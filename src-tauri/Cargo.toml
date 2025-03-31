@@ -1,0 +1,51 @@
+[package]
+name = "Commander"
+version = "0.1.0"
+description = "Desktop management app for Argon"
+authors = ["Caleb Clark", "Blake Byrnes"]
+edition = "2021"
+
+[workspace.metadata.tauri]
+bundle.identifier = "com.argon.commander.app"
+bundle.name = "Argon Commander"   # This is used as CFBundleName
+bundle.short_name = "Argon Commander"     # Optional, but can affect UI display
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+cargo-clippy = []
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "argon_commander_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["macos-private-api"] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri-plugin-os = "2.2.0"
+russh = "0.38.0"
+russh-keys = "0.38.0"
+tokio = "1.43.0"
+async-trait = "0.1.86"
+window-vibrancy = "0.5.3"
+cocoa = "0.26.0"
+objc = "0.2.7"
+ssh-key = { version = "0.6", features = ["ed25519"] }
+rand = "0.8"
+dirs = "5.0"
+rusqlite = "0.34.0"
+lazy_static = "1.4.0"
+anyhow = "1.0"
+shell-escape = "0.1.5"
+parking_lot = "0.12"
+sp-core = { version = "35", features = ["full_crypto"] }
+hex = "0.4"
+bip39 = "2.0.0"

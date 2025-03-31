@@ -1,0 +1,45 @@
+{
+  "name": "argon-commander",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@argonprotocol/mainchain": "^1.0.18",
+    "@chenfengyuan/vue-countdown": "^2.1.3",
+    "@headlessui/vue": "^1.7.23",
+    "@heroicons/vue": "^2.2.0",
+    "@polkadot/api": "^15.5.2",
+    "@tailwindcss/vite": "^4.0.3",
+    "@tauri-apps/api": "^2.2.0",
+    "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-os": "^2.2.0",
+    "@tauri-controls/vue": "^0.4.0",
+    "bignumber.js": "^9.1.2",
+    "dayjs": "^1.11.13",
+    "mitt": "^3.0.1",
+    "ordinal": "^1.0.3",
+    "pinia": "^3.0.1",
+    "qrcode": "^1.5.4",
+    "sass-embedded": "^1.85.1",
+    "tailwind-merge": "^3.0.1",
+    "tailwindcss": "^4.0.3",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@types/qrcode": "^1.5.5",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "clsx": "^2.1.1",
+    "svgo": "^3.3.2",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.3",
+    "vite-svg-loader": "^5.1.0",
+    "vue-tsc": "^2.1.10"
+  }
+}
