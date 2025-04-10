@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { twMerge } from "tailwind-merge"
-import { onMounted } from "vue"
-import { platform as getPlatform } from '@tauri-apps/plugin-os';
-import Gnome from "./controls/linux/Gnome.vue"
-import MacOs from "./controls/MacOs.vue"
-import Windows from "./controls/Windows.vue"
-import type { WindowControlsProps } from "./types"
+import { twMerge } from "tailwind-merge";
+import Gnome from "./controls/linux/Gnome.vue";
+import MacOs from "./controls/MacOs.vue";
+import Windows from "./controls/Windows.vue";
+import type { WindowControlsProps } from "./types";
+import { platformType } from "./utils/window";
 
 defineOptions({
   inheritAttrs: false,
@@ -16,23 +15,9 @@ const props = withDefaults(defineProps<WindowControlsProps>(), {
   hide: false,
   hideMethod: "display",
   className: "",
-})
+});
 
-let platform = props.platform;
-
-if (!platform) {
-  const platformType = getPlatform();
-  switch (platformType) {
-    case "macos":
-      platform = "macos"
-      break
-    case "linux":
-      platform = "gnome"
-      break
-    default:
-      platform = "windows"
-  }
-}
+let platform = props.platform || platformType;
 
 const customClass = twMerge(
   "flex",

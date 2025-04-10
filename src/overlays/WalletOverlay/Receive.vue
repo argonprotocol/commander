@@ -2,7 +2,9 @@
   <div>
     <div class="flex flex-row justify-between items-center w-full pt-5 pr-5 space-x-4">
       <ChevronLeftIcon @click="goBack" class="w-6 h-6 cursor-pointer" />
-      <div class="text-2xl font-bold grow">Fund Your Wallet</div>
+      <div class="text-2xl font-bold">{{ walletName }} Wallet</div>
+      <div>/</div>
+      <div class="text-2xl font-bold grow">Add Funds</div>
       <XMarkIcon @click="closeWalletOverlay" class="w-6 h-6 cursor-pointer" />
     </div>
     <img :src="qrCode" alt="QR Code" />
@@ -15,6 +17,13 @@ import QRCode from 'qrcode';
 import { useAccountStore } from '../../stores/account';
 import { ChevronLeftIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 
+const props = defineProps({
+  walletId: {
+    type: String as Vue.PropType<'mng' | 'llb' | 'vlt'>,
+    required: true
+  }
+});
+
 const emit = defineEmits(['navigate']);
 
 const goBack = () => {
@@ -25,9 +34,18 @@ const accountStore = useAccountStore();
 
 const qrCode = Vue.ref('');
 
+const walletName = Vue.computed(() => {
+  if (props.walletId === 'mng') {
+    return 'Mining';
+  } else if (props.walletId === 'llb') {
+    return 'Liquid Locking';
+  } else if (props.walletId === 'vlt') {
+    return 'Vaulting';
+  }
+});
+
 async function loadQRCode() {
-  qrCode.value = await QRCode.toDataURL(accountStore.address);
-  console.log(qrCode.value);
+  qrCode.value = await QRCode.toDataURL(accountStore.seedAddress);
 }
 
 function closeWalletOverlay() {

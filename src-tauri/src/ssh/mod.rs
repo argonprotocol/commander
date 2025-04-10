@@ -116,7 +116,7 @@ impl SSH {
         while let Some(_) = channel.wait().await {}
 
         // Now execute the script
-        let shell_command = format!("chmod +x {} && nohup {} &", remote_script_path, remote_script_path);
+        let shell_command = format!("chmod +x {} && nohup {} > /dev/null 2>&1 &", remote_script_path, remote_script_path);
         println!("Running: {}", shell_command);
         let mut channel = self.client.channel_open_session().await?;
         
@@ -126,6 +126,7 @@ impl SSH {
                 eprintln!("Error executing script: {}", e);
             }
         });
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
         Ok(())
     }
@@ -161,6 +162,7 @@ impl SSH {
         
         if filenames.is_empty() {
             self.run_script("setup-script.sh").await?;
+            println!("RAN SCRIPT");
         } else {
             println!("FILENAMES:");
             for filename in &filenames {

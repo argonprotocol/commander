@@ -1,11 +1,16 @@
 import { BigNumber } from 'bignumber.js';
 
 export function addCommas(num: string | number, decimals?: number) {
-  num = num.toString();
-  if (decimals === undefined) {
-    return isInt(num) ? addCommasToInt(num) : addCommasToFloat(num, 2);
+  // Check if the number is in scientific notation
+  if (typeof num === 'number' && num.toString().includes('e')) {
+    return num.toString();
   }
-  return addCommasToFloat(num, decimals ?? 2);
+  
+  const isInteger = isInt(num);
+  decimals ??= isInteger ? 0 : 2;
+  num = Number(num).toFixed(decimals);
+
+  return isInteger && decimals === 0 ? addCommasToInt(num) : addCommasToFloat(num, decimals);
 }
 
 export function addCommasToInt(str: string) {
@@ -45,9 +50,15 @@ export function formatArgonots(x: bigint | number): number {
   return Number(`${isNegative ? '-' : ''}${wholeWithCommas}.${decimal}`);
 }
 
+export function abreviateAddress(address: string) {
+  return address.slice(0, 6) + '...' + address.slice(-4);
+}
+
 export function convertFixedU128ToBigNumber(fixedU128: bigint): BigNumber {
   const decimalFactor = new BigNumber(10).pow(new BigNumber(18)); // Fixed point precision (18 decimals)
   const rawValue = new BigNumber(fixedU128.toString()); // Parse the u128 string value into BN
   // Convert the value to fixed-point
   return rawValue.div(decimalFactor);
 }
+
+export const convertFixedU256ToBigNumber = convertFixedU128ToBigNumber;

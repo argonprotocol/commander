@@ -1,206 +1,716 @@
 <template>
-  <TransitionRoot class='absolute inset-0' :show="isOpen">
-    <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
-      <BgOverlay @close="closeOverlay" />
-    </TransitionChild>
+  <TransitionRoot :show="isOpen" as="template" enter="duration-300 ease-out" enter-from="opacity-0" enter-to="opacity-100" leave="duration-200 ease-in" leave-from="opacity-100" leave-to="opacity-0">
+    <Dialog @close="maybeCloseOverlay" :initialFocus="dialogPanel">
 
-    <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" enter-to="opacity-100 translate-y-0 sm:scale-100" leave="ease-in duration-200" leave-from="opacity-100 translate-y-0 sm:scale-100" leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
-      <div class="flex flex-col absolute top-[52px] left-0 right-0 bottom-0 z-100 pt-[1px] rounded-b-lg">
-        <div class="absolute -top-[13px] right-4 w-[30px] h-[17px] overflow-hidden z-10 border-b-2 border-argon-menu-bg">
-          <div class="relative top-[5px] left-[5px] w-[20px] h-[20px] rotate-45 bg-slate-50 ring-1 ring-gray-900/20"></div>
-        </div>
-        <div class="flex flex-col relative grow transform overflow-hidden rounded-b-lg rounded-t-sm border-t border-black/30 bg-argon-menu-bg text-left transition-all w-full" style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255,255,255,1)">
-          <h2 class="relative text-3xl font-bold text-center border-b border-slate-300 pt-8 pb-6 mx-4 cursor-pointer text-[#672D73]">
-            Set Up Bidding Rules
-          </h2>
-
-          <div class="grow relative w-full">
-            <div class="absolute h-[100px] left-0 right-0 bottom-0 z-10 bg-gradient-to-b from-transparent to-argon-menu-bg pointer-events-none"></div>
-            <div class="absolute top-0 left-0 right-0 bottom-0 px-[16%] overflow-y-scroll pt-8 pb-[80px]">
-
-              <p>Argon Commander comes with an automated bidding bot. This page allows you to set the rules for how it should operate on your behalf. </p>
-
-              <div class="flex flex-col bg-[#f4ebf6] border border-[#A600D4] rounded-md p-4">
-                <header class="!border-b-transparent">What Is Your Seat Goal?</header>
-                <p>This is the minimum amount you want to bid. The bot will start bidding at this price.</p>
+      <DialogPanel class="absolute top-0 left-0 right-0 bottom-0 z-10">
+        <BgOverlay @close="maybeCloseOverlay" />
+        <div ref="dialogPanel" class="absolute top-[40px] left-3 right-3 bottom-3 flex flex-col overflow-hidden rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all" style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255,255,255,1)">
+          
+          <BidScenarioOverlay v-if="isShowingScenarioOverlay" :data="scenarioData" />
+          
+          <div v-if="isLoaded" class="flex flex-col h-full w-full">
+            <h2 class="relative text-3xl font-bold text-center border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 cursor-pointer text-[#672D73]" style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)">
+              Configure Bidding Rules
+              <div @click="closeOverlay" class="absolute top-[22px] right-[0px] z-10 flex items-center justify-center text-sm/6 font-semibold cursor-pointer border rounded-md w-[30px] h-[30px] focus:outline-none border-slate-400/60 hover:border-slate-500/70 hover:bg-[#D6D9DF]">
+                <XMarkIcon class="w-5 h-5 text-[#B74CBA] stroke-4" />
               </div>
+            </h2>
+            
+            <div class="grow relative w-full">
+              <div class="absolute h-[20px] left-0 right-0 bottom-0 z-10 bg-gradient-to-b from-transparent to-argon-menu-bg pointer-events-none"></div>
+              <div class="absolute top-0 left-0 right-0 bottom-0 px-[6%] overflow-y-scroll pt-8 pb-[50px]">
 
-              <header>Minimum Bids</header>
-              <p>This is the minimum amount you want to bid. The bot will start bidding at this price.</p>
+                <p class="opacity-80 font-light">Commander has a built-in bidding bot that helps maximize your chance of winning seats. This page allows you to configure the rules for how this bot should make decisions and place bids.</p>
 
-              <div class="flex flex-row w-full">
-                <Listbox as="div" v-model="selected" class="w-1/2">
-                  <ListboxLabel class="sr-only">Change published status</ListboxLabel>
-                  <div class="relative mt-2">
-                    <ListboxButton class="grid w-full cursor-default grid-cols-1 rounded-md bg-white py-1.5 pl-3 pr-2 text-left text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
-                      <span class="col-start-1 row-start-1 flex items-center gap-3 pr-6">
-                        <span class="block truncate">{{ selected.title }}</span>
-                      </span>
-                      <ChevronUpDownIcon class="col-start-1 row-start-1 size-5 self-center justify-self-end text-gray-500 sm:size-4" aria-hidden="true" />
-                    </ListboxButton>
-
-                    <transition leave-active-class="transition ease-in duration-100" leave-from-class="opacity-100" leave-to-class="opacity-0">
-                      <ListboxOptions class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm">
-                        <ListboxOption as="template" v-for="option in publishingOptions" :key="option.title" :value="option" v-slot="{ active, selected }">
-                          <li :class="[active ? 'bg-indigo-600 text-white' : 'text-gray-900', 'cursor-default select-none p-4 text-sm']">
-                            <div class="flex flex-col">
-                              <div class="flex justify-between">
-                                <p :class="selected ? 'font-semibold' : 'font-normal'">{{ option.title }}</p>
-                                <span v-if="selected" :class="active ? 'text-white' : 'text-indigo-600'">
-                                  <CheckIcon class="size-5" aria-hidden="true" />
-                                </span>
-                              </div>
-                              <p :class="[active ? 'text-indigo-200' : 'text-gray-500', 'mt-2']">{{ option.description }}</p>
-                            </div>
-                          </li>
-                        </ListboxOption>
-                      </ListboxOptions>
-                    </transition>
+                <div class="flex flex-col border border-yellow-800/20 rounded-md p-4 mt-4 shadow-md">
+                  <h3 class="text-xl font-bold border-b border-yellow-800/10 pb-2 text-center">Basic Calculator Settings</h3>
+                  <div class="flex flex-col gap-6 pl-2 pt-6 pb-2 font-mono text-md">
+                    <div class="flex flex-row items-center gap-2">
+                      <header class="whitespace-nowrap pr-1">Num of Seats You Want to Win = </header>
+                      <InputNumber v-model="calculatedTotalSeats" :max="100" :min="1" :recommends="calculatedTotalSeatMenu" class="w-4/12" />
+                      <InfoTip>This determines how many argons and argonots your account will need before it can start bidding.</InfoTip>
+                    </div>
+                    <div class="flex flex-row items-center gap-2">
+                      <header class="whitespace-nowrap pr-1">Expected Argon Circulation &nbsp; = </header>
+                      <InputMenu :options="{ name: 'Between', value: 1 }" :disabled="true" />
+                      <InputNumber v-model="calculatedArgonCirculationMin" :disabled="true" :format="addCommas" />
+                      <span>and</span>
+                      <InputNumber v-model="calculatedArgonCirculation" :max="5_000_000_000" :min="calculatedArgonCirculationMin" :dragBy="1_000_000" :recommends="calculatedArgonCirculationMenu" :format="addCommas" />
+                      <span class="pl-1">Within the Next Year</span>
+                      <InfoTip>These contribute to mining rewards. We use this to help calculate your optimistic scenarios below.</InfoTip>
+                    </div>
+                    <div class="flex flex-row items-center gap-2">
+                      <header class="whitespace-nowrap pr-1">Argonot Ten Day Price Change = </header>
+                      <InputMenu v-model="argonotPriceChangeType" :options="[{ name: 'Between', value: 1 }, { name: 'Exactly', value: 2}]" />
+                      <InputNumber v-model="argonotPriceChangeMin" :max="100" :min="-100" :prefix="argonotPriceChangeMin > 0 ? '+' : ''" :format="x => x.toFixed(2)" suffix="%" />
+                      <div v-if="argonotPriceChangeType === 1" class="flex flex-row items-center gap-2">
+                        <span>and</span>
+                        <InputNumber v-model="argonotPriceChangeMax" :max="100" :min="argonotPriceChangeMin+1" :prefix="argonotPriceChangeMin > 0 ? '+' : ''" :format="x => x.toFixed(2)" suffix="%" />
+                      </div>
+                      <span class="pl-1">Within the Next Ten Days</span>
+                      <InfoTip>The price of ARGNOTs naturally fluctuate on the open market. The has an affect on your mining returns.</InfoTip>
+                    </div>
                   </div>
-                </Listbox>
-              </div>
+                </div>
 
-              <p>This is the amount you want to bid each time. The bot will bid this amount each time it bids.</p>
-              <input type="text" class="w-1/2 bg-white border border-gray-300 rounded-md px-2 py-1" value="1.00">
+                <section class="flex flex-row mt-8">
+                  <div class="flex flex-col w-8/12">
+                    <header>Starting Bid</header>
+                    <p class="opacity-80 font-light">This is the minimum amount you want to bid. It should be lower than your maximum bid but not too low. Setting this too low will require lots of incremental bids with each bid requiring a small transaction fee -- this can add up.</p>
 
-              <header>Maximum Bids</header>
-              <p>This is the maximum amount you want to bid. The bot will stop bidding when it reaches this price.</p>
-
-              <div class="flex flex-row w-full">
-                <Listbox as="div" v-model="selected" class="w-1/2">
-                  <ListboxLabel class="sr-only">Change published status</ListboxLabel>
-                  <div class="relative mt-2">
-                    <ListboxButton class="grid w-full cursor-default grid-cols-1 rounded-md bg-white py-1.5 pl-3 pr-2 text-left text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6">
-                      <span class="col-start-1 row-start-1 flex items-center gap-3 pr-6">
-                        <span class="block truncate">{{ selected.title }}</span>
-                      </span>
-                      <ChevronUpDownIcon class="col-start-1 row-start-1 size-5 self-center justify-self-end text-gray-500 sm:size-4" aria-hidden="true" />
-                    </ListboxButton>
-
-                    <transition leave-active-class="transition ease-in duration-100" leave-from-class="opacity-100" leave-to-class="opacity-0">
-                      <ListboxOptions class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm">
-                        <ListboxOption as="template" v-for="option in publishingOptions" :key="option.title" :value="option" v-slot="{ active, selected }">
-                          <li :class="[active ? 'bg-indigo-600 text-white' : 'text-gray-900', 'cursor-default select-none p-4 text-sm']">
-                            <div class="flex flex-col">
-                              <div class="flex justify-between">
-                                <p :class="selected ? 'font-semibold' : 'font-normal'">{{ option.title }}</p>
-                                <span v-if="selected" :class="active ? 'text-white' : 'text-indigo-600'">
-                                  <CheckIcon class="size-5" aria-hidden="true" />
-                                </span>
-                              </div>
-                              <p :class="[active ? 'text-indigo-200' : 'text-gray-500', 'mt-2']">{{ option.description }}</p>
-                            </div>
-                          </li>
-                        </ListboxOption>
-                      </ListboxOptions>
-                    </transition>
+                    <label class="font-bold mt-6 mb-1.5">Starting Amount</label>
+                    <div class="flex flex-row items-center gap-2">
+                      <InputMenu v-model="startingAmountFormulaType" :options="[
+                        { name: 'Previous Day\'s Lowest Bid', value: 1 }, 
+                        { name: 'Minimum Breakeven', value: 2 }, 
+                        { name: 'Optimistic Breakeven', value: 3 }, 
+                        { name: 'Custom Amount', value: 4 }
+                      ]" />
+                      <template v-if="startingAmountFormulaType < 4">
+                        =
+                        <InputNumber v-model="startingAmountFormulaPrice" :prefix="currencySymbol" :disabled="true" :format="x => addCommas(argonTo(x), 2)" />
+                        +
+                        <InputNumber v-model="startingAmountFormulaIncrease" :min="-100" :dragBy="0.01" :format="x => x.toFixed(2)" suffix="%" />
+                      </template>
+                      = 
+                      <InputNumber v-model="startingAmount" :min="0" :prefix="currencySymbol" :format="x => addCommas(argonTo(x), 2)" :disabled="startingAmountFormulaType !== 4" :class="[startingAmountFormulaType === 4 ? 'min-w-60' : '']" />
+                    </div>
                   </div>
-                </Listbox>
-              </div>
+                  <div class="flex flex-col w-4/12">
+                    <header>&nbsp;</header>
+                    <div class="flex flex-col bg-yellow-50/30 border border-yellow-800/20 rounded-md shadow-md p-4 pt-5 mt-[3px] text-center ml-5">
+                      <div class="font-bold text-[22px] py-1">If You Buy @ Starting Bid</div>
+                      <div class="font-light text-sm leading-6">This box calculates your APR (Annual Percentage Rate) on a bid of {{currencySymbol}}{{ argonTo(startingAmount) < 10 ? argonTo(startingAmount).toFixed(2) : argonTo(startingAmount).toFixed(0) }}.</div>
+                      
+                      <div class="h-[1px] bg-yellow-800/20 my-4"></div>
+                      <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showScenarioOverlay(startingOptimisticCalculator)" @mouseleave="hideScenarioOverlay()">
+                        <BidScenarioOverlayArrow />
+                        <div class="font-bold text-sm uppercase">Optimistic APR</div>
+                        <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(startingOptimisticAPR, 999_999), 0) }}{{ startingOptimisticAPR > 999_999 ? '+' : '' }}%</div>
+                        <div class="font-light text-md">({{addCommas(startingOptimisticTDPR, 0)}}% Every 10 Days)</div>
+                      </div>
+                      <div class="h-[1px] bg-yellow-800/20 my-4"></div>
+                      <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showScenarioOverlay(startingMinimumCalculator)" @mouseleave="hideScenarioOverlay()">
+                        <BidScenarioOverlayArrow />
+                        <div class="font-bold text-sm uppercase">Minimum APR</div>
+                        <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(startingMinimumAPR, 999_999), 0) }}{{ startingMinimumAPR > 999_999 ? '+' : '' }}%</div>
+                        <div class="font-light text-md">({{addCommas(startingMinimumTDPR, 0)}}% Every 10 Days)</div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
 
-              <header>Throttles</header>
-              <p>This is the number of seats you want to win. The bot will keep bidding until it has won the desired number of seats.</p>
+                <section class="flex flex-row mt-8">
+                  <div class="flex flex-col w-8/12">
+                    <header>Rebidding Strategy</header>
+                    <p class="opacity-80 font-light">This is the minimum amount you want to bid. It should be lower than your maximum bid but not too low. Setting this too low will require lots of incremental bids with each bid requiring a small transaction fee -- this can add up.</p>
 
-              <div class="flex flex-row w-full">
-                <input type="checkbox" name="SeatStrategy" />
-                Cap at 
-                <div class="flex items-center rounded-md bg-white px-3 outline outline-1 -outline-offset-1 outline-gray-300 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600">
-                  <input type="text" name="price" id="price" class="block min-w-0 grow py-1.5 pl-1 pr-3 text-base text-gray-900 placeholder:text-gray-400 focus:outline focus:outline-0" placeholder="1" aria-describedby="price-currency" />
-                  <div id="price-currency" class="shrink-0 select-none text-base text-gray-500 sm:text-sm/6">Active Seats</div>
-                </div>
-                <div>
-                  Per Slot
-                </div>
-              </div>
+                    <label class="font-bold mt-6 mb-1.5">Delay Before Submitting Next Bid</label>
+                    <!-- <p class="opacity-80 font-light">By default your bot tries to reup your losing bids in the next block (next minute), however, you can increase this delay.</p> -->
+                    <InputNumber v-model="rebiddingDelay" :min="1" :suffix="`${rebiddingDelay === 1 ? ' minute' : ' minutes'}`" class="w-8/12" />
+                    
+                    <label class="font-bold mt-6 mb-1.5">Increment By</label>
+                    <!-- <p class="opacity-80 font-light">The amount you want to increment your losing bids in order to get back in the game.</p> -->
+                    <InputNumber v-model="incrementAmount" :min="0.01" :dragBy="1" :dragByMin="0.01" prefix="₳" :format="x => addCommas(x.toFixed(2))" class="w-8/12" />
+                  </div>
+                  <div class="flex flex-col w-4/12">
+                    <header>&nbsp;</header>
+                    <div class="flex flex-col bg-yellow-50/30 border border-yellow-800/20 rounded-md shadow-md px-10 pt-7 pb-8 text-center ml-5 mt-1 h-full">
+                      <div class="flex flex-row items-center justify-center">
+                        <LightBulbIcon class="w-10 h-10 text-yellow-500" />
+                      </div>
+                      <div class="font-bold text-2xl pt-3">Recommendation</div>
+                      <p class="font-light text-md pt-2 text-justify">
+                        We suggest setting your Delay to 10 minutes and your Increment By to a minimum of 5 ARGNs. This ensures that you won't spend too much on transaction fees by
+                        submitting bids too quickly.
+                      </p>
+                      <button @click="applyRecommendedRebiddingSettings" :class="appliedRecommendedRebiddingSettings ? 'pointer-events-none opacity-40' : ''" class="border border-yellow-700 text-yellow-800 hover:bg-yellow-700 hover:text-white py-1 mt-5 rounded-md cursor-pointer">
+                        <span v-if="!appliedRecommendedRebiddingSettings">Apply Recommendations</span>
+                        <span v-else>Recommendations Applied</span>
+                      </button>
+                    </div>
+                  </div>
+                </section>
 
-              <div class="flex flex-row">
-                <input type="checkbox" name="SeatStrategy" />
-                Attempt Even Mining Distribution Across All Slots (RECOMMENDED)
-              </div>
+                <section class="flex flex-row mt-8">
+                  <div class="flex flex-col w-8/12">
+                    <header>Final Ceiling</header>
+                    <p class="opacity-80 font-light">This section sets your bid ceiling. If the auction goes above this price, your bot will stop participating. We recommend setting this to the highest price you're willing to pay.</p>
+                    
+                    <label class="font-bold mt-6 mb-1.5">Your Final Bid Price</label>
+                    <div class="flex flex-row items-center gap-2">
+                      <InputMenu v-model="finalAmountFormulaType" :options="[
+                        { name: 'Previous Day\'s Winning Bid', value: 1 }, 
+                        { name: 'Minimum Breakeven', value: 2 }, 
+                        { name: 'Optimistic Breakeven', value: 3 }, 
+                        { name: 'Custom Amount', value: 4 }
+                      ]" />
+                      <template v-if="finalAmountFormulaType < 4">
+                        =
+                        <InputNumber v-model="finalAmountFormulaPrice" :prefix="currencySymbol" :disabled="true" :format="x => addCommas(argonTo(x), 2)" />
+                        +
+                        <InputNumber v-model="finalAmountFormulaIncrease" :min="-100" :dragBy="0.01" :format="x => x.toFixed(2)" suffix="%" />
+                      </template>
+                      = 
+                      <InputNumber v-model="finalAmount" :min="0" :prefix="currencySymbol" :format="x => addCommas(argonTo(x), 2)" :disabled="finalAmountFormulaType !== 4" :class="[finalAmountFormulaType === 4 ? 'min-w-60' : '']" />
+                    </div>
+                  </div>
+                  <div class="flex flex-col w-4/12">
+                    <header>&nbsp;</header>
+                    <div class="flex flex-col bg-yellow-50/30 border border-yellow-800/20 rounded-md shadow-md p-4 pt-5 mt-0.5 text-center ml-5">
+                      <div class="font-bold text-[22px] py-1">If You Buy @ Final Ceiling</div>
+                      <div class="font-light text-sm leading-6">This box calculates your APR (Annual Percentage Rate) on a bid of {{currencySymbol}}{{ argonTo(finalAmount) < 10 ? argonTo(finalAmount).toFixed(2) : argonTo(finalAmount).toFixed(0) }}.</div>
 
-              <header>Bot Longevity</header>
-              <p>This is the amount of time you want the bot to run. The bot will stop bidding after this amount of time.</p>
-              <div>
-                <RadioButton name="botLongevity" /> Allow bot to continue renewing my seats every epoch (10 days)
+                      <div class="h-[1px] bg-yellow-800/20 my-4"></div>
+                      <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showScenarioOverlay(finalOptimisticCalculator)" @mouseleave="hideScenarioOverlay()">
+                        <BidScenarioOverlayArrow />
+                        <div class="font-bold text-sm uppercase">Optimistic APR</div>
+                        <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(finalOptimisticAPR, 999_999), 0) }}{{ finalOptimisticAPR > 999_999 ? '+' : '' }}%</div>
+                        <div class="font-light text-md">({{addCommas(finalOptimisticTDPR, 0)}}% Every 10 Days)</div>
+                      </div>
+                      <div class="h-[1px] bg-yellow-800/20 my-4"></div>
+                      <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showScenarioOverlay(finalMinimumCalculator)" @mouseleave="hideScenarioOverlay()">
+                        <BidScenarioOverlayArrow />
+                        <div class="font-bold text-sm uppercase">Minimum APR</div>
+                        <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(finalMinimumAPR, 999_999), 0) }}{{ finalMinimumAPR > 999_999 ? '+' : '' }}%</div>
+                        <div class="font-light text-md">({{addCommas(finalMinimumTDPR, 0)}}% Every 10 Days)</div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="flex flex-row mt-8">
+                  <div class="flex flex-col w-8/12">
+                    <header>Throttling Strategies</header>
+                    <p class="opacity-80 font-light">
+                      By default, your bidding bot will try to win as may seats as it can, and sometimes this means you'll win all your seats on a single day. Unless this is your strategy, you'll probably want to 
+                      set one or more throttles to ensure you win seats across multiple slots.
+                    </p>
+
+                    <ul class="flex flex-col gap-y-2 mt-4">
+                      <li class="flex flex-row w-full font-mono text-md items-center h-[32px]">
+                        <div class="group grid size-5 grid-cols-1">
+                          <input type="checkbox" v-model="throttleSeats" class="col-start-1 row-start-1 appearance-none rounded border border-gray-600 bg-white checked:border-argon-button checked:bg-argon-button indeterminate:border-argon-button indeterminate:bg-argon-button focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-argon-button" />
+                          <svg class="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white group-has-[:disabled]:stroke-gray-950/25" viewBox="0 0 14 14" fill="none">
+                            <path class="opacity-0 group-has-[:checked]:opacity-100" d="M3 8L6 11L11 3.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path class="opacity-0 group-has-[:indeterminate]:opacity-100" d="M3 7H11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                          </svg>
+                        </div>
+                        <div :class="throttleSeats ? '' : 'opacity-50'" class="flex flex-row items-center cursor-default">
+                          <div @click="throttleSeats = !throttleSeats" class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2">CAP SEATS</div>
+                          <span @click="throttleSeats = !throttleSeats">Acquire no more than</span>
+                          <InputNumber @click="throttleSeats = true" v-model="throttleSeatCount" :min="1" :max="100" :dragBy="1" class="mx-2" />
+                          <span @click="throttleSeats = !throttleSeats">seat{{throttleSeatCount === 1 ? '' : 's'}} per slot</span>
+                        </div>
+                      </li>
+
+                      <li class="flex flex-row w-full font-mono text-md items-center h-[32px]">
+                        <div class="group grid size-5 grid-cols-1">
+                          <input type="checkbox" v-model="throttleSpending" class="col-start-1 row-start-1 appearance-none rounded border border-gray-600 bg-white checked:border-argon-button checked:bg-argon-button indeterminate:border-argon-button indeterminate:bg-argon-button focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-argon-button" />
+                          <svg class="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white group-has-[:disabled]:stroke-gray-950/25" viewBox="0 0 14 14" fill="none">
+                            <path class="opacity-0 group-has-[:checked]:opacity-100" d="M3 8L6 11L11 3.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path class="opacity-0 group-has-[:indeterminate]:opacity-100" d="M3 7H11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                          </svg>
+                        </div>
+                        <div :class="throttleSpending ? '' : 'opacity-50'" class="flex flex-row items-center cursor-default">
+                          <div @click="throttleSpending = !throttleSpending" class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2">CAP SPENDING</div>
+                          <span @click="throttleSpending = !throttleSpending">Spend no more than</span>
+                          <InputNumber @click="throttleSpending = true" v-model="throttleSpendingAmount" :min="finalAmount" :dragBy="1" :prefix="currencySymbol" :format="x => argonTo(x).toFixed(2)" class="mx-2" />
+                          <span @click="throttleSpending = !throttleSpending">per slot</span>
+                        </div>
+                      </li>
+
+                      <li class="flex flex-row w-full font-mono text-md items-center h-[32px]">
+                        <div class="group grid size-5 grid-cols-1">
+                          <input type="checkbox" v-model="throttleDistributeEvenly" class="col-start-1 row-start-1 appearance-none rounded border border-gray-600 bg-white checked:border-argon-button checked:bg-argon-button indeterminate:border-argon-button indeterminate:bg-argon-button focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-argon-button" />
+                          <svg class="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white group-has-[:disabled]:stroke-gray-950/25" viewBox="0 0 14 14" fill="none">
+                            <path class="opacity-0 group-has-[:checked]:opacity-100" d="M3 8L6 11L11 3.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path class="opacity-0 group-has-[:indeterminate]:opacity-100" d="M3 7H11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                          </svg>
+                        </div>
+                        <div :class="throttleDistributeEvenly ? '' : 'opacity-50'" class="flex flex-row items-center cursor-default">
+                          <div @click="throttleDistributeEvenly = !throttleDistributeEvenly" class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2">DISTRIBUTE EVENLY</div>
+                          <span @click="throttleDistributeEvenly = !throttleDistributeEvenly">Stagger your mining seats as evenly as possible</span>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="flex flex-col w-4/12">
+                    <header>&nbsp;</header>
+                    <div class="flex flex-col bg-yellow-50/30 border border-yellow-800/20 rounded-md shadow-md px-10 pt-7 pb-8 text-center ml-5 mt-1 h-full">
+                      <div class="flex flex-row items-center justify-center">
+                        <LightBulbIcon class="w-10 h-10 text-yellow-500" />
+                      </div>
+                      <div class="font-bold text-2xl pt-3">Recommendation</div>
+                      <p class="font-light text-md pt-2 text-justify">
+                        We suggest only using a single throttle, and we believe distributing seat bids as evenly as possible across all slots is the most important. By spreading your bids, you'll have a better chance of capturing demand spikes that drive 
+                        lucerative minting opportunities.
+                      </p>
+                      <button @click="applyRecommendedThrottles" :class="appliedRecommendedThrottles ? 'pointer-events-none opacity-40' : ''" class="border border-yellow-700 text-yellow-800 hover:bg-yellow-700 hover:text-white py-1 mt-5 rounded-md cursor-pointer">
+                        <span v-if="!appliedRecommendedThrottles">Apply Recommendations</span>
+                        <span v-else>Recommendations Applied</span>
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="flex flex-row mt-4">
+                  <div class="flex flex-col w-8/12">
+                    <header>Bot Longevity</header>
+                    <p class="opacity-80 font-light">You choose how long you want your bidding bot to work. We recommend setting your bot to Continuous. If you select otherwise, the bot will stop bidding and turn off once its time limit has been reached.</p>
+                    
+                    <ul class="flex flex-col gap-y-2 mt-4">
+
+                      <li class="flex flex-row w-full font-mono text-md items-center h-[32px]">
+                        <RadioButton name="disable-bot" :checked="disableBot === 'AfterFirstSeat'" @click="disableBot = 'AfterFirstSeat'" />
+                        <div :class="disableBot === 'AfterFirstSeat' ? '' : 'opacity-50'" class="flex flex-row items-center cursor-default">
+                          <div @click="disableBot = 'AfterFirstSeat'" class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2">SINGLE SEAT</div>
+                          <span @click="disableBot = 'AfterFirstSeat'">Disable bot after winning first seat</span>
+                        </div>
+                      </li>
+
+                      <li class="flex flex-row w-full font-mono text-md items-center h-[32px]">
+                        <RadioButton name="disable-bot" :checked="disableBot === 'AfterFirstSlot'" @click="disableBot = 'AfterFirstSlot'" />
+                        <div :class="disableBot === 'AfterFirstSlot' ? '' : 'opacity-50'" class="flex flex-row items-center cursor-default">
+                          <div @click="disableBot = 'AfterFirstSlot'" class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2">SINGLE SLOT</div>
+                          <span @click="disableBot = 'AfterFirstSlot'">Disable bot after winning seats in first slot</span>
+                        </div>
+                      </li>
+
+                      <li class="flex flex-row w-full font-mono text-md items-center h-[32px]">
+                        <RadioButton name="disable-bot" :checked="disableBot === 'Never'" @click="disableBot = 'Never'" />
+                        <div :class="disableBot === 'Never' ? '' : 'opacity-50'" class="flex flex-row items-center cursor-default">
+                          <div @click="disableBot = 'Never'" class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2">CONTINUOUS</div>
+                          <span @click="disableBot = 'Never'">Empower bot to continue renewing my seats</span>
+                        </div>
+                      </li>
+
+                      <li class="flex flex-row w-full font-mono text-md items-center h-[32px]">
+                        <RadioButton name="disable-bot" :checked="disableBot === 'Now'" @click="disableBot = 'Now'" />
+                        <div :class="disableBot === 'Now' ? '' : 'opacity-50'" class="flex flex-row items-center cursor-default">
+                          <div @click="disableBot = 'Now'" class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2">DISABLED</div>
+                          <span @click="disableBot = 'Now'">Disable bot immediately</span>
+                        </div>
+                      </li>
+
+                    </ul>
+                  </div>
+                  <div class="flex flex-col w-4/12">
+                    <header>&nbsp;</header>
+                    <div class="flex flex-col bg-yellow-50/30 border border-yellow-800/20 rounded-md shadow-md p-4 pt-6 mt-0.5 text-center ml-5">
+                      <div class="font-bold text-xl py-1">Compounding Scenario</div>
+                      <div v-if="disableBot === 'AfterFirstSeat'" class="font-light text-sm leading-6">This box calculates your expected range<br /> of returns based on shutting down after<br /> winning a single seat.</div>
+                      <div v-if="disableBot === 'AfterFirstSlot'" class="font-light text-sm leading-6">This box calculates your expected range<br /> of returns based on shutting down after<br /> winning a single slot.</div>
+                      <div v-else-if="disableBot === 'Never'" class="font-light text-sm leading-6">This box calculates your expected range<br /> of returns based on a full year of mining.</div>
+                      
+                      <div class="h-[1px] bg-yellow-800/20 my-4"></div>
+                      <div v-if="disableBot === 'Now'" class="text-sm uppercase px-10 py-10 opacity-50">Use the settings on the left to enable the bot so we can calculate your returns.</div>
+                      <div v-else>
+                        <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showScenarioOverlay(startingOptimisticCalculator)" @mouseleave="hideScenarioOverlay()">
+                          <BidScenarioOverlayArrow />
+                          <div v-if="['AfterFirstSeat','AfterFirstSlot'].includes(disableBot)">
+                            <div class="font-bold text-sm uppercase">Optimistic 10-Day Yield</div>
+                            <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(startingOptimisticTDPR, 999_999), 0) }}{{ startingOptimisticTDPR > 999_999 ? '+' : '' }}%</div>
+                            <div class="font-light text-md">(Ends After Slot Completion)</div>
+                          </div>
+                          <div v-else-if="disableBot === 'Never'">
+                            <div class="font-bold text-sm uppercase">Optimistic APY</div>
+                            <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(startingOptimisticAPY, 999_999), 0) }}{{ startingOptimisticAPY > 999_999 ? '+' : '' }}%</div>
+                            <div class="font-light text-md">({{addCommas(startingOptimisticTDPR, 0)}}% Compounding Every 10 Days)</div>
+                          </div>
+                        </div>
+                        <div class="h-[1px] bg-yellow-800/20 my-4"></div>
+                        <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showScenarioOverlay(finalMinimumCalculator)" @mouseleave="hideScenarioOverlay()">
+                          <BidScenarioOverlayArrow />
+                          <div v-if="['AfterFirstSeat','AfterFirstSlot'].includes(disableBot)">
+                            <div class="font-bold text-sm uppercase">Minimum 10-Day Yield</div>
+                            <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(finalMinimumTDPR, 999_999), 0) }}{{ finalMinimumTDPR > 999_999 ? '+' : '' }}%</div>
+                            <div class="font-light text-md">(Ends After Slot Completion)</div>
+                          </div>
+                          <div v-else-if="disableBot === 'Never'">
+                            <div class="font-bold text-sm uppercase">Minimum APY</div>
+                            <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(finalMinimumAPY, 999_999), 0) }}{{ finalMinimumAPY > 999_999 ? '+' : '' }}%</div>
+                            <div class="font-light text-md">({{addCommas(finalMinimumTDPR, 0)}}% Compounding Every 10 Days)</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="flex flex-row mt-4">
+                  <div class="flex flex-col">
+                    <header>&nbsp;</header>
+                    <p class="opacity-80 font-light w-10/12 mt-5">Once you're satisfied with your bidding rules, click the Save button below. We will then help you move in any necessary funds needed to cover your bids.</p>
+                  </div>
+                </section>
+
               </div>
-              <div>
-                <RadioButton name="botLongevity" /> Disable bot after winning next slot
+            </div>
+            
+            <div class="flex flex-row justify-end px-14 border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
+              <div class="grow font-bold text-lg text-slate-900/70">
+                Required Funds: {{ requiredArgons }} ARGN{{ requiredArgons === 1 ? '' : 's' }} + {{ requiredArgonots }} ARGONOT{{ requiredArgonots === 1 ? '' : 's' }}
               </div>
-              <div>
-                <RadioButton name="botLongevity" /> Disable bot now
+              <div class="flex flex-row space-x-4">
+                <button @click="closeOverlay" class="border border-argon-button text-xl font-bold text-gray-500 px-7 py-1 rounded-md cursor-pointer">
+                  <span>Close</span>
+                </button>
+                <button @click="saveRules" class="bg-argon-button text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
+                  <span v-if="!isSaving">{{ hasExistingRules ? 'Update' : 'Save' }} Rules</span>
+                  <span v-else>{{ hasExistingRules ? 'Updating' : 'Saving' }} Rules...</span>
+                </button>
               </div>
             </div>
           </div>
-          
-          <div class="flex flex-row justify-end px-4 border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
-            <button @click="closeOverlay" class="border border-[#A600D4] text-xl font-bold text-gray-500 px-7 py-2 rounded-md cursor-pointer">
-              <span>Close</span>
-            </button>
-            <button @click="saveRules" class="bg-[#A600D4] text-xl font-bold text-white px-7 py-2 rounded-md cursor-pointer">
-              <span v-if="!isSaving">Save Rules</span>
-              <span v-else>Saving Rules...</span>
-            </button>
+          <div v-else>
+            Loading...
           </div>
         </div>
-      </div>
-    </TransitionChild>
+      </DialogPanel>
+    </Dialog>
   </TransitionRoot>
 </template>
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { invoke } from "@tauri-apps/api/core";
-import { TransitionChild, TransitionRoot } from '@headlessui/vue';
+import dayjs from 'dayjs';
+import { storeToRefs } from 'pinia';
+import { Dialog, DialogPanel, TransitionRoot } from '@headlessui/vue';
 import emitter from '../emitters/basic';
-import { useServerStore } from '../stores/server';
+import { addCommas } from '../lib/Utils';
+import { useAccountStore } from '../stores/account';
 import BgOverlay from '../components/BgOverlay.vue';
-import { Listbox, ListboxButton, ListboxLabel, ListboxOption, ListboxOptions } from '@headlessui/vue'
-import { ChevronUpDownIcon } from '@heroicons/vue/16/solid'
-import { CheckIcon } from '@heroicons/vue/20/solid'
+import { XMarkIcon, LightBulbIcon } from '@heroicons/vue/24/outline';
 import RadioButton from '../components/RadioButton.vue';
+import InputNumber from '../components/InputNumber.vue';
+import InputMenu from '../components/InputMenu.vue';
+import BiddingCalculator from '../lib/BiddingCalculator';
+import InfoTip from '../components/InfoTip.vue';
+import BidScenarioOverlay from './BidScenarioOverlay.vue';
+import BidScenarioOverlayArrow from './BidScenarioOverlayArrow.vue';
+import BiddingCalculatorData from '../lib/BiddingCalculatorData';
+import { invoke } from '@tauri-apps/api/core';
 
-const serverStore = useServerStore();
+const accountStore = useAccountStore();
+
+const { argonTo } = accountStore;
+const { currencySymbol } = storeToRefs(accountStore);
 
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
+const hasExistingRules = !!accountStore.biddingConfig?.rules;
 
-const publicKey = Vue.ref('');
-const ipAddress = Vue.ref('');
+const dialogPanel = Vue.ref(null);
+const isShowingScenarioOverlay = Vue.ref(false);
 
-const publishingOptions = [
-  { title: 'Zero', description: 'Place a starting price of nothing.', current: true },
-  { title: 'First Bid', description: 'Always ensure your bid’s price is high enough to be at the top of the stack.', current: false },
-  { title: 'Middle Bid', description: 'Always ensure your bid’s price is high enough to be at the top of the stack.', current: false },
-  { title: 'Last Bid', description: 'Always ensure your bid’s price is high enough to be at the top of the stack.', current: false },
-  { title: 'Minimum Breakeven', description: 'Always ensure your bid’s price is high enough to be at the top of the stack.', current: false },
-  { title: 'Optimistic Breakeven', description: 'Always ensure your bid’s price is high enough to be at the top of the stack.', current: false },
-  { title: 'Amount In Account', description: 'Always ensure your bid’s price is high enough to be at the top of the stack.', current: false },
-  { title: 'Custom Amount', description: 'Always ensure your bid’s price is high enough to be at the top of the stack.', current: false },
+const requiredArgons = Vue.ref(0);
+const requiredArgonots = Vue.ref(0);
 
-]
+const calculatorData = new BiddingCalculatorData();
+const startingMinimumCalculator = new BiddingCalculator('Minimum', calculatorData);
+const startingOptimisticCalculator = new BiddingCalculator('Optimistic', calculatorData);
+const finalMinimumCalculator = new BiddingCalculator('Minimum', calculatorData);
+const finalOptimisticCalculator = new BiddingCalculator('Optimistic', calculatorData);
 
-const selected = Vue.ref(publishingOptions[0])
+const startingOptimisticAPR = Vue.ref(0);
+const startingOptimisticAPY = Vue.ref(0);
+const startingOptimisticTDPR = Vue.ref(0);
+const startingMinimumAPR = Vue.ref(0);
+const startingMinimumTDPR = Vue.ref(0);
+const finalOptimisticAPR = Vue.ref(0);
+const finalOptimisticTDPR = Vue.ref(0);
+const finalMinimumAPR = Vue.ref(0);
+const finalMinimumAPY = Vue.ref(0);
+const finalMinimumTDPR = Vue.ref(0);
 
-emitter.on('openBiddingRulesOverlay', async () => {
-  isOpen.value = true;
-  isLoaded.value = true;
+const scenarioData = Vue.ref({} as any);
+
+// Total Seats
+const calculatedTotalSeatMenu = Vue.ref([
+  { title: 'Beginner', value: 1, description: 'Recommended if you\'re just starting.', current: true },
+  { title: 'Believer', value: 3, description: 'Be a major player with multiple seats.', current: false },
+  { title: 'Gambler', value: 10, description: 'You realize argon is going to the moon.', current: false },
+  { title: 'Overly Aggressive', value: 20, description: 'We never recommend this to anyone.', current: false },
+]);
+const calculatedTotalSeats = Vue.ref(calculatedTotalSeatMenu.value[1].value);
+
+// Argon Circulation
+const calculatedArgonCirculationMenu = Vue.ref([
+  { title: 'Slow Growth', value: 2_000_000, current: true },
+  { title: 'Good Growth', value: 10_000_000, current: false },
+  { title: 'Great Growth', value: 100_000_000, current: false },
+  { title: 'Ethena Growth Rate', value: 5_000_000_000, current: false },
+]);
+const calculatedArgonCirculation = Vue.ref(calculatedArgonCirculationMenu.value[0].value);
+const calculatedArgonCirculationMin = Vue.ref(0);
+
+Vue.watch(calculatedArgonCirculation, () => {
+  startingOptimisticCalculator.setArgonCirculation(calculatedArgonCirculation.value);
+  finalOptimisticCalculator.setArgonCirculation(calculatedArgonCirculation.value);
+  updateStartingAmountFormulaPrice();
+  updateFinalAmountFormulaPrice();
 });
 
-const saveRules = () => {
-  isSaving.value = true;
+// Argonot Price Change
+const argonotPriceChangeType = Vue.ref(1);
+const argonotPriceChangeMin = Vue.ref(0);
+const argonotPriceChangeMax = Vue.ref(0);
+
+Vue.watch(argonotPriceChangeMin, () => {
+  startingMinimumCalculator.setArgonotPriceChange(argonotPriceChangeMin.value);
+  finalMinimumCalculator.setArgonotPriceChange(argonotPriceChangeMin.value);
+  updateStartingAmountFormulaPrice();
+  updateFinalAmountFormulaPrice();
+});
+
+Vue.watch(argonotPriceChangeMax, () => {
+  startingOptimisticCalculator.setArgonotPriceChange(argonotPriceChangeMax.value);
+  finalOptimisticCalculator.setArgonotPriceChange(argonotPriceChangeMax.value);
+  updateStartingAmountFormulaPrice();
+  updateFinalAmountFormulaPrice();
+});
+
+// Starting Amount
+const startingAmount = Vue.ref(0);
+const startingAmountFormulaType = Vue.ref(1);
+const startingAmountFormulaPrice = Vue.ref(0);
+const startingAmountFormulaIncrease = Vue.ref(0);
+
+function updateStartingAmountFormulaPrice() {
+  if (startingAmountFormulaType.value === 1) {
+    startingAmountFormulaPrice.value = calculatorData.previousLowestBid;
+  } else if (startingAmountFormulaType.value === 2) {
+    startingAmountFormulaPrice.value = startingMinimumCalculator.breakevenBid;
+  } else if (startingAmountFormulaType.value === 3) {
+    startingAmountFormulaPrice.value = startingOptimisticCalculator.breakevenBid;
+  }
+  updateStartingAmount();
 }
 
-const closeOverlay = () => {
+function updateStartingAmount() {
+  startingAmount.value = startingAmountFormulaPrice.value * (1 + startingAmountFormulaIncrease.value / 100);
+  updateStartingCalculators();
+}
+
+function updateStartingCalculators() {
+  startingMinimumCalculator.setBid(startingAmount.value);
+  startingOptimisticCalculator.setBid(startingAmount.value);
+
+  startingOptimisticAPR.value = startingOptimisticCalculator.APR;
+  startingOptimisticAPY.value = startingOptimisticCalculator.APY;
+  startingOptimisticTDPR.value = startingOptimisticCalculator.TDPR;
+  startingMinimumAPR.value = startingMinimumCalculator.APR;
+  startingMinimumTDPR.value = startingMinimumCalculator.TDPR;}
+
+Vue.watch(startingAmountFormulaType, updateStartingAmountFormulaPrice);
+Vue.watch(startingAmountFormulaIncrease, updateStartingAmount);
+Vue.watch(startingAmount, () => updateStartingCalculators);
+
+// Rebidding
+const incrementAmount = Vue.ref(0.01);
+const rebiddingDelay = Vue.ref(1);
+const appliedRecommendedRebiddingSettings = Vue.ref(false);
+
+function applyRecommendedRebiddingSettings() {
+  rebiddingDelay.value = 10;
+  incrementAmount.value = 5;
+  appliedRecommendedRebiddingSettings.value = true;
+}
+
+Vue.watch(rebiddingDelay, () => {
+  if (rebiddingDelay.value !== 10) {
+    appliedRecommendedRebiddingSettings.value = false;
+  }
+});
+
+Vue.watch(incrementAmount, () => {
+  if (incrementAmount.value !== 5) {
+    appliedRecommendedRebiddingSettings.value = false;
+  }
+});
+
+// Final Amount
+const finalAmount = Vue.ref(0);
+const finalAmountFormulaType = Vue.ref(1);
+const finalAmountFormulaPrice = Vue.ref(0);
+const finalAmountFormulaIncrease = Vue.ref(0);
+
+function updateFinalAmountFormulaPrice() {
+  if (finalAmountFormulaType.value === 1) {
+    finalAmountFormulaPrice.value = calculatorData.previousHighestBid;
+  } else if (finalAmountFormulaType.value === 2) {
+    finalAmountFormulaPrice.value = calculatorData.argonRewardsForThisSeat;
+  } else if (finalAmountFormulaType.value === 3) {
+    finalAmountFormulaPrice.value = finalOptimisticCalculator.breakevenBid;
+  }
+  updateFinalAmount();
+}
+
+function updateFinalAmount() {
+  finalAmount.value = finalAmountFormulaPrice.value * (1 + finalAmountFormulaIncrease.value / 100);
+  requiredArgons.value = Math.ceil(finalAmount.value * calculatedTotalSeats.value * 1.1);
+  requiredArgonots.value = Math.ceil(calculatorData.argonotsRequiredForBid * calculatedTotalSeats.value * 1.1);
+  updateFinalCalculators();
+}
+
+function updateFinalCalculators() {
+  finalMinimumCalculator.setBid(finalAmount.value);
+  finalOptimisticCalculator.setBid(finalAmount.value);
+
+  finalOptimisticAPR.value = finalOptimisticCalculator.APR;
+  finalOptimisticTDPR.value = finalOptimisticCalculator.TDPR;  
+  finalMinimumAPR.value = finalMinimumCalculator.APR;
+  finalMinimumAPY.value = finalMinimumCalculator.APY;
+  finalMinimumTDPR.value = finalMinimumCalculator.TDPR;
+}
+
+Vue.watch(finalAmountFormulaType, updateFinalAmountFormulaPrice);
+Vue.watch(finalAmountFormulaIncrease, updateFinalAmount);
+Vue.watch(finalAmount, () => updateFinalCalculators);
+
+// Throttles
+const throttleSeats = Vue.ref(false);
+const throttleSeatCount = Vue.ref(1);
+const throttleSpending = Vue.ref(false);
+const throttleSpendingAmount = Vue.ref(0);
+const throttleDistributeEvenly = Vue.ref(false);
+const appliedRecommendedThrottles = Vue.ref(false);
+
+function applyRecommendedThrottles() {
+  throttleSeats.value = false;
+  throttleSpending.value = false;
+  throttleDistributeEvenly.value = true;
+  appliedRecommendedThrottles.value = true;
+}
+
+// Disable
+const disableBot = Vue.ref('Never');
+
+let openedAt = dayjs();
+
+emitter.on('openBiddingRulesOverlay', async () => {
+  if (isOpen.value) return;
+  openedAt = dayjs();
+  isOpen.value = true;
+  calculatorData.isInitialized.then(() => {
+    isLoaded.value = true;
+    calculatedArgonCirculationMin.value = Math.ceil(calculatorData.argonRewardsForFullYear);
+
+    updateStartingAmountFormulaPrice();
+    updateFinalAmountFormulaPrice();
+  });
+});
+
+async function saveRules() {
+  isSaving.value = true;
+  const rules = {
+    calculatedTotalSeats: calculatedTotalSeats.value,
+    calculatedArgonCirculation: calculatedArgonCirculation.value,
+    argonotPriceChangeType: argonotPriceChangeType.value,
+    argonotPriceChangeMin: argonotPriceChangeMin.value,
+    argonotPriceChangeMax: argonotPriceChangeMax.value,
+
+    startingAmountFormulaType: startingAmountFormulaType.value,
+    startingAmountFormulaIncrease: startingAmountFormulaIncrease.value,
+    startingAmount: startingAmount.value,
+
+    rebiddingDelay: rebiddingDelay.value,
+    incrementAmount: incrementAmount.value,
+
+    finalAmountFormulaType: finalAmountFormulaType.value,
+    finalAmountFormulaIncrease: finalAmountFormulaIncrease.value,
+    finalAmount: finalAmount.value,
+
+    throttleSeats: throttleSeats.value,
+    throttleSeatCount: throttleSeatCount.value,
+
+    throttleSpending: throttleSpending.value,
+    throttleSpendingAmount: throttleSpendingAmount.value,
+
+    throttleDistributeEvenly: throttleDistributeEvenly.value,
+
+    disableBot: disableBot.value,
+
+    requiredArgons: requiredArgons.value,
+    requiredArgonots: requiredArgonots.value,
+  }
+  await invoke('save_bidding_rules', { rules });
+  accountStore.biddingConfig = rules;
+  closeOverlay();
+  isSaving.value = false;
+}
+
+function maybeCloseOverlay() {
+  const secondsSinceOpened = dayjs().diff(openedAt, 'seconds');
+  if (secondsSinceOpened < 2) {
+    closeOverlay();   
+  }
+};
+
+function closeOverlay() {
   isOpen.value = false;
   isLoaded.value = false;
 };
+
+function showScenarioOverlay(calculator: BiddingCalculator) {
+  
+  isShowingScenarioOverlay.value = true;
+  scenarioData.value = {
+    scenarioName: calculator.scenarioName,
+    costOfArgonotLoss: calculator.costOfArgonotLoss,
+    argonotPriceChange: calculator.argonotPriceChange,
+    argonotsRequiredForBid: calculatorData.argonotsRequiredForBid,
+    argonBidPremium: calculator.argonBidPremium,
+    transactionFee: calculatorData.transactionFee,
+    argonRewardsForThisSeat: calculatorData.argonRewardsForThisSeat,
+    argonotRewardsForThisSeat: calculatorData.argonotRewardsForThisSeat,
+    argonsToMintThisSeat: calculator.argonsToMintThisSeat,
+    argonotRewardsAsArgonValue: calculator.argonotRewardsAsArgonValue,
+    totalCost: calculator.totalCost,
+    totalRewards: calculator.totalRewards,
+    TDPR: calculator.TDPR,
+    APR: calculator.APR,
+    APY: calculator.APY,
+  };
+} 
+
+function hideScenarioOverlay() {
+  isShowingScenarioOverlay.value = false;
+}
 </script>
 
 <style scoped>
 @reference "../main.css";
 
-header {
-  @apply text-2xl font-bold pb-3 mb-2 pt-5 border-b border-slate-300;
+section header {
+  @apply text-2xl font-bold pb-3 mb-5 pt-6 border-b border-slate-300;
+}
+
+h2 {
+  position: relative;
+  &:before {
+    @apply bg-gradient-to-r from-argon-menu-bg to-transparent;
+    content: '';
+    display: block;
+    width: 30px;
+    position: absolute;
+    z-index: 1;
+    left: -5px;
+    top: 0;
+    bottom: -5px;
+  }
+  &:after {
+    @apply bg-gradient-to-l from-argon-menu-bg to-transparent;
+    content: '';
+    display: block;
+    width: 30px;
+    position: absolute;
+    z-index: 1;
+    right: -5px;
+    top: 0;
+    bottom: -5px;
+  }
 }
 </style>

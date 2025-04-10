@@ -43,7 +43,7 @@ pub fn try_fetch_server_record() -> Result<Option<ServerRecord>> {
     let conn = Connection::open(get_db_path())?;
     let mut stmt = conn.prepare("SELECT * FROM server")?;
     let mut server_iter = stmt.query_map([], |row| {
-        let status_str: String = row.get(4)?;
+        let status_str: String = row.get(5)?;
         let setup_status: SetupStatus = serde_json::from_str(&status_str)
             .unwrap_or(SetupStatus::default());
             
@@ -95,7 +95,7 @@ pub fn create_server_record(
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
 
     conn.execute(
-        "INSERT INTO server (address, key_private, key_public, setup_status, requires_password, created_at, updated_at)
+        "INSERT INTO server (address, private_key, public_key, setup_status, requires_password, created_at, updated_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         (address, private_key, public_key, setup_status_json, if requires_password { 1 } else { 0 }, &now, &now),
     )?;
@@ -150,7 +150,7 @@ pub fn update_server_record(
 
     conn.execute(
         "UPDATE server 
-         SET address = ?1, key_private = ?2, key_public = ?3, setup_status = ?4, requires_password = ?5, updated_at = ?6
+         SET address = ?1, private_key = ?2, public_key = ?3, setup_status = ?4, requires_password = ?5, updated_at = ?6
          WHERE id = ?7",
         (address, private_key, public_key, setup_status_json, if requires_password { 1 } else { 0 }, &now, id),
     )?;
@@ -208,7 +208,7 @@ fn db_file_exists() -> bool {
 }
 
 // Get the path where the database file should be located.
-fn get_db_path() -> String {
+pub fn get_db_path() -> String {
     let home_dir = dirs::home_dir().unwrap();
     home_dir.to_str().unwrap().to_string() + "/.config/argon-commander/database.sqlite"
 }

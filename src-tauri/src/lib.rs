@@ -1,7 +1,7 @@
 use tauri::Manager;
 use window_vibrancy::*;
 use server::Server;
-use account::Account;
+use account::{Account, BiddingRules};
 use parking_lot::Mutex;
 use std::sync::Arc;
 use tauri::State;
@@ -24,6 +24,8 @@ struct AppAccountRecord {
     requires_password: bool,
     #[serde(rename = "isSaved")]
     is_saved: bool,
+    #[serde(rename = "biddingConfig")]
+    bidding_config: Option<BiddingRules>,
 }
 
 #[derive(serde::Serialize)]
@@ -74,6 +76,7 @@ async fn fetch_account<'a>(account_record: State<'a, SharedAccountRecord>) -> Re
         private_json: account_record.private_json.clone(),
         requires_password: account_record.requires_password,
         is_saved: account_record.is_saved.clone(),
+        bidding_config: account_record.bidding_config.clone(),
     };
     Ok(record)
 }
@@ -99,6 +102,7 @@ async fn initialize_account<'a>(
         private_json: account.record.private_json.clone(),
         requires_password: account.record.requires_password,
         is_saved: true,
+        bidding_config: account.record.bidding_config.clone(),
     };
     Ok(record)
 }
@@ -139,6 +143,16 @@ async fn fetch_server_status<'a>(server_record: State<'a, SharedServerRecord>) -
     Ok(AppSetupStatus::from(server_record.lock().setup_status.clone()))
 }
 
+#[tauri::command]
+async fn save_bidding_rules<'a>(account_record: State<'a, SharedAccountRecord>, rules: BiddingRules) -> Result<(), String> {
+    let mut account = Account::from_record(account_record.lock().clone());
+    account.save_bidding_rules(rules).await.map_err(|e| e.to_string())?;
+
+    *account_record.lock() = account.record.clone();
+
+    Ok(())
+}
+
 ////////////////////////////////////////////////////////////
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -169,7 +183,14 @@ pub fn run() {
         .manage(account_record.clone())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
-        .invoke_handler(tauri::generate_handler![fetch_account, initialize_account, fetch_server, initialize_server, fetch_server_status])
+        .invoke_handler(tauri::generate_handler![
+            fetch_account, 
+            initialize_account, 
+            fetch_server, 
+            initialize_server, 
+            fetch_server_status,
+            save_bidding_rules,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -38,6 +38,7 @@ async-trait = "0.1.86"
 window-vibrancy = "0.5.3"
 cocoa = "0.26.0"
 objc = "0.2.7"
+core-foundation = "0.9.3"
 ssh-key = { version = "0.6", features = ["ed25519"] }
 rand = "0.8"
 dirs = "5.0"

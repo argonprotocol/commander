@@ -4,7 +4,6 @@ import mainchain from '../lib/Mainchain';
 import { invoke } from "@tauri-apps/api/core";
 import { Keyring, mnemonicGenerate, type KeyringPair } from '@argonprotocol/mainchain';
 import { u8aToHex } from '@polkadot/util';
-import { convertFixedU128ToBigNumber } from '../lib/Utils';
 
 export interface ICurrencyRecord {
   id: ICurrency;
@@ -22,7 +21,7 @@ export enum Currency {
 export type ICurrency = Currency.ARGN | Currency.USD | Currency.EURO | Currency.GBP | Currency.INR;
 
 export const useAccountStore = defineStore('account', () => {
-  let keyring: KeyringPair;
+  let seedAccount: KeyringPair;
 
   const isLoaded = Vue.ref(false);
     
@@ -35,11 +34,17 @@ export const useAccountStore = defineStore('account', () => {
     INR: 1,
   };
   
-  const address = Vue.ref('');
+  const seedAddress = Vue.ref('');
+  const mngAddress = Vue.ref('');
+  const llbAddress = Vue.ref('');
+  const vltAddress = Vue.ref('');
+
   const publicKey = Vue.ref('');
   const argonBalance = Vue.ref(0);
   const argonotBalance = Vue.ref(0);
   const walletBalance = Vue.computed(() => argonBalance.value + argonotToArgon(argonotBalance.value));
+  const biddingConfig: any | null = Vue.ref(null);
+  const requiresPassword = Vue.ref(false);
 
   const displayCurrencies: Record<ICurrency, ICurrencyRecord> = {
     [Currency.ARGN]: { id: Currency.ARGN, symbol: '₳', name: 'Argon' },
@@ -60,16 +65,13 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   async function loadExchangeRates() {
-    const client = await mainchain.client;
-
     const [otherResponse, argonResponse] = await Promise.all([
       fetch('https://open.er-api.com/v6/latest/USD'),
-      client.query.priceIndex.current()
+      mainchain.fetchExchangeRates()
     ]);
     
-    const priceIndex = argonResponse.value;
-    exchangeRates.USD = convertFixedU128ToBigNumber(priceIndex.argonUsdTargetPrice.toBigInt()).toNumber();  
-    exchangeRates.ARGNOT = convertFixedU128ToBigNumber(priceIndex.argonotUsdPrice.toBigInt()).toNumber() / exchangeRates.USD;
+    exchangeRates.USD = argonResponse.USD;
+    exchangeRates.ARGNOT = argonResponse.ARGNOT;
 
     const otherData = await otherResponse.json();
     if (!otherData.rates) return;
@@ -113,13 +115,21 @@ export const useAccountStore = defineStore('account', () => {
   async function createAccount() {
     const mnemonics = mnemonicGenerate();
 
-    keyring = new Keyring().createFromUri(mnemonics, { type: 'sr25519' });
-    address.value = keyring.address;
-    publicKey.value = u8aToHex(keyring.publicKey);
+    seedAccount = new Keyring().createFromUri(mnemonics, { type: 'sr25519' });
+    seedAddress.value = seedAccount.address;
+    publicKey.value = u8aToHex(seedAccount.publicKey);
+
+    const mngAccount = seedAccount.derive(`//mng`);
+    const llbAccount = seedAccount.derive(`//llb`);
+    const vltAccount = seedAccount.derive(`//vlt`);
+
+    mngAddress.value = mngAccount.address;
+    llbAddress.value = llbAccount.address;
+    vltAddress.value = vltAccount.address;
 
     const payload = {
-      address: address.value,
-      privateJson: JSON.stringify(keyring.toJson('')),
+      address: seedAddress.value,
+      privateJson: JSON.stringify(seedAccount.toJson('')),
       requiresPassword: false
     }
     await invoke('initialize_account', payload);
@@ -127,7 +137,10 @@ export const useAccountStore = defineStore('account', () => {
 
   async function load() {
     try {
-      address.value = ((await invoke('fetch_account')) as { address: string }).address;
+      const response = await invoke('fetch_account') as { address: string, biddingConfig: any, requiresPassword: boolean };
+      seedAddress.value = response.address;
+      biddingConfig.value = response.biddingConfig;
+      requiresPassword.value = response.requiresPassword;
     } catch (error) {
       if (error === 'AccountEmpty') {
         createAccount();
@@ -135,7 +148,7 @@ export const useAccountStore = defineStore('account', () => {
     }
     await Promise.all([
       loadExchangeRates(),
-      loadBalance(address.value),
+      loadBalance(seedAddress.value),
     ]);
     isLoaded.value = true;
   }
@@ -144,13 +157,17 @@ export const useAccountStore = defineStore('account', () => {
 
   return { 
     isLoaded,
-    address, 
+    seedAddress,
+    mngAddress,
+    llbAddress,
+    vltAddress,
     argonBalance, 
     argonotBalance, 
     displayCurrency, 
     displayCurrencies, 
     walletBalance, 
     currencySymbol,
+    biddingConfig,
     setDisplayCurrency,
     argonTo, 
     argonotTo, 

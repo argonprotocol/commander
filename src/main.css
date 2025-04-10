@@ -15,10 +15,22 @@
 
   --color-argon-menu-bg: #FEF8FF;
   --color-argon-menu-hover: #F7EDF8;
+  --color-argon-button: #A600D4;
+  --color-argon-button-hover: #8000A8;
+
+  --text-md: 15px; 
 }
 
 @utility inner-button-shadow {
   box-shadow: inset 1px 1px 0 0 rgba(255, 255, 255, 0.5);
+}
+
+@utility inner-input-shadow {
+  box-shadow: inset 1px 1px 1px 0 rgba(0, 0, 0, 0.1);
+}
+
+@utility inner-input-shadow-2 {
+  box-shadow: inset 2px 2px 1px 0 rgba(0, 0, 0, 0.1);
 }
 
 html {
@@ -28,6 +40,7 @@ html {
 }
 
 body {
+  @apply select-none;
   height: 100%;
   border-radius: 10px;
   overflow: hidden;
@@ -69,15 +82,15 @@ a:hover {
 }
 
 body.isDraggingIncrease {
-  cursor: e-resize !important;
+  cursor: n-resize !important;
   div, svg, span {
-    cursor: e-resize !important;
+    cursor: n-resize !important;
   }
 }
 
 body.isDraggingDecrease {
-  cursor: w-resize !important;
+  cursor: s-resize !important;
   div, svg, span {
-    cursor: w-resize !important;
+    cursor: s-resize !important;
   }
 }

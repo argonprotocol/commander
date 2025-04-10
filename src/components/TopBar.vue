@@ -15,16 +15,94 @@
         </li>
       </ul>
     </div>
-    <div class="flex flex-row mr-1 space-x-3 items-center">
-      <div v-if="accountStore.isLoaded" @click="openWalletOverlay()" class="flex flex-row mr-2 px-3 h-[30px] space-x-3 items-center hover:border-slate-400/50 hover:py-1 border border-transparent rounded-md cursor-pointer">
-        <div class="text-gray-900">
+    <div class="flex flex-row mr-1 space-x-2 items-center">
+      <Popover v-if="accountStore.isLoaded" class="relative" v-slot="{ open: isOpen }">
+        <PopoverButton v-if="walletNeedsFunding" class="flex flex-row text-white py-0.5 mr-0.5 px-[10px] h-[30px] items-center bg-argon-button hover:bg-argon-button-hover border rounded-md cursor-pointer">
+          <AlertIcon class="w-4 h-4 text-white mr-[7px] inline-block" />
+          <div class="font-bold text-md relative top-[0.5px]">Wallet Needs Funds</div>
+        </PopoverButton>
+        <PopoverButton v-else class="flex flex-row text-gray-900 pt-1 mr-0.5 px-[10px] h-[30px] items-center group hover:border-slate-400/50 border rounded-md cursor-pointer" :class="[ isOpen ? 'border-slate-400/50' : 'border-transparent' ]">
           {{ addCommas(accountStore.argonBalance) }} ARGN{{ accountStore.argonBalance === 1 ? '' : 's' }}
-        </div>
-        <div class="bg-slate-400/50 w-[1px] h-full"></div>
-        <div class="text-gray-900">
+          <PlusIcon class="relative top-[1px] w-4 h-4 text-gray-500/60 stroke-3 stroke-gray-500/60 mx-[5px] inline-block" />
           {{ addCommas(accountStore.argonotBalance) }} ARGNOT{{ accountStore.argonotBalance === 1 ? '' : 's' }}
-        </div>
-      </div>
+        </PopoverButton>
+        <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 translate-y-1" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-1">
+          <PopoverPanel v-slot="{ close: closeFn }" class="absolute -right-2 z-[1000] mt-2 flex w-screen max-w-min">
+            <div class="absolute -top-[15px] right-[118px] w-[30px] h-[15px] overflow-hidden">
+              <div class="relative top-[5px] left-[5px] w-[20px] h-[20px] rotate-45 bg-slate-50 ring-1 ring-gray-900/20"></div>
+            </div>
+            <div class="flex flex-row shrink rounded bg-white text-sm/6 font-semibold text-gray-900 shadow-lg py-1 px-1 ring-1 ring-gray-900/20">
+              
+              <section @click="openWalletOverlay('mng', closeFn)" class="relative flex flex-col items-center w-60 pt-7 px-6 hover:bg-argon-menu-hover/70 cursor-pointer">
+                <header class="text-lg font-bold text-gray-900">Mining Wallet</header>
+                <div class="relative">
+                  <MiningWalletIcon class="w-12 h-12 mt-5" />
+                  <AlertIcon class="text-argon-button absolute top-7 -left-1 w-4 h-4" />
+                </div>
+                <span class="text-4xl font-bold mt-5">$0<span class="opacity-50">.00</span></span>
+                
+                <div @click.stop="openFundMiningWalletOverlay(closeFn)" class="border border-fuchsia-950 shadow-md items-center justify-center whitespace-nowrap uppercase text-white bg-argon-button hover:bg-argon-button-hover rounded px-2 py-1 text-sm">
+                  Add Missing Funds
+                </div>
+                <!-- <span class="text-sm text-gray-500 flex flex-row items-center justify-center hover:bg-argon-menu-hover border border-transparent hover:border-gray-600/20 px-5 py-0.5 rounded-full cursor-pointer">0xDB29…2D03 <CopyIcon class="w-3 h-3 ml-1 inline-block" /></span> -->
+                
+                <ul class="relative flex flex-col items-center whitespace-nowrap w-full mt-6 mb-4">
+                  <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
+                    <div>0 ARGN</div>
+                    <div>$0.00</div>
+                  </li>
+                  <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
+                    <div>0 ARGNOT</div>
+                    <div>$0.00</div>
+                  </li>                    
+                </ul>
+              </section>
+
+              <div class="bg-slate-400/30 w-[1px] h-full mx-1"></div>
+              
+              <section @click="openWalletOverlay('llb', closeFn)" class="relative flex flex-col items-center w-60 pt-7 px-6 hover:bg-argon-menu-hover/70 cursor-pointer">
+                <header class="text-lg font-bold text-gray-900">Liquid Locking Wallet</header>
+                <div class="relative">
+                  <LiquidLockingWalletIcon class="w-12 h-12 mt-5" />
+                </div>
+                <span class="text-4xl font-bold mt-5">$0<span class="opacity-50">.00</span></span>
+                <span class="text-sm text-gray-500 flex flex-row items-center justify-center">{{abreviateAddress(accountStore.llbAddress)}} <CopyIcon class="w-3 h-3 ml-1 inline-block" /></span>
+                <ul class="flex flex-col items-center whitespace-nowrap w-full mt-7 mb-4">
+                  <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
+                    <div>0 ARGN</div>
+                    <div>$0.00</div>
+                  </li>
+                  <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
+                    <div>0 ARGNOT</div>
+                    <div>$0.00</div>
+                  </li>                    
+                </ul>
+              </section>
+              
+              <div class="bg-slate-400/30 w-[1px] h-full mx-1"></div>
+
+              <section @click="openWalletOverlay('vlt', closeFn)" class="relative flex flex-col items-center w-60 pt-7 px-6 hover:bg-argon-menu-hover/70 cursor-pointer">
+                <header class="text-lg font-bold text-gray-900">Vaulting Wallet</header>
+                <div class="relative">
+                  <VaultingWalletIcon class="w-12 h-12 mt-5" />
+                </div>
+                <span class="text-4xl font-bold mt-5">$0<span class="opacity-50">.00</span></span>
+                <span class="text-sm text-gray-500 flex flex-row items-center justify-center">{{ abreviateAddress(accountStore.vltAddress) }} <CopyIcon class="w-3 h-3 ml-1 inline-block" /></span>
+                <ul class="flex flex-col items-center whitespace-nowrap w-full mt-7 mb-4">
+                  <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
+                    <div>0 ARGN</div>
+                    <div>$0.00</div>
+                  </li>
+                  <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
+                    <div>0 ARGNOT</div>
+                    <div>$0.00</div>
+                  </li>                    
+                </ul>
+              </section>
+            </div>
+          </PopoverPanel>
+        </transition>
+      </Popover>
       <div v-else class="text-gray-900">
           Loading...
       </div>
@@ -36,7 +114,7 @@
       <div class="bg-slate-400/50 w-[1px] h-[28px]"></div>
       
       <Popover class="relative" v-slot="{ open: isOpen }">
-        <PopoverButton class="flex items-center justify-center text-sm/6 font-semibold text-gray-900 cursor-pointer border rounded-md w-[30px] h-[30px] focus:outline-none hover:border-slate-400/50" :class="[ isOpen ? 'border-slate-400/50' : 'border-transparent' ]">
+        <PopoverButton class="flex items-center justify-center text-sm/6 font-semibold text-gray-900 cursor-pointer border rounded-md w-[38px] h-[30px] focus:outline-none hover:border-slate-400/50" :class="[ isOpen ? 'border-slate-400/50' : 'border-transparent' ]">
           <img src="../assets/config.svg" class="w-5 h-5" />
         </PopoverButton>
 
@@ -59,18 +137,15 @@
                     Connect a new cloud server to<br />run your Argon mining operations
                   </p>
                 </li>
-                <li @click="openBiddingRulesOverlay(close)" class="py-2">
-                  <header>Set Up Bidding Rules</header>
+                <li @click="openBiddingRulesOverlay(close)" class="pt-2 pb-3">
+                  <header>Configure Bidding Rules</header>
                   <p>Set bid pricing and other required<br />parameters for upcoming mining auctions</p>
                 </li>
-                <li @click="openFundWalletOverlay(close)" class="pt-2 pb-3">
-                  <header>Fund Your Mining Account</header>
-                  <p>Ensure your account has enough argons<br />and argonots to financially operate</p>
-                </li>
-                <li class="bg-slate-400/40 h-[1px] w-full my-1"></li>
+                <li class="bg-slate-400/30 h-[1px] w-full my-1"></li>
                 <li class="py-2">
                   <header>Security Settings</header>
                 </li>
+                <li class="bg-slate-400/30 h-[1px] w-full my-1"></li>
                 <li class="py-2">
                   <header>Live Forever</header>
                 </li>
@@ -84,25 +159,43 @@
 </template>
 
 <script setup lang="ts">
+import * as Vue from 'vue';
 import { useBasicStore } from '../stores/basic';
 import { useServerStore } from '../stores/server';
 import { useAccountStore } from '../stores/account';
 import WindowControls from "../tauri-controls/WindowControls.vue";
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
-import { addCommas } from '../lib/Utils';
+import { PlusIcon } from '@heroicons/vue/24/outline';
+import { addCommas, abreviateAddress } from '../lib/Utils';
 import emitter from '../emitters/basic';
 import CurrencyMenu from './CurrencyMenu.vue';
+import MiningWalletIcon from '../assets/wallets/mining.svg';
+import LiquidLockingWalletIcon from '../assets/wallets/bitcoin.svg';
+import VaultingWalletIcon from '../assets/wallets/vault.svg';
+import CopyIcon from '../assets/copy.svg';
+import AlertIcon from '../assets/alert.svg';
 
 const basicStore = useBasicStore();
 const accountStore = useAccountStore();
 const serverStore = useServerStore();
 
-const openWalletOverlay = () => {
-  emitter.emit('openWalletOverlay');
+const walletNeedsFunding = Vue.computed(() => {
+  const { biddingConfig } = accountStore;
+  if (!biddingConfig) return false;
+  if (accountStore.argonBalance < biddingConfig.requiredArgons) return true;
+  if (accountStore.argonotBalance < biddingConfig.requiredArgonots) return true;
+  return false;
+});
+
+const openWalletOverlay = (walletId: 'mng' | 'llb' | 'vlt', closeFn: () => void) => {
+  emitter.emit('openWalletOverlay', { walletId, screen: 'receive' });
+  if (closeFn) {
+    closeFn();
+  }
 }
 
-const openFundWalletOverlay = (close: () => void) => {
-  emitter.emit('openWalletOverlay', { screen: 'receive' });
+const openFundMiningWalletOverlay = (close: () => void) => {
+  emitter.emit('openWalletOverlay', { walletId: 'mng', screen: 'receive' });
   if (close) {
     close();
   }

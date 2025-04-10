@@ -1,6 +1,6 @@
 <template>
   <Popover class="relative" v-slot="{ open: isOpen }">
-    <PopoverButton class="flex items-center justify-center text-sm/6 font-semibold text-gray-900 cursor-pointer border rounded-md w-[30px] h-[30px] focus:outline-none" :class="[ isOpen ? `${buttonBorderProperty} ${buttonBgProperty}` : `border-transparent hover:${buttonBorderProperty} hover:${buttonBgProperty}` ]">
+    <PopoverButton class="flex items-center justify-center text-sm/6 font-semibold text-gray-900 cursor-pointer border rounded-md w-[38px] h-[30px] focus:outline-none" :class="[ isOpen ? `${buttonBorderProperty} ${buttonBgProperty}` : `border-transparent hover:${buttonBorderProperty} hover:${buttonBgProperty}` ]">
       <ArgonSign v-if='accountStore.displayCurrency.id === "ARGN"' class="h-[18px]" />
       <DollarSign v-else-if='accountStore.displayCurrency.id === "USD"' class="h-[18px]" />
       <EuroSign v-else-if='accountStore.displayCurrency.id === "EURO"' class="h-[18px]" />

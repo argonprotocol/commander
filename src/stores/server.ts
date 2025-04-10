@@ -85,6 +85,8 @@ const steps: IStep[] = Vue.reactive([
   },
 ]);
 
+// STORE /////////////////////////////////////////////////////////////////
+
 export const useServerStore = defineStore('server', () => {
   const isLoading = Vue.ref(true);
   const isSaved = Vue.ref(false);
@@ -207,7 +209,7 @@ export const useServerStore = defineStore('server', () => {
     isLoading,
     isSaved, 
     isSetup,
-    saveServer,
     steps,
+    saveServer,
    }
 });

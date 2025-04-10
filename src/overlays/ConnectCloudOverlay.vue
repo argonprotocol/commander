@@ -20,16 +20,16 @@
                 Argon Commander will automatically setup and configure your mining server. All you need to do is activate it. The following steps show you how to activate a new server at Digital Ocean. Please follow each step exactly as shown -- the details are important!
               </p>
 
-              <ul Steps class="flex flex-col gap-4">
+              <ul Steps class="flex flex-col gap-4 w-full">
                 <li>
                   <header>1. Open DigitalOcean.com</header>
                   <div wrapper>
                     <div>
                       <p>
-                        Go to digitalocean.com and sign up for a new account.
+                        Go to digitalocean.com ("DO")and sign up for a new account. Skip to step 3 if you already have an account.
                       </p>
                       <p>
-                        Be aware that Digital Ocean routinely gives out $100-$200 in free server credits, but clicking the Sign
+                        Be aware that DO routinely gives out $100-$200 in free server credits, but clicking the Sign
                         Up link in the top right corner will NOT give you those credits. At the time of this writing, scrolling to the bottom of the page and clicking 
                         the "Get Started" button will give you the free credits.
                       </p>
@@ -43,20 +43,22 @@
                   <div wrapper>
                     <div>
                       <p>
-                        Fill out the form, confirm your email address, and input your credit card (there are multiple ways to get $100-$200 in free server credits… google it).
+                        Fill out the short form, confirm your email address, and input your credit card (even if you have free credits, you'll still need a card on file).
                       </p>
+                      <p>Don't skip past the welcome screen. We'll use this as the jumping off point for the next step.</p>
                     </div>
                     <img src="/create-do/step2.png" />
                   </div>
                 </li>
 
                 <li>
-                  <header>3. Click Deploy a Virtual Machine</header>
+                  <header>3. Click to Create a Virtual Machine</header>
                   <div wrapper>
                     <div>
                       <p>
-                        Whether you have an existing account or new account, you'll want to Create a Droplet (this is DO's lingo for creating a server).
-                        Once your account is setup, you will be given several options. Click the "Deploy a Virtual Machine."
+                        Once your account is setup, you will be given several options. Click the "Deploy a Virtual Machine" button. If you have an existing account,
+                        use the "Create a Droplet". Don't create a "GPU Droplet", just a standard Droplet. BTW, Droplets are DO's lingo for what everyone else calls 
+                        servers. Regardless, you'll be given a few options for how you want to create your server...
                       </p>
                     </div>
                     <img src="/create-do/step3.png" />
@@ -68,7 +70,7 @@
                   <div wrapper>
                     <div>
                       <p>
-                        Under the Choose An Image section, click the "Marketplace" tab. Then under "Recommended for You" select "Docker on Ubuntu 22.04".
+                        You can skip all the options at the top (DO's defaults are great). Under the Choose An Image section, click the "Marketplace" tab. Under "Recommended for You" select "Docker on Ubuntu 22.04".
                       </p>
                     </div>
                     <img src="/create-do/step4.png" />
@@ -80,7 +82,10 @@
                   <div wrapper>
                     <div>
                       <p>
-                        Under the Choose An Image section, click the "Marketplace" tab. Then under "Recommended for You" select "Docker on Ubuntu 22.04".
+                        Under the Choose Size section, select "Basic" for Droplet Type. 
+                      </p>
+                      <p>
+                        Under "CPU Options" select "Premium Intel" and then the $32/mo. This is plenty of power for Argon mining. And hopefully you have the $200 in credits which makes this free.
                       </p>
                     </div>
                     <img src="/create-do/step5.png" />
@@ -92,22 +97,60 @@
                   <div wrapper>
                     <div>
                       <p>
-                        Click the "Upload SSH Key" button and paste the following public key:
-                    <pre class="bg-slate-100 p-2 border border-slate-300 rounded-md">{{ serverStore.publicKey }}</pre>
+                        Skip down to the "Choose Authentication Method" and select "SSH Key" then "Add SSH Key". This will popup an overlay with a text box.
                       </p>
+                      <p>
+                        Copy and paste the following public key:
+                      </p>
+                      <div class="relative mb-3" @click="highlightAndCopy">
+                        <input type="text" :value="serverStore.publicKey" class="bg-white py-1 pl-4 pr-8 border border-slate-300 rounded-full w-full pointer-events-none" readonly />
+                        <div class="absolute right-8 top-1 w-10 bottom-1 bg-gradient-to-r from-transparent to-white pointer-events-auto"></div>
+                        <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <CopyIcon class="w-4 h-4" />
+                        </div>
+                        <div v-if="showCopied" class="absolute top-0 right-0 bottom-0 bg-gray-800 text-white px-6 flex items-center rounded-l-md rounded-r-full text-sm transition-opacity duration-200 whitespace-nowrap">
+                          Copied
+                        </div>
+                      </div>
+                      <p>You'll need to give this key a name. We recommend "Argon Commander". Click "Add SSH Key".</p>
                     </div>
                     <img src="/create-do/step6.png" />
                   </div>
                 </li>
 
                 <li>
-                  <header>6. Finalize Your New Server</header>
-                  Click the "Create Droplet" button.
+                  <header>7. Finalize Your New Server</header>
+                  <div wrapper>
+                    <div>
+                      <p>
+                        We're almost done. Click the "Create Droplet" button, and wait for your new server to boot up.
+                      </p>
+                    </div>
+                    <img src="/create-do/step7.png" />
+                  </div>
                 </li>
 
                 <li>
-                  <header>7. Copy and Paste Your IP Address</header>
-                  <input type="text" v-model="ipAddress" class="w-full border border-slate-300 rounded-md p-2" />
+                  <header>8. Copy and Paste Your IP Address</header>
+                  <div wrapper>
+                    <div>
+                      <p>
+                        Once your server is booted up, you'll need to copy and paste the IP address into the input box below.
+                      </p>
+                      <div v-if="ipAddressError" class="rounded-md bg-red-200 p-2 mb-2">
+                        <div class="flex">
+                          <div class="shrink-0">
+                            <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />
+                          </div>
+                          <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">IP Address cannot be left blank</h3>
+                          </div>
+                        </div>
+                      </div>
+                      <input type="text" v-model="ipAddress" placeholder="Your Server's IP Address" class="w-full border bg-white border-slate-300 rounded-md p-2" />
+                    </div>
+                    <img src="/create-do/step8.png" />
+                  </div>
                 </li>
               </ul>
             </div>
@@ -134,15 +177,17 @@ import { TransitionChild, TransitionRoot } from '@headlessui/vue';
 import emitter from '../emitters/basic';
 import { useServerStore } from '../stores/server';
 import BgOverlay from '../components/BgOverlay.vue';
+import CopyIcon from '../assets/copy.svg';
+import { ExclamationTriangleIcon } from '@heroicons/vue/20/solid'
 
 const serverStore = useServerStore();
 
 const isOpen = Vue.ref(false);
 const isSaving = Vue.ref(false);
+const showCopied = Vue.ref(false);
 
-const publicKey = Vue.ref('');
 const ipAddress = Vue.ref('');
-
+const ipAddressError = Vue.ref(false);
 emitter.on('openConnectCloudOverlay', async () => {
   isOpen.value = true;
 });
@@ -153,9 +198,24 @@ const closeOverlay = () => {
 
 async function addServer() {
   isSaving.value = true;
+  if (ipAddress.value === '') {
+    ipAddressError.value = true;
+    isSaving.value = false;
+    return;
+  }
   await serverStore.saveServer(ipAddress.value);
   closeOverlay();
   isSaving.value = false;
+}
+
+function highlightAndCopy(event: Event) {
+  const input = (event.target as HTMLElement).querySelector('input') as HTMLInputElement;
+  input.select();
+  navigator.clipboard.writeText(input.value);
+  showCopied.value = true;
+  setTimeout(() => {
+    showCopied.value = false;
+  }, 2000);
 }
 </script>
 
@@ -169,12 +229,15 @@ ul[Steps] li {
   }
   [wrapper] {
     @apply flex flex-row gap-x-10 items-start;
+    & > div {
+      @apply grow;
+    }
   }
   p {
     @apply mb-3;
   }
   img {
-    @apply w-60 object-contain border border-black/40 rounded-md;
+    @apply w-60 object-contain border border-black/40 rounded-md relative top-1;
   }
 }
 </style>

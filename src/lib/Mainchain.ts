@@ -1,10 +1,15 @@
 import { getClient, type ArgonClient } from '@argonprotocol/mainchain';
-import { formatArgonots } from './Utils';
+import { convertFixedU128ToBigNumber, formatArgonots } from './Utils';
 
 export type MainchainClient = ArgonClient;
 
+const BLOCK_REWARD_INCREASE_PER_INTERVAL = 0.001;
+const BLOCK_REWARD_MAX = 5;
+const BLOCK_REWARD_INTERVAL = 118;
+
 class Mainchain {
   public client = getClient('wss://rpc.argon.network');
+  // public client = getClient('wss://rpc.testnet.argonprotocol.org');
 
   public async getOwnershipAmountMinimum(): Promise<number> {
     const client = await this.client;
@@ -19,17 +24,48 @@ class Mainchain {
     return currentTick - genesisTick;
   }
 
-  public async currentArgonRewardsPerBlock(): Promise<number> {
+  public async currentMinimumRewardsPerBlock(): Promise<number> {
     const blocksSinceGenesis = await this.getTicksSinceGenesis();
     const initialReward = 0.5; // Initial Argon reward per block
-    const increasePerInterval = 0.001; // Increase in reward per interval
-    const intervalBlocks = 118; // Number of blocks per interval
 
     // Calculate the number of intervals
-    const numIntervals = Math.floor(blocksSinceGenesis / intervalBlocks);
+    const numIntervals = Math.floor(blocksSinceGenesis / BLOCK_REWARD_INTERVAL);
 
     // Calculate the current reward per block
-    return initialReward + (numIntervals * increasePerInterval);
+    const currentReward = initialReward + (numIntervals * BLOCK_REWARD_INCREASE_PER_INTERVAL);
+    return Math.min(currentReward, BLOCK_REWARD_MAX);
+  }
+
+  public async argonotBlockRewardsForThisSlot(): Promise<number> {
+    const rewardsPerBlock = await this.currentMinimumRewardsPerBlock();
+    const blocksPerSlot = 1_440;
+    return rewardsPerBlock * blocksPerSlot;
+  }
+
+  public async argonBlockRewardsForFullYear(currentRewardsPerBlock: number): Promise<number> {
+    const intervalsPerYear = (365 * 1440) / BLOCK_REWARD_INTERVAL;
+    const startingRewardsPerBlock = await this.currentMinimumRewardsPerBlock();
+
+    let totalRewards = 0;
+    let minimumRewardsPerBlock = startingRewardsPerBlock;
+    for (let i = 0; i < intervalsPerYear; i++) {
+      minimumRewardsPerBlock += BLOCK_REWARD_INCREASE_PER_INTERVAL;
+      minimumRewardsPerBlock = Math.min(minimumRewardsPerBlock, BLOCK_REWARD_MAX);
+      currentRewardsPerBlock = Math.max(minimumRewardsPerBlock, currentRewardsPerBlock);
+      totalRewards += currentRewardsPerBlock * BLOCK_REWARD_INTERVAL;
+    }
+
+    const intervalsPerYearRemainder = intervalsPerYear % 1;
+    if (intervalsPerYearRemainder > 0) {
+      totalRewards += currentRewardsPerBlock * (BLOCK_REWARD_INTERVAL * intervalsPerYearRemainder);
+    }
+
+    return totalRewards;
+  }
+
+  public async argonBlockRewardsForThisSlot(currentRewardsPerBlock: number): Promise<number> {
+    const blocksPerSlot = 1_440;
+    return currentRewardsPerBlock * blocksPerSlot;
   }
 
   public async getCurrentArgonTargetPrice(): Promise<number> {
@@ -59,6 +95,33 @@ class Mainchain {
     }
     
     return aggregateBidCosts;
+  }
+
+  public async fetchArgonsInCirculationMinusBitcoinLocked() {
+    const client = await this.client;
+
+    const argonsInCirculation = (await client.query.balances.totalIssuance()).toNumber();
+    const bitcoinArgons = (await client.query.mint.mintedBitcoinArgons()).toNumber();
+
+    return (argonsInCirculation - bitcoinArgons) / 1_000_000;
+  }
+
+  public async fetchCurrentRewardsPerBlock() {
+    const client = await this.client;
+
+    return 1.5;
+    // return (await client.query.blockRewards.argonsPerBlock()).toNumber() / 1_000_000;
+  }
+
+  public async fetchExchangeRates() {
+    const client = await this.client;
+    
+    
+    const priceIndex = (await client.query.priceIndex.current()).value;
+    const USD = convertFixedU128ToBigNumber(priceIndex.argonUsdTargetPrice.toBigInt()).toNumber();  
+    const ARGNOT = convertFixedU128ToBigNumber(priceIndex.argonotUsdPrice.toBigInt()).toNumber() / USD;
+
+    return { USD, ARGNOT };
   }
 }
 
