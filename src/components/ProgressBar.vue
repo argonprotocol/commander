@@ -1,5 +1,5 @@
 <template>
-  <div class="Component ProgressBar">
+  <div class="Component ProgressBar" :disabled="props.disabled">
     <div :style="{ width: `calc(${progress}% + 2px)` }">
       <span :style="{ opacity: progress / 25 }">{{ progressLabel }}</span>
     </div>
@@ -12,6 +12,7 @@ import * as Vue from 'vue';
 const props = defineProps<{
   progress: number;
   isSlow?: boolean;
+  disabled?: boolean;
 }>();
 
 const progressLabel = Vue.computed(() => {
@@ -40,7 +41,25 @@ const progressLabel = Vue.computed(() => {
     height: calc(100% + 2px);
     position: absolute;
     left: -1px;
-    top: -1px
+    top: -1px;
+    &:after {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 1px;
+      bottom: 1px;
+      width: 20px;
+      max-width: 100%;
+      background: linear-gradient(to right, white 10%, transparent 100%);
+    }
+  }
+  &[disabled="true"] {
+    div {
+      @apply bg-[#FAD1D8];
+      &:after {
+        background: linear-gradient(to right, #FAD1D8 10%, transparent 100%);
+      }
+    }
   }
   span {
     @apply text-xs text-gray-500 pr-2;

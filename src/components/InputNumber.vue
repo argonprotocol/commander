@@ -8,23 +8,21 @@
         @pointercancel="handlePointerUp"
         class="absolute top-[-2px] left-0 h-[5px] w-full cursor-n-resize" />
       <div 
-        @pointerdown="handlePointerDown" 
+        @pointerdown="handlePointerDown"
         @pointerup="handlePointerUp"
         @pointermove="emitDrag"
         @pointercancel="handlePointerUp"
         class="absolute bottom-[-2px] left-0 h-[5px] w-full cursor-s-resize" />
     </div>
     <div :class="[props.disabled ? 'border-dashed cursor-default' : '', hasFocus ? 'bg-slate-500/5 inner-input-shadow outline-2 -outline-offset-2 outline-argon-button' : '', [!hasFocus && !props.disabled ? 'hover:bg-white' : '']]" class="min-w-20 font-mono text-md flex flex-row w-full text-left py-[3px] border border-slate-700/50 rounded-md text-gray-800">
-      <span class="select-none pl-[10px] py-[1px]">{{ props.prefix }}</span>
-      <div :contenteditable="!props.disabled" ref="inputElem" @focus="handleFocus" @blur="handleBlur" @input="handleInput($event as Event)" @beforeinput="handleBeforeInput($event as InputEvent)" @paste="handlePaste($event as ClipboardEvent)" @keydown="handleKeyDown($event)" :class="[props.disabled ? 'opacity-70' : '']" class="inline-block w-auto focus:outline-none py-[1px]">
-        {{ props.format(value) }}
-      </div>
-      <span :class="[props.disabled ? 'pointer-events-none' : '', props.suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']" class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-default py-[1px]">
-        {{ props.suffix }}
+      <span class="select-none pl-[10px] py-[1px]">{{ prefix }}</span>
+      <div :contenteditable="!props.disabled" ref="inputElem" @focus="handleFocus" @blur="handleBlur" @input="handleInput" @beforeinput="handleBeforeInput($event as InputEvent)" @paste="handlePaste($event as ClipboardEvent)" @keydown="handleKeyDown($event)" :class="[props.disabled ? 'opacity-70' : '']" class="inline-block w-auto focus:outline-none py-[1px]"></div>
+      <span :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']" class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-default py-[1px]">
+        {{ suffix }}
         <span @click="moveCursorToEnd" @dblclick="selectAllText" class="absolute top-0 left-0 w-full h-full cursor-text" />
       </span>
       
-      <Menu v-if="props.recommends.length > 0">
+      <Menu v-if="props.options.length > 0">
         <MenuButton as="button" 
           @click="toggleMenu"
           :class="[showMenu ? 'text-gray-900' : 'text-gray-400']"
@@ -37,11 +35,11 @@
               <div class="relative top-[5px] left-[5px] w-[15px] h-[15px] rotate-45 bg-slate-50 ring-1 ring-gray-900/20"></div>
             </div>
             <div class="flex flex-col w-full h-full overflow-y-auto">
-              <MenuItem v-for="option of props.recommends" v-slot="{ active: isActive }" :value="option.value" @click.stop="selectItem(option)" :class="option.description ? 'border-b border-gray-500/20 last:border-b-0' : ''" class="text-md font-mono text-left font-bold text-gray-800 py-1 first:rounded-t last:rounded-b">
+              <MenuItem v-for="option of props.options" v-slot="{ active: isActive }" :value="option.value" @click.stop="selectItem(option)" :class="option.description ? 'border-b border-gray-500/20 last:border-b-0' : ''" class="text-md font-mono text-left font-bold text-gray-800 py-1 first:rounded-t last:rounded-b">
                 <div :class="[ isActive ? 'bg-argon-button text-white' : '']" class="flex flex-col pr-3 pl-2 py-0 cursor-pointer">
                   <div class="flex flex-row justify-between items-center">
                     <div class="whitespace-nowrap grow pr-3">{{ option.title || addCommas(option.value) }}</div>
-                    <div v-if="option.value !== undefined" class="opacity-70 font-light relative">{{ props.formatItem ? props.formatItem(option.value) : props.format(option.value) }}</div>
+                    <div v-if="option.value !== undefined" class="opacity-70 font-light relative">{{ formatFn(option.value) }}</div>
                   </div>
                   <div v-if="option.description" class="font-sans opacity-50 font-light">{{ option.description }}</div>
                 </div>
@@ -50,6 +48,7 @@
           </MenuItems>
         </transition>
       </Menu>
+      
       <div v-if="!props.disabled" class="flex flex-col mr-2">
         <NumArrow 
           @mousedown="startContinuousIncrement" 
@@ -72,28 +71,31 @@ import { LightBulbIcon } from '@heroicons/vue/24/outline';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
 import { addCommas } from '../lib/Utils';
 import NumArrow from '../assets/num-arrow.svg';
+import { useConfigStore } from '../stores/config';
+
+const configStore = useConfigStore();
 
 const props = withDefaults(defineProps<{
   modelValue: number;
   max?: number;
   min?: number;
-  recommends?: any[];
+  options?: any[];
   dragBy?: number;
   dragByMin?: number;
-  prefix?: string;
-  suffix?: string;
   disabled?: boolean;
-  format?: (value: number) => string;
-  formatItem?: (value: number) => string;
+  prefix?: string;
+  format?: 'argons' | 'percent' | 'integer' | 'minutes';
 }>(), {
-  recommends: () => [],
+  options: () => [],
   dragBy: 1,
   dragByMin: 0.01,
-  suffix: '',
   prefix: '',
   disabled: false,
-  format: (value: number) => value.toString(),
+  format: 'integer',
 });
+
+let loginValueOriginal = props.modelValue;
+let loginValueConverted = originalToConverted(props.modelValue);
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: number): void;
@@ -110,30 +112,71 @@ const decrementTimer = Vue.ref<number | null>(null);
 const initialDelay = 500; // Initial delay before starting continuous updates
 const updateInterval = 50; // Interval between updates once continuous mode starts
 
-const value = Vue.computed({
-  get: () => props.modelValue,
-  set: (value) => {
-    let constrainedValue = value;
-    if (props.max !== undefined && constrainedValue > props.max) {
-      return;
-    }
-    if (props.min !== undefined && constrainedValue < props.min) {
-      return;
-    }
-    
-    emit('update:modelValue', constrainedValue);
-  },
+const prefix = Vue.computed(() => {
+  return props.prefix + (props.format === 'argons' ? configStore.currencySymbol : '');
 });
+
+const suffix = Vue.computed(() => {
+  if (props.format === 'percent') {
+    return '%'; 
+  } else if (props.format === 'minutes') {
+    return loginValueConverted === 1 ? ' minute' : ' minutes';
+  } else {
+    return '';
+  }
+});
+
+function originalToConverted(valueOriginal: number) {
+  return props.format === 'argons' ? configStore.argonTo(valueOriginal) : valueOriginal;
+}
+
+function convertedToOriginal(convertedValue: number) {
+  return props.format === 'argons' ? configStore.toArgon(convertedValue) : convertedValue;
+}
+
+function updateInputValue(valueConverted: number) {
+  let valueOriginal = convertedToOriginal(valueConverted);
+  
+  if (props.max !== undefined && valueOriginal > props.max) {
+    valueOriginal = props.max;
+    valueConverted = originalToConverted(valueOriginal);
+  }
+  if (props.min !== undefined && valueOriginal < props.min) {
+    valueOriginal = props.min;
+    valueConverted = originalToConverted(valueOriginal);
+  }
+  
+  loginValueOriginal = valueOriginal;
+  loginValueConverted = valueConverted;
+
+  emit('update:modelValue', valueOriginal);
+  insertIntoInputElem(valueConverted);
+}
+
+function insertIntoInputElem(convertedValue: number) {
+  if (!inputElem.value) return;
+  
+  const hasFocus = document.activeElement === inputElem.value;
+  const caretPosition = hasFocus ? getCaretPosition() : 0;
+  inputElem.value.textContent = formatFn(convertedValue);
+  if (hasFocus) {
+    setCaretPosition(caretPosition);
+  }
+}
+
+function formatFn(value: number) {
+  return addCommas(value, props.format === 'integer' ? 0 : 2);
+}
 
 function moveCursorToEnd() {
   inputElem.value?.focus();
   const range = document.createRange();
-  const sel = window.getSelection();
+  const selection = window.getSelection();
   if (inputElem.value?.firstChild) {
     range.setStartAfter(inputElem.value.firstChild);
     range.collapse(true);
-    sel?.removeAllRanges();
-    sel?.addRange(range);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
   }
 }
 function handleFocus() {
@@ -153,20 +196,12 @@ function handleBlur() {
   if (showMenu.value) return;
   if (!activeElement || !$el.value?.contains(activeElement)) {    
     hasFocus.value = false;
-    // On blur, ensure the value is within range and emit it
-    let constrainedValue = value.value;
-    if (props.max !== undefined && constrainedValue > props.max) {
-      constrainedValue = props.max;
-    }
-    if (props.min !== undefined && constrainedValue < props.min) {
-      constrainedValue = props.min;
-    }
-    value.value = constrainedValue;
+    updateInputValue(loginValueConverted);
   }
 }
 
 let startDragY: number | null = null;
-let startValue: number = value.value;
+let startValue: number = loginValueConverted;
 let isDragging = false;
 let minStepsUp: number = 0;
 let minStepsDown: number = 0;
@@ -186,7 +221,7 @@ function handlePointerDown(event: PointerEvent) {
 
   button.setPointerCapture(event.pointerId);
   startDragY = event.clientY;
-  startValue = value.value;
+  startValue = loginValueConverted;
   
   // Calculate steps needed to reach nearest integers
   if (startValue % 1 !== 0) {
@@ -259,17 +294,17 @@ function emitDrag(event: PointerEvent) {
   }
 
   // Update visual feedback
-  if (newValue > value.value) {
+  if (newValue > loginValueConverted) {
     document.body.classList.add('isDraggingIncrease');
     document.body.classList.remove('isDraggingDecrease');
-  } else if (newValue < value.value) {
+  } else if (newValue < loginValueConverted) {
     document.body.classList.add('isDraggingDecrease');
     document.body.classList.remove('isDraggingIncrease');
   }
 
-  if (newValue !== value.value) {
+  if (newValue !== loginValueConverted) {
     isDragging = true;
-    value.value = newValue;
+    updateInputValue(newValue);
   }
 }
 
@@ -289,7 +324,7 @@ function handlePointerUp(event: PointerEvent) {
 function selectItem(item: any) {
   showMenu.value = false;
   if (item.value !== undefined) {
-    value.value = item.value;
+    updateInputValue(item.value);
   }
 }
 
@@ -347,23 +382,51 @@ function handlePaste(event: ClipboardEvent) {
 
   const numericValue = Number(finalValue.replace(/,/g, ''));
   if (!isNaN(numericValue)) {
-    value.value = numericValue;
+    updateInputValue(numericValue);
   }
 }
 
-function handleInput(event: Event) {
-  const target = event.target as HTMLElement;
-  if (!target) return;
-
-  const currentText = target.textContent || '';
+function handleInput() {
+  const currentText = inputElem.value?.textContent || '';
   const numericValue = Number(currentText.replace(/,/g, ''));
   if (!isNaN(numericValue)) {
-    value.value = numericValue;
+    updateInputValue(numericValue);
   }
+}
+
+function getCaretPosition() {
+  const selection = window.getSelection();
+  if (!selection || !selection.anchorNode || !inputElem.value) return 0;
+
+  const range = selection.getRangeAt(0);
+  const preCaretRange = range.cloneRange();
+  preCaretRange.selectNodeContents(inputElem.value);
+  preCaretRange.setEnd(range.endContainer, range.endOffset);
+  return preCaretRange.toString().length;
+}
+
+function setCaretPosition(position: number) {
+  if (!inputElem.value) return;
+
+  const selection = window.getSelection();
+  const range = document.createRange();
+  const textNode = inputElem.value.firstChild || inputElem.value;
+
+  // Ensure position is within bounds
+  const maxLength = (inputElem.value.textContent || '').length;
+  position = Math.min(Math.max(0, position), maxLength);
+
+  range.setStart(textNode, position);
+  range.setEnd(textNode, position);
+
+  selection?.removeAllRanges();
+  selection?.addRange(range);
 }
 
 function incrementValue() {
-  const startValue = Number(value.value)
+  const startValue = loginValueConverted;
+  const caretPosition = getCaretPosition();
+
   let incrementBy = props.dragBy;
   if (startValue < props.dragBy) {
     incrementBy = props.dragByMin || props.dragBy;
@@ -371,13 +434,14 @@ function incrementValue() {
     incrementBy = props.dragByMin || props.dragBy;
   }
   const newValue = startValue + incrementBy;
-  if (props.max === undefined || newValue <= props.max) {
-    value.value = newValue;
-  }
+  updateInputValue(newValue);
+  setCaretPosition(caretPosition);
 }
 
 function decrementValue() {
-  const startValue = Number(value.value)
+  const startValue = loginValueConverted;
+  const caretPosition = getCaretPosition();
+
   let decrementBy = props.dragBy;
   if (startValue <= props.dragBy) {
     decrementBy = props.dragByMin || props.dragBy;
@@ -385,9 +449,8 @@ function decrementValue() {
     decrementBy = props.dragByMin || props.dragBy;
   }
   const newValue = startValue - decrementBy;
-  if (props.min === undefined || newValue >= props.min) {
-    value.value = newValue;
-  }
+  updateInputValue(newValue);
+  setCaretPosition(caretPosition);
 }
 
 function startContinuousIncrement() {
@@ -409,9 +472,10 @@ function startContinuousIncrement() {
 }
 
 function startContinuousDecrement() {
-  // Clear any existing timers
-  stopContinuousUpdates();
-  
+  try {
+    // Clear any existing timers
+    stopContinuousUpdates();
+    
   // Initial decrement
   decrementValue();
   
@@ -422,8 +486,11 @@ function startContinuousDecrement() {
     }, updateInterval);
     
     // Store the interval ID in the timer ref
-    decrementTimer.value = intervalId;
-  }, initialDelay);
+      decrementTimer.value = intervalId;
+    }, initialDelay);
+  } catch (error) {
+    console.error('Error starting continuous decrement:', error);
+  }
 }
 
 function stopContinuousUpdates() {
@@ -466,11 +533,22 @@ function selectAllText() {
   }
 }
 
+Vue.watch(() => props.modelValue, (newModelValue) => {
+  const valueConverted = originalToConverted(newModelValue);
+  if (valueConverted !== loginValueConverted) {
+    updateInputValue(valueConverted);
+  }
+});
+
 Vue.watch(() => props.min, (newMin) => {
-  if (newMin !== undefined && value.value < newMin) {
-    value.value = newMin;
+  if (newMin !== undefined && loginValueConverted < newMin) {
+    updateInputValue(newMin);
   }
 }, { immediate: true });
+
+Vue.onMounted(() => {
+  insertIntoInputElem(loginValueConverted);
+});
 </script>
 
 <style scoped>

@@ -1,15 +1,19 @@
 <template>
-  <div v-if="serverStore.isLoading" class="flex flex-col items-center justify-center h-full opacity-50 text-2xl uppercase">Loading...</div>
-  <CloudMachineInitialized v-else-if="serverStore.isSetup" />
-  <CloudMachineInitializing v-else-if="serverStore.isSaved" />
+  <Dashboard v-if="serverConnection.hasMiningSeats" />
+  <FirstAuctionStarted v-else-if="serverConnection.isReadyForMining" />
+  <FinalSetupChecklist v-else-if="serverConnection.isProvisioned" />
+  <CloudMachineIsProvisioning v-else-if="serverConnection.isConnected" />
   <BlankSlate v-else />
 </template>
 
 <script setup lang="ts">
-import BlankSlate from './MiningPanel/BlankSlate.vue';
-import CloudMachineInitialized from './MiningPanel/CloudMachineInitialized.vue';
-import CloudMachineInitializing from './MiningPanel/CloudMachineInitializing.vue';
-import { useServerStore } from '../stores/server';
+import BlankSlate from './mining-panel/BlankSlate.vue';
+import FinalSetupChecklist from './mining-panel/FinalSetupChecklist.vue';
+import CloudMachineIsProvisioning from './mining-panel/CloudMachineIsProvisioning.vue';
+import FirstAuctionStarted from './mining-panel/FirstAuctionStarted.vue';
+import Dashboard from './mining-panel/Dashboard.vue';
+import { useConfigStore } from '../stores/config';
 
-const serverStore = useServerStore();
+const configStore = useConfigStore();
+const serverConnection = configStore.serverConnection;
 </script>

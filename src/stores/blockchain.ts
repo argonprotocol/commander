@@ -1,8 +1,9 @@
 import * as Vue from 'vue'
 import { defineStore } from 'pinia'
-import mainchain from '../lib/Mainchain';
+import mainchain, { type MainchainClient } from '../lib/bidding-calculator/Mainchain';
 
 export const useBlockchainStore = defineStore('blockchain', () => {
+  const isLoaded = Vue.ref(false);
   const recentBlocks = Vue.reactive<any[]>([]);
   const recentBlocksAreLoaded = Vue.ref(false);
   const lastBlockTimestamp = Vue.ref(0);
@@ -13,12 +14,21 @@ export const useBlockchainStore = defineStore('blockchain', () => {
   const currentAPR = Vue.ref(0);
   const currentAPY = Vue.ref(0);
   
-  async function addRecentBlock(client: any, blockHash: any) {
+  function extractBlockRewardsFromEvent(blockRewardEvent: any) {
+    if (!blockRewardEvent) {
+      return { argons: 0, argonots: 0 };
+    }
+    const argonots = (blockRewardEvent?.event?.data.rewards[0].ownership.toNumber() / 1_000_000).toFixed(2);
+    const argons = (blockRewardEvent?.event?.data.rewards[0].argons.toNumber() / 1_000_000).toFixed(2);
+    return { argons, argonots };
+  }
+  
+  async function addRecentBlock(client: MainchainClient, blockHash: any) {
     const block = await client.derive.chain.getBlock(blockHash);
     const events = await client.query.system.events.at(blockHash);
-    const blockRewardEvent = events.filter(({ event }: { event: any }) => event.section === "blockRewards" && event.method === "RewardCreated")[0];
-    const argonots = (blockRewardEvent?.event?.data[1][0].ownership.toNumber() / 1_000_000).toFixed(2);
-    const argons = (blockRewardEvent?.event?.data[1][0].argons.toNumber() / 1_000_000).toFixed(2);
+    const blockRewardEvent = events.filter(({ event }: { event: any }) => client.events.blockRewards.RewardCreated.is(event))[0];
+    const { argons, argonots } = extractBlockRewardsFromEvent(blockRewardEvent);
+
     const timestamp = await client.query.timestamp.now.at(blockHash);
     lastBlockTimestamp.value = timestamp.toNumber();
 
@@ -93,9 +103,10 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     ]);
     currentAPR.value = calculateAnnualPercentageRate(aggregateBidCosts.value, minimumBlockRewards.value);
     currentAPY.value = calculateAnnualPercentageYield(aggregateBidCosts.value, minimumBlockRewards.value);
+    isLoaded.value = true;
   }
 
   initialize();
 
-  return { recentBlocks, recentBlocksAreLoaded, lastBlockTimestamp, aggregateBidCosts, miningSeatCount, minimumBlockRewards, currentAPR, currentAPY }
+  return { isLoaded,recentBlocks, recentBlocksAreLoaded, lastBlockTimestamp, aggregateBidCosts, miningSeatCount, minimumBlockRewards, currentAPR, currentAPY }
 });

@@ -7,8 +7,6 @@ use russh::*;
 use ssh_key::{PrivateKey, PublicKey, Algorithm, LineEnding};
 use rand::rngs::OsRng;
 
-use crate::db::SetupStatus;
-
 pub struct SSH {
     client: client::Handle<ClientHandler>,
 }
@@ -52,8 +50,6 @@ impl SSH {
             anyhow::bail!("Authentication (with publickey) failed");
         }
 
-        println!("Connected");
-
         Ok(SSH { client })
     }
 
@@ -93,27 +89,37 @@ impl SSH {
         Ok((output, code.expect("program did not exit cleanly")))
     }
 
-    async fn run_script(&mut self, relative_script_path: &str) -> Result<()> {
-        let local_script_path = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), relative_script_path);
-        let remote_script_path = format!("~/{}", relative_script_path);
-        
+    pub async fn upload_file(&mut self, contents: &str, remote_path: &str) -> Result<()> {
         // First, create the script in the remote server's home directory
         let mut channel = self.client.channel_open_session().await?;
-        let scp_command = format!("cat > {}", remote_script_path);
+        let scp_command = format!("cat > {}", remote_path);
         channel.exec(true, scp_command).await?;
-        
-        println!("Copying local script {} TO remote server {}", local_script_path, remote_script_path);
 
-        // Write the contents of the setup script
-        if let Ok(script_contents) = std::fs::read_to_string(local_script_path) {
-            channel.data(script_contents.as_bytes()).await?;
-        } else {
-            anyhow::bail!("Failed to read setup script");
-        }
+        println!("Creating remote file {}", remote_path);
+
+        // Write the contents of the setup script        
+        channel.data(contents.as_bytes()).await?;
         channel.eof().await?;
-        
+
         // Wait for the copy to complete
         while let Some(_) = channel.wait().await {}
+
+        Ok(())
+    }
+    
+    pub async fn start_script(&mut self, relative_script_path: &str) -> Result<()> {
+        let local_script_path = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), relative_script_path);
+
+        let script_contents = match std::fs::read_to_string(&local_script_path) {
+            Ok(contents) => contents,
+            Err(_) => {
+                anyhow::bail!("Failed to read setup script");
+            }
+        };
+
+        let remote_script_path = format!("~/{}", relative_script_path);
+        
+        self.upload_file(&script_contents, &remote_script_path).await?;
 
         // Now execute the script
         let shell_command = format!("chmod +x {} && nohup {} > /dev/null 2>&1 &", remote_script_path, remote_script_path);
@@ -153,77 +159,6 @@ impl SSH {
         }
 
         Ok(())
-    }
-
-    pub async fn setup_server(&mut self) -> Result<SetupStatus, anyhow::Error> {
-        self.run_command("mkdir -p ~/setup-logs").await?;
-        let (output, _code) = self.run_command("ls ~/setup-logs").await?;
-        let filenames: Vec<&str> = output.split("\n").filter(|s| !s.is_empty()).collect();
-        
-        if filenames.is_empty() {
-            self.run_script("setup-script.sh").await?;
-            println!("RAN SCRIPT");
-        } else {
-            println!("FILENAMES:");
-            for filename in &filenames {
-                if !filename.is_empty() {
-                    println!("  - {}", filename);
-                }
-            }    
-        }
-
-        let mut status = SetupStatus::default();
-
-        if filenames.contains(&"ubuntu.finished") {
-            status.ubuntu = 100;
-        } else if filenames.contains(&"ubuntu.failed") {
-            return Err(anyhow::anyhow!("ubuntu"));
-        } else if filenames.contains(&"ubuntu.started") {
-            status.ubuntu = 1;
-            return Ok(status)
-        }
-
-        if filenames.contains(&"git.finished") {
-            status.git = 100;
-        } else if filenames.contains(&"git.failed") {
-            return Err(anyhow::anyhow!("git"));
-        } else if filenames.contains(&"git.started") {
-            status.ubuntu = 1;
-            return Ok(status)
-        }
-
-        if filenames.contains(&"docker.finished") {
-            status.docker = 100;
-        } else if filenames.contains(&"docker.failed") {
-            return Err(anyhow::anyhow!("docker"));
-        } else if filenames.contains(&"docker.started") {
-            status.docker = 1;
-            return Ok(status)
-        }
-
-        if filenames.contains(&"blocksync.failed") {
-            return Err(anyhow::anyhow!("blocksync"));
-        } else if filenames.contains(&"blocksync.started") {
-            status.blocksync = self.fetch_blocksync_progress().await?;
-            return Ok(status)
-        } else {
-            return Ok(status)
-        }
-    }
-
-    async fn fetch_blocksync_progress(&mut self) -> Result<f32> {
-        // Run commands sequentially instead of concurrently
-        let (argon_output, _) = self.run_command("docker exec argon-commander-deploy-argon-miner-1 syncstatus.sh").await?;
-        let (bitcoin_output, _) = self.run_command("docker exec argon-commander-deploy-bitcoin-1 syncstatus.sh").await?;
-        
-        let argon_progress = argon_output.trim().trim_end_matches('%').parse::<f32>().unwrap_or(0.0);
-        let bitcoin_progress = bitcoin_output.trim().trim_end_matches('%').parse::<f32>().unwrap_or(0.0);
-        let progress = bitcoin_progress; //(argon_progress + bitcoin_progress) / 2.0;
-        
-        println!("ARGON PROGRESS = {}", argon_progress);
-        println!("BITCOIN PROGRESS = {}", bitcoin_progress);
-
-        Ok(progress)
     }
     
     pub async fn close(&mut self) -> Result<()> {

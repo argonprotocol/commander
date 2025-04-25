@@ -3,7 +3,7 @@
     <div @click.stop class="absolute top-[22px] left-0">
       <WindowControls />
     </div>
-    <div v-if="props.allowCurrencyMenu" @click.stop class="absolute top-[13px] right-[71px]">
+    <div v-if="props.allowCurrencyMenu" @click.stop class="absolute hidden top-[13px] right-[128px]">
       <CurrencyMenu :isDark="true" />
     </div>
   </div>
@@ -27,7 +27,7 @@ let dragStartX = 0;
 let dragStartY = 0;
 let wasDragged = false;
 
-function emitClose(e: PointerEvent) {
+function emitClose(e: MouseEvent) {
   if (wasDragged) {
     e.preventDefault();
     e.stopPropagation();

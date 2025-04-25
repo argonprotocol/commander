@@ -6,7 +6,7 @@
         <BgOverlay @close="maybeCloseOverlay" />
         <div ref="dialogPanel" class="absolute top-[40px] left-3 right-3 bottom-3 flex flex-col overflow-hidden rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all" style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255,255,255,1)">
           
-          <BidScenarioOverlay v-if="isShowingScenarioOverlay" :data="scenarioData" />
+          <BidBreakdownTooltip v-if="isShowingBreakdownTooltip" :data="scenarioData" />
           
           <div v-if="isLoaded" class="flex flex-col h-full w-full">
             <h2 class="relative text-3xl font-bold text-center border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 cursor-pointer text-[#672D73]" style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)">
@@ -27,25 +27,25 @@
                   <div class="flex flex-col gap-6 pl-2 pt-6 pb-2 font-mono text-md">
                     <div class="flex flex-row items-center gap-2">
                       <header class="whitespace-nowrap pr-1">Num of Seats You Want to Win = </header>
-                      <InputNumber v-model="calculatedTotalSeats" :max="100" :min="1" :recommends="calculatedTotalSeatMenu" class="w-4/12" />
+                      <InputNumber v-model="calculatedTotalSeats" :max="100" :min="1" :options="calculatedTotalSeatMenu" class="w-4/12" />
                       <InfoTip>This determines how many argons and argonots your account will need before it can start bidding.</InfoTip>
                     </div>
                     <div class="flex flex-row items-center gap-2">
                       <header class="whitespace-nowrap pr-1">Expected Argon Circulation &nbsp; = </header>
-                      <InputMenu :options="{ name: 'Between', value: 1 }" :disabled="true" />
-                      <InputNumber v-model="calculatedArgonCirculationMin" :disabled="true" :format="addCommas" />
+                      <InputMenu :options="{ value: 'Between' }" :disabled="true" />
+                      <InputNumber v-model="calculatedArgonCirculationMin" :disabled="true" />
                       <span>and</span>
-                      <InputNumber v-model="calculatedArgonCirculation" :max="5_000_000_000" :min="calculatedArgonCirculationMin" :dragBy="1_000_000" :recommends="calculatedArgonCirculationMenu" :format="addCommas" />
+                      <InputNumber v-model="calculatedArgonCirculation" :max="5_000_000_000" :min="calculatedArgonCirculationMin" :dragBy="1_000_000" :options="calculatedArgonCirculationMenu" />
                       <span class="pl-1">Within the Next Year</span>
                       <InfoTip>These contribute to mining rewards. We use this to help calculate your optimistic scenarios below.</InfoTip>
                     </div>
                     <div class="flex flex-row items-center gap-2">
                       <header class="whitespace-nowrap pr-1">Argonot Ten Day Price Change = </header>
-                      <InputMenu v-model="argonotPriceChangeType" :options="[{ name: 'Between', value: 1 }, { name: 'Exactly', value: 2}]" />
-                      <InputNumber v-model="argonotPriceChangeMin" :max="100" :min="-100" :prefix="argonotPriceChangeMin > 0 ? '+' : ''" :format="x => x.toFixed(2)" suffix="%" />
-                      <div v-if="argonotPriceChangeType === 1" class="flex flex-row items-center gap-2">
+                      <InputMenu v-model="argonotPriceChangeType" :options="[{ value: 'Between' }, { value: 'Exactly' }]" />
+                      <InputNumber v-model="argonotPriceChangeMin" :max="100" :min="-100" :prefix="argonotPriceChangeMin > 0 ? '+' : ''" format="percent" />
+                      <div v-if="argonotPriceChangeType === 'Between'" class="flex flex-row items-center gap-2">
                         <span>and</span>
-                        <InputNumber v-model="argonotPriceChangeMax" :max="100" :min="argonotPriceChangeMin+1" :prefix="argonotPriceChangeMin > 0 ? '+' : ''" :format="x => x.toFixed(2)" suffix="%" />
+                        <InputNumber v-model="argonotPriceChangeMax" :max="100" :min="argonotPriceChangeMin+1" :prefix="argonotPriceChangeMax > 0 ? '+' : ''" format="percent" />
                       </div>
                       <span class="pl-1">Within the Next Ten Days</span>
                       <InfoTip>The price of ARGNOTs naturally fluctuate on the open market. The has an affect on your mining returns.</InfoTip>
@@ -61,19 +61,19 @@
                     <label class="font-bold mt-6 mb-1.5">Starting Amount</label>
                     <div class="flex flex-row items-center gap-2">
                       <InputMenu v-model="startingAmountFormulaType" :options="[
-                        { name: 'Previous Day\'s Lowest Bid', value: 1 }, 
-                        { name: 'Minimum Breakeven', value: 2 }, 
-                        { name: 'Optimistic Breakeven', value: 3 }, 
-                        { name: 'Custom Amount', value: 4 }
+                        { name: 'Previous Day\'s Lowest Bid', value: 'PreviousLowestBid' }, 
+                        { name: 'Minimum Breakeven', value: 'MinimumBreakeven' }, 
+                        { name: 'Optimistic Breakeven', value: 'OptimisticBreakeven' }, 
+                        { name: 'Custom Amount', value: 'Custom' }
                       ]" />
-                      <template v-if="startingAmountFormulaType < 4">
+                      <template v-if="startingAmountFormulaType !== 'Custom'">
                         =
-                        <InputNumber v-model="startingAmountFormulaPrice" :prefix="currencySymbol" :disabled="true" :format="x => addCommas(argonTo(x), 2)" />
+                        <InputNumber v-model="startingAmountFormulaPrice" :disabled="true" format="argons" />
                         +
-                        <InputNumber v-model="startingAmountFormulaIncrease" :min="-100" :dragBy="0.01" :format="x => x.toFixed(2)" suffix="%" />
+                        <InputNumber v-model="startingAmountFormulaIncrease" :min="-100" :dragBy="0.01" format="percent" />
                       </template>
                       = 
-                      <InputNumber v-model="startingAmount" :min="0" :prefix="currencySymbol" :format="x => addCommas(argonTo(x), 2)" :disabled="startingAmountFormulaType !== 4" :class="[startingAmountFormulaType === 4 ? 'min-w-60' : '']" />
+                      <InputNumber v-model="startingAmount" :min="0" format="argons" :disabled="startingAmountFormulaType !== 'Custom'" :class="[startingAmountFormulaType === 'Custom' ? 'min-w-60' : '']" />
                     </div>
                   </div>
                   <div class="flex flex-col w-4/12">
@@ -83,15 +83,15 @@
                       <div class="font-light text-sm leading-6">This box calculates your APR (Annual Percentage Rate) on a bid of {{currencySymbol}}{{ argonTo(startingAmount) < 10 ? argonTo(startingAmount).toFixed(2) : argonTo(startingAmount).toFixed(0) }}.</div>
                       
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
-                      <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showScenarioOverlay(startingOptimisticCalculator)" @mouseleave="hideScenarioOverlay()">
-                        <BidScenarioOverlayArrow />
+                      <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showBreakdownTooltip(startingOptimisticCalculator)" @mouseleave="hideBreakdownTooltip()">
+                        <BidBreakdownTooltipArrow />
                         <div class="font-bold text-sm uppercase">Optimistic APR</div>
                         <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(startingOptimisticAPR, 999_999), 0) }}{{ startingOptimisticAPR > 999_999 ? '+' : '' }}%</div>
                         <div class="font-light text-md">({{addCommas(startingOptimisticTDPR, 0)}}% Every 10 Days)</div>
                       </div>
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
-                      <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showScenarioOverlay(startingMinimumCalculator)" @mouseleave="hideScenarioOverlay()">
-                        <BidScenarioOverlayArrow />
+                      <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showBreakdownTooltip(startingMinimumCalculator)" @mouseleave="hideBreakdownTooltip()">
+                        <BidBreakdownTooltipArrow />
                         <div class="font-bold text-sm uppercase">Minimum APR</div>
                         <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(startingMinimumAPR, 999_999), 0) }}{{ startingMinimumAPR > 999_999 ? '+' : '' }}%</div>
                         <div class="font-light text-md">({{addCommas(startingMinimumTDPR, 0)}}% Every 10 Days)</div>
@@ -107,11 +107,11 @@
 
                     <label class="font-bold mt-6 mb-1.5">Delay Before Submitting Next Bid</label>
                     <!-- <p class="opacity-80 font-light">By default your bot tries to reup your losing bids in the next block (next minute), however, you can increase this delay.</p> -->
-                    <InputNumber v-model="rebiddingDelay" :min="1" :suffix="`${rebiddingDelay === 1 ? ' minute' : ' minutes'}`" class="w-8/12" />
+                    <InputNumber v-model="rebiddingDelay" :min="1" class="w-8/12" />
                     
                     <label class="font-bold mt-6 mb-1.5">Increment By</label>
                     <!-- <p class="opacity-80 font-light">The amount you want to increment your losing bids in order to get back in the game.</p> -->
-                    <InputNumber v-model="incrementAmount" :min="0.01" :dragBy="1" :dragByMin="0.01" prefix="₳" :format="x => addCommas(x.toFixed(2))" class="w-8/12" />
+                    <InputNumber v-model="incrementAmount" :min="0.01" :dragBy="1" :dragByMin="0.01" format="argons" class="w-8/12" />
                   </div>
                   <div class="flex flex-col w-4/12">
                     <header>&nbsp;</header>
@@ -140,19 +140,19 @@
                     <label class="font-bold mt-6 mb-1.5">Your Final Bid Price</label>
                     <div class="flex flex-row items-center gap-2">
                       <InputMenu v-model="finalAmountFormulaType" :options="[
-                        { name: 'Previous Day\'s Winning Bid', value: 1 }, 
-                        { name: 'Minimum Breakeven', value: 2 }, 
-                        { name: 'Optimistic Breakeven', value: 3 }, 
-                        { name: 'Custom Amount', value: 4 }
+                        { name: 'Previous Day\'s Winning Bid', value: 'PreviousHighestBid' }, 
+                        { name: 'Minimum Breakeven', value: 'MinimumBreakeven' }, 
+                        { name: 'Optimistic Breakeven', value: 'OptimisticBreakeven' }, 
+                        { name: 'Custom Amount', value: 'Custom' }
                       ]" />
-                      <template v-if="finalAmountFormulaType < 4">
+                      <template v-if="finalAmountFormulaType !== 'Custom'">
                         =
-                        <InputNumber v-model="finalAmountFormulaPrice" :prefix="currencySymbol" :disabled="true" :format="x => addCommas(argonTo(x), 2)" />
+                        <InputNumber v-model="finalAmountFormulaPrice" :disabled="true" format="argons" />
                         +
-                        <InputNumber v-model="finalAmountFormulaIncrease" :min="-100" :dragBy="0.01" :format="x => x.toFixed(2)" suffix="%" />
+                        <InputNumber v-model="finalAmountFormulaIncrease" :min="-100" :dragBy="0.01" format="percent" />
                       </template>
                       = 
-                      <InputNumber v-model="finalAmount" :min="0" :prefix="currencySymbol" :format="x => addCommas(argonTo(x), 2)" :disabled="finalAmountFormulaType !== 4" :class="[finalAmountFormulaType === 4 ? 'min-w-60' : '']" />
+                      <InputNumber v-model="finalAmount" :min="0" format="argons" :disabled="finalAmountFormulaType !== 'Custom'" :class="[finalAmountFormulaType === 'Custom' ? 'min-w-60' : '']" />
                     </div>
                   </div>
                   <div class="flex flex-col w-4/12">
@@ -162,15 +162,15 @@
                       <div class="font-light text-sm leading-6">This box calculates your APR (Annual Percentage Rate) on a bid of {{currencySymbol}}{{ argonTo(finalAmount) < 10 ? argonTo(finalAmount).toFixed(2) : argonTo(finalAmount).toFixed(0) }}.</div>
 
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
-                      <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showScenarioOverlay(finalOptimisticCalculator)" @mouseleave="hideScenarioOverlay()">
-                        <BidScenarioOverlayArrow />
+                      <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showBreakdownTooltip(finalOptimisticCalculator)" @mouseleave="hideBreakdownTooltip()">
+                        <BidBreakdownTooltipArrow />
                         <div class="font-bold text-sm uppercase">Optimistic APR</div>
                         <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(finalOptimisticAPR, 999_999), 0) }}{{ finalOptimisticAPR > 999_999 ? '+' : '' }}%</div>
                         <div class="font-light text-md">({{addCommas(finalOptimisticTDPR, 0)}}% Every 10 Days)</div>
                       </div>
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
-                      <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showScenarioOverlay(finalMinimumCalculator)" @mouseleave="hideScenarioOverlay()">
-                        <BidScenarioOverlayArrow />
+                      <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showBreakdownTooltip(finalMinimumCalculator)" @mouseleave="hideBreakdownTooltip()">
+                        <BidBreakdownTooltipArrow />
                         <div class="font-bold text-sm uppercase">Minimum APR</div>
                         <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(finalMinimumAPR, 999_999), 0) }}{{ finalMinimumAPR > 999_999 ? '+' : '' }}%</div>
                         <div class="font-light text-md">({{addCommas(finalMinimumTDPR, 0)}}% Every 10 Days)</div>
@@ -215,7 +215,7 @@
                         <div :class="throttleSpending ? '' : 'opacity-50'" class="flex flex-row items-center cursor-default">
                           <div @click="throttleSpending = !throttleSpending" class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2">CAP SPENDING</div>
                           <span @click="throttleSpending = !throttleSpending">Spend no more than</span>
-                          <InputNumber @click="throttleSpending = true" v-model="throttleSpendingAmount" :min="finalAmount" :dragBy="1" :prefix="currencySymbol" :format="x => argonTo(x).toFixed(2)" class="mx-2" />
+                          <InputNumber @click="throttleSpending = true" v-model="throttleSpendingAmount" :min="finalAmount" :dragBy="1" format="argons" class="mx-2" />
                           <span @click="throttleSpending = !throttleSpending">per slot</span>
                         </div>
                       </li>
@@ -306,8 +306,8 @@
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
                       <div v-if="disableBot === 'Now'" class="text-sm uppercase px-10 py-10 opacity-50">Use the settings on the left to enable the bot so we can calculate your returns.</div>
                       <div v-else>
-                        <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showScenarioOverlay(startingOptimisticCalculator)" @mouseleave="hideScenarioOverlay()">
-                          <BidScenarioOverlayArrow />
+                        <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showBreakdownTooltip(startingOptimisticCalculator)" @mouseleave="hideBreakdownTooltip()">
+                          <BidBreakdownTooltipArrow />
                           <div v-if="['AfterFirstSeat','AfterFirstSlot'].includes(disableBot)">
                             <div class="font-bold text-sm uppercase">Optimistic 10-Day Yield</div>
                             <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(startingOptimisticTDPR, 999_999), 0) }}{{ startingOptimisticTDPR > 999_999 ? '+' : '' }}%</div>
@@ -320,8 +320,8 @@
                           </div>
                         </div>
                         <div class="h-[1px] bg-yellow-800/20 my-4"></div>
-                        <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showScenarioOverlay(finalMinimumCalculator)" @mouseleave="hideScenarioOverlay()">
-                          <BidScenarioOverlayArrow />
+                        <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showBreakdownTooltip(finalMinimumCalculator)" @mouseleave="hideBreakdownTooltip()">
+                          <BidBreakdownTooltipArrow />
                           <div v-if="['AfterFirstSeat','AfterFirstSlot'].includes(disableBot)">
                             <div class="font-bold text-sm uppercase">Minimum 10-Day Yield</div>
                             <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(finalMinimumTDPR, 999_999), 0) }}{{ finalMinimumTDPR > 999_999 ? '+' : '' }}%</div>
@@ -350,7 +350,10 @@
             
             <div class="flex flex-row justify-end px-14 border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
               <div class="grow font-bold text-lg text-slate-900/70">
-                Required Funds: {{ requiredArgons }} ARGN{{ requiredArgons === 1 ? '' : 's' }} + {{ requiredArgonots }} ARGONOT{{ requiredArgonots === 1 ? '' : 's' }}
+                Tokens Needed: 
+                <template v-if="requiredArgons !== desiredArgons">{{ addCommas(requiredArgons) }} - </template>{{ addCommas(desiredArgons) }} Argon{{ desiredArgons === 1 ? '' : 's' }} 
+                + 
+                <template v-if="requiredArgonots !== desiredArgonots">{{ addCommas(requiredArgonots) }} - </template>{{ addCommas(desiredArgonots) }} Argonot{{ desiredArgonots === 1 ? '' : 's' }}
               </div>
               <div class="flex flex-row space-x-4">
                 <button @click="closeOverlay" class="border border-argon-button text-xl font-bold text-gray-500 px-7 py-1 rounded-md cursor-pointer">
@@ -379,34 +382,38 @@ import { storeToRefs } from 'pinia';
 import { Dialog, DialogPanel, TransitionRoot } from '@headlessui/vue';
 import emitter from '../emitters/basic';
 import { addCommas } from '../lib/Utils';
-import { useAccountStore } from '../stores/account';
+import { useConfigStore } from '../stores/config';
 import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon, LightBulbIcon } from '@heroicons/vue/24/outline';
 import RadioButton from '../components/RadioButton.vue';
 import InputNumber from '../components/InputNumber.vue';
 import InputMenu from '../components/InputMenu.vue';
-import BiddingCalculator from '../lib/BiddingCalculator';
+import BiddingCalculator, { type IBiddingRules } from '../lib/bidding-calculator';
 import InfoTip from '../components/InfoTip.vue';
-import BidScenarioOverlay from './BidScenarioOverlay.vue';
-import BidScenarioOverlayArrow from './BidScenarioOverlayArrow.vue';
-import BiddingCalculatorData from '../lib/BiddingCalculatorData';
+import BidBreakdownTooltip from './BidBreakdownTooltip.vue';
+import BidBreakdownTooltipArrow from './BidBreakdownTooltipArrow.vue';
+import BiddingCalculatorData from '../lib/bidding-calculator/BiddingCalculatorData';
 import { invoke } from '@tauri-apps/api/core';
 
-const accountStore = useAccountStore();
+const configStore = useConfigStore();
 
-const { argonTo } = accountStore;
-const { currencySymbol } = storeToRefs(accountStore);
+const { argonTo } = configStore;
+const { currencySymbol } = storeToRefs(configStore);
 
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
-const hasExistingRules = !!accountStore.biddingConfig?.rules;
+
+const hasExistingRules = Vue.ref(false);
 
 const dialogPanel = Vue.ref(null);
-const isShowingScenarioOverlay = Vue.ref(false);
+const isShowingBreakdownTooltip = Vue.ref(false);
 
-const requiredArgons = Vue.ref(0);
-const requiredArgonots = Vue.ref(0);
+const requiredArgons = Vue.ref(1);
+const requiredArgonots = Vue.ref(1);
+
+const desiredArgons = Vue.ref(1);
+const desiredArgonots = Vue.ref(1);
 
 const calculatorData = new BiddingCalculatorData();
 const startingMinimumCalculator = new BiddingCalculator('Minimum', calculatorData);
@@ -429,10 +436,10 @@ const scenarioData = Vue.ref({} as any);
 
 // Total Seats
 const calculatedTotalSeatMenu = Vue.ref([
-  { title: 'Beginner', value: 1, description: 'Recommended if you\'re just starting.', current: true },
-  { title: 'Believer', value: 3, description: 'Be a major player with multiple seats.', current: false },
-  { title: 'Gambler', value: 10, description: 'You realize argon is going to the moon.', current: false },
-  { title: 'Overly Aggressive', value: 20, description: 'We never recommend this to anyone.', current: false },
+  { title: 'Curious Beginner', value: 1, description: 'Recommended if you\'re just starting.', current: true },
+  { title: 'Committed Supporter', value: 3, description: 'Be a major player with multiple seats.', current: false },
+  { title: 'Bold Speculator', value: 10, description: 'You think argon is going to the moon.', current: false },
+  { title: 'Degenerate Gambler', value: 20, description: 'We never recommend this to anyone.', current: false },
 ]);
 const calculatedTotalSeats = Vue.ref(calculatedTotalSeatMenu.value[1].value);
 
@@ -454,7 +461,7 @@ Vue.watch(calculatedArgonCirculation, () => {
 });
 
 // Argonot Price Change
-const argonotPriceChangeType = Vue.ref(1);
+const argonotPriceChangeType = Vue.ref('Between' as IBiddingRules['argonotPriceChangeType']);
 const argonotPriceChangeMin = Vue.ref(0);
 const argonotPriceChangeMax = Vue.ref(0);
 
@@ -474,27 +481,33 @@ Vue.watch(argonotPriceChangeMax, () => {
 
 // Starting Amount
 const startingAmount = Vue.ref(0);
-const startingAmountFormulaType = Vue.ref(1);
+const startingAmountFormulaType = Vue.ref('PreviousLowestBid' as IBiddingRules['startingAmountFormulaType']);
 const startingAmountFormulaPrice = Vue.ref(0);
 const startingAmountFormulaIncrease = Vue.ref(0);
 
 function updateStartingAmountFormulaPrice() {
-  if (startingAmountFormulaType.value === 1) {
+  if (startingAmountFormulaType.value === 'PreviousLowestBid') {
     startingAmountFormulaPrice.value = calculatorData.previousLowestBid;
-  } else if (startingAmountFormulaType.value === 2) {
+  } else if (startingAmountFormulaType.value === 'MinimumBreakeven') {
     startingAmountFormulaPrice.value = startingMinimumCalculator.breakevenBid;
-  } else if (startingAmountFormulaType.value === 3) {
+  } else if (startingAmountFormulaType.value === 'OptimisticBreakeven') {
     startingAmountFormulaPrice.value = startingOptimisticCalculator.breakevenBid;
   }
   updateStartingAmount();
 }
 
 function updateStartingAmount() {
-  startingAmount.value = startingAmountFormulaPrice.value * (1 + startingAmountFormulaIncrease.value / 100);
+  if (startingAmountFormulaType.value !== 'Custom') {
+    startingAmount.value = startingAmountFormulaPrice.value * (1 + startingAmountFormulaIncrease.value / 100);
+  }
+
   updateStartingCalculators();
 }
 
 function updateStartingCalculators() {
+  requiredArgons.value = Math.max(1, Math.ceil(startingAmount.value * calculatedTotalSeats.value * 1.1));
+  requiredArgonots.value = Math.max(1, Math.ceil(calculatorData.argonotsRequiredForBid * calculatedTotalSeats.value * 1.1));
+
   startingMinimumCalculator.setBid(startingAmount.value);
   startingOptimisticCalculator.setBid(startingAmount.value);
 
@@ -502,11 +515,13 @@ function updateStartingCalculators() {
   startingOptimisticAPY.value = startingOptimisticCalculator.APY;
   startingOptimisticTDPR.value = startingOptimisticCalculator.TDPR;
   startingMinimumAPR.value = startingMinimumCalculator.APR;
-  startingMinimumTDPR.value = startingMinimumCalculator.TDPR;}
+  startingMinimumTDPR.value = startingMinimumCalculator.TDPR;
+}
 
 Vue.watch(startingAmountFormulaType, updateStartingAmountFormulaPrice);
 Vue.watch(startingAmountFormulaIncrease, updateStartingAmount);
-Vue.watch(startingAmount, () => updateStartingCalculators);
+Vue.watch(startingAmount, updateStartingCalculators);
+Vue.watch(calculatedTotalSeats, updateStartingCalculators);
 
 // Rebidding
 const incrementAmount = Vue.ref(0.01);
@@ -533,29 +548,33 @@ Vue.watch(incrementAmount, () => {
 
 // Final Amount
 const finalAmount = Vue.ref(0);
-const finalAmountFormulaType = Vue.ref(1);
+const finalAmountFormulaType = Vue.ref('PreviousHighestBid' as IBiddingRules['finalAmountFormulaType']);
 const finalAmountFormulaPrice = Vue.ref(0);
 const finalAmountFormulaIncrease = Vue.ref(0);
 
 function updateFinalAmountFormulaPrice() {
-  if (finalAmountFormulaType.value === 1) {
+  if (finalAmountFormulaType.value === 'PreviousHighestBid') {
     finalAmountFormulaPrice.value = calculatorData.previousHighestBid;
-  } else if (finalAmountFormulaType.value === 2) {
+  } else if (finalAmountFormulaType.value === 'MinimumBreakeven') {
     finalAmountFormulaPrice.value = calculatorData.argonRewardsForThisSeat;
-  } else if (finalAmountFormulaType.value === 3) {
+  } else if (finalAmountFormulaType.value === 'OptimisticBreakeven') {
     finalAmountFormulaPrice.value = finalOptimisticCalculator.breakevenBid;
   }
   updateFinalAmount();
 }
 
 function updateFinalAmount() {
-  finalAmount.value = finalAmountFormulaPrice.value * (1 + finalAmountFormulaIncrease.value / 100);
-  requiredArgons.value = Math.ceil(finalAmount.value * calculatedTotalSeats.value * 1.1);
-  requiredArgonots.value = Math.ceil(calculatorData.argonotsRequiredForBid * calculatedTotalSeats.value * 1.1);
+  if (finalAmountFormulaType.value !== 'Custom') {
+    finalAmount.value = finalAmountFormulaPrice.value * (1 + finalAmountFormulaIncrease.value / 100);
+  }
+      
   updateFinalCalculators();
 }
 
 function updateFinalCalculators() {
+  desiredArgons.value = Math.max(1, Math.ceil(finalAmount.value * calculatedTotalSeats.value * 1.1));
+  desiredArgonots.value = Math.max(1, Math.ceil(calculatorData.argonotsRequiredForBid * calculatedTotalSeats.value * 1.1));
+
   finalMinimumCalculator.setBid(finalAmount.value);
   finalOptimisticCalculator.setBid(finalAmount.value);
 
@@ -568,7 +587,8 @@ function updateFinalCalculators() {
 
 Vue.watch(finalAmountFormulaType, updateFinalAmountFormulaPrice);
 Vue.watch(finalAmountFormulaIncrease, updateFinalAmount);
-Vue.watch(finalAmount, () => updateFinalCalculators);
+Vue.watch(finalAmount, updateFinalCalculators);
+Vue.watch(calculatedTotalSeats, updateFinalCalculators);
 
 // Throttles
 const throttleSeats = Vue.ref(false);
@@ -586,7 +606,7 @@ function applyRecommendedThrottles() {
 }
 
 // Disable
-const disableBot = Vue.ref('Never');
+const disableBot: Vue.Ref<'AfterFirstSeat' | 'AfterFirstSlot' | 'Never' | 'Now'> = Vue.ref('Never');
 
 let openedAt = dayjs();
 
@@ -595,6 +615,28 @@ emitter.on('openBiddingRulesOverlay', async () => {
   openedAt = dayjs();
   isOpen.value = true;
   calculatorData.isInitialized.then(() => {
+    const biddingRules = configStore.biddingRules || {} as IBiddingRules;
+    hasExistingRules.value = !!biddingRules;
+    calculatedTotalSeats.value = biddingRules.calculatedTotalSeats || calculatedTotalSeats.value;
+    calculatedArgonCirculation.value = biddingRules.calculatedArgonCirculation || calculatedArgonCirculation.value
+    argonotPriceChangeType.value = biddingRules.argonotPriceChangeType || argonotPriceChangeType.value
+    argonotPriceChangeMin.value = biddingRules.argonotPriceChangeMin || argonotPriceChangeMin.value;
+    argonotPriceChangeMax.value = biddingRules.argonotPriceChangeMax || argonotPriceChangeMax.value;
+    startingAmount.value = biddingRules.startingAmount || startingAmount.value;
+    startingAmountFormulaType.value = biddingRules.startingAmountFormulaType || startingAmountFormulaType.value;
+    startingAmountFormulaIncrease.value = biddingRules.startingAmountFormulaIncrease || startingAmountFormulaIncrease.value;
+    incrementAmount.value = biddingRules.incrementAmount || incrementAmount.value;
+    rebiddingDelay.value = biddingRules.rebiddingDelay || rebiddingDelay.value;
+    finalAmount.value = biddingRules.finalAmount || finalAmount.value;
+    finalAmountFormulaType.value = biddingRules.finalAmountFormulaType || finalAmountFormulaType.value;
+    finalAmountFormulaIncrease.value = biddingRules.finalAmountFormulaIncrease || finalAmountFormulaIncrease.value;
+    throttleSeats.value = biddingRules.throttleSeats || throttleSeats.value;
+    throttleSeatCount.value = biddingRules.throttleSeatCount || throttleSeatCount.value;
+    throttleSpending.value = biddingRules.throttleSpending || throttleSpending.value;
+    throttleSpendingAmount.value = biddingRules.throttleSpendingAmount || throttleSpendingAmount.value;
+    throttleDistributeEvenly.value = biddingRules.throttleDistributeEvenly || throttleDistributeEvenly.value;
+    disableBot.value = biddingRules.disableBot || disableBot.value;
+
     isLoaded.value = true;
     calculatedArgonCirculationMin.value = Math.ceil(calculatorData.argonRewardsForFullYear);
 
@@ -605,7 +647,7 @@ emitter.on('openBiddingRulesOverlay', async () => {
 
 async function saveRules() {
   isSaving.value = true;
-  const rules = {
+  const rules: IBiddingRules = {
     calculatedTotalSeats: calculatedTotalSeats.value,
     calculatedArgonCirculation: calculatedArgonCirculation.value,
     argonotPriceChangeType: argonotPriceChangeType.value,
@@ -635,11 +677,14 @@ async function saveRules() {
 
     requiredArgons: requiredArgons.value,
     requiredArgonots: requiredArgonots.value,
+
+    desiredArgons: desiredArgons.value,
+    desiredArgonots: desiredArgonots.value,
   }
-  await invoke('save_bidding_rules', { rules });
-  accountStore.biddingConfig = rules;
-  closeOverlay();
+  await invoke('update_bidding_rules', { biddingRules: rules });
+  configStore.biddingRules = rules;
   isSaving.value = false;
+  closeOverlay();
 }
 
 function maybeCloseOverlay() {
@@ -654,9 +699,8 @@ function closeOverlay() {
   isLoaded.value = false;
 };
 
-function showScenarioOverlay(calculator: BiddingCalculator) {
-  
-  isShowingScenarioOverlay.value = true;
+function showBreakdownTooltip(calculator: BiddingCalculator) {
+  isShowingBreakdownTooltip.value = true;
   scenarioData.value = {
     scenarioName: calculator.scenarioName,
     costOfArgonotLoss: calculator.costOfArgonotLoss,
@@ -676,8 +720,8 @@ function showScenarioOverlay(calculator: BiddingCalculator) {
   };
 } 
 
-function hideScenarioOverlay() {
-  isShowingScenarioOverlay.value = false;
+function hideBreakdownTooltip() {
+  isShowingBreakdownTooltip.value = false;
 }
 </script>
 

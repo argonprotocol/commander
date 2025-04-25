@@ -1,154 +1,202 @@
-use tauri::Manager;
+use tauri::{Manager, AppHandle};
 use window_vibrancy::*;
-use server::Server;
-use account::{Account, BiddingRules};
-use parking_lot::Mutex;
-use std::sync::Arc;
-use tauri::State;
+use config::{Config, ServerStatus, BiddingRules, ServerConnection, ServerProgress, Mnemonics};
+use provisioner::Provisioner;
+use bidder::Bidder;
 
-mod db;
 mod ssh;
-mod server;
-mod account;
-
-type SharedServerRecord = Arc<Mutex<server::ServerRecord>>;
-type SharedAccountRecord = Arc<Mutex<account::AccountRecord>>;
+mod config;
+mod provisioner;
+mod bidder;
 
 #[derive(serde::Serialize)]
-struct AppAccountRecord {
-    #[serde(rename = "address")]
-    address: String,
-    #[serde(rename = "privateJson")]
-    private_json: String,
+struct AppConfig {
     #[serde(rename = "requiresPassword")]
     requires_password: bool,
-    #[serde(rename = "isSaved")]
-    is_saved: bool,
-    #[serde(rename = "biddingConfig")]
-    bidding_config: Option<BiddingRules>,
-}
 
-#[derive(serde::Serialize)]
-struct AppServerRecord {
-    #[serde(rename = "address")]
-    address: String,
-    #[serde(rename = "publicKey")]
-    public_key: String,    
-    #[serde(rename = "setupStatus")]
-    setup_status: AppSetupStatus,
-    #[serde(rename = "requiresPassword")]
-    requires_password: bool,
-    #[serde(rename = "isSaved")]
-    is_saved: bool,
-}
+    #[serde(rename = "mnemonics")]
+    mnemonics: Option<Mnemonics>,
 
-#[derive(serde::Serialize)]
-struct AppSetupStatus {
-    #[serde(rename = "ubuntu")]
-    ubuntu: i32,
-    #[serde(rename = "git")]
-    git: i32,
-    #[serde(rename = "docker")]
-    docker: i32,
-    #[serde(rename = "blocksync")]
-    blocksync: f32,
-}
+    #[serde(rename = "serverConnection")]
+    server_connection: ServerConnection,
 
-impl From<db::SetupStatus> for AppSetupStatus {
-    fn from(status: db::SetupStatus) -> Self {
-        AppSetupStatus {
-            ubuntu: status.ubuntu,
-            git: status.git,
-            docker: status.docker,
-            blocksync: status.blocksync,
-        }
-    }
+    #[serde(rename = "serverStatus")]
+    server_status: ServerStatus,
+
+    #[serde(rename = "serverProgress")]
+    server_progress: ServerProgress,
+    
+    #[serde(rename = "biddingRules")]
+    bidding_rules: Option<BiddingRules>,
 }
 
 #[tauri::command]
-async fn fetch_account<'a>(account_record: State<'a, SharedAccountRecord>) -> Result<AppAccountRecord, String> {
-    let account_record = account_record.lock();
-    if account_record.address.is_empty() {
-        return Err("AccountEmpty".to_string());
-    }
-    let record = AppAccountRecord {
-        address: account_record.address.clone(),
-        private_json: account_record.private_json.clone(),
-        requires_password: account_record.requires_password,
-        is_saved: account_record.is_saved.clone(),
-        bidding_config: account_record.bidding_config.clone(),
+async fn start(
+    app: AppHandle
+) -> Result<AppConfig, String> {
+    println!("start");
+
+    let config = match Config::load() {
+        Ok(config) => config,
+        Err(e) => panic!("ConfigFailed: {}", e),
     };
+
+    let record = AppConfig {
+        requires_password: config.requires_password.clone(),
+        mnemonics: config.mnemonics.clone(),
+        server_connection: config.server_connection.clone(),
+        server_status: config.server_status.clone(),
+        server_progress: config.server_progress.clone(),
+        bidding_rules: config.bidding_rules.clone(),
+    };
+
+    if config.server_connection.is_connected && !config.server_connection.is_provisioned {
+        let ssh_private_key = config.server_connection.ssh_private_key.clone(); 
+        let ip_address = config.server_connection.ip_address.clone();
+        let username = String::from("root");
+        let port = 22;
+        
+        Provisioner::reconnect(ssh_private_key, username, ip_address, port, app)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
     Ok(record)
 }
 
 #[tauri::command]
-async fn initialize_account<'a>(
-    account_record: State<'a, SharedAccountRecord>, 
-    address: String, 
-    private_json: String, 
-    requires_password: bool
-) -> Result<AppAccountRecord, String> {
-    if account_record.lock().is_saved {
-        return Err("AccountExists".to_string());
-    }
-    
-    let mut account = Account::from_record(account_record.lock().clone());
-    account.update_record(address, private_json, requires_password).await?;
+async fn create_mnemonics(
+    wallet: String,
+    session: String,
+) -> Result<(), String> {    
+    println!("create_mnemonics");
 
-    *account_record.lock() = account.record.clone();
+    Mnemonics::create(wallet, session).map_err(|e| e.to_string())?;
 
-    let record = AppAccountRecord {
-        address: account.record.address.clone(),
-        private_json: account.record.private_json.clone(),
-        requires_password: account.record.requires_password,
-        is_saved: true,
-        bidding_config: account.record.bidding_config.clone(),
+    Ok(())
+}
+
+#[tauri::command]
+async fn connect_server(
+    app: AppHandle,
+    ip_address: String,
+) -> Result<(), String> {
+    println!("connect_server");
+
+    let mut config = match Config::load() {
+        Ok(config) => config,
+        Err(e) => return Err(format!("ConfigFailed: {}", e)),
     };
-    Ok(record)
+    
+    let ssh_private_key = config.server_connection.ssh_private_key.clone();
+    let username = String::from("root");
+    let port = 22;
+    
+    Provisioner::start(ssh_private_key, username, ip_address.clone(), port, app)
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    config.server_connection.ip_address = ip_address;
+    config.server_connection.is_connected = true;
+    config.server_connection.save()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command]
-async fn fetch_server<'a>(server_record: State<'a, SharedServerRecord>) -> Result<AppServerRecord, String> {
-    let server_record = server_record.lock();
-    let record = AppServerRecord {
-        address: server_record.address.clone(),
-        public_key: server_record.public_key.clone(),
-        setup_status: AppSetupStatus::from(server_record.setup_status.clone()),
-        requires_password: server_record.requires_password,
-        is_saved: server_record.is_saved.clone(),
+async fn remove_server() -> Result<(), String> {
+    println!("remove_server");
+
+    let mut config = match Config::load() {
+        Ok(config) => config,
+        Err(e) => return Err(format!("ConfigFailed: {}", e)),
     };
-    Ok(record)
+
+    config.server_connection.ip_address = String::from("");
+    config.server_connection.is_connected = false;
+    config.server_connection.is_provisioned = false;
+    config.server_connection.save()
+        .map_err(|e| e.to_string())?;
+
+    config.server_status.remove_file()?;
+    config.server_progress.remove_file()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command]
-async fn initialize_server<'a>(server_record: State<'a, SharedServerRecord>, address: String) -> Result<String, String> {
-    // Update IP address
-    server_record.lock().address = address;
+async fn update_server_progress(
+    progress: ServerProgress,
+) -> Result<(), String> {
+    println!("update_server_progress");
 
-    let mut server = Server::from_record(server_record.lock().clone());
-    server.save().await.map_err(|e| e.to_string())?;
+    let mut config = match Config::load() {
+        Ok(config) => config,
+        Err(e) => return Err(format!("ConfigFailed: {}", e)),
+    };
+
+    config.server_progress = progress;
+    config.server_progress.save()
+        .map_err(|e| e.to_string())?;
     
-    *server_record.lock() = server.record.clone();
-    
-    Ok("ServerSaved".to_string())
+    Ok(())
 }
 
 #[tauri::command]
-async fn fetch_server_status<'a>(server_record: State<'a, SharedServerRecord>) -> Result<AppSetupStatus, String> {    
-    let mut server = Server::from_record(server_record.lock().clone());
-    server.refresh_setup_status().await.map_err(|e| e.to_string())?;
-    
-    *server_record.lock() = server.record.clone();
+async fn retry_provisioning(
+    app: AppHandle,
+    step_key: String,
+) -> Result<(), String> {
+    println!("retry_provisioning");
 
-    Ok(AppSetupStatus::from(server_record.lock().setup_status.clone()))
+    let config = match Config::load() {
+        Ok(config) => config,
+        Err(e) => return Err(format!("ConfigFailed: {}", e)),
+    };
+
+    let ssh_private_key = config.server_connection.ssh_private_key.clone();
+    let ip_address = config.server_connection.ip_address.clone();
+    let username = String::from("root");
+    let port = 22;
+    
+    Provisioner::retry_failure(step_key, ssh_private_key, username, ip_address.clone(), port, app)
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    Ok(())
 }
 
 #[tauri::command]
-async fn save_bidding_rules<'a>(account_record: State<'a, SharedAccountRecord>, rules: BiddingRules) -> Result<(), String> {
-    let mut account = Account::from_record(account_record.lock().clone());
-    account.save_bidding_rules(rules).await.map_err(|e| e.to_string())?;
+async fn update_bidding_rules(bidding_rules: BiddingRules) -> Result<(), String> {
+    println!("update_bidding_rules");
 
-    *account_record.lock() = account.record.clone();
+    bidding_rules.save().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn launch_mining_bot(
+    wallet_json: String,
+    session_mnemonic: String,
+) -> Result<(), String> {
+    println!("launch_mining_bot");
+
+    let server_connection = match ServerConnection::load() {
+        Ok(config) => config,
+        Err(e) => return Err(format!("ConfigFailed: {}", e)),
+    };
+
+    let ssh_private_key = server_connection.ssh_private_key.clone();
+    let ip_address = server_connection.ip_address.clone();
+    let username = String::from("root");
+    let port = 22;
+    
+    Bidder::start(ssh_private_key, username, ip_address, port, wallet_json, session_mnemonic)
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -156,19 +204,7 @@ async fn save_bidding_rules<'a>(account_record: State<'a, SharedAccountRecord>, 
 ////////////////////////////////////////////////////////////
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    let server = match Server::init() {
-        Ok(server) => server,
-        Err(e) => panic!("Failed to initialize server: {}", e),
-    };
-    let server_record: Arc<parking_lot::lock_api::Mutex<parking_lot::RawMutex, server::ServerRecord>> = Arc::new(Mutex::new(server.record.clone()));
-    
-    let account = match Account::init() {
-        Ok(account) => account,
-        Err(e) => panic!("Failed to initialize account: {}", e),
-    };
-    let account_record: Arc<parking_lot::lock_api::Mutex<parking_lot::RawMutex, account::AccountRecord>> = Arc::new(Mutex::new(account.record.clone()));
-
+pub fn run() {    
     tauri::Builder::default()
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
@@ -179,17 +215,17 @@ pub fn run() {
 
             Ok(())
         })
-        .manage(server_record.clone())
-        .manage(account_record.clone())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
-            fetch_account, 
-            initialize_account, 
-            fetch_server, 
-            initialize_server, 
-            fetch_server_status,
-            save_bidding_rules,
+            start, 
+            create_mnemonics, 
+            connect_server, 
+            remove_server,
+            update_server_progress,
+            update_bidding_rules,
+            retry_provisioning,
+            launch_mining_bot,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

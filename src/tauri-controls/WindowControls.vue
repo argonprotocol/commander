@@ -20,7 +20,7 @@ const props = withDefaults(defineProps<WindowControlsProps>(), {
 let platform = props.platform || platformType;
 
 const customClass = twMerge(
-  "flex",
+  "flex pointer-events-auto",
   props.className,
   props.hide && (props.hideMethod === "display" ? "hidden" : "invisible")
 );

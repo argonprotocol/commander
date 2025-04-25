@@ -1,8 +1,6 @@
-import { BigNumber } from 'bignumber.js';
-
 export function addCommas(num: string | number, decimals?: number) {
   // Check if the number is in scientific notation
-  if (typeof num === 'number' && num.toString().includes('e')) {
+  if (typeof num === 'number' && decimals === undefined && num.toString().includes('e')) {
     return num.toString();
   }
   
@@ -36,29 +34,6 @@ export function isInt(n: any) {
   return n % 1 === 0;
 }
 
-export function numberWithCommas(x: bigint): string {
-  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
-export function formatArgonots(x: bigint | number): number {
-  const isNegative = x < 0;
-  const [whole, decimal] = (Math.abs(Number(x)) / 1e6).toFixed(2).split('.');
-  if (decimal === '00') {
-    return Number(`${isNegative ? '-' : ''}${numberWithCommas(BigInt(whole))}`);
-  }
-  const wholeWithCommas = numberWithCommas(BigInt(whole));
-  return Number(`${isNegative ? '-' : ''}${wholeWithCommas}.${decimal}`);
-}
-
 export function abreviateAddress(address: string) {
   return address.slice(0, 6) + '...' + address.slice(-4);
 }
-
-export function convertFixedU128ToBigNumber(fixedU128: bigint): BigNumber {
-  const decimalFactor = new BigNumber(10).pow(new BigNumber(18)); // Fixed point precision (18 decimals)
-  const rawValue = new BigNumber(fixedU128.toString()); // Parse the u128 string value into BN
-  // Convert the value to fixed-point
-  return rawValue.div(decimalFactor);
-}
-
-export const convertFixedU256ToBigNumber = convertFixedU128ToBigNumber;
