@@ -9,7 +9,7 @@ function throttle<T extends (...args: any[]) => any>(
   limit: number
 ): (...args: Parameters<T>) => void {
   let inThrottle: boolean = false;
-  
+
   return function(this: any, ...args: Parameters<T>): void {
     if (!inThrottle) {
       func.apply(this, args);
@@ -30,7 +30,7 @@ appWindow.value = getCurrentWindow();
 appWindow.value.onResized(throttle(async () => {
   const isFullscreen = await getCurrentWindow().isFullscreen();
   isWindowFullscreen.value = isFullscreen;
-  
+
   if (platformType !== "macos") {
     const isMaximized = await appWindow.value?.isMaximized()
     if (isMaximized !== undefined) {
@@ -62,7 +62,6 @@ function getPlatformType() {
   switch (getPlatform()) {
     case "macos":
       return "macos"
-      break
     case "linux":
       return "gnome"
     default:

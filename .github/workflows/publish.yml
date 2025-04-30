@@ -63,4 +63,8 @@ jobs:
           tagName: ${{ env.VERSION }}
           releaseName: ${{ env.VERSION }}
           releaseBody: "Release ${{ env.VERSION }}"
+          releaseDraft: true
+          prerelease: true
+          updaterJsonKeepUniversal: true
+          includeUpdaterJson: true
           args: ${{ matrix.args }}

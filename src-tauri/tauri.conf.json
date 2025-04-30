@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.argon.commander.app",
   "build": {
-    "beforeDevCommand": "bun run dev",
+    "beforeDevCommand": "yarn run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "yarn run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -35,6 +35,8 @@
   },
   "bundle": {
     "active": true,
+    "category": "DeveloperTool",
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
@@ -43,5 +45,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ2NjE2QzAzOTJGMDQ4MzgKUldRNFNQQ1NBMnhoMW9IWDIrWDRJOVpDZnpqYjhUdGM5RW01eDdsM3phYmRtQWVleCtFaXlJOWoK",
+      "endpoints": [
+        "https://github.com/argonprotocol/commander/releases/latest/download/latest.json"
+      ]
+    }
   }
 }
