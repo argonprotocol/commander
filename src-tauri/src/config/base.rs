@@ -21,10 +21,6 @@ impl Base {
             Ok(Self::default())
         }
     }
-
-    pub fn save(&self) -> Result<(), Box<dyn Error>> {
-        Config::save_to_json_file(Self::FILENAME, self.clone())
-    }
 }
 
 impl Default for Base {

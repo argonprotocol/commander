@@ -50,3 +50,5 @@ parking_lot = "0.12"
 sp-core = { version = "35", features = ["full_crypto"] }
 hex = "0.4"
 bip39 = "2.0.0"
+reqwest = { version = "0.11", features = ["json"] }
+futures-util = "0.3"

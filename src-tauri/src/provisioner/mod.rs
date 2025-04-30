@@ -1,33 +1,13 @@
 use anyhow::Result;
 use tauri::{AppHandle, Emitter};
-use crate::ssh::SSH;
+use crate::ssh::{SSH, SSHDropGuard};
 use crate::config::{ServerConnection, ServerStatus, ServerStatusErrorType};
 use std::sync::{Arc, Mutex};
 use lazy_static::lazy_static;
 use tokio::sync::Mutex as TokioMutex;
-use tokio::runtime::Handle;
 
 lazy_static! {
     static ref RUNNING_TASK: Mutex<Option<tokio::task::JoinHandle<()>>> = Mutex::new(None);
-}
-
-struct SSHDropGuard(Arc<TokioMutex<SSH>>);
-
-impl Drop for SSHDropGuard {
-    fn drop(&mut self) {
-        if let Ok(handle) = Handle::try_current() {
-            let ssh_clone = self.0.clone();
-            handle.spawn(async move {
-                if let Ok(mut guard) = ssh_clone.try_lock() {
-                    if let Err(e) = guard.close().await {
-                        println!("Error closing SSH connection during cleanup: {}", e);
-                    }
-                }
-            });
-        } else {
-            println!("Warning: Could not close SSH connection during cleanup - no runtime available");
-        }
-    }
 }
 
 pub struct Provisioner {}
@@ -47,7 +27,7 @@ impl Provisioner {
             Provisioner::start_script(&mut ssh).await?;
         }
 
-        Provisioner::monitor(ssh, app).await?;        
+        Provisioner::monitor(app, ssh).await?;        
         println!("finished start");
         Ok(())
     }
@@ -67,7 +47,7 @@ impl Provisioner {
             Provisioner::start_script(&mut ssh).await?;
         } 
         
-        Provisioner::monitor(ssh, app).await?;
+        Provisioner::monitor(app, ssh).await?;
 
         Ok(())
     }
@@ -94,7 +74,7 @@ impl Provisioner {
         }
 
         Provisioner::start_script(&mut ssh).await?;
-        Provisioner::monitor(ssh, app).await?;
+        Provisioner::monitor(app, ssh).await?;
 
         Ok(())
     }
@@ -116,8 +96,8 @@ impl Provisioner {
     }
 
     pub async fn monitor(
-        ssh: SSH,
         app: AppHandle,
+        ssh: SSH,
     ) -> Result<()> {
         if let Some(handle) = RUNNING_TASK.lock().unwrap().take() {
             handle.abort();

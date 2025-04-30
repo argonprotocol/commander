@@ -6,15 +6,35 @@ use russh_keys::*;
 use russh::*;
 use ssh_key::{PrivateKey, PublicKey, Algorithm, LineEnding};
 use rand::rngs::OsRng;
+use tokio::sync::Mutex as TokioMutex;
+use tokio::runtime::Handle;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 pub struct SSH {
-    client: client::Handle<ClientHandler>,
+    client: Arc<client::Handle<ClientHandler>>,
 }
 
 // Explicitly implement Send for SSH
 unsafe impl Send for SSH {}
 
 impl SSH {
+    pub async fn find_available_port(start_port: u16) -> Result<u16> {
+        let mut port = start_port;
+        loop {
+            match tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port)).await {
+                Ok(_) => {
+                    return Ok(port);
+                }
+                Err(_) => {
+                    if port == u16::MAX {
+                        anyhow::bail!("No available ports found");
+                    }
+                    port += 1;
+                }
+            }
+        }
+    }
+
     pub async fn connect(private_key: &str, mut username: &str, host: &str, port: u16) -> Result<Self> {
         let key_pair = decode_secret_key(private_key, None)?;
         let addrs = (host, port);
@@ -50,7 +70,7 @@ impl SSH {
             anyhow::bail!("Authentication (with publickey) failed");
         }
 
-        Ok(SSH { client })
+        Ok(SSH { client: Arc::new(client) })
     }
 
     pub async fn run_command(&mut self, command: &str) -> Result<(String, u32)> {
@@ -187,6 +207,116 @@ impl SSH {
     
         Ok((private_key_openssh, public_key_openssh))
     }
+
+    pub async fn create_http_tunnel(&mut self, local_port: u16, remote_host: &str, remote_port: u16) -> Result<()> {
+        println!("Opening tunnel from local port {} to {}:{}", local_port, remote_host, remote_port);
+        
+        // Create a TCP listener on the local port
+        let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", local_port)).await?;
+        println!("TCP listener created on port {}", local_port);
+
+        // Clone the client handle and remote host for use in the spawned task
+        let client = Arc::clone(&self.client);
+        let remote_host = remote_host.to_string();
+
+        // Accept connections and forward them through the SSH tunnel
+        tokio::spawn(async move {
+            loop {
+                match listener.accept().await {
+                    Ok((local_stream, _)) => {
+                        
+                        // Clone the client handle for this connection
+                        let client = Arc::clone(&client);
+                        let remote_host = remote_host.clone();
+                        
+                        // Spawn a new task for each connection
+                        tokio::spawn(async move {
+                            // Create a new SSH channel for this connection
+                            let mut channel = match client.channel_open_direct_tcpip(
+                                &remote_host,
+                                remote_port as u32,
+                                "127.0.0.1",
+                                local_port as u32
+                            ).await {
+                                Ok(channel) => channel,
+                                Err(e) => {
+                                    println!("Error creating SSH channel: {}", e);
+                                    return;
+                                }
+                            };
+
+                            // Split the local stream
+                            let (mut local_read, mut local_write) = local_stream.into_split();
+
+                            // Single task to handle both directions
+                            let tunnel_task = async move {
+                                let mut buf = vec![0u8; 4096];
+                                let mut done = false;
+
+                                while !done {
+                                    tokio::select! {
+                                        // Handle local to remote
+                                        result = local_read.read(&mut buf) => {
+                                            match result {
+                                                Ok(0) => {
+                                                    done = true;
+                                                }
+                                                Ok(n) => {
+                                                    if let Err(e) = channel.data(&buf[..n]).await {
+                                                        println!("Error writing to remote: {}", e);
+                                                        done = true;
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    println!("Error reading from local: {}", e);
+                                                    done = true;
+                                                }
+                                            }
+                                        }
+                                        // Handle remote to local
+                                        msg = channel.wait() => {
+                                            match msg {
+                                                Some(russh::ChannelMsg::Data { data }) => {
+                                                    if let Err(e) = local_write.write_all(&data).await {
+                                                        println!("Error writing to local: {}", e);
+                                                        done = true;
+                                                    }
+                                                }
+                                                Some(russh::ChannelMsg::Eof) => {
+                                                    println!("Remote end closed connection");
+                                                    done = true;
+                                                }
+                                                Some(russh::ChannelMsg::Close) => {
+                                                    println!("Channel closed by remote");
+                                                    done = true;
+                                                }
+                                                None => {
+                                                    println!("Channel closed");
+                                                    done = true;
+                                                }
+                                                _ => {}
+                                            }
+                                        }
+                                    }
+                                }
+                            };
+
+                            // Run the tunnel task
+                            tunnel_task.await;
+                            println!("Connection closed");
+                        });
+                    }
+                    Err(e) => {
+                        println!("Error accepting connection: {}", e);
+                        break;
+                    }
+                }
+            }
+            println!("Tunnel connection handler ended");
+        });
+
+        Ok(())
+    }
 }
 
 struct ClientHandler {}
@@ -206,3 +336,21 @@ impl client::Handler for ClientHandler {
     }
 }
 
+pub struct SSHDropGuard(pub Arc<TokioMutex<SSH>>);
+
+impl Drop for SSHDropGuard {
+    fn drop(&mut self) {
+        if let Ok(handle) = Handle::try_current() {
+            let ssh_clone = self.0.clone();
+            handle.spawn(async move {
+                if let Ok(mut guard) = ssh_clone.try_lock() {
+                    if let Err(e) = guard.close().await {
+                        println!("Error closing SSH connection during cleanup: {}", e);
+                    }
+                }
+            });
+        } else {
+            println!("Warning: Could not close SSH connection during cleanup - no runtime available");
+        }
+    }
+}

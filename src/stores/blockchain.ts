@@ -1,18 +1,24 @@
 import * as Vue from 'vue'
 import { defineStore } from 'pinia'
 import mainchain, { type MainchainClient } from '../lib/bidding-calculator/Mainchain';
+import { type UnsubscribePromise } from '@polkadot/api-base/types/base';
+
+export type IActiveBid = {
+  cohortId: number;
+  accountId: string;
+  amount: number;
+  submittedAt: number | null;
+  isMine?: boolean;
+}
 
 export const useBlockchainStore = defineStore('blockchain', () => {
-  const isLoaded = Vue.ref(false);
   const recentBlocks = Vue.reactive<any[]>([]);
   const recentBlocksAreLoaded = Vue.ref(false);
   const lastBlockTimestamp = Vue.ref(0);
 
   const miningSeatCount = Vue.ref(0);
-  const aggregateBidCosts = Vue.ref(0);
-  const minimumBlockRewards = Vue.ref(70_981);
-  const currentAPR = Vue.ref(0);
-  const currentAPY = Vue.ref(0);
+  const aggregatedBidCosts = Vue.ref(0);
+  const aggregatedBlockRewards = Vue.ref({ argons: 0, argonots: 0 });
   
   function extractBlockRewardsFromEvent(blockRewardEvent: any) {
     if (!blockRewardEvent) {
@@ -71,42 +77,46 @@ export const useBlockchainStore = defineStore('blockchain', () => {
 
     recentBlocks.sort((a, b) => a.number - b.number);
   }
+
+  async function subscribeToActiveBids(callbackFn: (activeBids: IActiveBid[]) => void): UnsubscribePromise {
+    const client = await mainchain.client;
+    return client.query.miningSlot.nextSlotCohort(nextSlotCohort => {
+      const newBids: IActiveBid[] = [];
+      for (const bid of nextSlotCohort) {
+        newBids.push({
+          cohortId: bid.cohortId.toNumber(),
+          accountId: bid.accountId.toString(),
+          amount: bid.bid.toNumber(),
+          submittedAt: null,
+        });
+      }
+      callbackFn(newBids);
+    });
+  }
   
-  function calculateAnnualPercentageRate(aggregateBidCosts: number, minimumBlockRewards: number) {
-    const tenDayRate = (minimumBlockRewards - aggregateBidCosts) / aggregateBidCosts;
-    return tenDayRate * 36.5 * 100;
-  }
-
-  function calculateAnnualPercentageYield(aggregateBidCosts: number, minimumBlockRewards: number) {
-    const tenDayRate = (minimumBlockRewards - aggregateBidCosts) / aggregateBidCosts;
-    // Compound APR over 36.5 cycles (10-day periods in a year)
-    const apy = (Math.pow(1 + tenDayRate, 36.5) - 1) * 100;
-    if (apy > 9999) {
-      return 9999;
-    }
-    return apy;
-  }
-
-  async function fetchMiningSeatCount() {
+  async function updateMiningSeatCount() {
     miningSeatCount.value = await mainchain.getMiningSeatCount();
   }
 
-  async function fetchAggregateBidCosts() {
-    aggregateBidCosts.value = await mainchain.getAggregateBidCosts();
+  async function updateAggregateBidCosts() {
+    aggregatedBidCosts.value = await mainchain.getAggregateBidCosts();
   }
 
-  async function initialize() {
-    await Promise.all([
-      subscribeToRecentBlocks(),
-      fetchAggregateBidCosts(),
-      fetchMiningSeatCount(),
-    ]);
-    currentAPR.value = calculateAnnualPercentageRate(aggregateBidCosts.value, minimumBlockRewards.value);
-    currentAPY.value = calculateAnnualPercentageYield(aggregateBidCosts.value, minimumBlockRewards.value);
-    isLoaded.value = true;
+  async function updateAggregateBlockRewards() {
+    aggregatedBlockRewards.value = await mainchain.getAggregateBlockRewards();
   }
 
-  initialize();
-
-  return { isLoaded,recentBlocks, recentBlocksAreLoaded, lastBlockTimestamp, aggregateBidCosts, miningSeatCount, minimumBlockRewards, currentAPR, currentAPY }
+  return { 
+    recentBlocks,
+    recentBlocksAreLoaded,
+    lastBlockTimestamp,
+    aggregatedBidCosts,
+    aggregatedBlockRewards,
+    miningSeatCount,
+    subscribeToRecentBlocks,
+    updateAggregateBidCosts,
+    updateAggregateBlockRewards,
+    updateMiningSeatCount,
+    subscribeToActiveBids,
+  }
 });

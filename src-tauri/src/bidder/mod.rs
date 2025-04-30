@@ -1,61 +1,57 @@
 use anyhow::Result;
-use crate::ssh::SSH;
+use crate::ssh::{SSH, SSHDropGuard};
 use crate::config::{Config, ServerConnection};
+use crate::bidder_stats::BidderStats;
+use tauri::{AppHandle, Emitter};
 use std::sync::{Arc, Mutex};
 use lazy_static::lazy_static;
 use tokio::sync::Mutex as TokioMutex;
-use tokio::runtime::Handle;
-use std::error::Error;
 use std::path::PathBuf;
 
 lazy_static! {
     static ref RUNNING_TASK: Mutex<Option<tokio::task::JoinHandle<()>>> = Mutex::new(None);
 }
-
-struct SSHDropGuard(Arc<TokioMutex<SSH>>);
-
-impl Drop for SSHDropGuard {
-    fn drop(&mut self) {
-        if let Ok(handle) = Handle::try_current() {
-            let ssh_clone = self.0.clone();
-            handle.spawn(async move {
-                if let Ok(mut guard) = ssh_clone.try_lock() {
-                    if let Err(e) = guard.close().await {
-                        println!("Error closing SSH connection during cleanup: {}", e);
-                    }
-                }
-            });
-        } else {
-            println!("Warning: Could not close SSH connection during cleanup - no runtime available");
-        }
-    }
-}
-
 pub struct Bidder;
 
 impl Bidder {
     pub async fn start(
+        app: AppHandle,
         ssh_private_key: String,
         username: String, 
         host: String, 
         port: u16, 
         wallet_json: String,
         session_mnemonic: String,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<()> {
         let mut ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
 
         Self::upload_files(&mut ssh, wallet_json, session_mnemonic).await?;
         Self::start_docker(&mut ssh).await?;
 
-        let mut server_connection = ServerConnection::load()?;
+        let mut server_connection = ServerConnection::load().unwrap();
         server_connection.is_ready_for_mining = true;
-        server_connection.save()?;
+        server_connection.save().unwrap();
         
-        println!("finished start");
+        Self::monitor(app, ssh).await?;
+
         Ok(())
     }
 
-    async fn upload_files(ssh: &mut SSH, wallet_json: String, session_mnemonic: String) -> Result<(), Box<dyn Error>> {
+    pub async fn reconnect(
+        ssh_private_key: String,
+        username: String, 
+        host: String, 
+        port: u16, 
+        app: AppHandle
+    ) -> Result<()> {
+        let mut ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
+
+        Self::monitor(app, ssh).await?;
+
+        Ok(())
+    }
+
+    async fn upload_files(ssh: &mut SSH, wallet_json: String, session_mnemonic: String) -> Result<()> {
         let bidding_rules = Config::load_from_file("biddingRules.json").unwrap();
         let security_env = format!("SESSION_KEYS_MNEMONIC=\"{}\"\nKEYPAIR_PASSPHRASE=", session_mnemonic);
 
@@ -77,7 +73,7 @@ impl Bidder {
                 .collect::<Vec<String>>()
                 .join(" "),
             Err(e) => {
-                return Err(Box::new(e) as Box<dyn Error>);
+                return Err(e.into());
             }
         };
         println!("Calculator files: {}", filenames);
@@ -88,38 +84,48 @@ impl Bidder {
             let script_contents = match std::fs::read_to_string(&local_file_path) {
                 Ok(contents) => contents,
                 Err(e) => {
-                    return Err(Box::new(e) as Box<dyn Error>);
+                    return Err(e.into());
                 }
             };
     
             ssh.upload_file(&script_contents, remote_file_path.as_str()).await?;
         }
 
-
         Ok(())
     }
 
     pub async fn start_docker(ssh: &mut SSH) -> Result<()> {
+        ssh.run_command("cd commander-deploy && docker compose down bot").await?;
         ssh.run_command("cd commander-deploy && docker compose --env-file=.env.testnet up -d bot").await?;
         Ok(())
     }
 
     pub async fn monitor(
-        ssh: SSH,
-    ) -> Result<(), Box<dyn Error>> {
+        app: AppHandle,
+        mut ssh: SSH,
+    ) -> Result<()> {
         if let Some(handle) = RUNNING_TASK.lock().unwrap().take() {
             handle.abort();
         }
+
+        println!("Creating HTTP tunnel");
+        let local_port = SSH::find_available_port(3600).await?;
+        let remote_host = "127.0.0.1";
+        let remote_port = 3000;
+        ssh.create_http_tunnel(local_port, remote_host, remote_port).await?;
 
         let ssh = Arc::new(TokioMutex::new(ssh));
         let ssh_clone = ssh.clone();
         let _guard = SSHDropGuard(ssh_clone.clone());
 
         let handle = tokio::spawn(async move {
+            let mut ssh = ssh_clone.lock().await;
+            let mut bidder_stats = BidderStats::new(app, &mut ssh, local_port);
             loop {
-                let mut ssh = ssh_clone.lock().await;
-                
-                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                if let Err(e) = bidder_stats.run().await {
+                    eprintln!("Error in bidder stats: {}", e);
+                }
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
             }
         });
 

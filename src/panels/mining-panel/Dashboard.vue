@@ -37,18 +37,33 @@
         <header class="text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30">YOUR CLOUD MACHINE IS LIVE</header>
         <div class="flex flex-row py-2">
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
-            <span class="opacity-50">Bitcoin Node</span>
-            <span>Last block 0 min ago</span>
+            <span class="opacity-50">Last Bitcoin Block</span>
+            <CountupClock as="span" :time="lastBitcoinActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
+              <template v-if="hours">{{ hours }}h, </template>
+              <template v-if="minutes">{{ minutes }}m and </template>
+              <template v-if="!isNull">{{ seconds }}s ago</template>
+              <template v-else>-- ----</template>
+            </CountupClock>
           </div>
           <div class="h-full w-[1px] bg-slate-400/30"></div>
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
-            <span class="opacity-50">Argon Node</span>
-            <span>Last block 0 min ago</span>
+            <span class="opacity-50">Last Argon Block</span>
+            <CountupClock as="span" :time="lastArgonActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
+              <template v-if="hours">{{ hours }}h, </template>
+              <template v-if="minutes">{{ minutes }}m and </template>
+              <template v-if="!isNull">{{ seconds }}s ago</template>
+              <template v-else>-- ----</template>
+            </CountupClock>
           </div>
           <div class="h-full w-[1px] bg-slate-400/30"></div>
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
-            <span class="opacity-50">Bidding Bot</span>
-            <span>Last activity 0 min ago</span>
+            <span class="opacity-50">Last Bidding Activity</span>
+            <CountupClock as="span" :time="lastBotActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
+              <template v-if="hours">{{ hours }}h, </template>
+              <template v-if="minutes">{{ minutes }}m and </template>
+              <template v-if="!isNull">{{ seconds }}s ago</template>
+              <template v-else>-- ----</template>
+            </CountupClock>
           </div>
         </div>
       </section>
@@ -160,16 +175,39 @@
 </template>
 
 <script setup lang="ts">
+import * as Vue from 'vue';
 import { storeToRefs } from 'pinia';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import utc from 'dayjs/plugin/utc';
 import { useConfigStore } from '../../stores/config';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import AlertIcon from '../../assets/alert.svg';
 import emitter from '../../emitters/basic';
+import CountupClock from '../../components/CountupClock.vue';
+
+dayjs.extend(relativeTime);
+dayjs.extend(utc);
 
 const configStore = useConfigStore();
 const { currencySymbol } = storeToRefs(configStore);
 
-const openFundMiningWalletOverlay = () => {
+const lastBitcoinActivityAt = Vue.computed(() => {
+  const lastActivity = configStore.bitcoinActivity[0];
+  return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
+});
+
+const lastArgonActivityAt = Vue.computed(() => {
+  const lastActivity = configStore.argonActivity[0];
+  return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
+});
+
+const lastBotActivityAt = Vue.computed(() => {
+  const lastActivity = configStore.botActivity[0];
+  return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
+});
+
+function openFundMiningWalletOverlay() {
   emitter.emit('openWalletOverlay', { walletId: 'mng', screen: 'receive' });
 }
 </script>

@@ -15,6 +15,8 @@ export default class BiddingCalculatorData {
 
   public exchangeRates: { USD: number, ARGNOT: number } = { USD: 0, ARGNOT: 0 };
 
+  public miningSeatCount: number = 0;
+
   constructor() {
     this.isInitialized = this.initialize();
   }
@@ -23,9 +25,10 @@ export default class BiddingCalculatorData {
     const currentBlockRewards = await mainchain.fetchCurrentRewardsPerBlock();
 
     this.argonRewardsForFullYear = await mainchain.argonBlockRewardsForFullYear(currentBlockRewards);
-    this.argonRewardsForThisSeat = (await mainchain.argonBlockRewardsForThisSlot(currentBlockRewards)) / 10;
+    this.argonRewardsForThisSeat = (currentBlockRewards * 1_440) / 10;
     this.argonotsRequiredForBid = await mainchain.getOwnershipAmountMinimum(); 
     this.argonotRewardsForThisSeat = (await mainchain.argonotBlockRewardsForThisSlot()) / 10;
     this.exchangeRates = await mainchain.fetchExchangeRates();
+    this.miningSeatCount = await mainchain.getMiningSeatCount();
   }
 }

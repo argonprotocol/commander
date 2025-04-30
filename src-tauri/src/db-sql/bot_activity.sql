@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS bot_activity (
+    action TEXT NOT NULL,
+    inserted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

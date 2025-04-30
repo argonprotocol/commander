@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS account_snapshots (
-    current_cohort_id DATETIME DEFAULT CURRENT_TIMESTAMP,
+    rotation_id DATETIME DEFAULT CURRENT_TIMESTAMP,
     active_cohort_count INTEGER NOT NULL,
     active_seat_count INTEGER NOT NULL,
     value_invested INTEGER NOT NULL,

@@ -681,8 +681,7 @@ async function saveRules() {
     desiredArgons: desiredArgons.value,
     desiredArgonots: desiredArgonots.value,
   }
-  await invoke('update_bidding_rules', { biddingRules: rules });
-  configStore.biddingRules = rules;
+  await configStore.updateBiddingRules(rules);
   isSaving.value = false;
   closeOverlay();
 }

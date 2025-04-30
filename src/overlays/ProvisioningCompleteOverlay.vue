@@ -16,7 +16,7 @@
           </p>
 
           <div class="flex flex-row justify-end gap-4 mt-6 border-t border-slate-300 pt-4">
-            <button @click="closeOverlay" class="bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-6 py-2 rounded-md cursor-pointer">Let's Go!</button>
+            <button @click="closeOverlay" class="bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-12 py-2 rounded-md cursor-pointer">Let's Go!</button>
           </div>
         </div>
       </TransitionChild>

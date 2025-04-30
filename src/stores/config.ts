@@ -6,6 +6,7 @@ import { Keyring, mnemonicGenerate } from '@argonprotocol/mainchain';
 import Provisioner, { IStep } from '../lib/Provisioner';
 import emitter from '../emitters/basic';
 import type IBiddingRules from '../lib/bidding-calculator/IBiddingRules';
+import { listen } from '@tauri-apps/api/event';
 
 export interface ICurrencyRecord {
   id: ICurrency;
@@ -27,6 +28,23 @@ export interface IWallet {
   argons: number;
   argonots: number;
   totalValue: number;
+}
+
+export interface IArgonActivity {
+  localhostBlockNumber: number;
+  mainchainBlockNumber: number;
+  insertedAt: string;
+}
+
+export interface IBitcoinActivity {
+  localhostBlockNumber: number;
+  mainchainBlockNumber: number;
+  insertedAt: string;
+}
+
+export interface IBotActivity {
+  action: string;
+  insertedAt: string;
 }
 
 export type ICurrency = Currency.ARGN | Currency.USD | Currency.EURO | Currency.GBP | Currency.INR;
@@ -93,6 +111,10 @@ export const useConfigStore = defineStore('config', () => {
   
   const biddingRules: Vue.Ref<IBiddingRules | null> = Vue.ref(null);
   const requiresPassword = Vue.ref(false);
+
+  const argonActivity = Vue.ref<IArgonActivity[]>([]);
+  const bitcoinActivity = Vue.ref<IBitcoinActivity[]>([]);
+  const botActivity = Vue.ref<IBotActivity[]>([]);
 
   const displayCurrencies: Record<ICurrency, ICurrencyRecord> = {
     [Currency.ARGN]: { id: Currency.ARGN, symbol: '₳', name: 'Argon' },
@@ -263,28 +285,76 @@ export const useConfigStore = defineStore('config', () => {
     await invoke('retry_provisioning', { stepKey });
   }
 
-  async function launchMiningBot() {
+  async function createServerSecurityVariables() {
     const seedAccount = new Keyring({ type: 'sr25519' }).createFromUri(walletMnemonic.value);
     const mngAccount = seedAccount.derive(`//mng`);
     const walletJson = JSON.stringify(mngAccount.toJson(''));
 
-    await invoke('launch_mining_bot', { walletJson, sessionMnemonic: sessionMnemonic.value });
+    return { walletJson, sessionMnemonic: sessionMnemonic.value };
+  }
+
+  async function launchMiningBot() {
+    const { walletJson, sessionMnemonic } = await createServerSecurityVariables();
+    await invoke('launch_mining_bot', { walletJson, sessionMnemonic });
 
     await new Promise(resolve => setTimeout(resolve, 1000));
     serverConnection.isReadyForMining = true;
   }
 
+  async function updateBiddingRules(rules: IBiddingRules) {
+    const { walletJson, sessionMnemonic } = await createServerSecurityVariables();
+    await invoke('update_bidding_rules', { biddingRules: rules, walletJson, sessionMnemonic });
+    biddingRules.value = rules;
+  }
+
+  // BIDDER DATA //////////////////////////////////////////////////////////////
+  const bidderDataCallbackFns: ((bidderData: any) => void)[] = [];
+
+  function subscribeToBidderData(callbackFn: (bidderData: any) => void) {
+    bidderDataCallbackFns.push(callbackFn);
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+
   async function load() {
+    await listen('bidderData', (event: any) => {
+      for (const callbackFn of bidderDataCallbackFns) {
+        callbackFn(event.payload);
+      }
+    });
+
+    await listen('argonActivity', (event: any) => {
+      argonActivity.value.unshift(event.payload);
+      argonActivity.value.splice(10);
+    });
+
+    await listen('bitcoinActivity', (event: any) => {
+      bitcoinActivity.value.unshift(event.payload);
+      bitcoinActivity.value.splice(10);
+    });
+
+    await listen('botActivity', (event: any) => {
+      botActivity.value.unshift(event.payload);
+      botActivity.value.splice(10);
+    });
+
     const response = await invoke('start', {}) as { 
       mnemonics?: { wallet: string, session: string }, 
       biddingRules: any, 
       serverConnection: any, 
       serverStatus: any,
       serverProgress: any,
-      requiresPassword: boolean
+      requiresPassword: boolean,
+      argonActivity: IArgonActivity[],
+      bitcoinActivity: IBitcoinActivity[],
+      botActivity: IBotActivity[],
     };
     biddingRules.value = response.biddingRules;
     requiresPassword.value = response.requiresPassword;
+    
+    argonActivity.value = response.argonActivity;
+    bitcoinActivity.value = response.bitcoinActivity;
+    botActivity.value = response.botActivity;
 
     serverConnection.isConnected = response.serverConnection.isConnected;
     serverConnection.isProvisioned = response.serverConnection.isProvisioned || false;
@@ -322,6 +392,9 @@ export const useConfigStore = defineStore('config', () => {
     currencySymbol,
     biddingRules,
     serverConnection,
+    argonActivity,
+    bitcoinActivity,
+    botActivity,
     setDisplayCurrency,
     argonTo,
     toArgon,
@@ -331,5 +404,7 @@ export const useConfigStore = defineStore('config', () => {
     removeServer,
     runRetryStep,
     launchMiningBot,
+    updateBiddingRules,
+    subscribeToBidderData,
   };
 });

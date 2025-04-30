@@ -33,7 +33,7 @@
           </section>
         </div>
 
-        <button @click="launchMiningBot" :class="[walletIsMinimallyFunded && hasBiddingRules ? 'text-white' : 'text-white/70 pointer-events-none opacity-30']" class="bg-argon-button border border-argon-button-hover mt-8 text-2xl font-bold px-4 py-4 rounded-md w-full cursor-pointer hover:bg-argon-button-hover hover:inner-button-shadow">
+        <button @click="launchMiningBot" :class="[walletIsMinimallyFunded && hasBiddingRules ? 'text-white' : 'text-white/70 pointer-events-none opacity-30', isLaunchingMiningBot ? 'opacity-30 pointer-events-none' : '']" class="bg-argon-button border border-argon-button-hover mt-8 text-2xl font-bold px-4 py-4 rounded-md w-full cursor-pointer hover:bg-argon-button-hover hover:inner-button-shadow">
           {{ isLaunchingMiningBot ? 'Launching Mining Bot...' : 'Launch Mining Bot' }}
         </button>
       </div>

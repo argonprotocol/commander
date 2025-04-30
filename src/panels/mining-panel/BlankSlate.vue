@@ -22,8 +22,8 @@
           <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">
             <div class="text-4xl font-bold">
-              <template v-if="blockchainStore.isLoaded">
-                <span :class="[currencySymbol === '₳' ? 'font-medium' : 'font-bold']">{{currencySymbol}}</span>{{ addCommas(argonTo(blockchainStore.aggregateBidCosts), blockchainStore.aggregateBidCosts > 1_000 ? 0 : 2) }}
+              <template v-if="isLoaded">
+                <span :class="[currencySymbol === '₳' ? 'font-medium' : 'font-bold']">{{currencySymbol}}</span>{{ addCommas(argonTo(blockchainStore.aggregatedBidCosts), blockchainStore.aggregatedBidCosts > 1_000 ? 0 : 2) }}
               </template>
               <template v-else>
                 ---
@@ -34,8 +34,8 @@
           <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">
             <div class="text-4xl font-bold">
-              <template v-if="blockchainStore.isLoaded">
-                <span :class="[currencySymbol === '₳' ? 'font-medium' : 'font-bold']">{{currencySymbol}}</span>{{ addCommas(argonTo(blockchainStore.minimumBlockRewards), blockchainStore.minimumBlockRewards > 1_000 ? 0 : 2) }}
+              <template v-if="isLoaded">
+                <span :class="[currencySymbol === '₳' ? 'font-medium' : 'font-bold']">{{currencySymbol}}</span>{{ addCommas(argonTo(aggregatedBlockRewards), aggregatedBlockRewards > 1_000 ? 0 : 2) }}
               </template>
               <template v-else>
                 ---
@@ -46,8 +46,8 @@
           <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">
             <div class="text-4xl font-bold">
-              <template v-if="blockchainStore.isLoaded">
-                {{ addCommas(blockchainStore.currentAPY, blockchainStore.currentAPY > 100 ? 0 : 2) }}%{{ blockchainStore.currentAPY >= 9_999? '+' : ' ' }}
+              <template v-if="isLoaded">
+                {{ addCommas(Math.min(currentAPY, 999_999), currentAPY > 100 ? 0 : 2) }}%{{ currentAPY >= 9_999? '+' : ' ' }}
               </template>
               <template v-else>
                 ---
@@ -102,11 +102,29 @@ dayjs.extend(utc);
 const blockchainStore = useBlockchainStore();
 const configStore = useConfigStore();
 
-const { argonTo } = configStore;
+const { argonTo, argonotToArgon } = configStore;
 const { currencySymbol } = storeToRefs(configStore);
 
 const minutesSinceBlock = Vue.ref(0);
 const secondsSinceBlock = Vue.ref(0);
+const isLoaded = Vue.ref(false);
+
+const aggregatedBlockRewards = Vue.computed(() => {
+  return blockchainStore.aggregatedBlockRewards.argons + argonotToArgon(blockchainStore.aggregatedBlockRewards.argonots);
+});
+
+const currentAPY = Vue.computed(() => {
+  if (blockchainStore.aggregatedBidCosts === 0 && aggregatedBlockRewards.value > 0) return 1_000_000;
+  if (blockchainStore.aggregatedBidCosts === 0) return 0;
+  
+  const tenDayRate = (aggregatedBlockRewards.value - blockchainStore.aggregatedBidCosts) / blockchainStore.aggregatedBidCosts;
+  // Compound APR over 36.5 cycles (10-day periods in a year)
+  const apy = (Math.pow(1 + tenDayRate, 36.5) - 1) * 100;
+  if (apy > 9999) {
+    return 9999;
+  }
+  return apy;
+});
 
 function updateTimeSinceBlock() {
   if (blockchainStore.lastBlockTimestamp) {
@@ -126,6 +144,15 @@ function openServerConnectOverlay() {
 
 Vue.onMounted(async () => {
   updateTimeSinceBlock();
+
+  Promise.all([
+    blockchainStore.subscribeToRecentBlocks(),
+    blockchainStore.updateAggregateBidCosts(),
+    blockchainStore.updateAggregateBlockRewards(),
+    blockchainStore.updateMiningSeatCount(),
+  ]).then(() => {
+    isLoaded.value = true;
+  });
 });
 
 </script>

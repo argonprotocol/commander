@@ -3,11 +3,14 @@ use window_vibrancy::*;
 use config::{Config, ServerStatus, BiddingRules, ServerConnection, ServerProgress, Mnemonics};
 use provisioner::Provisioner;
 use bidder::Bidder;
+use db::{DB, ArgonActivity, BitcoinActivity, BotActivity};
 
 mod ssh;
 mod config;
 mod provisioner;
 mod bidder;
+mod bidder_stats;
+mod db;
 
 #[derive(serde::Serialize)]
 struct AppConfig {
@@ -28,6 +31,15 @@ struct AppConfig {
     
     #[serde(rename = "biddingRules")]
     bidding_rules: Option<BiddingRules>,
+
+    #[serde(rename = "argonActivity")]
+    argon_activity: Vec<ArgonActivity>,
+
+    #[serde(rename = "bitcoinActivity")]
+    bitcoin_activity: Vec<BitcoinActivity>,
+
+    #[serde(rename = "botActivity")]
+    bot_activity: Vec<BotActivity>,
 }
 
 #[tauri::command]
@@ -48,6 +60,9 @@ async fn start(
         server_status: config.server_status.clone(),
         server_progress: config.server_progress.clone(),
         bidding_rules: config.bidding_rules.clone(),
+        argon_activity: ArgonActivity::fetch_last_five_records().map_err(|e| e.to_string())?,
+        bitcoin_activity: BitcoinActivity::fetch_last_five_records().map_err(|e| e.to_string())?,
+        bot_activity: BotActivity::fetch_last_five_records().map_err(|e| e.to_string())?,
     };
 
     if config.server_connection.is_connected && !config.server_connection.is_provisioned {
@@ -57,6 +72,15 @@ async fn start(
         let port = 22;
         
         Provisioner::reconnect(ssh_private_key, username, ip_address, port, app)
+            .await
+            .map_err(|e| e.to_string())?;
+    } else if config.server_connection.is_ready_for_mining {
+        let ssh_private_key = config.server_connection.ssh_private_key.clone(); 
+        let ip_address = config.server_connection.ip_address.clone();
+        let username = String::from("root");
+        let port = 22;
+        
+        Bidder::reconnect(ssh_private_key, username, ip_address, port, app)
             .await
             .map_err(|e| e.to_string())?;
     }
@@ -169,16 +193,38 @@ async fn retry_provisioning(
 }
 
 #[tauri::command]
-async fn update_bidding_rules(bidding_rules: BiddingRules) -> Result<(), String> {
+async fn update_bidding_rules(
+    app: AppHandle,
+    bidding_rules: BiddingRules,
+    wallet_json: String,
+    session_mnemonic: String,
+) -> Result<(), String> {
     println!("update_bidding_rules");
 
     bidding_rules.save().map_err(|e| e.to_string())?;
+
+    let server_connection = match ServerConnection::load() {
+        Ok(config) => config,
+        Err(e) => return Err(format!("ConfigFailed: {}", e)),
+    };
+
+    if server_connection.is_ready_for_mining {
+        let ssh_private_key = server_connection.ssh_private_key.clone();
+        let ip_address = server_connection.ip_address.clone();
+        let username = String::from("root");
+        let port = 22;
+        
+        Bidder::start(app, ssh_private_key, username, ip_address, port, wallet_json, session_mnemonic)
+            .await
+            .map_err(|e| e.to_string())?;    
+    }
 
     Ok(())
 }
 
 #[tauri::command]
 async fn launch_mining_bot(
+    app: AppHandle,
     wallet_json: String,
     session_mnemonic: String,
 ) -> Result<(), String> {
@@ -194,7 +240,7 @@ async fn launch_mining_bot(
     let username = String::from("root");
     let port = 22;
     
-    Bidder::start(ssh_private_key, username, ip_address, port, wallet_json, session_mnemonic)
+    Bidder::start(app, ssh_private_key, username, ip_address, port, wallet_json, session_mnemonic)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -208,6 +254,8 @@ pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
+
+            DB::init().map_err(|e| e.to_string())?;
 
             #[cfg(target_os = "macos")]
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(16.0))
