@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::path::Path;
 
-#[derive(Deserialize, Serialize, Clone)]
-#[derive(Default)]
+#[derive(Deserialize, Serialize, Clone, Default)]
 pub struct Base {
     #[serde(rename = "requiresPassword")]
     pub requires_password: bool,
@@ -23,4 +22,3 @@ impl Base {
         }
     }
 }
-
