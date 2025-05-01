@@ -1,16 +1,16 @@
-use tauri::{Manager, AppHandle};
-use window_vibrancy::*;
-use config::{Config, ServerStatus, BiddingRules, ServerConnection, ServerProgress, Mnemonics};
-use provisioner::Provisioner;
 use bidder::Bidder;
-use db::{DB, ArgonActivity, BitcoinActivity, BotActivity};
+use config::{BiddingRules, Config, Mnemonics, ServerConnection, ServerProgress, ServerStatus};
+use db::{ArgonActivity, BitcoinActivity, BotActivity, DB};
+use provisioner::Provisioner;
+use tauri::{AppHandle, Manager};
+use window_vibrancy::*;
 
-mod ssh;
-mod config;
-mod provisioner;
 mod bidder;
 mod bidder_stats;
+mod config;
 mod db;
+mod provisioner;
+mod ssh;
 
 #[derive(serde::Serialize)]
 struct AppConfig {
@@ -28,7 +28,7 @@ struct AppConfig {
 
     #[serde(rename = "serverProgress")]
     server_progress: ServerProgress,
-    
+
     #[serde(rename = "biddingRules")]
     bidding_rules: Option<BiddingRules>,
 
@@ -43,9 +43,7 @@ struct AppConfig {
 }
 
 #[tauri::command]
-async fn start(
-    app: AppHandle
-) -> Result<AppConfig, String> {
+async fn start(app: AppHandle) -> Result<AppConfig, String> {
     println!("start");
 
     let config = match Config::load() {
@@ -54,7 +52,7 @@ async fn start(
     };
 
     let record = AppConfig {
-        requires_password: config.requires_password.clone(),
+        requires_password: config.requires_password,
         mnemonics: config.mnemonics.clone(),
         server_connection: config.server_connection.clone(),
         server_status: config.server_status.clone(),
@@ -66,20 +64,20 @@ async fn start(
     };
 
     if config.server_connection.is_connected && !config.server_connection.is_provisioned {
-        let ssh_private_key = config.server_connection.ssh_private_key.clone(); 
+        let ssh_private_key = config.server_connection.ssh_private_key.clone();
         let ip_address = config.server_connection.ip_address.clone();
         let username = String::from("root");
         let port = 22;
-        
+
         Provisioner::reconnect(ssh_private_key, username, ip_address, port, app)
             .await
             .map_err(|e| e.to_string())?;
     } else if config.server_connection.is_ready_for_mining {
-        let ssh_private_key = config.server_connection.ssh_private_key.clone(); 
+        let ssh_private_key = config.server_connection.ssh_private_key.clone();
         let ip_address = config.server_connection.ip_address.clone();
         let username = String::from("root");
         let port = 22;
-        
+
         Bidder::reconnect(ssh_private_key, username, ip_address, port, app)
             .await
             .map_err(|e| e.to_string())?;
@@ -89,10 +87,7 @@ async fn start(
 }
 
 #[tauri::command]
-async fn create_mnemonics(
-    wallet: String,
-    session: String,
-) -> Result<(), String> {    
+async fn create_mnemonics(wallet: String, session: String) -> Result<(), String> {
     println!("create_mnemonics");
 
     Mnemonics::create(wallet, session).map_err(|e| e.to_string())?;
@@ -101,29 +96,25 @@ async fn create_mnemonics(
 }
 
 #[tauri::command]
-async fn connect_server(
-    app: AppHandle,
-    ip_address: String,
-) -> Result<(), String> {
+async fn connect_server(app: AppHandle, ip_address: String) -> Result<(), String> {
     println!("connect_server");
 
     let mut config = match Config::load() {
         Ok(config) => config,
         Err(e) => return Err(format!("ConfigFailed: {}", e)),
     };
-    
+
     let ssh_private_key = config.server_connection.ssh_private_key.clone();
     let username = String::from("root");
     let port = 22;
-    
+
     Provisioner::start(ssh_private_key, username, ip_address.clone(), port, app)
         .await
         .map_err(|e| e.to_string())?;
-    
+
     config.server_connection.ip_address = ip_address;
     config.server_connection.is_connected = true;
-    config.server_connection.save()
-        .map_err(|e| e.to_string())?;
+    config.server_connection.save().map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -140,20 +131,19 @@ async fn remove_server() -> Result<(), String> {
     config.server_connection.ip_address = String::from("");
     config.server_connection.is_connected = false;
     config.server_connection.is_provisioned = false;
-    config.server_connection.save()
-        .map_err(|e| e.to_string())?;
+    config.server_connection.save().map_err(|e| e.to_string())?;
 
     config.server_status.remove_file()?;
-    config.server_progress.remove_file()
+    config
+        .server_progress
+        .remove_file()
         .map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 #[tauri::command]
-async fn update_server_progress(
-    progress: ServerProgress,
-) -> Result<(), String> {
+async fn update_server_progress(progress: ServerProgress) -> Result<(), String> {
     println!("update_server_progress");
 
     let mut config = match Config::load() {
@@ -162,17 +152,13 @@ async fn update_server_progress(
     };
 
     config.server_progress = progress;
-    config.server_progress.save()
-        .map_err(|e| e.to_string())?;
-    
+    config.server_progress.save().map_err(|e| e.to_string())?;
+
     Ok(())
 }
 
 #[tauri::command]
-async fn retry_provisioning(
-    app: AppHandle,
-    step_key: String,
-) -> Result<(), String> {
+async fn retry_provisioning(app: AppHandle, step_key: String) -> Result<(), String> {
     println!("retry_provisioning");
 
     let config = match Config::load() {
@@ -184,11 +170,18 @@ async fn retry_provisioning(
     let ip_address = config.server_connection.ip_address.clone();
     let username = String::from("root");
     let port = 22;
-    
-    Provisioner::retry_failure(step_key, ssh_private_key, username, ip_address.clone(), port, app)
-        .await
-        .map_err(|e| e.to_string())?;
-    
+
+    Provisioner::retry_failure(
+        step_key,
+        ssh_private_key,
+        username,
+        ip_address.clone(),
+        port,
+        app,
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+
     Ok(())
 }
 
@@ -213,10 +206,18 @@ async fn update_bidding_rules(
         let ip_address = server_connection.ip_address.clone();
         let username = String::from("root");
         let port = 22;
-        
-        Bidder::start(app, ssh_private_key, username, ip_address, port, wallet_json, session_mnemonic)
-            .await
-            .map_err(|e| e.to_string())?;    
+
+        Bidder::start(
+            app,
+            ssh_private_key,
+            username,
+            ip_address,
+            port,
+            wallet_json,
+            session_mnemonic,
+        )
+        .await
+        .map_err(|e| e.to_string())?;
     }
 
     Ok(())
@@ -239,10 +240,18 @@ async fn launch_mining_bot(
     let ip_address = server_connection.ip_address.clone();
     let username = String::from("root");
     let port = 22;
-    
-    Bidder::start(app, ssh_private_key, username, ip_address, port, wallet_json, session_mnemonic)
-        .await
-        .map_err(|e| e.to_string())?;
+
+    Bidder::start(
+        app,
+        ssh_private_key,
+        username,
+        ip_address,
+        port,
+        wallet_json,
+        session_mnemonic,
+    )
+    .await
+    .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -250,7 +259,7 @@ async fn launch_mining_bot(
 ////////////////////////////////////////////////////////////
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {    
+pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
@@ -259,16 +268,16 @@ pub fn run() {
 
             #[cfg(target_os = "macos")]
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(16.0))
-                .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");            
+                .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
 
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
-            start, 
-            create_mnemonics, 
-            connect_server, 
+            start,
+            create_mnemonics,
+            connect_server,
             remove_server,
             update_server_progress,
             update_bidding_rules,

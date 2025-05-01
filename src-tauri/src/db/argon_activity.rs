@@ -1,5 +1,5 @@
-use rusqlite::{Connection, Result};
 use super::DB;
+use rusqlite::{Connection, Result};
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct ArgonActivity {
@@ -17,7 +17,7 @@ impl ArgonActivity {
         let mut stmt = conn.prepare(
             "INSERT INTO argon_activity (localhost_block_number, mainchain_block_number) 
              VALUES (?1, ?2) 
-             RETURNING *"
+             RETURNING *",
         )?;
         let argon_activity = stmt.query_row((localhost_block, mainchain_block), |row| {
             Ok(ArgonActivity {
@@ -31,7 +31,8 @@ impl ArgonActivity {
 
     pub fn fetch_last_five_records() -> Result<Vec<ArgonActivity>> {
         let conn = Connection::open(DB::get_db_path())?;
-        let mut stmt = conn.prepare("SELECT * FROM argon_activity ORDER BY inserted_at DESC LIMIT 5")?;
+        let mut stmt =
+            conn.prepare("SELECT * FROM argon_activity ORDER BY inserted_at DESC LIMIT 5")?;
         let argon_activity_iter = stmt.query_map([], |row| {
             Ok(ArgonActivity {
                 localhost_block_number: row.get("localhost_block_number")?,

@@ -1,14 +1,14 @@
+use anyhow::Result;
+use async_trait::async_trait;
+use rand::rngs::OsRng;
+use russh::*;
+use russh_keys::*;
+use ssh_key::{Algorithm, LineEnding, PrivateKey, PublicKey};
 use std::sync::Arc;
 use std::time::Duration;
-use async_trait::async_trait;
-use anyhow::Result;
-use russh_keys::*;
-use russh::*;
-use ssh_key::{PrivateKey, PublicKey, Algorithm, LineEnding};
-use rand::rngs::OsRng;
-use tokio::sync::Mutex as TokioMutex;
-use tokio::runtime::Handle;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::runtime::Handle;
+use tokio::sync::Mutex as TokioMutex;
 
 pub struct SSH {
     client: Arc<client::Handle<ClientHandler>>,
@@ -35,7 +35,12 @@ impl SSH {
         }
     }
 
-    pub async fn connect(private_key: &str, mut username: &str, host: &str, port: u16) -> Result<Self> {
+    pub async fn connect(
+        private_key: &str,
+        mut username: &str,
+        host: &str,
+        port: u16,
+    ) -> Result<Self> {
         let key_pair = decode_secret_key(private_key, None)?;
         let addrs = (host, port);
         if username.is_empty() {
@@ -60,17 +65,16 @@ impl SSH {
         let mut client = client::connect(config, addrs, handler).await?;
         // use publickey authentication, with or without certificate
         let auth_res = client
-            .authenticate_publickey(
-                username,
-                Arc::new(key_pair)
-            )
+            .authenticate_publickey(username, Arc::new(key_pair))
             .await?;
 
         if !auth_res {
             anyhow::bail!("Authentication (with publickey) failed");
         }
 
-        Ok(SSH { client: Arc::new(client) })
+        Ok(SSH {
+            client: Arc::new(client),
+        })
     }
 
     pub async fn run_command(&mut self, command: &str) -> Result<(String, u32)> {
@@ -94,7 +98,8 @@ impl SSH {
                 }
                 // Collect stderr data
                 russh::ChannelMsg::ExtendedData { ref data, ext } => {
-                    if ext == 1 { // 1 is stderr
+                    if ext == 1 {
+                        // 1 is stderr
                         output.push_str(&String::from_utf8_lossy(data));
                     }
                 }
@@ -117,16 +122,16 @@ impl SSH {
 
         println!("Creating remote file {}", remote_path);
 
-        // Write the contents of the setup script        
+        // Write the contents of the setup script
         channel.data(contents.as_bytes()).await?;
         channel.eof().await?;
 
         // Wait for the copy to complete
-        while let Some(_) = channel.wait().await {}
+        while (channel.wait().await).is_some() {}
 
         Ok(())
     }
-    
+
     pub async fn start_script(&mut self, relative_script_path: &str) -> Result<()> {
         let local_script_path = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), relative_script_path);
 
@@ -138,14 +143,18 @@ impl SSH {
         };
 
         let remote_script_path = format!("~/{}", relative_script_path);
-        
-        self.upload_file(&script_contents, &remote_script_path).await?;
+
+        self.upload_file(&script_contents, &remote_script_path)
+            .await?;
 
         // Now execute the script
-        let shell_command = format!("chmod +x {} && nohup {} > /dev/null 2>&1 &", remote_script_path, remote_script_path);
+        let shell_command = format!(
+            "chmod +x {} && nohup {} > /dev/null 2>&1 &",
+            remote_script_path, remote_script_path
+        );
         println!("Running: {}", shell_command);
         let mut channel = self.client.channel_open_session().await?;
-        
+
         // Start execution but don't wait for it
         let _ = tokio::spawn(async move {
             if let Err(e) = SSH::exec_and_print_output_static(&mut channel, shell_command).await {
@@ -158,9 +167,12 @@ impl SSH {
     }
 
     // Static version that doesn't need &mut self
-    async fn exec_and_print_output_static(channel: &mut Channel<client::Msg>, command: String) -> Result<()> {
+    async fn exec_and_print_output_static(
+        channel: &mut Channel<client::Msg>,
+        command: String,
+    ) -> Result<()> {
         channel.exec(true, command).await?;
-        
+
         while let Some(msg) = channel.wait().await {
             match msg {
                 russh::ChannelMsg::Data { ref data } => {
@@ -180,7 +192,7 @@ impl SSH {
 
         Ok(())
     }
-    
+
     pub async fn close(&mut self) -> Result<()> {
         self.client
             .disconnect(Disconnect::ByApplication, "", "English")
@@ -190,27 +202,35 @@ impl SSH {
 
     pub fn generate_keys() -> Result<(String, String), String> {
         // Generate a new key pair using Ed25519
-        let private_key = PrivateKey::random(&mut OsRng, Algorithm::Ed25519)
-            .map_err(|e| e.to_string())?;
-        
+        let private_key =
+            PrivateKey::random(&mut OsRng, Algorithm::Ed25519).map_err(|e| e.to_string())?;
+
         // Derive the public key from the private key
         let public_key = PublicKey::from(&private_key);
-        
+
         // Convert to OpenSSH format
-        let public_key_openssh = public_key.to_openssh()
-            .map_err(|e| e.to_string())?;
-                
+        let public_key_openssh = public_key.to_openssh().map_err(|e| e.to_string())?;
+
         // Convert private key to OpenSSH format
-        let private_key_openssh = private_key.to_openssh(LineEnding::LF)
+        let private_key_openssh = private_key
+            .to_openssh(LineEnding::LF)
             .map_err(|e| e.to_string())?
             .to_string();
-    
+
         Ok((private_key_openssh, public_key_openssh))
     }
 
-    pub async fn create_http_tunnel(&mut self, local_port: u16, remote_host: &str, remote_port: u16) -> Result<()> {
-        println!("Opening tunnel from local port {} to {}:{}", local_port, remote_host, remote_port);
-        
+    pub async fn create_http_tunnel(
+        &mut self,
+        local_port: u16,
+        remote_host: &str,
+        remote_port: u16,
+    ) -> Result<()> {
+        println!(
+            "Opening tunnel from local port {} to {}:{}",
+            local_port, remote_host, remote_port
+        );
+
         // Create a TCP listener on the local port
         let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", local_port)).await?;
         println!("TCP listener created on port {}", local_port);
@@ -224,20 +244,22 @@ impl SSH {
             loop {
                 match listener.accept().await {
                     Ok((local_stream, _)) => {
-                        
                         // Clone the client handle for this connection
                         let client = Arc::clone(&client);
                         let remote_host = remote_host.clone();
-                        
+
                         // Spawn a new task for each connection
                         tokio::spawn(async move {
                             // Create a new SSH channel for this connection
-                            let mut channel = match client.channel_open_direct_tcpip(
-                                &remote_host,
-                                remote_port as u32,
-                                "127.0.0.1",
-                                local_port as u32
-                            ).await {
+                            let mut channel = match client
+                                .channel_open_direct_tcpip(
+                                    &remote_host,
+                                    remote_port as u32,
+                                    "127.0.0.1",
+                                    local_port as u32,
+                                )
+                                .await
+                            {
                                 Ok(channel) => channel,
                                 Err(e) => {
                                     println!("Error creating SSH channel: {}", e);
@@ -350,7 +372,9 @@ impl Drop for SSHDropGuard {
                 }
             });
         } else {
-            println!("Warning: Could not close SSH connection during cleanup - no runtime available");
+            println!(
+                "Warning: Could not close SSH connection during cleanup - no runtime available"
+            );
         }
     }
 }

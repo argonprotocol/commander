@@ -1,8 +1,8 @@
+use super::Config;
+use serde::{Deserialize, Serialize};
+use std::error::Error;
 use std::fs;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
-use super::Config;
-use std::error::Error;
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum ServerStatusErrorType {
@@ -38,8 +38,7 @@ pub struct ServerStatus {
 impl std::fmt::Display for ServerStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "ServerStatus {{ ubuntu: {}, git: {}, docker: {}, bitcoinsync: {}, argonsync: {}, minerlaunch: {}, error_type: {:?}, error_message: {:?} }}",
-            self.ubuntu, self.git, self.docker, self.bitcoinsync, self.argonsync, 
-            self.minerlaunch, self.error_type, self.error_message)
+            self.ubuntu, self.git, self.docker, self.bitcoinsync, self.argonsync, self.minerlaunch, self.error_type, self.error_message)
     }
 }
 
@@ -63,7 +62,8 @@ impl ServerStatus {
     pub fn remove_file(&self) -> Result<(), String> {
         let config_dir = Config::get_config_dir();
         let file_path = Path::new(&config_dir).join(Self::FILENAME);
-        fs::remove_file(file_path).map_err(|e| format!("Failed to remove {} file: {}", Self::FILENAME, e))
+        fs::remove_file(file_path)
+            .map_err(|e| format!("Failed to remove {} file: {}", Self::FILENAME, e))
     }
 }
 
@@ -80,4 +80,4 @@ impl Default for ServerStatus {
             error_message: None,
         }
     }
-} 
+}

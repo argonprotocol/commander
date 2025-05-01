@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
-use crate::ssh::SSH;
 use super::Config;
-use std::path::Path;
+use crate::ssh::SSH;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
+use std::path::Path;
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ServerConnection {
@@ -26,15 +26,15 @@ impl ServerConnection {
     pub const FILENAME: &'static str = "serverConnection.json";
 
     pub fn load() -> Result<Self, Box<dyn Error>> {
-      let file_path = Config::get_full_path(Self::FILENAME);
+        let file_path = Config::get_full_path(Self::FILENAME);
 
-      if Path::new(&file_path).exists() {
-        Config::load_from_json_file(Self::FILENAME)
-      } else {
-        let server_connection = Self::default();
-        server_connection.save()?;
-        Ok(server_connection)
-      }
+        if Path::new(&file_path).exists() {
+            Config::load_from_json_file(Self::FILENAME)
+        } else {
+            let server_connection = Self::default();
+            server_connection.save()?;
+            Ok(server_connection)
+        }
     }
 
     pub fn save(&self) -> Result<(), Box<dyn Error>> {
@@ -44,18 +44,17 @@ impl ServerConnection {
 
 impl Default for ServerConnection {
     fn default() -> Self {
-        let (ssh_private_key, ssh_public_key) = SSH::generate_keys().unwrap_or_else(|_| {
-            ("".to_string(), "".to_string())
-        });
+        let (ssh_private_key, ssh_public_key) =
+            SSH::generate_keys().unwrap_or_else(|_| ("".to_string(), "".to_string()));
 
         Self {
             ip_address: "".to_string(),
-            ssh_public_key: ssh_public_key,
-            ssh_private_key: ssh_private_key,
+            ssh_public_key,
+            ssh_private_key,
             is_connected: false,
             is_provisioned: false,
             is_ready_for_mining: false,
             has_mining_seats: false,
         }
     }
-} 
+}

@@ -1,8 +1,8 @@
+use super::Config;
+use serde::{Deserialize, Serialize};
+use std::error::Error;
 use std::fs;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
-use super::Config;
-use std::error::Error;
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ServerProgress {
@@ -58,4 +58,4 @@ impl Default for ServerProgress {
             minerlaunch: 0.00,
         }
     }
-} 
+}

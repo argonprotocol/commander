@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use super::Config;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::path::Path;
 

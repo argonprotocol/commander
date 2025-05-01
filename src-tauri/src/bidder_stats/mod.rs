@@ -1,12 +1,11 @@
-use anyhow::Result;
-use crate::ssh::{SSH};
-use crate::config::{Config, ServerConnection};
+use crate::config::ServerConnection;
 use crate::db::{ArgonActivity, BitcoinActivity, BotActivity};
-use tauri::{AppHandle, Emitter};
-use std::sync::{Mutex};
+use crate::ssh::SSH;
+use anyhow::Result;
 use lazy_static::lazy_static;
-use serde_json;
 use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
+use tauri::{AppHandle, Emitter};
 
 lazy_static! {
     static ref RUNNING_TASK: Mutex<Option<tokio::task::JoinHandle<()>>> = Mutex::new(None);
@@ -139,19 +138,17 @@ pub struct BidderStats<'a> {
 impl<'a> BidderStats<'a> {
     pub fn new(app: AppHandle, ssh: &'a mut SSH, local_port: u16) -> Self {
         BidderStats {
-            app: app,
+            app,
             biddings_last_updated: String::new(),
             earnings_last_updated: String::new(),
-            ssh: ssh,
-            local_port: local_port,
+            ssh,
+            local_port,
             argon_mining_status: (0, 0),
             bitcoin_mining_status: (0, 0),
         }
     }
 
-    pub async fn run(
-        &mut self,
-    ) -> Result<()> {
+    pub async fn run(&mut self) -> Result<()> {
         let status = self.update_sync_status().await?;
 
         // // If processed rotation is less than current rotation, we need to update the biddings and earnings
@@ -174,14 +171,25 @@ impl<'a> BidderStats<'a> {
             .await
             .map_err(|e| anyhow::anyhow!("Failed to fetch status: {}", e))?;
 
-        let text = response.text().await.unwrap_or_else(|_| "Could not get response text".to_string());
-        let status: IStatusResponse = serde_json::from_str(&text)
-            .map_err(|e| anyhow::anyhow!("Failed to parse status JSON: {}. Response text: {}", e, text))?;
+        let text = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Could not get response text".to_string());
+        let status: IStatusResponse = serde_json::from_str(&text).map_err(|e| {
+            anyhow::anyhow!(
+                "Failed to parse status JSON: {}. Response text: {}",
+                e,
+                text
+            )
+        })?;
 
         if status.has_won_seats {
-            let mut server_connection = ServerConnection::load().map_err(|e| anyhow::anyhow!("Failed to load server connection: {}", e))?;
+            let mut server_connection = ServerConnection::load()
+                .map_err(|e| anyhow::anyhow!("Failed to load server connection: {}", e))?;
             server_connection.has_mining_seats = true;
-            server_connection.save().map_err(|e| anyhow::anyhow!("Failed to save server connection: {}", e))?;
+            server_connection
+                .save()
+                .map_err(|e| anyhow::anyhow!("Failed to save server connection: {}", e))?;
         }
 
         let mut biddings_were_updated = false;
@@ -209,40 +217,69 @@ impl<'a> BidderStats<'a> {
     }
 
     async fn update_biddings(&mut self, next_cohort_id: u32) -> Result<()> {
-        let response = reqwest::get(format!("http://127.0.0.1:{}/biddings/{}", self.local_port, next_cohort_id))
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to fetch biddings/: {}", e))?;
+        let response = reqwest::get(format!(
+            "http://127.0.0.1:{}/biddings/{}",
+            self.local_port, next_cohort_id
+        ))
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to fetch biddings/: {}", e))?;
 
-        let text = response.text().await.unwrap_or_else(|_| "Could not get response text".to_string());
-        let status: IBiddingsFile = serde_json::from_str(&text)
-            .map_err(|e| anyhow::anyhow!("Failed to parse status JSON: {}. Response text: {}", e, text))?;
+        let text = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Could not get response text".to_string());
+        let status: IBiddingsFile = serde_json::from_str(&text).map_err(|e| {
+            anyhow::anyhow!(
+                "Failed to parse status JSON: {}. Response text: {}",
+                e,
+                text
+            )
+        })?;
 
         Ok(())
     }
 
     async fn update_earnings(&mut self, rotation_id: u32) -> Result<()> {
-        let response = reqwest::get(format!("http://127.0.0.1:{}/earnings/{}", self.local_port, rotation_id))
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to fetch earnings/: {}", e))?;
+        let response = reqwest::get(format!(
+            "http://127.0.0.1:{}/earnings/{}",
+            self.local_port, rotation_id
+        ))
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to fetch earnings/: {}", e))?;
 
-        let text = response.text().await.unwrap_or_else(|_| "Could not get response text".to_string());
-        let status: IEarningsFile = serde_json::from_str(&text)
-            .map_err(|e| anyhow::anyhow!("Failed to parse status JSON: {}. Response text: {}", e, text))?;
+        let text = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Could not get response text".to_string());
+        let status: IEarningsFile = serde_json::from_str(&text).map_err(|e| {
+            anyhow::anyhow!(
+                "Failed to parse status JSON: {}. Response text: {}",
+                e,
+                text
+            )
+        })?;
 
         Ok(())
     }
 
     async fn update_argon_blockchain_status(&mut self) -> Result<(u32, u32)> {
-        let (argon_output, _) = self.ssh.run_command("docker exec commander-deploy-argon-miner-1 latestblock.sh").await?;
+        let (argon_output, _) = self
+            .ssh
+            .run_command("docker exec commander-deploy-argon-miner-1 latestblock.sh")
+            .await?;
         println!("ARGON output: {}", argon_output);
 
         let parts: Vec<&str> = argon_output.trim().split('-').collect();
         if parts.len() != 2 {
             return Err(anyhow::anyhow!("Invalid argon output format"));
         }
-        let localhost_block = parts[0].trim().parse::<u32>()
+        let localhost_block = parts[0]
+            .trim()
+            .parse::<u32>()
             .map_err(|_| anyhow::anyhow!("Failed to parse localhost block number"))?;
-        let mainchain_block = parts[1].trim().parse::<u32>()
+        let mainchain_block = parts[1]
+            .trim()
+            .parse::<u32>()
             .map_err(|_| anyhow::anyhow!("Failed to parse mainchain block number"))?;
 
         if self.argon_mining_status != (localhost_block, mainchain_block) {
@@ -252,20 +289,27 @@ impl<'a> BidderStats<'a> {
                 println!("Error emitting argon activity: {}", e);
             }
         }
-        
+
         Ok((localhost_block, mainchain_block))
     }
 
     async fn update_bitcoin_blockchain_status(&mut self) -> Result<(u32, u32)> {
-        let (bitcoin_output, _) = self.ssh.run_command("docker exec commander-deploy-bitcoin-1 latestblock.sh").await?;
+        let (bitcoin_output, _) = self
+            .ssh
+            .run_command("docker exec commander-deploy-bitcoin-1 latestblock.sh")
+            .await?;
 
         let parts: Vec<&str> = bitcoin_output.trim().split('-').collect();
         if parts.len() != 2 {
             return Err(anyhow::anyhow!("Invalid bitcoin output format"));
         }
-        let localhost_block = parts[0].trim().parse::<u32>()
+        let localhost_block = parts[0]
+            .trim()
+            .parse::<u32>()
             .map_err(|_| anyhow::anyhow!("Failed to parse localhost block number"))?;
-        let mainchain_block = parts[1].trim().parse::<u32>()
+        let mainchain_block = parts[1]
+            .trim()
+            .parse::<u32>()
             .map_err(|_| anyhow::anyhow!("Failed to parse mainchain block number"))?;
 
         if self.bitcoin_mining_status != (localhost_block, mainchain_block) {
@@ -278,37 +322,39 @@ impl<'a> BidderStats<'a> {
 
         Ok((localhost_block, mainchain_block))
     }
-    
+
     async fn fetch_current_bidding_data(ssh: &mut SSH) -> Result<String> {
-        let (sync_state, _code) = match ssh.run_command("cat ~/commander-data/sync-state.json").await {
+        let (sync_state, _code) = match ssh
+            .run_command("cat ~/commander-data/sync-state.json")
+            .await
+        {
             Ok(result) => result,
-            Err(e) => return Err(anyhow::anyhow!("Failed to fetch sync-state.json: {}", e))
+            Err(e) => return Err(anyhow::anyhow!("Failed to fetch sync-state.json: {}", e)),
         };
-        
+
         // Parse the sync state JSON
         let sync_state: serde_json::Value = serde_json::from_str(&sync_state)
             .map_err(|e| anyhow::anyhow!("Failed to parse sync-state.json: {}", e))?;
-        
+
         // Extract the lastBlockByRotation object
         let last_block_by_rotation = sync_state["lastBlockByRotation"]
             .as_object()
             .ok_or_else(|| anyhow::anyhow!("lastBlockByRotation is not an object"))?;
-        
+
         // Find the highest rotation number
         let highest_rotation = last_block_by_rotation
             .keys()
             .filter_map(|k| k.parse::<u32>().ok())
             .max()
             .ok_or_else(|| anyhow::anyhow!("No valid rotation numbers found"))?;
-        
+
         let filename = format!("cohort-{}.json", highest_rotation);
         let command = format!("cat ~/commander-data/bidding/{}", filename);
         let (bidding_data, _code) = match ssh.run_command(command.as_str()).await {
             Ok(result) => result,
-            Err(_) => return Err(anyhow::anyhow!("Failed to fetch {}", filename))
+            Err(_) => return Err(anyhow::anyhow!("Failed to fetch {}", filename)),
         };
-        
+
         Ok(bidding_data)
     }
 }
-

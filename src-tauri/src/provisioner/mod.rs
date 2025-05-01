@@ -1,9 +1,9 @@
-use anyhow::Result;
-use tauri::{AppHandle, Emitter};
-use crate::ssh::{SSH, SSHDropGuard};
 use crate::config::{ServerConnection, ServerStatus, ServerStatusErrorType};
-use std::sync::{Arc, Mutex};
+use crate::ssh::{SSHDropGuard, SSH};
+use anyhow::Result;
 use lazy_static::lazy_static;
+use std::sync::{Arc, Mutex};
+use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex as TokioMutex;
 
 lazy_static! {
@@ -15,29 +15,29 @@ pub struct Provisioner {}
 impl Provisioner {
     pub async fn start(
         ssh_private_key: String,
-        username: String, 
-        host: String, 
-        port: u16, 
-        app: AppHandle
+        username: String,
+        host: String,
+        port: u16,
+        app: AppHandle,
     ) -> Result<()> {
         let mut ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
-        
+
         let script_is_running = Provisioner::is_script_running(&mut ssh).await?;
         if !script_is_running {
             Provisioner::start_script(&mut ssh).await?;
         }
 
-        Provisioner::monitor(app, ssh).await?;        
+        Provisioner::monitor(app, ssh).await?;
         println!("finished start");
         Ok(())
     }
 
     pub async fn reconnect(
         ssh_private_key: String,
-        username: String, 
-        host: String, 
-        port: u16, 
-        app: AppHandle
+        username: String,
+        host: String,
+        port: u16,
+        app: AppHandle,
     ) -> Result<()> {
         let mut ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
 
@@ -45,8 +45,8 @@ impl Provisioner {
         println!("need to start script = {}", !script_is_running);
         if !script_is_running {
             Provisioner::start_script(&mut ssh).await?;
-        } 
-        
+        }
+
         Provisioner::monitor(app, ssh).await?;
 
         Ok(())
@@ -58,7 +58,7 @@ impl Provisioner {
         username: String,
         host: String,
         port: u16,
-        app: AppHandle
+        app: AppHandle,
     ) -> Result<()> {
         let mut ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
 
@@ -70,7 +70,8 @@ impl Provisioner {
         if step_key == "all" {
             ssh.run_command("rm -rf ~/setup-logs/*").await?;
         } else {
-            ssh.run_command(format!("rm -rf ~/setup-logs/{}.*", step_key).as_str()).await?;
+            ssh.run_command(format!("rm -rf ~/setup-logs/{}.*", step_key).as_str())
+                .await?;
         }
 
         Provisioner::start_script(&mut ssh).await?;
@@ -81,12 +82,8 @@ impl Provisioner {
 
     async fn is_script_running(ssh: &mut SSH) -> Result<bool> {
         match ssh.run_command("pgrep -f setup-script.sh").await {
-            Ok((pid, _)) => {
-                Ok(pid.trim().is_empty() == false)
-            },
-            Err(_) => {
-                Ok(false)
-            },
+            Ok((pid, _)) => Ok(!pid.trim().is_empty()),
+            Err(_) => Ok(false),
         }
     }
 
@@ -95,10 +92,7 @@ impl Provisioner {
         Ok(())
     }
 
-    pub async fn monitor(
-        app: AppHandle,
-        ssh: SSH,
-    ) -> Result<()> {
+    pub async fn monitor(app: AppHandle, ssh: SSH) -> Result<()> {
         if let Some(handle) = RUNNING_TASK.lock().unwrap().take() {
             handle.abort();
         }
@@ -111,7 +105,7 @@ impl Provisioner {
             let mut server_status = ServerStatus::load().unwrap_or_default();
             loop {
                 let mut ssh = ssh_clone.lock().await;
-                let filenames = match Provisioner::fetch_filenames(&mut *ssh).await {
+                let filenames = match Provisioner::fetch_filenames(&mut ssh).await {
                     Ok(files) => files,
                     Err(e) => {
                         server_status.error_type = Some(ServerStatusErrorType::Unknown);
@@ -124,8 +118,8 @@ impl Provisioner {
                         break;
                     }
                 };
-                
-                match Provisioner::calculate_setup_status(&filenames, &mut *ssh).await {
+
+                match Provisioner::calculate_setup_status(&filenames, &mut ssh).await {
                     Ok(latest_status) => {
                         println!("EMITTING serverStatus2");
                         if let Err(e) = app.emit("serverStatus", latest_status.clone()) {
@@ -148,7 +142,7 @@ impl Provisioner {
                             server_connection.save().unwrap();
                             break;
                         }
-                    },
+                    }
                     Err(e) => {
                         server_status.error_type = Some(ServerStatusErrorType::Unknown);
                         server_status.error_message = Some(format!("{}", e));
@@ -159,7 +153,7 @@ impl Provisioner {
                         break;
                     }
                 }
-                
+
                 tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             }
         });
@@ -169,11 +163,11 @@ impl Provisioner {
     }
 
     fn is_provisioned(server_status: &ServerStatus) -> bool {
-        server_status.ubuntu >= 100 
-            && server_status.git >= 100 
-            && server_status.docker >= 100 
-            && server_status.bitcoinsync >= 100 
-            && server_status.argonsync >= 100 
+        server_status.ubuntu >= 100
+            && server_status.git >= 100
+            && server_status.docker >= 100
+            && server_status.bitcoinsync >= 100
+            && server_status.argonsync >= 100
             && server_status.minerlaunch >= 100.0
     }
 
@@ -184,22 +178,26 @@ impl Provisioner {
     async fn fetch_filenames(ssh: &mut SSH) -> Result<Vec<String>> {
         let (output, _code) = match ssh.run_command("ls ~/setup-logs").await {
             Ok(result) => result,
-            Err(_) => return Ok(Vec::new())
+            Err(_) => return Ok(Vec::new()),
         };
-        let filenames: Vec<String> = output.split("\n")
+        let filenames: Vec<String> = output
+            .split("\n")
             .filter(|s| !s.is_empty())
             .map(|s| s.to_string())
             .collect();
         Ok(filenames)
     }
 
-    async fn calculate_setup_status(filenames: &Vec<String>, ssh: &mut SSH) -> Result<ServerStatus> {
+    async fn calculate_setup_status(
+        filenames: &Vec<String>,
+        ssh: &mut SSH,
+    ) -> Result<ServerStatus> {
         println!("FILENAMES:");
         for filename in filenames {
             if !filename.is_empty() {
                 println!("  - {}", filename);
             }
-        }    
+        }
 
         let mut status = ServerStatus::default();
         let s = |s: &str| s.to_string();
@@ -208,76 +206,87 @@ impl Provisioner {
             status.ubuntu = 100;
         } else if filenames.contains(&s("ubuntu.failed")) {
             status.error_type = Some(ServerStatusErrorType::Ubuntu);
-            return Ok(status)
+            return Ok(status);
         } else if filenames.contains(&s("ubuntu.started")) {
             status.ubuntu = 1;
-            return Ok(status)
+            return Ok(status);
         }
 
         if filenames.contains(&s("git.finished")) {
             status.git = 100;
         } else if filenames.contains(&s("git.failed")) {
             status.error_type = Some(ServerStatusErrorType::Git);
-            return Ok(status)
+            return Ok(status);
         } else if filenames.contains(&s("git.started")) {
             status.ubuntu = 1;
-            return Ok(status)
+            return Ok(status);
         }
 
         if filenames.contains(&s("docker.finished")) {
             status.docker = 100;
         } else if filenames.contains(&s("docker.failed")) {
             status.error_type = Some(ServerStatusErrorType::Docker);
-            return Ok(status)
+            return Ok(status);
         } else if filenames.contains(&s("docker.started")) {
             status.docker = 1;
-            return Ok(status)
+            return Ok(status);
         }
 
         if filenames.contains(&s("bitcoinsync.finished")) {
             status.bitcoinsync = 100;
         } else if filenames.contains(&s("bitcoinsync.failed")) {
             status.error_type = Some(ServerStatusErrorType::BitcoinSync);
-            return Ok(status)
+            return Ok(status);
         } else if filenames.contains(&s("bitcoinsync.started")) {
             status.bitcoinsync = 1;
-            return Ok(status)
+            return Ok(status);
         }
 
         if filenames.contains(&s("argonsync.finished")) {
             status.argonsync = 100;
         } else if filenames.contains(&s("argonsync.failed")) {
             status.error_type = Some(ServerStatusErrorType::ArgonSync);
-            return Ok(status)
+            return Ok(status);
         } else if filenames.contains(&s("argonsync.started")) {
             status.argonsync = 1;
-            return Ok(status)
+            return Ok(status);
         }
 
         if filenames.contains(&s("minerlaunch.failed")) {
             status.error_type = Some(ServerStatusErrorType::MinerLaunch);
-            return Ok(status)
+            Ok(status)
         } else if filenames.contains(&s("minerlaunch.started")) {
             status.minerlaunch = Provisioner::fetch_minerlaunch_progress(ssh).await?;
-            return Ok(status)
+            return Ok(status);
         } else {
-            return Ok(status)
+            return Ok(status);
         }
     }
 
     async fn fetch_minerlaunch_progress(ssh: &mut SSH) -> Result<f32> {
         // Run commands sequentially instead of concurrently
-        let (argon_output, _) = ssh.run_command("docker exec commander-deploy-argon-miner-1 syncstatus.sh").await?;
-        let (bitcoin_output, _) = ssh.run_command("docker exec commander-deploy-bitcoin-1 syncstatus.sh").await?;
-        
-        let argon_progress = argon_output.trim().trim_end_matches('%').parse::<f32>().unwrap_or(0.0);
-        let bitcoin_progress = bitcoin_output.trim().trim_end_matches('%').parse::<f32>().unwrap_or(0.0);
+        let (argon_output, _) = ssh
+            .run_command("docker exec commander-deploy-argon-miner-1 syncstatus.sh")
+            .await?;
+        let (bitcoin_output, _) = ssh
+            .run_command("docker exec commander-deploy-bitcoin-1 syncstatus.sh")
+            .await?;
+
+        let argon_progress = argon_output
+            .trim()
+            .trim_end_matches('%')
+            .parse::<f32>()
+            .unwrap_or(0.0);
+        let bitcoin_progress = bitcoin_output
+            .trim()
+            .trim_end_matches('%')
+            .parse::<f32>()
+            .unwrap_or(0.0);
         let progress = (argon_progress + bitcoin_progress) / 2.0;
-        
+
         println!("ARGON PROGRESS = {}", argon_progress);
         println!("BITCOIN PROGRESS = {}", bitcoin_progress);
         println!("PROGRESS = {}", progress);
         Ok(progress)
     }
 }
-

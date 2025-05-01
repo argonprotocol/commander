@@ -1,5 +1,5 @@
-use rusqlite::{Connection, Result};
 use super::DB;
+use rusqlite::{Connection, Result};
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct BotActivity {
@@ -15,7 +15,7 @@ impl BotActivity {
         let mut stmt = conn.prepare(
             "INSERT INTO bot_activity (action, inserted_at) 
              VALUES (?1, ?2) 
-             RETURNING *"
+             RETURNING *",
         )?;
         let bot_activity = stmt.query_row((action, inserted_at), |row| {
             Ok(BotActivity {
@@ -28,7 +28,8 @@ impl BotActivity {
 
     pub fn fetch_last_five_records() -> Result<Vec<BotActivity>> {
         let conn = Connection::open(DB::get_db_path())?;
-        let mut stmt = conn.prepare("SELECT * FROM bot_activity ORDER BY inserted_at DESC LIMIT 5")?;
+        let mut stmt =
+            conn.prepare("SELECT * FROM bot_activity ORDER BY inserted_at DESC LIMIT 5")?;
         let bot_activity_iter = stmt.query_map([], |row| {
             Ok(BotActivity {
                 action: row.get("action")?,

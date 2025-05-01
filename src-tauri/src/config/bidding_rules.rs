@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use super::Config;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::path::Path;
 
@@ -73,7 +73,7 @@ pub struct BiddingRules {
     pub desired_argons: i32,
     #[serde(rename = "desiredArgonots")]
     pub desired_argonots: i32,
-} 
+}
 
 impl BiddingRules {
     pub const FILENAME: &'static str = "biddingRules.json";

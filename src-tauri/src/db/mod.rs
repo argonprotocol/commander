@@ -1,7 +1,6 @@
+use rusqlite::{Connection, Result};
 use std::fs;
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
-use rusqlite::{Connection, Result};
 
 pub mod argon_activity;
 pub mod bitcoin_activity;
@@ -41,8 +40,12 @@ impl DB {
     fn create_tables() -> Result<()> {
         let conn = Connection::open(Self::get_db_path())?;
         // Create activity tables
-        let sql_files = ["argon_activity.sql", "bitcoin_activity.sql", "bot_activity.sql"];
-        
+        let sql_files = [
+            "argon_activity.sql",
+            "bitcoin_activity.sql",
+            "bot_activity.sql",
+        ];
+
         for sql_file in sql_files {
             let sql_path = format!("src/db-sql/{}", sql_file);
             let sql = fs::read_to_string(sql_path)
@@ -75,8 +78,8 @@ impl DB {
 //         let status_str: String = row.get(5)?;
 //         let setup_status: SetupStatus = serde_json::from_str(&status_str)
 //             .unwrap_or(SetupStatus::default());
-            
-//         Ok(ServerRecord {   
+
+//         Ok(ServerRecord {
 //             id: row.get(0)?,
 //             address: row.get(1)?,
 //             private_key: row.get(2)?,
@@ -93,8 +96,8 @@ impl DB {
 // pub fn try_fetch_account_record() -> Result<Option<AccountRecord>> {
 //     let conn = Connection::open(get_db_path())?;
 //     let mut stmt = conn.prepare("SELECT * FROM account")?;
-//     let mut account_iter = stmt.query_map([], |row| {            
-//         Ok(AccountRecord {   
+//     let mut account_iter = stmt.query_map([], |row| {
+//         Ok(AccountRecord {
 //             id: row.get(0)?,
 //             address: row.get(1)?,
 //             private_json: row.get(2)?,
@@ -119,7 +122,7 @@ impl DB {
 //         .unwrap()
 //         .as_secs()
 //         .to_string();
-    
+
 //     let setup_status_json = serde_json::to_string(setup_status)
 //         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
 
@@ -130,7 +133,7 @@ impl DB {
 //     )?;
 
 //     let id = conn.last_insert_rowid();
-    
+
 //     Ok(id as i64)
 // }
 
@@ -154,7 +157,7 @@ impl DB {
 //     )?;
 
 //     let id = conn.last_insert_rowid();
-    
+
 //     Ok(id as i64)
 // }
 
@@ -178,7 +181,7 @@ impl DB {
 //         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
 
 //     conn.execute(
-//         "UPDATE server 
+//         "UPDATE server
 //          SET address = ?1, private_key = ?2, public_key = ?3, setup_status = ?4, requires_password = ?5, updated_at = ?6
 //          WHERE id = ?7",
 //         (address, private_key, public_key, setup_status_json, if requires_password { 1 } else { 0 }, &now, id),
@@ -202,7 +205,7 @@ impl DB {
 //         .to_string();
 
 //     conn.execute(
-//         "UPDATE account 
+//         "UPDATE account
 //          SET address = ?1, private_json = ?2, requires_password = ?3, updated_at = ?4
 //          WHERE id = ?5",
 //         (address, private_json, if requires_password { 1 } else { 0 }, &now, id),
@@ -210,5 +213,3 @@ impl DB {
 
 //     Ok(())
 // }
-
-
