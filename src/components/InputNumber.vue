@@ -1,13 +1,13 @@
 <template>
   <div ref="$el" :class="[hasFocus ? 'z-90' : '']" class="relative focus-within:relative" tabindex="0" @focus="handleFocus" @blur="handleBlur">
     <div v-if="!props.disabled" >
-      <div 
-        @pointerdown="handlePointerDown" 
+      <div
+        @pointerdown="handlePointerDown"
         @pointerup="handlePointerUp"
         @pointermove="emitDrag"
         @pointercancel="handlePointerUp"
         class="absolute top-[-2px] left-0 h-[5px] w-full cursor-n-resize" />
-      <div 
+      <div
         @pointerdown="handlePointerDown"
         @pointerup="handlePointerUp"
         @pointermove="emitDrag"
@@ -21,9 +21,9 @@
         {{ suffix }}
         <span @click="moveCursorToEnd" @dblclick="selectAllText" class="absolute top-0 left-0 w-full h-full cursor-text" />
       </span>
-      
+
       <Menu v-if="props.options.length > 0">
-        <MenuButton as="button" 
+        <MenuButton as="button"
           @click="toggleMenu"
           :class="[showMenu ? 'text-gray-900' : 'text-gray-400']"
           class="mr-2 text-md font-semibold focus:outline-none cursor-pointer hover:text-gray-900">
@@ -48,16 +48,16 @@
           </MenuItems>
         </transition>
       </Menu>
-      
+
       <div v-if="!props.disabled" class="flex flex-col mr-2">
-        <NumArrow 
-          @mousedown="startContinuousIncrement" 
-          @mouseup="stopContinuousUpdates" 
+        <NumArrow
+          @mousedown="startContinuousIncrement"
+          @mouseup="stopContinuousUpdates"
           @mouseleave="stopContinuousUpdates"
           class="relative top-[1px] size-[12px] text-gray-300 cursor-pointer hover:text-gray-600" />
-        <NumArrow 
-          @mousedown="startContinuousDecrement" 
-          @mouseup="stopContinuousUpdates" 
+        <NumArrow
+          @mousedown="startContinuousDecrement"
+          @mouseup="stopContinuousUpdates"
           @mouseleave="stopContinuousUpdates"
           class="relative top-[-1px] size-[12px] text-gray-300 rotate-180 cursor-pointer hover:text-gray-600" />
       </div>
@@ -118,7 +118,7 @@ const prefix = Vue.computed(() => {
 
 const suffix = Vue.computed(() => {
   if (props.format === 'percent') {
-    return '%'; 
+    return '%';
   } else if (props.format === 'minutes') {
     return loginValueConverted === 1 ? ' minute' : ' minutes';
   } else {
@@ -136,7 +136,7 @@ function convertedToOriginal(convertedValue: number) {
 
 function updateInputValue(valueConverted: number) {
   let valueOriginal = convertedToOriginal(valueConverted);
-  
+
   if (props.max !== undefined && valueOriginal > props.max) {
     valueOriginal = props.max;
     valueConverted = originalToConverted(valueOriginal);
@@ -145,7 +145,7 @@ function updateInputValue(valueConverted: number) {
     valueOriginal = props.min;
     valueConverted = originalToConverted(valueOriginal);
   }
-  
+
   loginValueOriginal = valueOriginal;
   loginValueConverted = valueConverted;
 
@@ -155,7 +155,7 @@ function updateInputValue(valueConverted: number) {
 
 function insertIntoInputElem(convertedValue: number) {
   if (!inputElem.value) return;
-  
+
   const hasFocus = document.activeElement === inputElem.value;
   const caretPosition = hasFocus ? getCaretPosition() : 0;
   inputElem.value.textContent = formatFn(convertedValue);
@@ -181,20 +181,20 @@ function moveCursorToEnd() {
 }
 function handleFocus() {
   if (props.disabled) return;
-  
+
   // Check if focus is coming from a text selection
   const selection = window.getSelection();
   if (selection && selection.toString().length > 0) {
     return;
   }
-  
+
   hasFocus.value = true;
 }
 
 function handleBlur() {
   const activeElement = document.activeElement;
   if (showMenu.value) return;
-  if (!activeElement || !$el.value?.contains(activeElement)) {    
+  if (!activeElement || !$el.value?.contains(activeElement)) {
     hasFocus.value = false;
     updateInputValue(loginValueConverted);
   }
@@ -222,13 +222,13 @@ function handlePointerDown(event: PointerEvent) {
   button.setPointerCapture(event.pointerId);
   startDragY = event.clientY;
   startValue = loginValueConverted;
-  
+
   // Calculate steps needed to reach nearest integers
   if (startValue % 1 !== 0) {
     const minStep = props.dragByMin || props.dragBy;
     const nextIntegerUp = Math.ceil(startValue);
     const nextIntegerDown = Math.floor(startValue);
-    
+
     minStepsUp = Math.round((nextIntegerUp - startValue) / minStep);
     minStepsDown = Math.round((startValue - nextIntegerDown) / minStep);
   } else {
@@ -257,7 +257,7 @@ function emitDrag(event: PointerEvent) {
 
   const minStep = props.dragByMin || props.dragBy;
   const stepsToInteger = direction > 0 ? minStepsUp : minStepsDown;
-  
+
   if (remainingSteps <= stepsToInteger) {
     // Still in decimal territory, use min steps
     newValue += direction * remainingSteps * minStep;
@@ -349,7 +349,7 @@ function handlePaste(event: ClipboardEvent) {
   event.preventDefault();
   const pastedText = event.clipboardData?.getData('text') || '';
   const sanitizedText = pastedText.replace(/[^\d,.]/g, '');
-  
+
   const target = event.target as HTMLElement;
   if (!target) return;
 
@@ -361,10 +361,10 @@ function handlePaste(event: ClipboardEvent) {
   // Insert the sanitized text at cursor position
   const currentText = target.textContent || '';
   const newText = currentText.slice(0, cursorOffset) + sanitizedText + currentText.slice(cursorOffset);
-  
+
   // Ensure only one decimal point
   const parts = newText.split('.');
-  const finalValue = parts.length > 2 
+  const finalValue = parts.length > 2
     ? parts[0] + '.' + parts.slice(1).join('')
     : newText;
 
@@ -456,16 +456,16 @@ function decrementValue() {
 function startContinuousIncrement() {
   // Clear any existing timers
   stopContinuousUpdates();
-  
+
   // Initial increment
   incrementValue();
-  
+
   // Start continuous updates after initial delay
   incrementTimer.value = window.setTimeout(() => {
     const intervalId = window.setInterval(() => {
       incrementValue();
     }, updateInterval);
-    
+
     // Store the interval ID in the timer ref
     incrementTimer.value = intervalId;
   }, initialDelay);
@@ -475,16 +475,16 @@ function startContinuousDecrement() {
   try {
     // Clear any existing timers
     stopContinuousUpdates();
-    
+
   // Initial decrement
   decrementValue();
-  
+
   // Start continuous updates after initial delay
   decrementTimer.value = window.setTimeout(() => {
     const intervalId = window.setInterval(() => {
       decrementValue();
     }, updateInterval);
-    
+
     // Store the interval ID in the timer ref
       decrementTimer.value = intervalId;
     }, initialDelay);
@@ -509,7 +509,7 @@ function stopContinuousUpdates() {
 function handleKeyDown(event: KeyboardEvent) {
   const target = event.target as HTMLElement;
   if (!target) return;
-  
+
   if (event.key === 'ArrowDown') {
     event.preventDefault();
     decrementValue();
@@ -523,7 +523,7 @@ function handleKeyDown(event: KeyboardEvent) {
 
 function selectAllText() {
   if (!inputElem.value) return;
-  
+
   const range = document.createRange();
   range.selectNodeContents(inputElem.value);
   const selection = window.getSelection();

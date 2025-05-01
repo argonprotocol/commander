@@ -5,9 +5,9 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"@argonprotocol/mainchain@npm:1.1.0-rc.5":
-  version: 1.1.0-rc.5
-  resolution: "@argonprotocol/mainchain@npm:1.1.0-rc.5"
+"@argonprotocol/mainchain@npm:1.1.0-rc.6":
+  version: 1.1.0-rc.6
+  resolution: "@argonprotocol/mainchain@npm:1.1.0-rc.6"
   dependencies:
     "@commander-js/extra-typings": "npm:^13.1.0"
     "@polkadot/api": "npm:^15.8.1"
@@ -27,7 +27,7 @@ __metadata:
       optional: true
   bin:
     mainchain: lib/cli.js
-  checksum: 10c0/931f5e72f1a3f16ab143a90b36cb90d208d76e5d92dc8a90d37ca44fe4b6b0733878f039b066765d3f7c774c9140f9aabaa5f530f9a8d6c4371089dfc916b689
+  checksum: 10c0/140343d596fc115b89962b39ece6f5a85dca4c9c87045cf550179a2aa67f32dc9c2956f3ac1a4af6843d25be5662e59583dc67d09d7c786c0cdccd3d31aaeeba
   languageName: node
   linkType: hard
 
@@ -1779,7 +1779,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "argon-commander@workspace:."
   dependencies:
-    "@argonprotocol/mainchain": "npm:1.1.0-rc.5"
+    "@argonprotocol/mainchain": "npm:1.1.0-rc.6"
     "@chenfengyuan/vue-countdown": "npm:^2.1.3"
     "@headlessui/vue": "npm:^1.7.23"
     "@heroicons/vue": "npm:^2.2.0"

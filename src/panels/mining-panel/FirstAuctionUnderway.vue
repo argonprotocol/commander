@@ -4,7 +4,7 @@
       <img src="../../assets/confetti.svg" class="absolute top-[10px] left-[10px]" style="width: calc(100% - 20px);" />
       <div class="relative mx-auto inline-block">
         <h1 class="text-5xl font-bold text-center mt-32 mb-10 whitespace-nowrap">Your First Auction Is Live!</h1>
-        
+
         <div class="text-center mt-6 mb-5 uppercase text-base flex flex-row justify-center items-center">
           <div class="h-[1px] bg-gray-300 w-1/2"></div>
           <div class="whitespace-nowrap px-5 text-gray-500">YOU ARE IN BID POSITION{{ seatPositions.length > 1 ? 'S' : '' }}</div>
@@ -32,7 +32,7 @@
           </div>
         </div>
         <p class="text-center text-lg mt-6 border-t border-b border-gray-300 pt-8 pb-7 font-light leading-7.5">
-          <template v-if="auctionIsClosing">
+          <template v-if="auctionIsClosing && startOfAuctionClosing != null">
             This auction is in the process of closing. Bids can still be submitted for the<br />
             next
             <CountdownClock :time="startOfAuctionClosing" @tick="handleAuctionClosingTick" v-slot="{ hours, minutes, seconds }">
@@ -41,15 +41,15 @@
               {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
             </CountdownClock>
           </template>
-          <template v-else>
-            This auction will begin closing in 
+          <template v-else-if="startOfNextCohort != null">
+            This auction will begin closing in
             <CountdownClock :time="startOfNextCohort" v-slot="{ hours, minutes, seconds }">
               <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }}, </template>
               <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and </template>
               {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
             </CountdownClock>.<br />
             Your account allows for an additional bid raise of {{configStore.currencySymbol}}{{ addCommas(configStore.argonTo(remainingBidBudget)) }} if needed.
-          </template>          
+          </template>
         </p>
         <Popover as="div" class="relative text-center text-lg font-bold mt-10">
           <PopoverButton class="focus:outline-none border border-argon-300 text-argon-600 px-7 py-2 rounded cursor-pointer hover:bg-argon-50/40 hover:border-argon-600 transition-all duration-300 w-10/12">View Active Bids</PopoverButton>
@@ -154,12 +154,12 @@ function processBidderData() {
       bid.isMine = true;
     }
   }
-  
+
 }
 
 Vue.onMounted(async () => {
   if (!configStore.biddingRules) return;
-  
+
   blockchainStore.subscribeToActiveBids(newActiveBids => {
     activeBids.value = newActiveBids;
     if (!bidderData.value) {
@@ -174,7 +174,7 @@ Vue.onMounted(async () => {
     if (!activeBids.value.length) {
       return;
     }
-    processBidderData();  
+    processBidderData();
   });
 
   if (!startOfAuctionClosing || !startOfNextCohort) {
