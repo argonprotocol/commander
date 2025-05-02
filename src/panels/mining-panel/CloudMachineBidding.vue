@@ -2,7 +2,7 @@
   <div class="flex flex-col h-full text-[#3E444E]">
 
     <div class="grow m-4 relative">
-      <img src="../../assets/confetti.svg" class="absolute -top-10 -left-10 w-[calc(100%+80px)] h-[calc(100%+80px)] pointer-events-none" />
+      <ConfettiIcon class="absolute -top-10 -left-10 w-[calc(100%+80px)] h-[calc(100%+80px)] pointer-events-none" />
       <div class="absolute -bottom-2 -left-2 w-[calc(100%+16px)] h-full bg-gradient-to-b from-transparent to-[#F9F2FA] pointer-events-none"></div>
 
       <div class="relative z-10">
@@ -48,6 +48,7 @@
 import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import ConfettiIcon from '../assets/confetti.svg';
 import VueCountdown from '@chenfengyuan/vue-countdown';
 import emitter from '../../emitters/basic';
 

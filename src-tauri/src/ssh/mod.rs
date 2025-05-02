@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use log::{error, info};
 use rand::rngs::OsRng;
 use russh::*;
 use russh_keys::*;
@@ -79,7 +80,7 @@ impl SSH {
 
     pub async fn run_command(&mut self, command: &str) -> Result<(String, u32)> {
         let shell_command = format!("bash -c '{}'", command);
-        println!("Executing shell command: {}", shell_command);
+        info!("Executing shell command: {}", shell_command);
         let mut channel = self.client.channel_open_session().await?;
         channel.exec(true, shell_command).await?;
 
@@ -120,7 +121,7 @@ impl SSH {
         let scp_command = format!("cat > {}", remote_path);
         channel.exec(true, scp_command).await?;
 
-        println!("Creating remote file {}", remote_path);
+        info!("Creating remote file {}", remote_path);
 
         // Write the contents of the setup script
         channel.data(contents.as_bytes()).await?;
@@ -132,19 +133,12 @@ impl SSH {
         Ok(())
     }
 
-    pub async fn start_script(&mut self, relative_script_path: &str) -> Result<()> {
-        let local_script_path = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), relative_script_path);
+    pub async fn start_script(&mut self) -> Result<()> {
+        let script_contents = include_str!("../../setup-script.sh");
 
-        let script_contents = match std::fs::read_to_string(&local_script_path) {
-            Ok(contents) => contents,
-            Err(_) => {
-                anyhow::bail!("Failed to read setup script");
-            }
-        };
+        let remote_script_path = "~/setup-script.sh";
 
-        let remote_script_path = format!("~/{}", relative_script_path);
-
-        self.upload_file(&script_contents, &remote_script_path)
+        self.upload_file(&script_contents, remote_script_path)
             .await?;
 
         // Now execute the script
@@ -152,13 +146,13 @@ impl SSH {
             "chmod +x {} && nohup {} > /dev/null 2>&1 &",
             remote_script_path, remote_script_path
         );
-        println!("Running: {}", shell_command);
+        info!("Running: {}", shell_command);
         let mut channel = self.client.channel_open_session().await?;
 
         // Start execution but don't wait for it
         let _ = tokio::spawn(async move {
             if let Err(e) = SSH::exec_and_print_output_static(&mut channel, shell_command).await {
-                eprintln!("Error executing script: {}", e);
+                error!("Error executing script: {}", e);
             }
         });
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
@@ -176,15 +170,15 @@ impl SSH {
         while let Some(msg) = channel.wait().await {
             match msg {
                 russh::ChannelMsg::Data { ref data } => {
-                    println!("{}", String::from_utf8_lossy(data));
+                    info!("{}", String::from_utf8_lossy(data));
                 }
                 russh::ChannelMsg::ExtendedData { ref data, ext } => {
                     if ext == 1 {
-                        println!("{}", String::from_utf8_lossy(data));
+                        info!("{}", String::from_utf8_lossy(data));
                     }
                 }
                 russh::ChannelMsg::ExitStatus { exit_status } => {
-                    println!("Exit status: {}", exit_status);
+                    info!("Exit status: {}", exit_status);
                 }
                 _ => {}
             }
@@ -226,14 +220,14 @@ impl SSH {
         remote_host: &str,
         remote_port: u16,
     ) -> Result<()> {
-        println!(
+        info!(
             "Opening tunnel from local port {} to {}:{}",
             local_port, remote_host, remote_port
         );
 
         // Create a TCP listener on the local port
         let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", local_port)).await?;
-        println!("TCP listener created on port {}", local_port);
+        info!("TCP listener created on port {}", local_port);
 
         // Clone the client handle and remote host for use in the spawned task
         let client = Arc::clone(&self.client);
@@ -262,7 +256,7 @@ impl SSH {
                             {
                                 Ok(channel) => channel,
                                 Err(e) => {
-                                    println!("Error creating SSH channel: {}", e);
+                                    error!("Error creating SSH channel: {}", e);
                                     return;
                                 }
                             };
@@ -285,12 +279,12 @@ impl SSH {
                                                 }
                                                 Ok(n) => {
                                                     if let Err(e) = channel.data(&buf[..n]).await {
-                                                        println!("Error writing to remote: {}", e);
+                                                        error!("Error writing to remote: {}", e);
                                                         done = true;
                                                     }
                                                 }
                                                 Err(e) => {
-                                                    println!("Error reading from local: {}", e);
+                                                    error!("Error reading from local: {}", e);
                                                     done = true;
                                                 }
                                             }
@@ -300,20 +294,20 @@ impl SSH {
                                             match msg {
                                                 Some(russh::ChannelMsg::Data { data }) => {
                                                     if let Err(e) = local_write.write_all(&data).await {
-                                                        println!("Error writing to local: {}", e);
+                                                        error!("Error writing to local: {}", e);
                                                         done = true;
                                                     }
                                                 }
                                                 Some(russh::ChannelMsg::Eof) => {
-                                                    println!("Remote end closed connection");
+                                                    info!("Remote end closed connection");
                                                     done = true;
                                                 }
                                                 Some(russh::ChannelMsg::Close) => {
-                                                    println!("Channel closed by remote");
+                                                    info!("Channel closed by remote");
                                                     done = true;
                                                 }
                                                 None => {
-                                                    println!("Channel closed");
+                                                    info!("Channel closed");
                                                     done = true;
                                                 }
                                                 _ => {}
@@ -325,16 +319,16 @@ impl SSH {
 
                             // Run the tunnel task
                             tunnel_task.await;
-                            println!("Connection closed");
+                            info!("Connection closed");
                         });
                     }
                     Err(e) => {
-                        println!("Error accepting connection: {}", e);
+                        error!("Error accepting connection: {}", e);
                         break;
                     }
                 }
             }
-            println!("Tunnel connection handler ended");
+            info!("Tunnel connection handler ended");
         });
 
         Ok(())
@@ -367,14 +361,12 @@ impl Drop for SSHDropGuard {
             handle.spawn(async move {
                 if let Ok(mut guard) = ssh_clone.try_lock() {
                     if let Err(e) = guard.close().await {
-                        println!("Error closing SSH connection during cleanup: {}", e);
+                        error!("Error closing SSH connection during cleanup: {}", e);
                     }
                 }
             });
         } else {
-            println!(
-                "Warning: Could not close SSH connection during cleanup - no runtime available"
-            );
+            info!("Warning: Could not close SSH connection during cleanup - no runtime available");
         }
     }
 }

@@ -3,9 +3,11 @@ use crate::config::{Config, ServerConnection};
 use crate::ssh::{SSHDropGuard, SSH};
 use anyhow::Result;
 use lazy_static::lazy_static;
+use log::{error, info};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use tauri::AppHandle;
+use tauri::path::BaseDirectory;
+use tauri::{AppHandle, Manager};
 use tokio::sync::Mutex as TokioMutex;
 
 lazy_static! {
@@ -25,7 +27,7 @@ impl Bidder {
     ) -> Result<()> {
         let mut ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
 
-        Self::upload_files(&mut ssh, wallet_json, session_mnemonic).await?;
+        Self::upload_files(&app, &mut ssh, wallet_json, session_mnemonic).await?;
         Self::start_docker(&mut ssh).await?;
 
         let mut server_connection = ServerConnection::load().unwrap();
@@ -51,7 +53,25 @@ impl Bidder {
         Ok(())
     }
 
+    pub fn get_bidding_calculator_path(app: &AppHandle) -> Result<PathBuf> {
+        let local_base_path = app
+            .path()
+            .resolve("../src/lib/bidding-calculator", BaseDirectory::Resource)?;
+        Ok(local_base_path)
+    }
+
+    pub fn get_calculator_files(path: &PathBuf) -> Result<Vec<String>> {
+        let dir = std::fs::read_dir(&path)?;
+        let files = dir
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| entry.path().is_file())
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+        Ok(files)
+    }
+
     async fn upload_files(
+        app: &AppHandle,
         ssh: &mut SSH,
         wallet_json: String,
         session_mnemonic: String,
@@ -72,24 +92,11 @@ impl Bidder {
 
         ssh.run_command("mkdir -p commander-config/bidding-calculator")
             .await?;
-        let local_base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .unwrap()
-            .join("src/lib/bidding-calculator");
-        let filenames = match std::fs::read_dir(&local_base_path) {
-            Ok(entries) => entries
-                .filter_map(|entry| entry.ok())
-                .filter(|entry| entry.path().is_file())
-                .map(|entry| entry.file_name().to_string_lossy().into_owned())
-                .collect::<Vec<String>>()
-                .join(" "),
-            Err(e) => {
-                return Err(e.into());
-            }
-        };
-        println!("Calculator files: {}", filenames);
+        let local_base_path = Self::get_bidding_calculator_path(app)?;
+        let filenames = Self::get_calculator_files(&local_base_path)?;
+        info!("Calculator files: {:?}", filenames);
 
-        for file in filenames.split_whitespace() {
+        for file in filenames {
             let local_file_path = format!("{}/{}", local_base_path.display(), file);
             let remote_file_path = format!("commander-config/bidding-calculator/{}", file);
             let script_contents = match std::fs::read_to_string(&local_file_path) {
@@ -119,7 +126,7 @@ impl Bidder {
             handle.abort();
         }
 
-        println!("Creating HTTP tunnel");
+        info!("Creating HTTP tunnel");
         let local_port = SSH::find_available_port(3600).await?;
         let remote_host = "127.0.0.1";
         let remote_port = 3000;
@@ -135,7 +142,7 @@ impl Bidder {
             let mut bidder_stats = BidderStats::new(app, &mut ssh, local_port);
             loop {
                 if let Err(e) = bidder_stats.run().await {
-                    eprintln!("Error in bidder stats: {}", e);
+                    error!("Error in bidder stats: {}", e);
                 }
                 tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
             }

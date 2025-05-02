@@ -59,8 +59,15 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
+          includeDebug: true
           tagName: ${{ env.VERSION }}
           releaseName: ${{ env.VERSION }}
           releaseBody: "Release ${{ env.VERSION }}"
+          releaseDraft: true
+          prerelease: true
+          updaterJsonKeepUniversal: true
+          includeUpdaterJson: true
           args: ${{ matrix.args }}

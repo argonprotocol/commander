@@ -1,4 +1,6 @@
-use rusqlite::{Connection, Result};
+use anyhow::Result;
+use log::info;
+use rusqlite::Connection;
 use std::fs;
 use std::path::Path;
 
@@ -14,59 +16,42 @@ pub struct DB;
 
 impl DB {
     pub fn init() -> Result<()> {
-        if !Self::db_file_exists() {
-            Self::create_db_file()?;
-        }
-        Ok(())
-    }
-
-    // Create the database file.
-    fn create_db_file() -> Result<()> {
         let db_path = Self::get_db_path();
         let db_dir = Path::new(&db_path).parent().unwrap();
 
         // If the parent directory does not exist, create it.
         if !db_dir.exists() {
-            fs::create_dir_all(db_dir).unwrap();
+            fs::create_dir_all(db_dir)?;
         }
 
         // Create the database file.
-        println!("Creating database file at {}", db_path);
-        fs::File::create(db_path).unwrap();
-        Self::create_tables()?;
-        Ok(())
-    }
+        info!("Create/update database file at {}", db_path);
 
-    fn create_tables() -> Result<()> {
-        let conn = Connection::open(Self::get_db_path())?;
+        let conn = Connection::open(db_path)?;
         // Create activity tables
         let sql_files = [
-            "argon_activity.sql",
-            "bitcoin_activity.sql",
-            "bot_activity.sql",
+            include_str!("../db-sql/argon_activity.sql"),
+            include_str!("../db-sql/bitcoin_activity.sql"),
+            include_str!("../db-sql/bot_activity.sql"),
         ];
 
         for sql_file in sql_files {
-            let sql_path = format!("src/db-sql/{}", sql_file);
-            let sql = fs::read_to_string(sql_path)
-                .unwrap_or_else(|_| panic!("Failed to read {}", sql_file));
-
-            conn.execute(&sql, ())?;
+            conn.execute(&sql_file, ())?;
         }
 
         Ok(())
-    }
-
-    // Check whether the database file exists.
-    fn db_file_exists() -> bool {
-        let db_path = Self::get_db_path();
-        Path::new(&db_path).exists()
     }
 
     // Get the path where the database file should be located.
     pub fn get_db_path() -> String {
         let home_dir = dirs::home_dir().unwrap();
-        home_dir.to_str().unwrap().to_string() + "/.config/argon-commander/database.sqlite"
+        home_dir
+            .join(".config")
+            .join("argon-commander")
+            .join("database.sqlite")
+            .to_str()
+            .unwrap()
+            .to_string()
     }
 }
 

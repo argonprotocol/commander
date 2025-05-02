@@ -28,6 +28,9 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-process = "2"
+log = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-os = "2.2.0"
@@ -35,20 +38,15 @@ russh = "0.38.0"
 russh-keys = "0.38.0"
 tokio = "1.43.0"
 async-trait = "0.1.86"
-window-vibrancy = "0.5.3"
-cocoa = "0.26.0"
-objc = "0.2.7"
-core-foundation = "0.9.3"
+window-vibrancy = "0.6.0"
 ssh-key = { version = "0.6", features = ["ed25519"] }
 rand = "0.8"
-dirs = "5.0"
-rusqlite = "0.34.0"
+dirs = "6.0.0"
+rusqlite = { version = "0.35.0", features = ["bundled", "bundled-sqlcipher-vendored-openssl"] }
 lazy_static = "1.4.0"
 anyhow = "1.0"
-shell-escape = "0.1.5"
-parking_lot = "0.12"
-sp-core = { version = "35", features = ["full_crypto"] }
-hex = "0.4"
-bip39 = "2.0.0"
-reqwest = { version = "0.11", features = ["json"] }
-futures-util = "0.3"
+reqwest = { version = "0.12", features = ["json"] }
+tauri-plugin-log = { version = "2", features = ["colored" ] }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"

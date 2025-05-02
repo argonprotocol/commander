@@ -25,3 +25,4 @@ dist-ssr
 *.sw?
 
 ssh_key.pem
+/key

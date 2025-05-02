@@ -67,7 +67,7 @@
             <li Connection></li>
           </template>
           <li Block class="flex flex-col text-center justify-center items-center">
-            <img src="../../assets/mining.gif" class="w-8 inline-block relative -left-1">
+            <img src="/mining.gif" class="w-8 inline-block relative -left-1">
             <div class="flex flex-row justify-center pt-5">
               <div class="flex flex-col items-center leading-none">
                 <div>{{ minutesSinceBlock }}</div>
