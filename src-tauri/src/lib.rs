@@ -4,6 +4,7 @@ use db::{ArgonActivity, BitcoinActivity, BotActivity, DB};
 use log::{info, LevelFilter};
 use provisioner::Provisioner;
 use std::env;
+use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use window_vibrancy::*;
@@ -299,6 +300,16 @@ pub fn run() {
             let window = app.get_webview_window("main").unwrap();
 
             DB::init().map_err(|e| e.to_string())?;
+
+            // test paths
+
+            let local_base_path = Bidder::get_bidding_calculator_path(app.handle())?;
+            let filenames = Bidder::get_calculator_files(&local_base_path)?;
+            info!(
+                "Have bidding calculator embedded: {}. {:#?}",
+                local_base_path.display(),
+                filenames
+            );
 
             #[cfg(target_os = "macos")]
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(16.0))
