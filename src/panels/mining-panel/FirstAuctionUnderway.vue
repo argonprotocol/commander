@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col h-full w-full p-3 cursor-default">
     <div class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center overflow-hidden">
-      <img src="../../assets/confetti.svg" class="absolute top-[10px] left-[10px]" style="width: calc(100% - 20px);" />
+      <ConfettiIcon class="absolute top-[10px] left-[10px]" style="width: calc(100% - 20px);" />
       <div class="relative mx-auto inline-block">
         <h1 class="text-5xl font-bold text-center mt-32 mb-10 whitespace-nowrap">Your First Auction Is Live!</h1>
 
@@ -105,6 +105,7 @@ import { addCommas } from '../../lib/Utils';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { useBlockchainStore, type IActiveBid } from '../../stores/blockchain';
 import CountdownClock from '../../components/CountdownClock.vue';
+import ConfettiIcon from '../../assets/confetti.svg';
 
 dayjs.extend(utc);
 

@@ -143,7 +143,7 @@
       
       <Popover class="relative pointer-events-auto" v-slot="{ open: isOpen }">
         <PopoverButton class="flex items-center justify-center text-sm/6 font-semibold text-gray-900 cursor-pointer border rounded-md w-[38px] h-[30px] focus:outline-none hover:border-slate-400/50" :class="[ isOpen ? 'border-slate-400/50' : 'border-transparent' ]">
-          <img src="../assets/config.svg" class="w-5 h-5" />
+          <ConfigIcon class="w-5 h-5" />
         </PopoverButton>
 
         <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 translate-y-1" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-1">
@@ -199,6 +199,7 @@ import MiningWalletIcon from '../assets/wallets/mining.svg';
 import LiquidLockingWalletIcon from '../assets/wallets/bitcoin.svg';
 import VaultingWalletIcon from '../assets/wallets/vault.svg';
 import CopyIcon from '../assets/copy.svg';
+import ConfigIcon from '../assets/config.svg';
 import AlertIcon from '../assets/alert.svg';
 import CopyToClipboard from './CopyToClipboard.vue';
 import { storeToRefs } from 'pinia';

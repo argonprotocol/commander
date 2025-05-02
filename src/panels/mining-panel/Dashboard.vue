@@ -134,7 +134,7 @@
             </table>
             <div class="flex flex-col justify-center items-center grow">
               <span>
-                <img src="../../assets/mining.gif" class="w-16 opacity-20 inline-block relative -left-1">
+                <img src="/mining.gif" class="w-16 opacity-20 inline-block relative -left-1">
               </span>
               <div class="flex flex-col items-center opacity-30 mt-5">
                 <div class="text-lg font-bold">No Blocks Have Been Mined</div>
