@@ -1,12 +1,12 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use log::{error, info};
 use rand::rngs::OsRng;
 use russh::*;
 use russh_keys::*;
 use ssh_key::{Algorithm, LineEnding, PrivateKey, PublicKey};
 use std::sync::Arc;
 use std::time::Duration;
-use log::{error, info};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::runtime::Handle;
 use tokio::sync::Mutex as TokioMutex;
@@ -133,19 +133,12 @@ impl SSH {
         Ok(())
     }
 
-    pub async fn start_script(&mut self, relative_script_path: &str) -> Result<()> {
-        let local_script_path = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), relative_script_path);
+    pub async fn start_script(&mut self) -> Result<()> {
+        let script_contents = include_str!("../../setup-script.sh");
 
-        let script_contents = match std::fs::read_to_string(&local_script_path) {
-            Ok(contents) => contents,
-            Err(_) => {
-                anyhow::bail!("Failed to read setup script");
-            }
-        };
+        let remote_script_path = "~/setup-script.sh";
 
-        let remote_script_path = format!("~/{}", relative_script_path);
-
-        self.upload_file(&script_contents, &remote_script_path)
+        self.upload_file(&script_contents, remote_script_path)
             .await?;
 
         // Now execute the script
@@ -373,9 +366,7 @@ impl Drop for SSHDropGuard {
                 }
             });
         } else {
-            info!(
-                "Warning: Could not close SSH connection during cleanup - no runtime available"
-            );
+            info!("Warning: Could not close SSH connection during cleanup - no runtime available");
         }
     }
 }

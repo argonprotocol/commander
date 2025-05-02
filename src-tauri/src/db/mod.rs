@@ -30,17 +30,13 @@ impl DB {
         let conn = Connection::open(db_path)?;
         // Create activity tables
         let sql_files = [
-            "argon_activity.sql",
-            "bitcoin_activity.sql",
-            "bot_activity.sql",
+            include_str!("../db-sql/argon_activity.sql"),
+            include_str!("../db-sql/bitcoin_activity.sql"),
+            include_str!("../db-sql/bot_activity.sql"),
         ];
 
         for sql_file in sql_files {
-            let sql_path = format!("src/db-sql/{}", sql_file);
-            let sql = fs::read_to_string(sql_path)
-                .unwrap_or_else(|_| panic!("Failed to read {}", sql_file));
-
-            conn.execute(&sql, ())?;
+            conn.execute(&sql_file, ())?;
         }
 
         Ok(())

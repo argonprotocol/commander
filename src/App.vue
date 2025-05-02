@@ -38,12 +38,17 @@ import TopBar from "./components/TopBar.vue";
 import { useBasicStore } from "./stores/basic";
 import { useConfigStore } from "./stores/config";
 import { checkForUpdates } from "./tauri-controls/utils/checkForUpdates.ts";
-import { onBeforeUnmount, onMounted } from "vue";
+import {onBeforeMount, onBeforeUnmount, onMounted} from "vue";
+import {waitForLoad} from "@argonprotocol/mainchain";
 
 const basicStore = useBasicStore();
 const configStore = useConfigStore();
 
 let timeout: number | undefined;
+onBeforeMount(async () => {
+  // need to wait for crypto to load
+  await waitForLoad();
+});
 onMounted(() => {
   timeout = setInterval(() => checkForUpdates(), 60000) as unknown as number;
 });

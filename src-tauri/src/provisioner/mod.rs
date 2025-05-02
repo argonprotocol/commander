@@ -2,8 +2,8 @@ use crate::config::{ServerConnection, ServerStatus, ServerStatusErrorType};
 use crate::ssh::{SSHDropGuard, SSH};
 use anyhow::Result;
 use lazy_static::lazy_static;
-use std::sync::{Arc, Mutex};
 use log::{error, info, trace};
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex as TokioMutex;
 
@@ -89,7 +89,7 @@ impl Provisioner {
     }
 
     async fn start_script(ssh: &mut SSH) -> Result<()> {
-        ssh.start_script("setup-script.sh").await?;
+        ssh.start_script().await?;
         Ok(())
     }
 

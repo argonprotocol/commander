@@ -35,6 +35,7 @@
   },
   "bundle": {
     "active": true,
+    "resources": ["../src"],
     "category": "DeveloperTool",
     "createUpdaterArtifacts": true,
     "targets": "all",
