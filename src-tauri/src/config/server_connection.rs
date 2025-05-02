@@ -5,20 +5,14 @@ use std::error::Error;
 use std::path::Path;
 
 #[derive(Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ServerConnection {
-    #[serde(rename = "ipAddress")]
     pub ip_address: String,
-    #[serde(rename = "sshPublicKey")]
     pub ssh_public_key: String,
-    #[serde(rename = "sshPrivateKey")]
     pub ssh_private_key: String,
-    #[serde(rename = "isConnected")]
     pub is_connected: bool,
-    #[serde(rename = "isProvisioned")]
     pub is_provisioned: bool,
-    #[serde(rename = "isReadyForMining")]
     pub is_ready_for_mining: bool,
-    #[serde(rename = "hasMiningSeats")]
     pub has_mining_seats: bool,
 }
 

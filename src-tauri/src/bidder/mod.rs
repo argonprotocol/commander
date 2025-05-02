@@ -1,4 +1,4 @@
-use crate::bidder_stats::BidderStats;
+use crate::bidder::stats::BidderStats;
 use crate::config::{Config, ServerConnection};
 use crate::ssh::{SSHDropGuard, SSH};
 use anyhow::Result;
@@ -9,6 +9,8 @@ use std::sync::{Arc, Mutex};
 use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager};
 use tokio::sync::Mutex as TokioMutex;
+
+pub mod stats;
 
 lazy_static! {
     static ref RUNNING_TASK: Mutex<Option<tokio::task::JoinHandle<()>>> = Mutex::new(None);
@@ -144,7 +146,7 @@ impl Bidder {
                 if let Err(e) = bidder_stats.run().await {
                     error!("Error in bidder stats: {}", e);
                 }
-                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             }
         });
 

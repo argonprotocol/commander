@@ -227,7 +227,6 @@ impl SSH {
 
         // Create a TCP listener on the local port
         let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", local_port)).await?;
-        info!("TCP listener created on port {}", local_port);
 
         // Clone the client handle and remote host for use in the spawned task
         let client = Arc::clone(&self.client);
@@ -299,15 +298,12 @@ impl SSH {
                                                     }
                                                 }
                                                 Some(russh::ChannelMsg::Eof) => {
-                                                    info!("Remote end closed connection");
                                                     done = true;
                                                 }
                                                 Some(russh::ChannelMsg::Close) => {
-                                                    info!("Channel closed by remote");
                                                     done = true;
                                                 }
                                                 None => {
-                                                    info!("Channel closed");
                                                     done = true;
                                                 }
                                                 _ => {}
@@ -319,7 +315,6 @@ impl SSH {
 
                             // Run the tunnel task
                             tunnel_task.await;
-                            info!("Connection closed");
                         });
                     }
                     Err(e) => {

@@ -94,7 +94,7 @@ import utc from 'dayjs/plugin/utc';
 import emitter from '../../emitters/basic';
 import { useBlockchainStore } from '../../stores/blockchain';
 import { useConfigStore } from '../../stores/config';
-import { addCommas } from '../../lib/Utils';
+import { addCommas, calculateAPY } from '../../lib/Utils';
 import { storeToRefs } from 'pinia';
 
 dayjs.extend(utc);
@@ -114,16 +114,7 @@ const aggregatedBlockRewards = Vue.computed(() => {
 });
 
 const currentAPY = Vue.computed(() => {
-  if (blockchainStore.aggregatedBidCosts === 0 && aggregatedBlockRewards.value > 0) return 1_000_000;
-  if (blockchainStore.aggregatedBidCosts === 0) return 0;
-  
-  const tenDayRate = (aggregatedBlockRewards.value - blockchainStore.aggregatedBidCosts) / blockchainStore.aggregatedBidCosts;
-  // Compound APR over 36.5 cycles (10-day periods in a year)
-  const apy = (Math.pow(1 + tenDayRate, 36.5) - 1) * 100;
-  if (apy > 9999) {
-    return 9999;
-  }
-  return apy;
+  return calculateAPY(blockchainStore.aggregatedBidCosts, aggregatedBlockRewards.value);
 });
 
 function updateTimeSinceBlock() {

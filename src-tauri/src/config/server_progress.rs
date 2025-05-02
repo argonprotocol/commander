@@ -5,20 +5,14 @@ use std::fs;
 use std::path::Path;
 
 #[derive(Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ServerProgress {
-    #[serde(rename = "ssh")]
     pub ssh: f32,
-    #[serde(rename = "ubuntu")]
     pub ubuntu: f32,
-    #[serde(rename = "git")]
     pub git: f32,
-    #[serde(rename = "docker")]
     pub docker: f32,
-    #[serde(rename = "bitcoinsync")]
     pub bitcoinsync: f32,
-    #[serde(rename = "argonsync")]
     pub argonsync: f32,
-    #[serde(rename = "minerlaunch")]
     pub minerlaunch: f32,
 }
 
