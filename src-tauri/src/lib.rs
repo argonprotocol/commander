@@ -1,8 +1,11 @@
 use bidder::Bidder;
 use config::{BiddingRules, Config, Mnemonics, ServerConnection, ServerProgress, ServerStatus};
 use db::{ArgonActivity, BitcoinActivity, BotActivity, DB};
+use log::{info, LevelFilter};
 use provisioner::Provisioner;
+use std::env;
 use tauri::{AppHandle, Manager};
+use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use window_vibrancy::*;
 
 mod bidder;
@@ -44,7 +47,7 @@ struct AppConfig {
 
 #[tauri::command]
 async fn start(app: AppHandle) -> Result<AppConfig, String> {
-    println!("start");
+    info!("start");
 
     let config = match Config::load() {
         Ok(config) => config,
@@ -88,7 +91,7 @@ async fn start(app: AppHandle) -> Result<AppConfig, String> {
 
 #[tauri::command]
 async fn create_mnemonics(wallet: String, session: String) -> Result<(), String> {
-    println!("create_mnemonics");
+    info!("create_mnemonics");
 
     Mnemonics::create(wallet, session).map_err(|e| e.to_string())?;
 
@@ -97,7 +100,7 @@ async fn create_mnemonics(wallet: String, session: String) -> Result<(), String>
 
 #[tauri::command]
 async fn connect_server(app: AppHandle, ip_address: String) -> Result<(), String> {
-    println!("connect_server");
+    info!("connect_server");
 
     let mut config = match Config::load() {
         Ok(config) => config,
@@ -121,7 +124,7 @@ async fn connect_server(app: AppHandle, ip_address: String) -> Result<(), String
 
 #[tauri::command]
 async fn remove_server() -> Result<(), String> {
-    println!("remove_server");
+    info!("remove_server");
 
     let mut config = match Config::load() {
         Ok(config) => config,
@@ -144,7 +147,7 @@ async fn remove_server() -> Result<(), String> {
 
 #[tauri::command]
 async fn update_server_progress(progress: ServerProgress) -> Result<(), String> {
-    println!("update_server_progress");
+    info!("update_server_progress");
 
     let mut config = match Config::load() {
         Ok(config) => config,
@@ -159,7 +162,7 @@ async fn update_server_progress(progress: ServerProgress) -> Result<(), String> 
 
 #[tauri::command]
 async fn retry_provisioning(app: AppHandle, step_key: String) -> Result<(), String> {
-    println!("retry_provisioning");
+    info!("retry_provisioning");
 
     let config = match Config::load() {
         Ok(config) => config,
@@ -192,7 +195,7 @@ async fn update_bidding_rules(
     wallet_json: String,
     session_mnemonic: String,
 ) -> Result<(), String> {
-    println!("update_bidding_rules");
+    info!("update_bidding_rules");
 
     bidding_rules.save().map_err(|e| e.to_string())?;
 
@@ -229,7 +232,7 @@ async fn launch_mining_bot(
     wallet_json: String,
     session_mnemonic: String,
 ) -> Result<(), String> {
-    println!("launch_mining_bot");
+    info!("launch_mining_bot");
 
     let server_connection = match ServerConnection::load() {
         Ok(config) => config,
@@ -260,7 +263,35 @@ async fn launch_mining_bot(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut log_builder = tauri_plugin_log::Builder::new()
+        .target(tauri_plugin_log::Target::new(
+            tauri_plugin_log::TargetKind::Folder {
+                path: std::path::PathBuf::from(DB::get_db_path())
+                    .parent()
+                    .unwrap()
+                    .into(),
+                file_name: None,
+            },
+        ))
+        .max_file_size(10_000_000)
+        .target(tauri_plugin_log::Target::new(
+            tauri_plugin_log::TargetKind::Webview,
+        ))
+        .with_colors(ColoredLevelConfig::default());
+
+    let rust_log = env::var("RUST_LOG").unwrap_or("debug, tauri=info, hyper=info".into());
+    for part in rust_log.split(',') {
+        if let Some((target, level)) = part.split_once('=') {
+            if let Ok(level) = level.parse::<LevelFilter>() {
+                log_builder = log_builder.level_for(target.trim().to_owned(), level);
+            }
+        } else if let Ok(level) = part.parse::<LevelFilter>() {
+            log_builder = log_builder.level(level);
+        }
+    }
+
     tauri::Builder::default()
+        .plugin(log_builder.build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())

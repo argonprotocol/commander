@@ -18,6 +18,7 @@
     "@tailwindcss/vite": "^4.0.3",
     "@tauri-apps/api": "^2.2.0",
     "@tauri-apps/plugin-dialog": "~2",
+    "@tauri-apps/plugin-log": "~2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-os": "^2.2.0",
     "@tauri-apps/plugin-process": "~2",

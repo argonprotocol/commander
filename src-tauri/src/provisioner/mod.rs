@@ -3,6 +3,7 @@ use crate::ssh::{SSHDropGuard, SSH};
 use anyhow::Result;
 use lazy_static::lazy_static;
 use std::sync::{Arc, Mutex};
+use log::{error, info, trace};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex as TokioMutex;
 
@@ -28,7 +29,7 @@ impl Provisioner {
         }
 
         Provisioner::monitor(app, ssh).await?;
-        println!("finished start");
+        trace!("finished start");
         Ok(())
     }
 
@@ -42,7 +43,7 @@ impl Provisioner {
         let mut ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
 
         let script_is_running = Provisioner::is_script_running(&mut ssh).await?;
-        println!("need to start script = {}", !script_is_running);
+        info!("need to start script = {}", !script_is_running);
         if !script_is_running {
             Provisioner::start_script(&mut ssh).await?;
         }
@@ -110,9 +111,9 @@ impl Provisioner {
                     Err(e) => {
                         server_status.error_type = Some(ServerStatusErrorType::Unknown);
                         server_status.error_message = Some(format!("{}", e));
-                        println!("EMITTING serverStatus1");
+                        info!("EMITTING serverStatus1");
                         if let Err(e) = app.emit("serverStatus", server_status.clone()) {
-                            println!("Error sending server status: {}", e);
+                            error!("Error sending server status: {}", e);
                         }
                         server_status.save().unwrap();
                         break;
@@ -121,9 +122,9 @@ impl Provisioner {
 
                 match Provisioner::calculate_setup_status(&filenames, &mut ssh).await {
                     Ok(latest_status) => {
-                        println!("EMITTING serverStatus2");
+                        info!("EMITTING serverStatus2");
                         if let Err(e) = app.emit("serverStatus", latest_status.clone()) {
-                            println!("Error sending server status: {}", e);
+                            error!("Error sending server status: {}", e);
                         }
                         latest_status.save().unwrap();
                         server_status = latest_status.clone();
@@ -134,7 +135,7 @@ impl Provisioner {
                             let mut server_connection = match ServerConnection::load() {
                                 Ok(connection) => connection,
                                 Err(e) => {
-                                    println!("Error loading server connection: {}", e);
+                                    error!("Error loading server connection: {}", e);
                                     break;
                                 }
                             };
@@ -147,7 +148,7 @@ impl Provisioner {
                         server_status.error_type = Some(ServerStatusErrorType::Unknown);
                         server_status.error_message = Some(format!("{}", e));
                         if let Err(e) = app.emit("serverStatus", server_status.clone()) {
-                            println!("Error sending server status: {}", e);
+                            error!("Error sending server status: {}", e);
                         }
                         server_status.save().unwrap();
                         break;
@@ -192,10 +193,10 @@ impl Provisioner {
         filenames: &Vec<String>,
         ssh: &mut SSH,
     ) -> Result<ServerStatus> {
-        println!("FILENAMES:");
+        info!("FILENAMES:");
         for filename in filenames {
             if !filename.is_empty() {
-                println!("  - {}", filename);
+                info!("  - {}", filename);
             }
         }
 
@@ -284,9 +285,9 @@ impl Provisioner {
             .unwrap_or(0.0);
         let progress = (argon_progress + bitcoin_progress) / 2.0;
 
-        println!("ARGON PROGRESS = {}", argon_progress);
-        println!("BITCOIN PROGRESS = {}", bitcoin_progress);
-        println!("PROGRESS = {}", progress);
+        info!("ARGON PROGRESS = {}", argon_progress);
+        info!("BITCOIN PROGRESS = {}", bitcoin_progress);
+        info!("PROGRESS = {}", progress);
         Ok(progress)
     }
 }

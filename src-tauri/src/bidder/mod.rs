@@ -5,6 +5,7 @@ use anyhow::Result;
 use lazy_static::lazy_static;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use log::{error, info};
 use tauri::AppHandle;
 use tokio::sync::Mutex as TokioMutex;
 
@@ -87,7 +88,7 @@ impl Bidder {
                 return Err(e.into());
             }
         };
-        println!("Calculator files: {}", filenames);
+        info!("Calculator files: {}", filenames);
 
         for file in filenames.split_whitespace() {
             let local_file_path = format!("{}/{}", local_base_path.display(), file);
@@ -119,7 +120,7 @@ impl Bidder {
             handle.abort();
         }
 
-        println!("Creating HTTP tunnel");
+        info!("Creating HTTP tunnel");
         let local_port = SSH::find_available_port(3600).await?;
         let remote_host = "127.0.0.1";
         let remote_port = 3000;
@@ -135,7 +136,7 @@ impl Bidder {
             let mut bidder_stats = BidderStats::new(app, &mut ssh, local_port);
             loop {
                 if let Err(e) = bidder_stats.run().await {
-                    eprintln!("Error in bidder stats: {}", e);
+                    error!("Error in bidder stats: {}", e);
                 }
                 tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
             }

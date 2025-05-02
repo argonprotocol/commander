@@ -5,6 +5,7 @@ use anyhow::Result;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
+use log::{error, info};
 use tauri::{AppHandle, Emitter};
 
 lazy_static! {
@@ -200,7 +201,7 @@ impl<'a> BidderStats<'a> {
             self.biddings_last_updated = status.biddings_last_updated;
             biddings_were_updated = true;
             if let Err(e) = self.app.emit("botActivity", record.clone()) {
-                println!("Error emitting bot activity: {}", e);
+                error!("Error emitting bot activity: {}", e);
             }
         }
 
@@ -209,7 +210,7 @@ impl<'a> BidderStats<'a> {
             self.earnings_last_updated = status.earnings_last_updated;
             earnings_were_updated = true;
             if let Err(e) = self.app.emit("botActivity", record.clone()) {
-                println!("Error emitting bot activity: {}", e);
+                error!("Error emitting bot activity: {}", e);
             }
         }
 
@@ -267,7 +268,7 @@ impl<'a> BidderStats<'a> {
             .ssh
             .run_command("docker exec commander-deploy-argon-miner-1 latestblock.sh")
             .await?;
-        println!("ARGON output: {}", argon_output);
+        info!("ARGON output: {}", argon_output);
 
         let parts: Vec<&str> = argon_output.trim().split('-').collect();
         if parts.len() != 2 {
@@ -286,7 +287,7 @@ impl<'a> BidderStats<'a> {
             let record = ArgonActivity::insert(localhost_block, mainchain_block)?;
             self.argon_mining_status = (localhost_block, mainchain_block);
             if let Err(e) = self.app.emit("argonActivity", record.clone()) {
-                println!("Error emitting argon activity: {}", e);
+                error!("Error emitting argon activity: {}", e);
             }
         }
 
@@ -316,7 +317,7 @@ impl<'a> BidderStats<'a> {
             let record = BitcoinActivity::insert(localhost_block, mainchain_block)?;
             self.bitcoin_mining_status = (localhost_block, mainchain_block);
             if let Err(e) = self.app.emit("bitcoinActivity", record.clone()) {
-                println!("Error emitting bitcoin activity: {}", e);
+                error!("Error emitting bitcoin activity: {}", e);
             }
         }
 

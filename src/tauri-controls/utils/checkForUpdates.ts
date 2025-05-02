@@ -50,6 +50,8 @@ export async function checkForUpdates(onProgress?: (percent: number) => void) {
       console.log("update installed");
       await relaunch();
     }
+  } catch (e) {
+    console.error("Error checking for updates", e);
   } finally {
     existingCheck = false;
   }

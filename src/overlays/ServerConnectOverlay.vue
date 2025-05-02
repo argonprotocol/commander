@@ -98,7 +98,7 @@
                   </li>
 
                   <li>
-                    <header>6. Copy Our SSH Key</header>
+                    <header>6. Copy Your SSH Key</header>
                     <div wrapper>
                       <div>
                         <p>
