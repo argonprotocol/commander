@@ -1,5 +1,5 @@
 use super::DB;
-use rusqlite::{Connection, Result};
+use anyhow::Result;
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct BotActivity {
@@ -11,7 +11,9 @@ pub struct BotActivity {
 
 impl BotActivity {
     pub fn insert(action: &str, inserted_at: &str) -> Result<BotActivity> {
-        let conn = Connection::open(DB::get_db_path())?;
+        let lock = DB::get_connection()?;
+        let conn = lock.lock().unwrap();
+
         let mut stmt = conn.prepare(
             "INSERT INTO bot_activity (action, inserted_at) 
              VALUES (?1, ?2) 
@@ -27,16 +29,20 @@ impl BotActivity {
     }
 
     pub fn fetch_last_five_records() -> Result<Vec<BotActivity>> {
-        let conn = Connection::open(DB::get_db_path())?;
+        let lock = DB::get_connection()?;
+        let conn = lock.lock().unwrap();
+
         let mut stmt =
             conn.prepare("SELECT * FROM bot_activity ORDER BY inserted_at DESC LIMIT 5")?;
-        let bot_activity_iter = stmt.query_map([], |row| {
-            Ok(BotActivity {
-                action: row.get("action")?,
-                inserted_at: row.get("inserted_at")?,
-            })
-        })?;
-        let bot_activity_list = bot_activity_iter.collect::<Result<Vec<_>>>()?;
+        let bot_activity_list = stmt
+            .query_map([], |row| {
+                Ok(BotActivity {
+                    action: row.get("action")?,
+                    inserted_at: row.get("inserted_at")?,
+                })
+            })?
+            .flatten()
+            .collect::<Vec<_>>();
         Ok(bot_activity_list)
     }
 }

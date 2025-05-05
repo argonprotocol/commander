@@ -1,8 +1,12 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use lazy_static::lazy_static;
 use log::info;
+use rand::RngCore;
 use rusqlite::Connection;
 use std::fs;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
+use tokio::sync::OnceCell;
 
 pub mod argon_activity;
 pub mod bitcoin_activity;
@@ -12,10 +16,18 @@ pub use argon_activity::ArgonActivity;
 pub use bitcoin_activity::BitcoinActivity;
 pub use bot_activity::BotActivity;
 
+lazy_static! {
+    static ref DB_CONN: OnceCell<Arc<Mutex<Connection>>> = OnceCell::new();
+}
+pub enum DbPassword {
+    None,
+    Password(String),
+    Keychain,
+}
 pub struct DB;
 
 impl DB {
-    pub fn init() -> Result<()> {
+    pub fn init(password: DbPassword) -> Result<()> {
         let db_path = Self::get_db_path();
         let db_dir = Path::new(&db_path).parent().unwrap();
 
@@ -27,7 +39,14 @@ impl DB {
         // Create the database file.
         info!("Create/update database file at {}", db_path);
 
-        let conn = Connection::open(db_path)?;
+        let key = match password {
+            DbPassword::None => None,
+            DbPassword::Password(p) => Some(p),
+            DbPassword::Keychain => Some(Self::get_key_from_keychain()?),
+        };
+
+        let conn = Self::get_or_encrypt_db(&db_path, key)?;
+
         // Create activity tables
         let sql_files = [
             include_str!("../db-sql/argon_activity.sql"),
@@ -38,8 +57,68 @@ impl DB {
         for sql_file in sql_files {
             conn.execute(&sql_file, ())?;
         }
+        DB_CONN.set(Arc::new(Mutex::new(conn)))?;
 
         Ok(())
+    }
+
+    pub fn get_connection() -> Result<Arc<Mutex<Connection>>> {
+        let conn = DB_CONN.get().ok_or_else(|| anyhow!("DB not initialized"))?;
+        Ok(conn.clone())
+    }
+
+    pub fn get_key_from_keychain() -> Result<String> {
+        let key_entry = keyring::Entry::new("argon-commander", "db_key")?;
+        let key = match key_entry.get_password() {
+            Ok(k) => k,
+            Err(_) => {
+                let mut key = [0u8; 32]; // 256-bit key
+                rand::thread_rng().fill_bytes(&mut key);
+                let new_key = hex::encode(&key);
+
+                key_entry.set_password(&new_key)?;
+                new_key
+            }
+        };
+        Ok(key)
+    }
+
+    pub fn get_or_encrypt_db(db_path: &str, key: Option<String>) -> Result<Connection> {
+        info!("Opening database file at {}", db_path);
+        let mut conn = Connection::open(&db_path)?;
+        let Some(key) = key else {
+            return Ok(conn);
+        };
+
+        if let Ok(bytes) = fs::read(db_path) {
+            if bytes.starts_with(b"SQLite format 3") {
+                conn.close().map_err(|(_c, e)| anyhow!(e))?;
+                let encrypted_path = format!("{}.enc", db_path);
+                info!("Database needs to be encrypted");
+                let conn_encrypted = Connection::open(&encrypted_path)?;
+                conn_encrypted.pragma_update(None, "key", &key)?;
+
+                conn_encrypted.execute(
+                    &format!("ATTACH DATABASE '{db_path}' AS plaintext KEY ''",),
+                    (),
+                )?;
+
+                conn_encrypted.query_row(
+                    "SELECT sqlcipher_export('main', 'plaintext')",
+                    (),
+                    |_| Ok(()),
+                )?;
+                conn_encrypted.execute("DETACH DATABASE plaintext", ())?;
+                conn_encrypted.close().map_err(|(_c, e)| anyhow!(e))?;
+                fs::rename(db_path, format!("{}.old", db_path))?;
+                fs::rename(encrypted_path, db_path)?;
+                conn = Connection::open(db_path)?;
+            }
+        }
+
+        conn.pragma_update(None, "key", key)?;
+
+        Ok(conn)
     }
 
     // Get the path where the database file should be located.
@@ -57,7 +136,7 @@ impl DB {
 
 // /// Attempts to fetch a server record, returns None if no records exist
 // pub fn try_fetch_server_record() -> Result<Option<ServerRecord>> {
-//     let conn = Connection::open(get_db_path())?;
+//     let conn = DB::get_connection()?;
 //     let mut stmt = conn.prepare("SELECT * FROM server")?;
 //     let mut server_iter = stmt.query_map([], |row| {
 //         let status_str: String = row.get(5)?;
@@ -79,7 +158,7 @@ impl DB {
 
 // /// Attempts to fetch an account record, returns None if no records exist
 // pub fn try_fetch_account_record() -> Result<Option<AccountRecord>> {
-//     let conn = Connection::open(get_db_path())?;
+//     let conn = DB::get_connection()?;
 //     let mut stmt = conn.prepare("SELECT * FROM account")?;
 //     let mut account_iter = stmt.query_map([], |row| {
 //         Ok(AccountRecord {
@@ -101,7 +180,7 @@ impl DB {
 //     setup_status: &SetupStatus,
 //     requires_password: bool,
 // ) -> Result<i64> {
-//     let conn = Connection::open(get_db_path())?;
+//     let conn = DB::get_connection()?;
 //     let now = SystemTime::now()
 //         .duration_since(UNIX_EPOCH)
 //         .unwrap()
@@ -128,7 +207,7 @@ impl DB {
 //     private_json: &str,
 //     requires_password: bool,
 // ) -> Result<i64> {
-//     let conn = Connection::open(get_db_path())?;
+//     let conn = DB::get_connection()?;
 //     let now = SystemTime::now()
 //         .duration_since(UNIX_EPOCH)
 //         .unwrap()
@@ -155,7 +234,7 @@ impl DB {
 //     setup_status: &SetupStatus,
 //     requires_password: bool,
 // ) -> Result<()> {
-//     let conn = Connection::open(get_db_path())?;
+//     let conn = DB::get_connection()?;
 //     let now = SystemTime::now()
 //         .duration_since(UNIX_EPOCH)
 //         .unwrap()
@@ -182,7 +261,7 @@ impl DB {
 //     private_json: &str,
 //     requires_password: bool,
 // ) -> Result<()> {
-//     let conn = Connection::open(get_db_path())?;
+//     let conn = DB::get_connection()?;
 //     let now = SystemTime::now()
 //         .duration_since(UNIX_EPOCH)
 //         .unwrap()

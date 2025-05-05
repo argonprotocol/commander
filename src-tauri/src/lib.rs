@@ -1,10 +1,10 @@
+use crate::db::DbPassword;
 use bidder::Bidder;
 use config::{BiddingRules, Config, Mnemonics, ServerConnection, ServerProgress, ServerStatus};
 use db::{ArgonActivity, BitcoinActivity, BotActivity, DB};
 use log::{info, LevelFilter};
 use provisioner::Provisioner;
 use std::env;
-use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use window_vibrancy::*;
@@ -299,7 +299,7 @@ pub fn run() {
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
 
-            DB::init().map_err(|e| e.to_string())?;
+            DB::init(DbPassword::Keychain).map_err(|e| e.to_string())?;
 
             // test paths
 

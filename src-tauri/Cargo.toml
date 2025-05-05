@@ -47,6 +47,8 @@ lazy_static = "1.4.0"
 anyhow = "1.0"
 reqwest = { version = "0.12", features = ["json"] }
 tauri-plugin-log = { version = "2", features = ["colored" ] }
+keyring = {version = "3", features = ["apple-native", "windows-native"] }
+hex = "0.4.3"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"
