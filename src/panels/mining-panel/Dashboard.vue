@@ -1,34 +1,41 @@
 <template>
   <div class="flex flex-col h-full">
-    <div @click="openFundMiningWalletOverlay" class="flex flex-row items-center gap-x-3 cursor-pointer bg-[#C253E1] text-white px-3.5 py-2 border-b border-[#A601D4]" style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)">
+    <div v-if="false" @click="openFundMiningWalletOverlay" class="flex flex-row items-center gap-x-3 cursor-pointer bg-[#C253E1] text-white px-3.5 py-2 border-b border-[#A601D4]" style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)">
       <AlertIcon class="w-4 h-4 text-white relative left-1 inline-block" />
       <div class="font-bold grow">Your Mining Wallet is low on funds which may inhibit bidding. </div>
       <span class="cursor-pointer inline-block rounded-full bg-[#79009B] px-3">Add Funds</span>
     </div>
-    <div class="flex flex-col h-full px-3.5 py-3 gap-y-2.5 justify-stretch grow">
+    <div v-else-if="configStore.isDataSyncing" class="flex flex-row items-center gap-x-3 cursor-pointer bg-[#C253E1] text-white px-3.5 py-2 border-b border-[#A601D4]" style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)">
+      <AlertIcon class="w-4 h-4 text-white relative left-1 inline-block" />
+      <div v-if="configStore.dataSync.type === 'server'" class="font-bold grow">Your server data is being synced </div>
+      <div v-else-if="configStore.dataSync.type === 'db'" class="font-bold grow">Updating your stats database </div>
+      <div>{{ configStore.dataSync.progress.toFixed(0) }}%</div>
+    </div>
+
+    <div :class="configStore.isDataSyncing ? 'opacity-30 pointer-events-none' : ''" class="flex flex-col h-full px-3.5 py-3 gap-y-2.5 justify-stretch grow">
       <section class="flex flex-row gap-x-3">
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>0</span>
+          <span>{{ globalStats.activeCohorts || 0 }}</span>
           <label>Active Cohorts</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>0</span>
+          <span>{{ globalStats.activeSeats || 0 }}</span>
           <label>Active Seats</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>0</span>
+          <span>{{ formatLargeNumber(globalStats.totalBlocksMined || 0) }}</span>
           <label>Total Blocks Mined</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ currencySymbol }}0</span>
+          <span>{{ currencySymbol }}{{ formatLargeNumber(argonTo(globalArgonsInvested/1_000_000)) }}</span>
           <label>Total Invested</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ currencySymbol }}0</span>
+          <span>{{ currencySymbol }}{{ formatLargeNumber(argonTo(globalArgonsEarned/1_000_000)) }}</span>
           <label>Total Earned</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>0%</span>
+          <span>{{ addCommas(globalAPY) }}%</span>
           <label>Current APY</label>
         </div>
       </section>
@@ -75,7 +82,7 @@
             PREV SLOT
           </div>
           <span class="flex flex-row items-center">
-            COHORT #4,345 (March 3/31 - 4/9)
+            COHORT #{{ cohortStats.frameIdAtCohortActivation }} ({{cohortStartDate}} - {{cohortEndDate}})
             <span class="inline-block rounded-full bg-green-500/80 w-2.5 h-2.5 ml-2"></span>
           </span>
           <div class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer">
@@ -87,34 +94,34 @@
           <div class="flex flex-col w-1/2 h-full pt-2 gap-y-2">
             <div class="flex flex-row w-full h-1/2 gap-x-2">
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
-                <span>0</span>
+                <span>{{ cohortStats.seatsWon }}</span>
                 <label>Active Seats</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
-                <span>0</span>
+                <span>{{ addCommas((cohortStats.argonsMined + cohortStats.argonsMinted) / 1_000_000) }}</span>
                 <label>Argons Earned</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
-                <span>0</span>
+                <span>{{ addCommas(cohortStats.argonotsMined / 1_000_000) }}</span>
                 <label>Argonots Earned</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
             </div>
             <div class="flex flex-row w-full h-1/2 gap-x-2">
               <div stat-box class="flex flex-col w-1/3 h-full">
-                <span>{{ currencySymbol }}0</span>
+                <span>{{ currencySymbol }}{{ addCommas(cohortArgonsInvested / 1_000_000) }}</span>
                 <label>Total Invested</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full">
-                <span>{{ currencySymbol }}0</span>
+                <span>{{ currencySymbol }}{{ addCommas(cohortArgonsEarned / 1_000_000) }}</span>
                 <label>Expected Earnings</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full">
-                <span>0%</span>
+                <span>{{ addCommas(cohortAPY) }}%</span>
                 <label>Expected APY</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
@@ -180,6 +187,7 @@ import { storeToRefs } from 'pinia';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import utc from 'dayjs/plugin/utc';
+import { addCommas, calculateAPY, showDecimalsIfNeeded } from '../../lib/Utils';
 import { useConfigStore } from '../../stores/config';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import AlertIcon from '../../assets/alert.svg';
@@ -190,7 +198,50 @@ dayjs.extend(relativeTime);
 dayjs.extend(utc);
 
 const configStore = useConfigStore();
-const { currencySymbol } = storeToRefs(configStore);
+const { argonTo, argonotToArgon } = configStore;
+const { currencySymbol, globalStats, cohortStats } = storeToRefs(configStore);
+
+const globalArgonsEarned = Vue.computed(() => {
+  return globalStats.value.totalArgonsMined +
+    globalStats.value.totalArgonsMinted +
+    argonotToArgon(globalStats.value.totalArgonotsMined);
+});
+
+const globalArgonsInvested = Vue.computed(() => {
+  return globalStats.value.totalArgonsBid + globalStats.value.totalTransactionFees;
+});
+
+const globalAPY = Vue.computed(() => {
+  return calculateAPY(globalArgonsInvested.value, globalArgonsEarned.value);
+});
+
+const cohortArgonsEarned = Vue.computed(() => {
+  return cohortStats.value.argonsMined + cohortStats.value.argonsMinted + argonotToArgon(cohortStats.value.argonotsMined);
+});
+
+const cohortArgonsInvested = Vue.computed(() => {
+  return cohortStats.value.argonsBid + cohortStats.value.transactionFees;
+});
+
+const cohortAPY = Vue.computed(() => {
+  return calculateAPY(cohortArgonsInvested.value, cohortArgonsEarned.value);
+});
+
+const cohortStartDate = Vue.computed(() => {
+  if (!cohortStats.value.frameTickStart) {
+    return '-----';
+  }
+  const date = dayjs.utc(cohortStats.value.frameTickStart * 60e3);
+  return date.local().format('MMMM D');
+});
+
+const cohortEndDate = Vue.computed(() => {
+  if (!cohortStats.value.frameTickEnd) {
+    return '-----';
+  }
+  const date = dayjs.utc(cohortStats.value.frameTickEnd * 60e3);
+  return date.local().format('MMMM D');
+});
 
 const lastBitcoinActivityAt = Vue.computed(() => {
   const lastActivity = configStore.bitcoinActivity[0];
@@ -209,6 +260,16 @@ const lastBotActivityAt = Vue.computed(() => {
 
 function openFundMiningWalletOverlay() {
   emitter.emit('openWalletOverlay', { walletId: 'mng', screen: 'receive' });
+}
+
+function formatLargeNumber(number: number, maxLength = 5) {
+  if (number < (10 ** (maxLength - 2))) { // 1_000
+    return showDecimalsIfNeeded(number, 2, 2);
+  } else if (number < (99 ** (maxLength - 2))) { // 99_000
+    return addCommas(number, 0);
+  }
+  return number;
+  // return (number / 1_000_000).toFixed(1) + 'M';
 }
 </script>
 

@@ -1,7 +1,7 @@
-use crate::db::DbPassword;
+use crate::db::{DB, ArgonActivities, ArgonActivityRecord, BitcoinActivities, BitcoinActivityRecord, BotActivities, BotActivityRecord};
 use bidder::Bidder;
+use bidder::stats::{BidderStats, IGlobalStats, ICohortStats};
 use config::{BiddingRules, Config, Mnemonics, ServerConnection, ServerProgress, ServerStatus};
-use db::{ArgonActivity, BitcoinActivity, BotActivity, DB};
 use log::{info, LevelFilter};
 use provisioner::Provisioner;
 use std::env;
@@ -10,40 +10,25 @@ use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use window_vibrancy::*;
 
 mod bidder;
-mod bidder_stats;
 mod config;
 mod db;
 mod provisioner;
 mod ssh;
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct AppConfig {
-    #[serde(rename = "requiresPassword")]
     requires_password: bool,
-
-    #[serde(rename = "mnemonics")]
     mnemonics: Option<Mnemonics>,
-
-    #[serde(rename = "serverConnection")]
     server_connection: ServerConnection,
-
-    #[serde(rename = "serverStatus")]
     server_status: ServerStatus,
-
-    #[serde(rename = "serverProgress")]
     server_progress: ServerProgress,
-
-    #[serde(rename = "biddingRules")]
     bidding_rules: Option<BiddingRules>,
-
-    #[serde(rename = "argonActivity")]
-    argon_activity: Vec<ArgonActivity>,
-
-    #[serde(rename = "bitcoinActivity")]
-    bitcoin_activity: Vec<BitcoinActivity>,
-
-    #[serde(rename = "botActivity")]
-    bot_activity: Vec<BotActivity>,
+    argon_activity: Vec<ArgonActivityRecord>,
+    bitcoin_activity: Vec<BitcoinActivityRecord>,
+    bot_activity: Vec<BotActivityRecord>,
+    global_stats: Option<IGlobalStats>,
+    cohort_stats: Option<ICohortStats>,
 }
 
 #[tauri::command]
@@ -55,16 +40,18 @@ async fn start(app: AppHandle) -> Result<AppConfig, String> {
         Err(e) => panic!("ConfigFailed: {}", e),
     };
 
-    let record = AppConfig {
+    let mut record = AppConfig {
         requires_password: config.requires_password,
         mnemonics: config.mnemonics.clone(),
         server_connection: config.server_connection.clone(),
         server_status: config.server_status.clone(),
         server_progress: config.server_progress.clone(),
         bidding_rules: config.bidding_rules.clone(),
-        argon_activity: ArgonActivity::fetch_last_five_records().map_err(|e| e.to_string())?,
-        bitcoin_activity: BitcoinActivity::fetch_last_five_records().map_err(|e| e.to_string())?,
-        bot_activity: BotActivity::fetch_last_five_records().map_err(|e| e.to_string())?,
+        argon_activity: ArgonActivities::fetch_last_five_records().map_err(|e| e.to_string())?,
+        bitcoin_activity: BitcoinActivities::fetch_last_five_records().map_err(|e| e.to_string())?,
+        bot_activity: BotActivities::fetch_last_five_records().map_err(|e| e.to_string())?,
+        global_stats: None,
+        cohort_stats: None,
     };
 
     if config.server_connection.is_connected && !config.server_connection.is_provisioned {
@@ -85,6 +72,11 @@ async fn start(app: AppHandle) -> Result<AppConfig, String> {
         Bidder::reconnect(ssh_private_key, username, ip_address, port, app)
             .await
             .map_err(|e| e.to_string())?;
+    }
+
+    if config.server_connection.has_mining_seats {
+        record.global_stats = Some(BidderStats::fetch_global_stats().map_err(|e| e.to_string())?);
+        record.cohort_stats = BidderStats::fetch_latest_cohort_stats().map_err(|e| e.to_string())?;
     }
 
     Ok(record)
@@ -275,9 +267,9 @@ pub fn run() {
             },
         ))
         .max_file_size(10_000_000)
-        .target(tauri_plugin_log::Target::new(
-            tauri_plugin_log::TargetKind::Webview,
-        ))
+        // .target(tauri_plugin_log::Target::new(
+        //     tauri_plugin_log::TargetKind::Webview,
+        // ))
         .with_colors(ColoredLevelConfig::default());
 
     let rust_log = env::var("RUST_LOG").unwrap_or("debug, tauri=info, hyper=info".into());
@@ -299,7 +291,7 @@ pub fn run() {
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
 
-            DB::init(DbPassword::Keychain).map_err(|e| e.to_string())?;
+            DB::init().map_err(|e| e.to_string())?;
 
             // test paths
 

@@ -147,8 +147,9 @@ class Mainchain {
     const priceIndex = (await client.query.priceIndex.current()).value;
     const USD = convertFixedU128ToBigNumber(priceIndex.argonUsdTargetPrice.toBigInt()).toNumber();  
     const ARGNOT = convertFixedU128ToBigNumber(priceIndex.argonotUsdPrice.toBigInt()).toNumber() / USD;
+    const ARGN = 1;
 
-    return { USD, ARGNOT };
+    return { USD, ARGNOT, ARGN };
   }
 
   public async getNextSlotRange(): Promise<[bigint, bigint]> {

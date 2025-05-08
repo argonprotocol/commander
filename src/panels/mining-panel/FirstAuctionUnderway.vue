@@ -68,7 +68,7 @@
                   </tr>
                 </thead>
                 <tbody class="font-light font-mono">
-                  <tr v-for="(bid, index) in activeBids" :key="bid.accountId">
+                  <tr v-for="(bid, index) in allBids" :key="bid.accountId">
                     <td class="text-left">{{ index + 1 }}</td>
                     <td class="text-left">{{configStore.currencySymbol}}{{ addCommas(configStore.argonTo(bid.amount)) }}</td>
                     <td class="text-left">recently</td>
@@ -77,8 +77,8 @@
                       <span v-if="bid.isMine" class="absolute right-0 top-1/2 -translate-y-1/2 bg-argon-600 text-white px-1.5 pb-0.25 rounded text-sm">ME<span class="absolute top-0 -left-3 inline-block h-full bg-gradient-to-r from-transparent to-white w-3"></span></span>
                     </td>
                   </tr>
-                  <tr v-for="i in 10 - activeBids.length" :key="i">
-                    <td class="text-left">{{ activeBids.length + i }}</td>
+                  <tr v-for="i in 10 - allBids.length" :key="i">
+                    <td class="text-left">{{ allBids.length + i }}</td>
                     <td class="text-left text-gray-400">---</td>
                     <td class="text-left text-gray-400">---</td>
                     <td class="text-right text-gray-400">-------------</td>
@@ -114,8 +114,8 @@ const blockchainStore = useBlockchainStore();
 
 const auctionIsClosing = Vue.ref(false);
 
-const activeBids = Vue.ref<IActiveBid[]>([]);
-const bidderData = Vue.ref<any>(null);
+const allBids = Vue.ref<IActiveBid[]>([]);
+const myBids = Vue.ref<any>(null);
 
 const maxBidPrice = Vue.ref(0);
 const currentBidPrice = Vue.ref(0);
@@ -137,19 +137,15 @@ function handleAuctionClosingTick(totalSecondsRemaining: number) {
   }
 }
 
-function convertStringToBigInt(str: string) {
-  return BigInt(str.slice(0, -1));
-}
-
-function processBidderData() {
-  const seatCount = bidderData.value.subaccounts.length;
-  const totalArgonsBid = Number(convertStringToBigInt(bidderData.value.totalArgonsBid));
+function processBids() {
+  const seatCount = myBids.value.subaccounts.length;
+  const totalArgonsBid = Number(myBids.value.argonsBidTotal);
   currentBidPrice.value = totalArgonsBid * seatCount;
   remainingBidBudget.value = maxBidPrice.value - currentBidPrice.value;
   seatPositions.value = [];
 
-  for (const bid of activeBids.value) {
-    const bidIndex = bidderData.value.subaccounts.findIndex((s: any) => s.address === bid.accountId);
+  for (const bid of allBids.value) {
+    const bidIndex = myBids.value.subaccounts.findIndex((s: any) => s.address === bid.accountId);
     if (bidIndex !== -1) {
       seatPositions.value.push(bidIndex + 1);
       bid.isMine = true;
@@ -162,20 +158,21 @@ Vue.onMounted(async () => {
   if (!configStore.biddingRules) return;
 
   blockchainStore.subscribeToActiveBids(newActiveBids => {
-    activeBids.value = newActiveBids;
-    if (!bidderData.value) {
+    allBids.value = newActiveBids;
+    if (!myBids.value) {
       console.log('no bidder data');
       return;
     }
-    processBidderData();
+    processBids();
   });
 
-  configStore.subscribeToBidderData(newBidderData => {
-    bidderData.value = newBidderData;
-    if (!activeBids.value.length) {
+  configStore.subscribeToMyBids(myNewBids => {
+    console.log('myNewBids', myNewBids);
+    myBids.value = myNewBids;
+    if (!allBids.value.length) {
       return;
     }
-    processBidderData();
+    processBids();
   });
 
   if (!startOfAuctionClosing || !startOfNextCohort) {

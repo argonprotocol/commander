@@ -7,6 +7,7 @@ import Provisioner, { IStep } from '../lib/Provisioner';
 import emitter from '../emitters/basic';
 import type IBiddingRules from '../lib/bidding-calculator/IBiddingRules';
 import { listen } from '@tauri-apps/api/event';
+import { message } from '@tauri-apps/plugin-dialog';
 
 export interface ICurrencyRecord {
   id: ICurrency;
@@ -47,10 +48,46 @@ export interface IBotActivity {
   insertedAt: string;
 }
 
+export interface IGlobalStats {
+  activeCohorts: number;
+  activeSeats: number;
+  totalBlocksMined: number;
+  totalArgonsBid: number;
+  totalArgonsMinted: number;
+  totalArgonsMined: number;
+  totalTransactionFees: number;
+  totalArgonotsMined: number;
+  totalArgonsEarned: number;
+  totalArgonsInvested: number;
+}
+
+export interface ICohortStats {
+  frameIdAtCohortActivation: number;
+  transactionFees: number;
+  argonotsStaked: number;
+  argonsBid: number;
+  seatsWon: number;
+  blocksMined: number;
+  argonotsMined: number;
+  argonsMined: number;
+  argonsMinted: number;
+  argonsInvested: number;
+  argonsEarned: number;
+  frameTickStart: number;
+  frameTickEnd: number;
+}
+
 export type ICurrency = Currency.ARGN | Currency.USD | Currency.EURO | Currency.GBP | Currency.INR;
 
 export const useConfigStore = defineStore('config', () => {
   const isLoaded = Vue.ref(false);
+  const isDataSyncing = Vue.ref(false);
+
+  const dataSync = Vue.ref({
+    type: 'server',
+    progress: 0,
+  });
+
   const provisioner = new Provisioner();
 
   provisioner.finishedFn = () => {
@@ -115,6 +152,34 @@ export const useConfigStore = defineStore('config', () => {
   const argonActivity = Vue.ref<IArgonActivity[]>([]);
   const bitcoinActivity = Vue.ref<IBitcoinActivity[]>([]);
   const botActivity = Vue.ref<IBotActivity[]>([]);
+
+  const globalStats = Vue.ref<IGlobalStats>({
+    activeCohorts: 0,
+    activeSeats: 0,
+    totalBlocksMined: 0,
+    totalArgonsBid: 0,
+    totalArgonsMinted: 0,
+    totalArgonsMined: 0,
+    totalTransactionFees: 0,
+    totalArgonotsMined: 0,
+    totalArgonsEarned: 0,
+    totalArgonsInvested: 0,
+  });
+  const cohortStats = Vue.ref<ICohortStats>({
+    frameIdAtCohortActivation: 0,
+    transactionFees: 0,
+    argonotsStaked: 0,
+    argonsBid: 0,
+    seatsWon: 0,
+    blocksMined: 0,
+    argonotsMined: 0,
+    argonsMined: 0,
+    argonsMinted: 0,
+    argonsInvested: 0,
+    argonsEarned: 0,
+    frameTickStart: 0,
+    frameTickEnd: 0,
+  });
 
   const displayCurrencies: Record<ICurrency, ICurrencyRecord> = {
     [Currency.ARGN]: { id: Currency.ARGN, symbol: '₳', name: 'Argon' },
@@ -308,17 +373,17 @@ export const useConfigStore = defineStore('config', () => {
   }
 
   // BIDDER DATA //////////////////////////////////////////////////////////////
-  const bidderDataCallbackFns: ((bidderData: any) => void)[] = [];
+  const myBidsCallbackFns: ((currentBids: any) => void)[] = [];
 
-  function subscribeToBidderData(callbackFn: (bidderData: any) => void) {
-    bidderDataCallbackFns.push(callbackFn);
+  function subscribeToMyBids(callbackFn: (currentBids: any) => void) {
+    myBidsCallbackFns.push(callbackFn);
   }
 
   //////////////////////////////////////////////////////////////////////////////
 
   async function load() {
-    await listen('bidderData', (event: any) => {
-      for (const callbackFn of bidderDataCallbackFns) {
+    await listen('currentBids', (event: any) => {
+      for (const callbackFn of myBidsCallbackFns) {
         callbackFn(event.payload);
       }
     });
@@ -338,6 +403,16 @@ export const useConfigStore = defineStore('config', () => {
       botActivity.value.splice(10);
     });
 
+    await listen('dataSync', (event: any) => {
+      isDataSyncing.value = event.payload.progress < 100;
+      dataSync.value = event.payload;
+    });
+
+    await listen('stats', (event: any) => {
+      globalStats.value = { ...event.payload.globalStats };
+      cohortStats.value = { ...event.payload.cohortStats };
+    });
+
     const response = await invoke('start', {}) as { 
       mnemonics?: { wallet: string, session: string }, 
       biddingRules: any, 
@@ -348,6 +423,8 @@ export const useConfigStore = defineStore('config', () => {
       argonActivity: IArgonActivity[],
       bitcoinActivity: IBitcoinActivity[],
       botActivity: IBotActivity[],
+      globalStats: any,
+      cohortStats: any,
     };
     biddingRules.value = response.biddingRules;
     requiresPassword.value = response.requiresPassword;
@@ -355,6 +432,11 @@ export const useConfigStore = defineStore('config', () => {
     argonActivity.value = response.argonActivity;
     bitcoinActivity.value = response.bitcoinActivity;
     botActivity.value = response.botActivity;
+
+    globalStats.value = { ...response.globalStats };
+    if (response.cohortStats) {
+      cohortStats.value = { ...response.cohortStats };
+    }
 
     serverConnection.isConnected = response.serverConnection.isConnected;
     serverConnection.isProvisioned = response.serverConnection.isProvisioned || false;
@@ -370,7 +452,11 @@ export const useConfigStore = defineStore('config', () => {
     }
 
     await loadAccounts(response.mnemonics);
-    await loadExchangeRates();
+    try {
+      await loadExchangeRates();
+    } catch (error) {
+      await message('Failed to load exchange rates.', { title: 'Argon Commander', kind: 'error' });
+    }
     await loadBalances();
 
     isLoaded.value = true;
@@ -380,6 +466,8 @@ export const useConfigStore = defineStore('config', () => {
 
   return { 
     isLoaded,
+    isDataSyncing,
+    dataSync,
     walletMnemonic,
     mngWallet,
     llbWallet,
@@ -395,6 +483,8 @@ export const useConfigStore = defineStore('config', () => {
     argonActivity,
     bitcoinActivity,
     botActivity,
+    globalStats,
+    cohortStats,
     setDisplayCurrency,
     argonTo,
     toArgon,
@@ -405,6 +495,6 @@ export const useConfigStore = defineStore('config', () => {
     runRetryStep,
     launchMiningBot,
     updateBiddingRules,
-    subscribeToBidderData,
+    subscribeToMyBids,
   };
 });

@@ -4,8 +4,8 @@ use std::error::Error;
 use std::path::Path;
 
 #[derive(Deserialize, Serialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct Base {
-    #[serde(rename = "requiresPassword")]
     pub requires_password: bool,
 }
 

@@ -16,22 +16,15 @@ pub enum ServerStatusErrorType {
 }
 
 #[derive(Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ServerStatus {
-    #[serde(rename = "ubuntu")]
     pub ubuntu: i32,
-    #[serde(rename = "git")]
     pub git: i32,
-    #[serde(rename = "docker")]
     pub docker: i32,
-    #[serde(rename = "bitcoinsync")]
     pub bitcoinsync: i32,
-    #[serde(rename = "argonsync")]
     pub argonsync: i32,
-    #[serde(rename = "minerlaunch")]
     pub minerlaunch: f32,
-    #[serde(rename = "errorType")]
     pub error_type: Option<ServerStatusErrorType>,
-    #[serde(rename = "errorMessage")]
     pub error_message: Option<String>,
 }
 

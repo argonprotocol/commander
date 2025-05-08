@@ -4,16 +4,16 @@ import App from './App.vue';
 import './main.css';
 import {attachLogger, debug, error, info, LogLevel, trace, warn} from "@tauri-apps/plugin-log";
 
-const ConsoleLogger = {
-    [LogLevel.Trace]: console.log.bind(console),
-    [LogLevel.Debug]: console.debug.bind(console),
-    [LogLevel.Info]: console.info.bind(console),
-    [LogLevel.Warn]: console.warn.bind(console),
-    [LogLevel.Error]: console.error.bind(console),
-}
-void attachLogger(({ level, message }) => {
-    ConsoleLogger[level]?.(message);
-});
+// const ConsoleLogger = {
+//     [LogLevel.Trace]: console.log.bind(console),
+//     [LogLevel.Debug]: console.debug.bind(console),
+//     [LogLevel.Info]: console.info.bind(console),
+//     [LogLevel.Warn]: console.warn.bind(console),
+//     [LogLevel.Error]: console.error.bind(console),
+// }
+// void attachLogger(({ level, message }) => {
+//     ConsoleLogger[level]?.(message);
+// });
 function forwardConsole(
     fnName: 'log' | 'debug' | 'info' | 'warn' | 'error',
     logger: (message: string) => Promise<void>
