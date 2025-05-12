@@ -1,7 +1,7 @@
 export default interface IBidderParams {
     minBid: bigint;
     maxBid: bigint;
-    maxBalance: bigint;
+    maxBudget: bigint;
     maxSeats: number;
     bidIncrement: bigint;
     bidDelay: number;
