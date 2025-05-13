@@ -1,6 +1,6 @@
 use crate::bidder::stats::BidderStats;
 use crate::config::{Config, ServerConnection};
-use crate::ssh::{SSHDropGuard, SSH};
+use crate::ssh::SSH;
 use anyhow::Result;
 use lazy_static::lazy_static;
 use log::{error, info};
@@ -8,7 +8,6 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Manager};
-use tokio::sync::Mutex as TokioMutex;
 
 pub mod stats;
 
@@ -27,10 +26,10 @@ impl Bidder {
         wallet_json: String,
         session_mnemonic: String,
     ) -> Result<()> {
-        let mut ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
+        let ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
 
-        Self::upload_files(&app, &mut ssh, wallet_json, session_mnemonic).await?;
-        Self::start_docker(&mut ssh).await?;
+        Self::upload_files(&app, &ssh, wallet_json, session_mnemonic).await?;
+        Self::start_docker(&ssh).await?;
 
         let mut server_connection = ServerConnection::load().unwrap();
         server_connection.is_ready_for_mining = true;
@@ -74,7 +73,7 @@ impl Bidder {
 
     async fn upload_files(
         app: &AppHandle,
-        ssh: &mut SSH,
+        ssh: &SSH,
         wallet_json: String,
         session_mnemonic: String,
     ) -> Result<()> {
@@ -115,7 +114,7 @@ impl Bidder {
         Ok(())
     }
 
-    pub async fn start_docker(ssh: &mut SSH) -> Result<()> {
+    pub async fn start_docker(ssh: &SSH) -> Result<()> {
         ssh.run_command("cd commander-deploy && docker compose down bot")
             .await?;
         ssh.run_command("cd commander-deploy && docker compose --env-file=.env.testnet up -d bot")
@@ -123,7 +122,7 @@ impl Bidder {
         Ok(())
     }
 
-    pub async fn monitor(app: AppHandle, mut ssh: SSH) -> Result<()> {
+    pub async fn monitor(app: AppHandle, ssh: SSH) -> Result<()> {
         if let Some(handle) = RUNNING_TASK.lock().unwrap().take() {
             handle.abort();
         }
@@ -132,19 +131,23 @@ impl Bidder {
         let local_port = SSH::find_available_port(3600).await?;
         let remote_host = "127.0.0.1";
         let remote_port = 3000;
-        ssh.create_http_tunnel(local_port, remote_host, remote_port)
+
+        let arc_ssh = Arc::new(ssh);
+        arc_ssh
+            .clone()
+            .create_http_tunnel(local_port, remote_host, remote_port)
             .await?;
 
-        let ssh = Arc::new(TokioMutex::new(ssh));
-        let ssh_clone = ssh.clone();
-        let _guard = SSHDropGuard(ssh_clone.clone());
-
         let handle = tokio::spawn(async move {
-            let mut ssh = ssh_clone.lock().await;
-            let mut bidder_stats = BidderStats::new(app, &mut ssh, local_port);
+            let mut bidder_stats = BidderStats::new(app, arc_ssh.clone(), local_port);
             loop {
                 if let Err(e) = bidder_stats.run().await {
                     error!("Error in bidder stats: {}", e);
+                    let _ = arc_ssh
+                        .clone()
+                        .create_http_tunnel(local_port, remote_host, remote_port)
+                        .await
+                        .inspect_err(|e| error!("Error in bidder stats: {}", e));
                 }
                 tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             }
