@@ -1,6 +1,7 @@
 use crate::config::ServerConnection;
 use crate::db::{
-    ArgonActivities, BitcoinActivities, BotActivities, CohortAccounts, CohortFrames, Cohorts, Frames
+    ArgonActivities, BitcoinActivities, BotActivities, CohortAccounts, CohortFrames, Cohorts,
+    Frames,
 };
 use crate::ssh::SSH;
 use anyhow::Result;
@@ -10,7 +11,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::json;
 use std::collections::HashSet;
 use std::str::FromStr;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter};
 
 lazy_static! {
@@ -153,9 +154,9 @@ pub struct ICohortStats {
 ////////////////////////////////////////////////////////////
 // BidderStats
 ////////////////////////////////////////////////////////////
-pub struct BidderStats<'a> {
+pub struct BidderStats {
     app: AppHandle,
-    ssh: &'a mut SSH,
+    ssh: Arc<SSH>,
     local_port: u16,
     db_is_synced: bool,
     has_won_seats: bool,
@@ -171,8 +172,8 @@ pub struct BidderStats<'a> {
     last_processed_frame_id: u32,
 }
 
-impl<'a> BidderStats<'a> {
-    pub fn new(app: AppHandle, ssh: &'a mut SSH, local_port: u16) -> Self {
+impl BidderStats {
+    pub fn new(app: AppHandle, ssh: Arc<SSH>, local_port: u16) -> Self {
         BidderStats {
             app,
             ssh,
@@ -192,12 +193,11 @@ impl<'a> BidderStats<'a> {
     pub async fn run(&mut self) -> Result<()> {
         self.update_argon_blockchain_status().await?;
         self.update_bitcoin_blockchain_status().await?;
-        
+
         let bot_status = self.fetch_bidding_bot_status().await?;
 
         self.oldest_frame_id_to_sync = bot_status.oldest_frame_id_to_sync;
         self.current_frame_id = bot_status.current_frame_id;
-
 
         if bot_status.has_won_seats && !self.has_won_seats {
             self.set_has_won_seats().await?;
@@ -208,12 +208,15 @@ impl<'a> BidderStats<'a> {
 
         if bot_status.load_progress < 100.0 {
             println!("Waiting for server to load: {}", bot_status.load_progress);
-            if let Err(e) = self.app.emit("dataSync", json!({ "type": "server", "progress": bot_status.load_progress })) {
+            if let Err(e) = self.app.emit(
+                "dataSync",
+                json!({ "type": "server", "progress": bot_status.load_progress }),
+            ) {
                 error!("Error during emit loading: {}", e);
             }
             return Ok(());
         }
-        
+
         if self.last_processed_frame_id < bot_status.current_frame_id {
             self.db_is_synced = false;
         }
@@ -222,20 +225,26 @@ impl<'a> BidderStats<'a> {
             if has_bids_update {
                 self.update_bids().await?;
             }
-    
+
             if has_earnings_update {
-                println!("Syncing earnings for frame: {}", bot_status.current_frame_id);
+                println!(
+                    "Syncing earnings for frame: {}",
+                    bot_status.current_frame_id
+                );
                 self.sync_db_frame(bot_status.current_frame_id).await?;
             }
 
             if has_bids_update || has_earnings_update {
                 let cohort_stats = Self::fetch_latest_cohort_stats()?;
                 let global_stats = Self::fetch_global_stats()?;
-                
-                if let Err(e) = self.app.emit("stats", json!({
-                    "cohortStats": cohort_stats,
-                    "globalStats": global_stats,
-                })) {
+
+                if let Err(e) = self.app.emit(
+                    "stats",
+                    json!({
+                        "cohortStats": cohort_stats,
+                        "globalStats": global_stats,
+                    }),
+                ) {
                     error!("Error emitting stats: {}", e);
                 }
             }
@@ -358,10 +367,13 @@ impl<'a> BidderStats<'a> {
     async fn sync_db(&mut self) -> Result<()> {
         let frames_to_sync = self.current_frame_id - self.oldest_frame_id_to_sync;
         let mut frames_synced = 0;
-        
+
         for frame_id in self.oldest_frame_id_to_sync..=self.current_frame_id {
             let progress = (frames_synced as f32 / frames_to_sync as f32) * 100.0;
-            if let Err(e) = self.app.emit("dataSync", json!({ "type": "db", "progress": progress })) {
+            if let Err(e) = self
+                .app
+                .emit("dataSync", json!({ "type": "db", "progress": progress }))
+            {
                 error!("Error emitting loadingy: {}", e);
             }
             self.sync_db_frame(frame_id).await?;
@@ -399,22 +411,32 @@ impl<'a> BidderStats<'a> {
             )
         })?;
 
-        Frames::insert_or_update(frame_id, data.frame_tick_start, data.frame_tick_end, data.frame_progress, false)?;
-        
+        Frames::insert_or_update(
+            frame_id,
+            data.frame_tick_start,
+            data.frame_tick_end,
+            data.frame_progress,
+            false,
+        )?;
+
         let mut processed_cohorts: HashSet<u32> = HashSet::new();
-        
+
         let mut total_blocks_mined = 0;
 
-        for (frame_id_at_cohort_activation_str, cohort_data) in data.by_frame_id_at_cohort_activation.iter() {
+        for (frame_id_at_cohort_activation_str, cohort_data) in
+            data.by_frame_id_at_cohort_activation.iter()
+        {
             let frame_id_at_cohort_activation = u32::from_str(frame_id_at_cohort_activation_str)
                 .map_err(|e| anyhow::anyhow!("Failed to parse frame ID: {}", e))?;
             if !processed_cohorts.contains(&frame_id_at_cohort_activation) {
-                self.sync_db_cohort(frame_id_at_cohort_activation, frame_id, data.frame_progress).await?;
+                self.sync_db_cohort(frame_id_at_cohort_activation, frame_id, data.frame_progress)
+                    .await?;
                 processed_cohorts.insert(frame_id_at_cohort_activation);
             }
 
             total_blocks_mined += cohort_data.blocks_mined;
-            self.sync_db_cohort_frame(frame_id_at_cohort_activation, frame_id, cohort_data).await?;
+            self.sync_db_cohort_frame(frame_id_at_cohort_activation, frame_id, cohort_data)
+                .await?;
         }
 
         println!("TOTAL BLOCKS MINED: {}", total_blocks_mined);
@@ -423,12 +445,23 @@ impl<'a> BidderStats<'a> {
         if is_processed {
             self.last_processed_frame_id = frame_id;
         }
-        Frames::update(frame_id, data.frame_tick_start, data.frame_tick_end, data.frame_progress, is_processed)?;
+        Frames::update(
+            frame_id,
+            data.frame_tick_start,
+            data.frame_tick_end,
+            data.frame_progress,
+            is_processed,
+        )?;
 
         Ok(())
     }
 
-    async fn sync_db_cohort_frame(&mut self, frame_id_at_cohort_activation: u32, frame_id: u32, data: &IEarningsFileCohort) -> Result<()> {
+    async fn sync_db_cohort_frame(
+        &mut self,
+        frame_id_at_cohort_activation: u32,
+        frame_id: u32,
+        data: &IEarningsFileCohort,
+    ) -> Result<()> {
         CohortFrames::insert_or_update(
             frame_id,
             frame_id_at_cohort_activation,
@@ -437,23 +470,31 @@ impl<'a> BidderStats<'a> {
             data.argons_mined,
             data.argons_minted,
         )?;
-    
+
         Ok(())
     }
 
-    async fn sync_db_cohort(&mut self, frame_id_at_cohort_activation: u32, current_frame_id: u32, current_frame_progress: f32) -> Result<()> {
+    async fn sync_db_cohort(
+        &mut self,
+        frame_id_at_cohort_activation: u32,
+        current_frame_id: u32,
+        current_frame_progress: f32,
+    ) -> Result<()> {
         let data = self.fetch_bids_file(frame_id_at_cohort_activation).await?;
-        
+
         if data.frame_bidding_progress < 100.0 {
             // cohort hasn't started yet so don't add to DB
-            println!("Cohort hasn't started yet so don't add to DB: {} in {}", frame_id_at_cohort_activation, current_frame_id);
+            println!(
+                "Cohort hasn't started yet so don't add to DB: {} in {}",
+                frame_id_at_cohort_activation, current_frame_id
+            );
             return Ok(());
         }
 
         let frames_completed = current_frame_id - frame_id_at_cohort_activation;
         let progress = ((frames_completed as f32 * 100.0) + current_frame_progress) / 10.0;
         let argonots_staked = data.argonots_staked_per_seat * data.seats_won as u64;
-        
+
         Cohorts::insert_or_update(
             frame_id_at_cohort_activation,
             progress,
@@ -507,15 +548,17 @@ impl<'a> BidderStats<'a> {
         }
         Ok(true)
     }
-    
-    async fn fetch_bids_file(&mut self, frame_id_at_cohort_activation: impl Into<Option<u32>>) -> Result<IBidsFile> {
+
+    async fn fetch_bids_file(
+        &mut self,
+        frame_id_at_cohort_activation: impl Into<Option<u32>>,
+    ) -> Result<IBidsFile> {
         let url_base = format!("http://127.0.0.1:{}/bids", self.local_port);
         let url = match frame_id_at_cohort_activation.into() {
-            Some(frame_id_at_cohort_activation) => format!(
-                "{}/{}",
-                url_base, frame_id_at_cohort_activation
-            ),
-            None => url_base
+            Some(frame_id_at_cohort_activation) => {
+                format!("{}/{}", url_base, frame_id_at_cohort_activation)
+            }
+            None => url_base,
         };
         println!("Fetching cohort data for cohort: {}", url);
         let response = reqwest::get(url)
@@ -527,9 +570,8 @@ impl<'a> BidderStats<'a> {
             .await
             .unwrap_or_else(|_| "Could not get response text".to_string());
 
-        let data: IBidsFile = serde_json::from_str(&text).map_err(|e| {
-            anyhow::anyhow!("Failed to parse bids JSON: {}. Text: {}", e, text)
-        })?;
+        let data: IBidsFile = serde_json::from_str(&text)
+            .map_err(|e| anyhow::anyhow!("Failed to parse bids JSON: {}. Text: {}", e, text))?;
 
         Ok(data)
     }
@@ -572,8 +614,9 @@ impl<'a> BidderStats<'a> {
             Some(cohort) => cohort,
             None => return Ok(None),
         };
-        
-        let (blocks_mined, argonots_mined, argons_mined, argons_minted) = CohortFrames::fetch_cohort_stats(cohort.frame_id_at_cohort_activation)?;
+
+        let (blocks_mined, argonots_mined, argons_mined, argons_minted) =
+            CohortFrames::fetch_cohort_stats(cohort.frame_id_at_cohort_activation)?;
         Ok(Some(ICohortStats {
             frame_id_at_cohort_activation: cohort.frame_id_at_cohort_activation,
             frame_tick_start: cohort.frame_tick_start,

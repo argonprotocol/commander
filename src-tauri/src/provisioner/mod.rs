@@ -1,11 +1,10 @@
 use crate::config::{ServerConnection, ServerStatus, ServerStatusErrorType};
-use crate::ssh::{SSHDropGuard, SSH};
+use crate::ssh::SSH;
 use anyhow::Result;
 use lazy_static::lazy_static;
 use log::{error, info, trace};
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use tauri::{AppHandle, Emitter};
-use tokio::sync::Mutex as TokioMutex;
 
 lazy_static! {
     static ref RUNNING_TASK: Mutex<Option<tokio::task::JoinHandle<()>>> = Mutex::new(None);
@@ -21,11 +20,11 @@ impl Provisioner {
         port: u16,
         app: AppHandle,
     ) -> Result<()> {
-        let mut ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
+        let ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
 
-        let script_is_running = Provisioner::is_script_running(&mut ssh).await?;
+        let script_is_running = Provisioner::is_script_running(&ssh).await?;
         if !script_is_running {
-            Provisioner::start_script(&mut ssh).await?;
+            Provisioner::start_script(&ssh).await?;
         }
 
         Provisioner::monitor(app, ssh).await?;
@@ -40,12 +39,12 @@ impl Provisioner {
         port: u16,
         app: AppHandle,
     ) -> Result<()> {
-        let mut ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
+        let ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
 
-        let script_is_running = Provisioner::is_script_running(&mut ssh).await?;
+        let script_is_running = Provisioner::is_script_running(&ssh).await?;
         info!("need to start script = {}", !script_is_running);
         if !script_is_running {
-            Provisioner::start_script(&mut ssh).await?;
+            Provisioner::start_script(&ssh).await?;
         }
 
         Provisioner::monitor(app, ssh).await?;
@@ -61,9 +60,9 @@ impl Provisioner {
         port: u16,
         app: AppHandle,
     ) -> Result<()> {
-        let mut ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
+        let ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
 
-        let script_is_running = Provisioner::is_script_running(&mut ssh).await?;
+        let script_is_running = Provisioner::is_script_running(&ssh).await?;
         if script_is_running {
             return Ok(());
         }
@@ -75,20 +74,20 @@ impl Provisioner {
                 .await?;
         }
 
-        Provisioner::start_script(&mut ssh).await?;
+        Provisioner::start_script(&ssh).await?;
         Provisioner::monitor(app, ssh).await?;
 
         Ok(())
     }
 
-    async fn is_script_running(ssh: &mut SSH) -> Result<bool> {
+    async fn is_script_running(ssh: &SSH) -> Result<bool> {
         match ssh.run_command("pgrep -f setup-script.sh").await {
             Ok((pid, _)) => Ok(!pid.trim().is_empty()),
             Err(_) => Ok(false),
         }
     }
 
-    async fn start_script(ssh: &mut SSH) -> Result<()> {
+    async fn start_script(ssh: &SSH) -> Result<()> {
         ssh.start_script().await?;
         Ok(())
     }
@@ -98,15 +97,10 @@ impl Provisioner {
             handle.abort();
         }
 
-        let ssh = Arc::new(TokioMutex::new(ssh));
-        let ssh_clone = ssh.clone();
-        let _guard = SSHDropGuard(ssh_clone.clone());
-
         let handle = tokio::spawn(async move {
             let mut server_status = ServerStatus::load().unwrap_or_default();
             loop {
-                let mut ssh = ssh_clone.lock().await;
-                let filenames = match Provisioner::fetch_filenames(&mut ssh).await {
+                let filenames = match Provisioner::fetch_filenames(&ssh).await {
                     Ok(files) => files,
                     Err(e) => {
                         server_status.error_type = Some(ServerStatusErrorType::Unknown);
@@ -120,7 +114,7 @@ impl Provisioner {
                     }
                 };
 
-                match Provisioner::calculate_setup_status(&filenames, &mut ssh).await {
+                match Provisioner::calculate_setup_status(&filenames, &ssh).await {
                     Ok(latest_status) => {
                         info!("EMITTING serverStatus2");
                         if let Err(e) = app.emit("serverStatus", latest_status.clone()) {
@@ -176,7 +170,7 @@ impl Provisioner {
         server_status.error_type.is_some()
     }
 
-    async fn fetch_filenames(ssh: &mut SSH) -> Result<Vec<String>> {
+    async fn fetch_filenames(ssh: &SSH) -> Result<Vec<String>> {
         let (output, _code) = match ssh.run_command("ls ~/setup-logs").await {
             Ok(result) => result,
             Err(_) => return Ok(Vec::new()),
@@ -189,10 +183,7 @@ impl Provisioner {
         Ok(filenames)
     }
 
-    async fn calculate_setup_status(
-        filenames: &Vec<String>,
-        ssh: &mut SSH,
-    ) -> Result<ServerStatus> {
+    async fn calculate_setup_status(filenames: &Vec<String>, ssh: &SSH) -> Result<ServerStatus> {
         info!("FILENAMES:");
         for filename in filenames {
             if !filename.is_empty() {
@@ -264,7 +255,7 @@ impl Provisioner {
         }
     }
 
-    async fn fetch_minerlaunch_progress(ssh: &mut SSH) -> Result<f32> {
+    async fn fetch_minerlaunch_progress(ssh: &SSH) -> Result<f32> {
         // Run commands sequentially instead of concurrently
         let (argon_output, _) = ssh
             .run_command("docker exec commander-deploy-argon-miner-1 syncstatus.sh")
