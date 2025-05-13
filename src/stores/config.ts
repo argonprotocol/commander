@@ -114,7 +114,7 @@ export const useConfigStore = defineStore('config', () => {
     GBP: 1,
     INR: 1,
   };
-  
+
   const walletMnemonic = Vue.ref('');
   const sessionMnemonic = Vue.ref('');
 
@@ -141,11 +141,11 @@ export const useConfigStore = defineStore('config', () => {
     argonots: 0,
     totalValue: 0,
   });
-  
+
   const totalArgons = Vue.ref(0);
   const totalArgonots = Vue.ref(0);
   const totalWalletValue = Vue.ref(0);
-  
+
   const biddingRules: Vue.Ref<IBiddingRules | null> = Vue.ref(null);
   const requiresPassword = Vue.ref(false);
 
@@ -204,7 +204,7 @@ export const useConfigStore = defineStore('config', () => {
       fetch('https://open.er-api.com/v6/latest/USD'),
       mainchain.fetchExchangeRates()
     ]);
-    
+
     exchangeRates.USD = argonResponse.USD;
     exchangeRates.ARGNOT = argonResponse.ARGNOT || 5;
 
@@ -212,7 +212,7 @@ export const useConfigStore = defineStore('config', () => {
     if (!otherData.rates) return;
 
     exchangeRates.EURO = otherData.rates.EUR / exchangeRates.USD;
-    exchangeRates.GBP = otherData.rates.GBP / exchangeRates.USD; 
+    exchangeRates.GBP = otherData.rates.GBP / exchangeRates.USD;
     exchangeRates.INR = otherData.rates.INR / exchangeRates.USD;
   }
 
@@ -272,7 +272,7 @@ export const useConfigStore = defineStore('config', () => {
       return qty / exchangeRates.EURO;
     } else if (displayCurrency.value.id === Currency.GBP) {
       return qty / exchangeRates.GBP;
-    } else if (displayCurrency.value.id === Currency.INR) { 
+    } else if (displayCurrency.value.id === Currency.INR) {
       return qty / exchangeRates.INR;
     } else {
       return qty;
@@ -292,11 +292,11 @@ export const useConfigStore = defineStore('config', () => {
       return qtyInArgons;
     }
   }
-  
+
   function argonotTo(qty: number) {
     return argonTo(argonotToArgon(qty));
   }
-  
+
   function argonotToArgon(qty: number) {
     return qty * exchangeRates.ARGNOT;
   }
@@ -333,7 +333,8 @@ export const useConfigStore = defineStore('config', () => {
 
     provisioner.setIpAddress(ipAddress);
     serverConnection.isConnected = true;
-    provisioner.run();
+    serverConnection.ipAddress = ipAddress;
+    void provisioner.run();
   }
 
   async function removeServer() {
@@ -413,10 +414,10 @@ export const useConfigStore = defineStore('config', () => {
       cohortStats.value = { ...event.payload.cohortStats };
     });
 
-    const response = await invoke('start', {}) as { 
-      mnemonics?: { wallet: string, session: string }, 
-      biddingRules: any, 
-      serverConnection: any, 
+    const response = await invoke('start', {}) as {
+      mnemonics?: { wallet: string, session: string },
+      biddingRules: any,
+      serverConnection: any,
       serverStatus: any,
       serverProgress: any,
       requiresPassword: boolean,
@@ -428,7 +429,7 @@ export const useConfigStore = defineStore('config', () => {
     };
     biddingRules.value = response.biddingRules;
     requiresPassword.value = response.requiresPassword;
-    
+
     argonActivity.value = response.argonActivity;
     bitcoinActivity.value = response.bitcoinActivity;
     botActivity.value = response.botActivity;
@@ -464,7 +465,7 @@ export const useConfigStore = defineStore('config', () => {
 
   load().catch(error => console.error(`Error loading config: ${error}`));
 
-  return { 
+  return {
     isLoaded,
     isDataSyncing,
     dataSync,
@@ -475,8 +476,8 @@ export const useConfigStore = defineStore('config', () => {
     totalArgons,
     totalArgonots,
     totalWalletValue,
-    displayCurrency, 
-    displayCurrencies, 
+    displayCurrency,
+    displayCurrencies,
     currencySymbol,
     biddingRules,
     serverConnection,
@@ -488,7 +489,7 @@ export const useConfigStore = defineStore('config', () => {
     setDisplayCurrency,
     argonTo,
     toArgon,
-    argonotTo, 
+    argonotTo,
     argonotToArgon,
     connectServer,
     removeServer,
