@@ -85,7 +85,7 @@ class Mainchain {
   public async getAggregateBidCosts(): Promise<number> {
     const client = await this.client;
     const activeMiners = await client.query.miningSlot.activeMinersByIndex.entries();
-    
+
     let aggregateBidCosts = 0;
 
     for (const miner of activeMiners) {
@@ -95,7 +95,7 @@ class Mainchain {
       const bidCost = argons + argonot;
       aggregateBidCosts += bidCost;
     }
-    
+
     return aggregateBidCosts;
   }
 
@@ -145,7 +145,7 @@ class Mainchain {
   public async fetchExchangeRates() {
     const client = await this.client;
     const priceIndex = (await client.query.priceIndex.current()).value;
-    const USD = convertFixedU128ToBigNumber(priceIndex.argonUsdTargetPrice.toBigInt()).toNumber();  
+    const USD = convertFixedU128ToBigNumber(priceIndex.argonUsdPrice.toBigInt()).toNumber();
     const ARGNOT = convertFixedU128ToBigNumber(priceIndex.argonotUsdPrice.toBigInt()).toNumber() / USD;
     const ARGN = 1;
 
@@ -165,7 +165,7 @@ class Mainchain {
 
   public async getTickAtStartOfAuctionClosing(): Promise<bigint> {
     const client = await this.client;
-    const tickAtStartOfNextCohort = await this.getTickAtStartOfNextCohort();    
+    const tickAtStartOfNextCohort = await this.getTickAtStartOfNextCohort();
     const ticksBeforeBidEndForVrfClose = (await client.query.miningSlot.miningConfig()).ticksBeforeBidEndForVrfClose.toBigInt();
     return tickAtStartOfNextCohort - ticksBeforeBidEndForVrfClose;
   }
