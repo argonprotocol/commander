@@ -28,3 +28,6 @@ ssh_key.pem
 ssh_key1.pem
 ssh_key2.pem
 /key
+bot/alice.json
+bot/caleb.json
+bot/.env

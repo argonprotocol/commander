@@ -17,13 +17,13 @@ export default async function createBidderParams(
   const maxBid = await helper.calculateMaxBid();
 
   const maxSeats = await helper.getMaxSeats();
-  const maxBalance = helper.getMaxBalance(maxBid * BigInt(maxSeats));
+  const maxBudget = helper.getMaxBalance(maxBid * BigInt(maxSeats));
   const bidDelay = biddingRules.rebiddingDelay || 0;
   const bidIncrement = convertArgonToMicrogons(biddingRules.incrementAmount || 1);
   const bidderParams: IBidderParams = {
     minBid,
     maxBid,
-    maxBalance,
+    maxBudget,
     maxSeats,
     bidDelay,
     bidIncrement,
@@ -81,7 +81,7 @@ export class Helper {
     }
 
     const minBid = formulaAmount * (1 + this.biddingRules.startingAmountFormulaIncrease / 100);
-    
+
     return convertArgonToMicrogons(minBid);
   }
 
@@ -89,7 +89,7 @@ export class Helper {
     if (this.biddingRules.finalAmountFormulaType === 'Custom') {
       return convertArgonToMicrogons(this.biddingRules.finalAmount);
     }
-    
+
     await this.calculatorData.isInitialized;
     let formulaAmount = 0;
 

@@ -1,0 +1,27 @@
+{
+  "name": "@argonprotocol/commander-bot",
+  "private": true,
+  "version": "0.0.1-rc7",
+  "description": "An api for integration with commander",
+  "main": "index.ts",
+  "scripts": {
+    "start": "tsx index.ts",
+    "test:local": "ARGON_PROJECT_ROOT=../../mainchain vitest --run",
+    "lint": "prettier -w ."
+  },
+  "type": "module",
+  "dependencies": {
+    "@argonprotocol/mainchain": "^1.1.0",
+    "express": "^5.1.0",
+    "tiny-lru": "^11.2.11",
+    "tsx": "^4.19.3"
+  },
+  "devDependencies": {
+    "@argonprotocol/testing": "^1.1.0",
+    "@types/express": "^5.0.1",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  },
+  "packageManager": "yarn@4.9.1"
+}

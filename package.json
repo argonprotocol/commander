@@ -35,6 +35,9 @@
     "tailwindcss": "^4.0.3",
     "vue": "^3.5.13"
   },
+  "workspaces": [
+    "bot"
+  ],
   "devDependencies": {
     "@tauri-apps/cli": "^2",
     "@types/qrcode": "^1.5.5",
