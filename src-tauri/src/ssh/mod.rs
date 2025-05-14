@@ -23,7 +23,7 @@ use tokio::sync::{Mutex as TokioMutex, Mutex};
 #[derive(Clone)]
 pub struct SSH {
     client: Arc<TokioMutex<client::Handle<ClientHandler>>>,
-    config: SSHConfig,
+    pub config: SSHConfig,
 }
 
 #[derive(Clone)]
@@ -224,8 +224,9 @@ impl SSH {
         info!("Creating remote file {}", remote_path);
         let mut channel = self.open_channel().await?;
         let scp_command = format!("cat > {}", remote_path);
-
         channel.exec(true, scp_command).await?;
+
+        info!("Creating remote file {}", remote_path);
 
         // Write the contents of the setup script
         channel.data(contents.as_bytes()).await?;
@@ -233,39 +234,6 @@ impl SSH {
 
         // Wait for the copy to complete
         while channel.wait().await.is_some() {}
-
-        Ok(())
-    }
-
-    pub async fn start_script(&self) -> Result<()> {
-        let script_contents = include_str!("../../setup-script.sh");
-        let shasum_script = include_str!("../../../scripts/get_shasum.sh");
-
-        let remote_script_path = "~/setup-script.sh";
-
-        self.upload_file(&script_contents, remote_script_path)
-            .await?;
-
-        self.run_command("mkdir -p scripts").await?;
-        self.upload_file(&shasum_script, "~/scripts/get_shasum.sh")
-            .await?;
-        self.run_command("chmod +x ~/scripts/get_shasum.sh").await?;
-
-        // Now execute the script
-        let shell_command = format!(
-            "chmod +x {} && nohup {} > /dev/null 2>&1 &",
-            remote_script_path, remote_script_path
-        );
-        info!("Running: {}", shell_command);
-        let mut channel = self.open_channel().await?;
-
-        // Start execution but don't wait for it
-        let _ = tokio::spawn(async move {
-            if let Err(e) = SSH::exec_and_print_output_static(&mut channel, shell_command).await {
-                error!("Error executing script: {}", e);
-            }
-        });
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
         Ok(())
     }
@@ -453,7 +421,7 @@ impl SSH {
                                         }
                                     }
                                     Err(e) => {
-                                        error!("Error creating channel: {}", e);
+                                        error!("Error creating channel for tunnel: {}", e);
                                     }
                                 }
                                 // default is to break

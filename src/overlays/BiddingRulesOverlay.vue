@@ -86,15 +86,15 @@
                       <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showBreakdownTooltip(startingOptimisticCalculator)" @mouseleave="hideBreakdownTooltip()">
                         <BidBreakdownTooltipArrow />
                         <div class="font-bold text-sm uppercase">Optimistic APR</div>
-                        <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(startingOptimisticAPR, 999_999), 0) }}{{ startingOptimisticAPR > 999_999 ? '+' : '' }}%</div>
-                        <div class="font-light text-md">({{addCommas(startingOptimisticTDPR, 0)}}% Every 10 Days)</div>
+                        <div class="text-5xl font-bold py-1">{{ fmtCommas(Math.min(startingOptimisticAPR, 999_999).toString()) }}{{ startingOptimisticAPR > 999_999 ? '+' : '' }}%</div>
+                        <div class="font-light text-md">({{fmtCommas(startingOptimisticTDPR.toString())}}% Every 10 Days)</div>
                       </div>
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
                       <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showBreakdownTooltip(startingMinimumCalculator)" @mouseleave="hideBreakdownTooltip()">
                         <BidBreakdownTooltipArrow />
                         <div class="font-bold text-sm uppercase">Minimum APR</div>
-                        <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(startingMinimumAPR, 999_999), 0) }}{{ startingMinimumAPR > 999_999 ? '+' : '' }}%</div>
-                        <div class="font-light text-md">({{addCommas(startingMinimumTDPR, 0)}}% Every 10 Days)</div>
+                        <div class="text-5xl font-bold py-1">{{ fmtCommas(Math.min(startingMinimumAPR, 999_999).toString()) }}{{ startingMinimumAPR > 999_999 ? '+' : '' }}%</div>
+                        <div class="font-light text-md">({{fmtCommas(startingMinimumTDPR.toString())}}% Every 10 Days)</div>
                       </div>
                     </div>
                   </div>
@@ -165,15 +165,15 @@
                       <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showBreakdownTooltip(finalOptimisticCalculator)" @mouseleave="hideBreakdownTooltip()">
                         <BidBreakdownTooltipArrow />
                         <div class="font-bold text-sm uppercase">Optimistic APR</div>
-                        <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(finalOptimisticAPR, 999_999), 0) }}{{ finalOptimisticAPR > 999_999 ? '+' : '' }}%</div>
-                        <div class="font-light text-md">({{addCommas(finalOptimisticTDPR, 0)}}% Every 10 Days)</div>
+                        <div class="text-5xl font-bold py-1">{{ fmtCommas(Math.min(finalOptimisticAPR, 999_999).toString()) }}{{ finalOptimisticAPR > 999_999 ? '+' : '' }}%</div>
+                        <div class="font-light text-md">({{fmtCommas(finalOptimisticTDPR.toString())}}% Every 10 Days)</div>
                       </div>
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
                       <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showBreakdownTooltip(finalMinimumCalculator)" @mouseleave="hideBreakdownTooltip()">
                         <BidBreakdownTooltipArrow />
                         <div class="font-bold text-sm uppercase">Minimum APR</div>
-                        <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(finalMinimumAPR, 999_999), 0) }}{{ finalMinimumAPR > 999_999 ? '+' : '' }}%</div>
-                        <div class="font-light text-md">({{addCommas(finalMinimumTDPR, 0)}}% Every 10 Days)</div>
+                        <div class="text-5xl font-bold py-1">{{ fmtCommas(Math.min(finalMinimumAPR, 999_999).toString()) }}{{ finalMinimumAPR > 999_999 ? '+' : '' }}%</div>
+                        <div class="font-light text-md">({{fmtCommas(finalMinimumTDPR.toString())}}% Every 10 Days)</div>
                       </div>
                     </div>
                   </div>
@@ -310,13 +310,13 @@
                           <BidBreakdownTooltipArrow />
                           <div v-if="['AfterFirstSeat','AfterFirstSlot'].includes(disableBot)">
                             <div class="font-bold text-sm uppercase">Optimistic 10-Day Yield</div>
-                            <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(startingOptimisticTDPR, 999_999), 0) }}{{ startingOptimisticTDPR > 999_999 ? '+' : '' }}%</div>
+                            <div class="text-5xl font-bold py-1">{{ fmtCommas(Math.min(startingOptimisticTDPR, 999_999).toString()) }}{{ startingOptimisticTDPR > 999_999 ? '+' : '' }}%</div>
                             <div class="font-light text-md">(Ends After Slot Completion)</div>
                           </div>
                           <div v-else-if="disableBot === 'Never'">
                             <div class="font-bold text-sm uppercase">Optimistic APY</div>
-                            <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(startingOptimisticAPY, 999_999), 0) }}{{ startingOptimisticAPY > 999_999 ? '+' : '' }}%</div>
-                            <div class="font-light text-md">({{addCommas(startingOptimisticTDPR, 0)}}% Compounding Every 10 Days)</div>
+                            <div class="text-5xl font-bold py-1">{{ fmtCommas(Math.min(startingOptimisticAPY, 999_999).toString()) }}{{ startingOptimisticAPY > 999_999 ? '+' : '' }}%</div>
+                            <div class="font-light text-md">({{fmtCommas(startingOptimisticTDPR.toFixed(0))}}% Compounding Every 10 Days)</div>
                           </div>
                         </div>
                         <div class="h-[1px] bg-yellow-800/20 my-4"></div>
@@ -324,13 +324,13 @@
                           <BidBreakdownTooltipArrow />
                           <div v-if="['AfterFirstSeat','AfterFirstSlot'].includes(disableBot)">
                             <div class="font-bold text-sm uppercase">Minimum 10-Day Yield</div>
-                            <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(finalMinimumTDPR, 999_999), 0) }}{{ finalMinimumTDPR > 999_999 ? '+' : '' }}%</div>
+                            <div class="text-5xl font-bold py-1">{{ fmtCommas(Math.min(finalMinimumTDPR, 999_999).toString()) }}{{ finalMinimumTDPR > 999_999 ? '+' : '' }}%</div>
                             <div class="font-light text-md">(Ends After Slot Completion)</div>
                           </div>
                           <div v-else-if="disableBot === 'Never'">
                             <div class="font-bold text-sm uppercase">Minimum APY</div>
-                            <div class="text-5xl font-bold py-1">{{ addCommas(Math.min(finalMinimumAPY, 999_999), 0) }}{{ finalMinimumAPY > 999_999 ? '+' : '' }}%</div>
-                            <div class="font-light text-md">({{addCommas(finalMinimumTDPR, 0)}}% Compounding Every 10 Days)</div>
+                            <div class="text-5xl font-bold py-1">{{ fmtCommas(Math.min(finalMinimumAPY, 999_999).toString()) }}{{ finalMinimumAPY > 999_999 ? '+' : '' }}%</div>
+                            <div class="font-light text-md">({{fmtCommas(finalMinimumTDPR.toFixed(0))}}% Compounding Every 10 Days)</div>
                           </div>
                         </div>
                       </div>
@@ -350,10 +350,10 @@
 
             <div class="flex flex-row justify-end px-14 border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
               <div class="grow font-bold text-lg text-slate-900/70">
-                Tokens Needed:
-                <template v-if="requiredArgons !== desiredArgons">{{ addCommas(requiredArgons) }} - </template>{{ addCommas(desiredArgons) }} Argon{{ desiredArgons === 1 ? '' : 's' }}
-                +
-                <template v-if="requiredArgonots !== desiredArgonots">{{ addCommas(requiredArgonots) }} - </template>{{ addCommas(desiredArgonots) }} Argonot{{ desiredArgonots === 1 ? '' : 's' }}
+                Tokens Needed: 
+                <template v-if="requiredArgons !== desiredArgons">{{ fmtCommas(requiredArgons.toString()) }} - </template>{{ fmtCommas(desiredArgons.toString()) }} Argon{{ desiredArgons === 1 ? '' : 's' }} 
+                + 
+                <template v-if="requiredArgonots !== desiredArgonots">{{ fmtCommas(requiredArgonots.toString()) }} - </template>{{ fmtCommas(desiredArgonots.toString()) }} Argonot{{ desiredArgonots === 1 ? '' : 's' }}
               </div>
               <div class="flex flex-row space-x-4">
                 <button @click="closeOverlay" class="border border-argon-button text-xl font-bold text-gray-500 px-7 py-1 rounded-md cursor-pointer">
@@ -381,7 +381,7 @@ import dayjs from 'dayjs';
 import { storeToRefs } from 'pinia';
 import { Dialog, DialogPanel, TransitionRoot } from '@headlessui/vue';
 import emitter from '../emitters/basic';
-import { addCommas } from '../lib/Utils';
+import { fmtCommas } from '../lib/Utils';
 import { useConfigStore } from '../stores/config';
 import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon, LightBulbIcon } from '@heroicons/vue/24/outline';
@@ -607,43 +607,6 @@ function applyRecommendedThrottles() {
 // Disable
 const disableBot: Vue.Ref<'AfterFirstSeat' | 'AfterFirstSlot' | 'Never' | 'Now'> = Vue.ref('Never');
 
-let openedAt = dayjs();
-
-emitter.on('openBiddingRulesOverlay', async () => {
-  if (isOpen.value) return;
-  openedAt = dayjs();
-  isOpen.value = true;
-  calculatorData.isInitialized.then(() => {
-    const biddingRules = configStore.biddingRules || {} as IBiddingRules;
-    hasExistingRules.value = !!biddingRules;
-    calculatedTotalSeats.value = biddingRules.calculatedTotalSeats || calculatedTotalSeats.value;
-    calculatedArgonCirculation.value = biddingRules.calculatedArgonCirculation || calculatedArgonCirculation.value
-    argonotPriceChangeType.value = biddingRules.argonotPriceChangeType || argonotPriceChangeType.value
-    argonotPriceChangeMin.value = biddingRules.argonotPriceChangeMin || argonotPriceChangeMin.value;
-    argonotPriceChangeMax.value = biddingRules.argonotPriceChangeMax || argonotPriceChangeMax.value;
-    startingAmount.value = biddingRules.startingAmount || startingAmount.value;
-    startingAmountFormulaType.value = biddingRules.startingAmountFormulaType || startingAmountFormulaType.value;
-    startingAmountFormulaIncrease.value = biddingRules.startingAmountFormulaIncrease || startingAmountFormulaIncrease.value;
-    incrementAmount.value = biddingRules.incrementAmount || incrementAmount.value;
-    rebiddingDelay.value = biddingRules.rebiddingDelay || rebiddingDelay.value;
-    finalAmount.value = biddingRules.finalAmount || finalAmount.value;
-    finalAmountFormulaType.value = biddingRules.finalAmountFormulaType || finalAmountFormulaType.value;
-    finalAmountFormulaIncrease.value = biddingRules.finalAmountFormulaIncrease || finalAmountFormulaIncrease.value;
-    throttleSeats.value = biddingRules.throttleSeats || throttleSeats.value;
-    throttleSeatCount.value = biddingRules.throttleSeatCount || throttleSeatCount.value;
-    throttleSpending.value = biddingRules.throttleSpending || throttleSpending.value;
-    throttleSpendingAmount.value = biddingRules.throttleSpendingAmount || throttleSpendingAmount.value;
-    throttleDistributeEvenly.value = biddingRules.throttleDistributeEvenly || throttleDistributeEvenly.value;
-    disableBot.value = biddingRules.disableBot || disableBot.value;
-
-    isLoaded.value = true;
-    calculatedArgonCirculationMin.value = Math.ceil(calculatorData.argonRewardsForFullYear);
-
-    updateStartingAmountFormulaPrice();
-    updateFinalAmountFormulaPrice();
-  });
-});
-
 async function saveRules() {
   isSaving.value = true;
   const rules: IBiddingRules = {
@@ -721,6 +684,43 @@ function showBreakdownTooltip(calculator: BiddingCalculator) {
 function hideBreakdownTooltip() {
   isShowingBreakdownTooltip.value = false;
 }
+
+let openedAt = dayjs();
+
+emitter.on('openBiddingRulesOverlay', async () => {
+  if (isOpen.value) return;
+  openedAt = dayjs();
+  isOpen.value = true;
+  calculatorData.isInitialized.then(() => {
+    const biddingRules = configStore.biddingRules || {} as IBiddingRules;
+    hasExistingRules.value = !!biddingRules;
+    calculatedTotalSeats.value = biddingRules.calculatedTotalSeats || calculatedTotalSeats.value;
+    calculatedArgonCirculation.value = biddingRules.calculatedArgonCirculation || calculatedArgonCirculation.value
+    argonotPriceChangeType.value = biddingRules.argonotPriceChangeType || argonotPriceChangeType.value
+    argonotPriceChangeMin.value = biddingRules.argonotPriceChangeMin || argonotPriceChangeMin.value;
+    argonotPriceChangeMax.value = biddingRules.argonotPriceChangeMax || argonotPriceChangeMax.value;
+    startingAmount.value = biddingRules.startingAmount || startingAmount.value;
+    startingAmountFormulaType.value = biddingRules.startingAmountFormulaType || startingAmountFormulaType.value;
+    startingAmountFormulaIncrease.value = biddingRules.startingAmountFormulaIncrease || startingAmountFormulaIncrease.value;
+    incrementAmount.value = biddingRules.incrementAmount || incrementAmount.value;
+    rebiddingDelay.value = biddingRules.rebiddingDelay || rebiddingDelay.value;
+    finalAmount.value = biddingRules.finalAmount || finalAmount.value;
+    finalAmountFormulaType.value = biddingRules.finalAmountFormulaType || finalAmountFormulaType.value;
+    finalAmountFormulaIncrease.value = biddingRules.finalAmountFormulaIncrease || finalAmountFormulaIncrease.value;
+    throttleSeats.value = biddingRules.throttleSeats || throttleSeats.value;
+    throttleSeatCount.value = biddingRules.throttleSeatCount || throttleSeatCount.value;
+    throttleSpending.value = biddingRules.throttleSpending || throttleSpending.value;
+    throttleSpendingAmount.value = biddingRules.throttleSpendingAmount || throttleSpendingAmount.value;
+    throttleDistributeEvenly.value = biddingRules.throttleDistributeEvenly || throttleDistributeEvenly.value;
+    disableBot.value = biddingRules.disableBot || disableBot.value;
+
+    isLoaded.value = true;
+    calculatedArgonCirculationMin.value = Math.ceil(calculatorData.argonRewardsForFullYear);
+
+    updateStartingAmountFormulaPrice();
+    updateFinalAmountFormulaPrice();
+  });
+});
 </script>
 
 <style scoped>

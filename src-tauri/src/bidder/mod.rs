@@ -1,5 +1,5 @@
 use crate::bidder::stats::BidderStats;
-use crate::config::{BiddingRules, Config, ConfigFile, ServerConnection};
+use crate::config::{Config, BiddingRules, ConfigFile, ServerConnection, Security};
 use crate::ssh::{SSHConfig, SSH};
 use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
@@ -8,7 +8,7 @@ use semver::Version;
 use std::env;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 
 pub mod stats;
 
@@ -18,39 +18,37 @@ lazy_static! {
 pub struct Bidder;
 
 impl Bidder {
-    pub async fn start(
+    pub async fn try_start(
         app: AppHandle,
         sshconfig: SSHConfig,
-        wallet_json: String,
-        session_mnemonic: String,
     ) -> Result<()> {
+        let server_connection = ServerConnection::load()?;
+        let is_ready_for_bidding = server_connection.is_provisioned && server_connection.is_ready_for_mining;
+
+        if !is_ready_for_bidding {
+            info!("Server is not ready for mining, skipping Bidder");
+            return Ok(());
+        }
+
         let ssh = SSH::connect(sshconfig).await?;
 
-        Self::upload_files(&app, &ssh, wallet_json, session_mnemonic).await?;
         Self::update_bot_if_needed(&app, &ssh).await?;
-        Self::start_docker(&ssh).await?;
-
-        let mut server_connection = ServerConnection::load().unwrap();
-        server_connection.is_ready_for_mining = true;
-        server_connection.save().unwrap();
-
-        Self::monitor(app, ssh).await?;
-
-        Ok(())
-    }
-
-    pub async fn reconnect(sshconfig: SSHConfig, app: AppHandle) -> Result<()> {
-        let ssh = SSH::connect(sshconfig).await?;
-
-        Self::monitor(app, ssh).await?;
+        Self::monitor_stats(app, ssh).await?;
 
         Ok(())
     }
 
     pub async fn update_bot_if_needed(app: &AppHandle, ssh: &SSH) -> Result<()> {
         if Self::needs_new_bot_version(ssh, app).await? {
+            info!("Uploading core files");
+            Self::upload_core_files(&app, &ssh).await?;
+            info!("Uploading bot");
             ssh.upload_directory(app, "bot", "commander-config").await?;
+            info!("Starting docker");
             Self::start_docker(ssh).await?;
+        } else {
+            info!("Starting docker");
+            Self::start_docker(&ssh).await?;
         }
         Ok(())
     }
@@ -62,13 +60,13 @@ impl Bidder {
         {
             Ok((output, code)) => {
                 if code != 0 {
-                    error!("Error fetching remote version: {}", code);
+                    info!("Remote bot version does not exist: {}", code);
                     return Ok(true);
                 }
                 output
             }
             Err(e) => {
-                error!("Error fetching remote version: {}", e);
+                info!("Remote bot version does not exist: {}", e);
                 return Ok(true);
             }
         };
@@ -111,24 +109,32 @@ impl Bidder {
         Ok(false)
     }
 
-    async fn upload_files(
+    async fn upload_core_files(
         app: &AppHandle,
-        ssh: &SSH,
-        wallet_json: String,
-        session_mnemonic: String,
+        ssh: &SSH
     ) -> Result<()> {
-        let bidding_rules = BiddingRules::load_raw()?.ok_or(anyhow!("Bidding rules not found"))?;
-        let security_env = format!(
+        let security = Security::load()?.ok_or(anyhow!("Failed to load security config"))?;
+        let bidding_rules_str = BiddingRules::load_raw()?.ok_or(anyhow!("Bidding rules not found"))?;
+        let server_connection = ServerConnection::load().unwrap();
+        
+        let env_security = format!(
             "SESSION_KEYS_MNEMONIC=\"{}\"\nKEYPAIR_PASSPHRASE=",
-            session_mnemonic
+            security.session_mnemonic
+        );
+        
+        let env_state = format!(
+            "OLDEST_FRAME_ID_TO_SYNC={}\n",
+            server_connection.oldest_frame_id_to_sync.map_or("".to_string(), |id| id.to_string())
         );
 
         ssh.run_command("mkdir -p commander-config").await?;
-        ssh.upload_file(&wallet_json, "commander-config/wallet.json")
+        ssh.upload_file(&security.wallet_json, "commander-config/wallet.json")
             .await?;
-        ssh.upload_file(&bidding_rules, "commander-config/biddingRules.json")
+        ssh.upload_file(&bidding_rules_str, "commander-config/biddingRules.json")
             .await?;
-        ssh.upload_file(&security_env, "commander-config/security.env")
+        ssh.upload_file(&env_security, "commander-config/.env.security")
+            .await?;
+        ssh.upload_file(&env_state, "commander-config/.env.state")
             .await?;
 
         ssh.run_command("mkdir -p commander-config/bidding-calculator")
@@ -153,9 +159,9 @@ impl Bidder {
         Ok(())
     }
 
-    pub async fn monitor(app: AppHandle, ssh: SSH) -> Result<()> {
-        if let Some(handle) = RUNNING_TASK.lock().unwrap().take() {
-            handle.abort();
+    async fn monitor_stats(app: AppHandle, ssh: SSH) -> Result<()> {
+        if let Some(_handle) = RUNNING_TASK.lock().unwrap().take() {
+            return Ok(());
         }
 
         info!("Creating HTTP tunnel");
@@ -170,15 +176,22 @@ impl Bidder {
             .await?;
 
         let handle = tokio::spawn(async move {
-            let mut bidder_stats = BidderStats::new(app, arc_ssh.clone(), local_port);
+            let mut bidder_stats = BidderStats::new(app.clone(), arc_ssh.clone(), local_port);
+            let mut error_count = 0;
             loop {
                 if let Err(e) = bidder_stats.run().await {
-                    error!("Error in bidder stats: {}", e);
-                    let _ = arc_ssh
-                        .clone()
-                        .create_http_tunnel(local_port, remote_host, remote_port)
-                        .await
-                        .inspect_err(|e| error!("Error in bidder stats: {}", e));
+                    error_count += 1;
+                    if error_count > 3 {
+                        error!("Error in bidder stats, too many retries: {}", e);
+                        if let Err(e) = app.emit("FatalServerError", ()) {
+                            error!("Error sending FatalServerError: {}", e);
+                        }
+                        break;
+                    } else {
+                        error!("Error in bidder stats, retrying: {}", e);
+                    }
+                } else {
+                    error_count = 0;
                 }
                 tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             }

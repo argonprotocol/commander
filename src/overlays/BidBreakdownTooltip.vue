@@ -13,7 +13,7 @@
         <tbody>
           <tr>
             <td>{{ data.argonotsRequiredForBid }} ARGNOTs</td>
-            <td>{{currencySymbol}}{{ addCommas(argonotTo(data.argonotsRequiredForBid), 2) }}</td>
+            <td>{{currencySymbol}}{{ fmtMoney(argonotTo(data.argonotsRequiredForBid)) }}</td>
           </tr>
           <tr>
             <td>Expected Change In Price</td>
@@ -21,7 +21,7 @@
           </tr>
           <tr>
             <td>ARGNOT Staking Cost</td>
-            <td>{{currencySymbol}}{{ addCommas(argonTo(data.costOfArgonotLoss), 2) }}</td>
+            <td>{{currencySymbol}}{{ fmtMoney(argonTo(data.costOfArgonotLoss)) }}</td>
           </tr>
         </tbody>
       </table>
@@ -35,19 +35,19 @@
         <tbody>
           <tr>
             <td>ARGNOT Staking Cost</td>
-            <td>{{currencySymbol}}{{ addCommas(argonTo(data.costOfArgonotLoss), 2) }}</td>
+            <td>{{currencySymbol}}{{ fmtMoney(argonTo(data.costOfArgonotLoss)) }}</td>
           </tr>
           <tr>
             <td>ARGN Bid Premium</td>
-            <td>{{currencySymbol}}{{addCommas(argonTo(data.argonBidPremium), 2)}}</td>
+            <td>{{currencySymbol}}{{fmtMoney(argonTo(data.argonBidPremium))}}</td>
           </tr>
           <tr>
             <td>Transaction Fee</td>
-            <td>{{currencySymbol}}{{addCommas(argonTo(data.transactionFee), 2)}}</td>
+            <td>{{currencySymbol}}{{fmtMoney(argonTo(data.transactionFee))}}</td>
           </tr>
           <tr>
             <td>TOTAL COST</td>
-            <td>{{currencySymbol}}{{addCommas(argonTo(data.totalCost), 2)}}</td>
+            <td>{{currencySymbol}}{{fmtMoney(argonTo(data.totalCost))}}</td>
           </tr>
         </tbody>
       </table>
@@ -60,20 +60,20 @@
         </thead>
         <tbody>
           <tr>
-            <td>{{addCommas(data.argonRewardsForThisSeat, data.argonRewardsForThisSeat >= 100 ? 0 : 1)}} ARGN Block Rewards</td>
-            <td>{{currencySymbol}}{{addCommas(argonTo(data.argonRewardsForThisSeat), 2)}}</td>
+            <td>{{fmtCommas(fmtDecimals(data.argonRewardsForThisSeat, data.argonRewardsForThisSeat >= 100 ? 0 : 1))}} ARGN Block Rewards</td>
+            <td>{{currencySymbol}}{{fmtMoney(argonTo(data.argonRewardsForThisSeat))}}</td>
           </tr>
           <tr>
-            <td>{{addCommas(data.argonotRewardsForThisSeat, data.argonotRewardsForThisSeat >- 100 ? 0 : 1)}} ARGNOT Block Rewards</td>
-            <td>{{currencySymbol}}{{addCommas(argonTo(data.argonotRewardsAsArgonValue), 2)}}</td>
+            <td>{{fmtCommas(fmtDecimals(data.argonotRewardsForThisSeat, data.argonotRewardsForThisSeat >- 100 ? 0 : 1))}} ARGNOT Block Rewards</td>
+            <td>{{currencySymbol}}{{fmtMoney(argonTo(data.argonotRewardsAsArgonValue))}}</td>
           </tr>
           <tr>
-            <td>{{addCommas(data.argonsToMintThisSeat, data.argonsToMintThisSeat >= 100 ? 0 : 1)}} ARGNs Expected to Mint</td>
-            <td>{{currencySymbol}}{{addCommas(argonTo(data.argonsToMintThisSeat), 2)}}</td>
+            <td>{{fmtCommas(fmtDecimals(data.argonsToMintThisSeat, data.argonsToMintThisSeat >= 100 ? 0 : 1))}} ARGNs Expected to Mint</td>
+            <td>{{currencySymbol}}{{fmtMoney(argonTo(data.argonsToMintThisSeat))}}</td>
           </tr>
           <tr>
             <td>TOTAL REWARDS</td>
-            <td>{{currencySymbol}}{{addCommas(argonTo(data.totalRewards), 2)}}</td>
+            <td>{{currencySymbol}}{{fmtMoney(argonTo(data.totalRewards))}}</td>
           </tr>
         </tbody>
       </table>
@@ -82,15 +82,15 @@
         <thead class="font-bold">
           <tr>
             <td>Ten Day Percentage Rate (TDPR)</td>
-            <td>{{addCommas(Math.min(data.TDPR, 999_999_999_999), 0)}}{{ data.TDPR > 999_999_999_999 ? '+' : '' }}%</td>
+            <td>{{fmtMoney(Math.min(data.TDPR, 999_999_999_999))}}{{ data.TDPR > 999_999_999_999 ? '+' : '' }}%</td>
           </tr>
           <tr>
             <td>Annual Percentage Rate (APR)</td>
-            <td>{{addCommas(Math.min(data.APR, 999_999_999_999), 0)}}{{ data.APR > 999_999_999_999 ? '+' : '' }}%</td>
+            <td>{{fmtMoney(Math.min(data.APR, 999_999_999_999))}}{{ data.APR > 999_999_999_999 ? '+' : '' }}%</td>
           </tr>
           <tr>
             <td>Annual Percentage Yield (APY)</td>
-            <td>{{addCommas(Math.min(data.APY, 999_999_999_999), 0)}}{{ data.APY > 999_999_999_999 ? '+' : '' }}%</td>
+            <td>{{fmtMoney(Math.min(data.APY, 999_999_999_999))}}{{ data.APY > 999_999_999_999 ? '+' : '' }}%</td>
           </tr>
         </thead>
       </table>
@@ -104,7 +104,7 @@
 import * as Vue from 'vue';
 import { useConfigStore } from '../stores/config';
 import { storeToRefs } from 'pinia';
-import { addCommas } from '../lib/Utils';
+import { fmtCommas, fmtDecimals, fmtMoney } from '../lib/Utils';
 
 const configStore = useConfigStore();
 const { argonTo, argonotTo } = configStore;

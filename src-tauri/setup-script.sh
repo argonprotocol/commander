@@ -88,8 +88,20 @@ if ! (already_ran "ubuntu"); then
 
     run_command "lsb_release -d"
     command_output=$(fetch_output)
-    if ! echo "$command_output" | grep "Ubuntu 24.10" > /dev/null; then
-        failed "ubuntu" "ubuntu version is not 24.10: $command_output"
+    
+    # Extract version numbers from the output
+    version=$(echo "$command_output" | grep -oE '[0-9]+\.[0-9]+' | head -1)
+    if [ -z "$version" ]; then
+        failed "ubuntu" "Could not extract Ubuntu version from: $command_output"
+    fi
+    
+    # Split version into major and minor
+    major_version=$(echo "$version" | cut -d. -f1)
+    minor_version=$(echo "$version" | cut -d. -f2)
+    
+    # Compare versions semantically
+    if [ "$major_version" -lt 24 ] || ([ "$major_version" -eq 24 ] && [ "$minor_version" -lt 10 ]); then
+        failed "ubuntu" "Ubuntu version $version is less than required version 24.10"
     fi
 
     finished "ubuntu"
@@ -102,20 +114,37 @@ if ! (already_ran "system"); then
     echo "-----------------------------------------------------------------"
     echo "CHECKING SYSTEM"
 
+    run_command "git --version"
+    command_output=$(fetch_output 1)
+
     run_command "./scripts/get_shasum.sh ~/commander-deploy"
     shasum_output=$(fetch_output | tail -n1)
+    
+    # Extract version numbers from the output - handle both 2 and 3 number versions
+    version=$(echo "$command_output" | grep -oE '[0-9]+(\.[0-9]+){1,2}' | head -1)
 
     if [ -z "$shasum_output" ]; then
         failed "system" "get_shasum command failed"
+    if [ -z "$version" ]; then
+        failed "git" "Could not extract Git version from: $command_output"
     fi
+    
+    # Get major and minor versions
     echo "SHASUM: $shasum_output"
+    major_version=$(echo "$version" | cut -d. -f1)
     run_command "cat SHASUMS256"
     shasum256_output=$(fetch_output)
+    minor_version=$(echo "$version" | cut -d. -f2)
+    
 
     if [ -z "$shasum256_output" ]; then
         failed "system" "SHASUMS256 not found"
+    # Compare versions semantically
+    if [ "$major_version" -lt 2 ] || ([ "$major_version" -eq 2 ] && [ "$minor_version" -lt 45 ]); then
+        failed "git" "Git version $version is less than required version 2.45"
     fi
 
+    run_command "git clone https://github.com/argonprotocol/commander-deploy"
     if ! echo "$shasum256_output" | grep "deploy $shasum_output" > /dev/null; then
         failed "system" "SHASUMS256 does contain: $command_output"
     fi
@@ -160,8 +189,18 @@ if ! (already_ran "docker"); then
     run_command "docker --version"
 
     command_output=$(fetch_output 1)
-    if ! echo "$command_output" | grep "version 28" > /dev/null; then
-        failed "docker" "docker version is not 28: $command_output"
+    # Extract version numbers from the output - handle both 2 and 3 number versions
+    version=$(echo "$command_output" | grep -oE '[0-9]+(\.[0-9]+){1,2}' | head -1)
+    if [ -z "$version" ]; then
+        failed "docker" "Could not extract Docker version from: $command_output"
+    fi
+    
+    # Get major version
+    major_version=$(echo "$version" | cut -d. -f1)
+    
+    # Compare major version
+    if [ "$major_version" -lt 27 ]; then
+        failed "docker" "Docker version $version is less than required major version 28"
     fi
 
     finished "docker" "$command_output"
@@ -220,7 +259,7 @@ started "minerlaunch"
 echo "-----------------------------------------------------------------"
 echo "STARTING MINERS"
 
-run_command "docker compose --env-file=.env.testnet up -d"
+run_command "docker compose --env-file=.env.$ARGON_CHAIN up -d"
 command_output=$(fetch_output)
 if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
     failed "minerlaunch"

@@ -18,6 +18,10 @@
   --color-argon-button: #A600D4;
   --color-argon-button-hover: #8000A8;
 
+  --color-argon-error: #DC3545;
+  --color-argon-error-darker: #C62030;
+  --color-argon-error-darkest: #800000;
+
   --text-md: 15px; 
 }
 

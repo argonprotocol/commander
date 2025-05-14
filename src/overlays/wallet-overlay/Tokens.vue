@@ -7,10 +7,10 @@
         </div>
         <div class="flex flex-col justify-between items-start grow">
           <div class="text-xl font-bold">Argon</div>
-          <div class="">{{addCommas(mngWallet.argons)}} ARGN</div>
+          <div class="">{{fmtCommas(mngWallet.argons)}} ARGN</div>
         </div>
         <div class="flex flex-col justify-between items-end">
-          <div class="font-bold">{{currencySymbol}}{{addCommas(argonTo(mngWallet.argons), 2)}}</div>
+          <div class="font-bold">{{currencySymbol}}{{fmtMoney(argonTo(mngWallet.argons))}}</div>
           <div class="">0.03%</div>
         </div>
       </MenuButton>
@@ -37,10 +37,10 @@
         </div>
         <div class="flex flex-col justify-between items-start grow">
           <div class="text-xl font-bold">Argonot</div>
-          <div class="">{{addCommas(mngWallet.argonots)}} ARGNOT</div>
+          <div class="">{{fmtCommas(mngWallet.argonots)}} ARGNOT</div>
         </div>
         <div class="flex flex-col justify-between items-end">
-          <div class="font-bold">{{currencySymbol}}{{addCommas(argonotTo(mngWallet.argonots), 2)}}</div>
+          <div class="font-bold">{{currencySymbol}}{{fmtMoney(argonotTo(mngWallet.argonots))}}</div>
           <div class="">0.03%</div>
         </div>
       </MenuButton>
@@ -67,7 +67,7 @@
 import * as Vue from 'vue';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
 import { useConfigStore } from '../../stores/config';
-import { addCommas } from '../../lib/Utils';
+import { fmtCommas, fmtMoney } from '../../lib/Utils';
 import { storeToRefs } from 'pinia';
 import ArgnToken from '../../assets/tokens/argn.svg';
 import ArgnotToken from '../../assets/tokens/argnot.svg';

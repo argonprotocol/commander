@@ -1,9 +1,10 @@
-use crate::config::{ConfigFile, ServerConnection, ServerStatus, ServerStatusErrorType};
+use crate::config::{ConfigFile, ServerConnection, ServerStatus, ServerProgress , ServerStatusErrorType};
 use crate::ssh::{SSHConfig, SSH};
 use anyhow::Result;
 use lazy_static::lazy_static;
 use log::{error, info, trace};
 use std::sync::Mutex;
+use std::env;
 use tauri::{AppHandle, Emitter};
 
 lazy_static! {
@@ -13,31 +14,53 @@ lazy_static! {
 pub struct Provisioner {}
 
 impl Provisioner {
-    pub async fn start(sshconfig: SSHConfig, app: AppHandle) -> Result<()> {
-        let ssh = SSH::connect(sshconfig).await?;
-
-        Self::upload_sha256(&ssh).await?;
-        let script_is_running = Provisioner::is_script_running(&ssh).await?;
-        if !script_is_running {
-            Provisioner::start_script(&ssh).await?;
+    pub async fn try_start(sshconfig: SSHConfig, app: AppHandle) -> Result<()> {
+        let mut server_connection = ServerConnection::load()?;
+        if !server_connection.is_connected {
+            info!("Server is not connected, skipping Provisioner");
+            return Ok(());
         }
 
-        Provisioner::monitor(app, ssh).await?;
-        trace!("finished start");
-        Ok(())
-    }
-
-    pub async fn reconnect(sshconfig: SSHConfig, app: AppHandle) -> Result<()> {
         let ssh = SSH::connect(sshconfig).await?;
+        let is_new_server = Self::is_new_server(&ssh).await?;
+        info!("Is new server = {}", is_new_server);
 
-        Self::upload_sha256(&ssh).await?;
-        let script_is_running = Provisioner::is_script_running(&ssh).await?;
-        info!("need to start script = {}", !script_is_running);
-        if !script_is_running {
-            Provisioner::start_script(&ssh).await?;
+        let (has_completed, has_error) = if is_new_server {
+            (false, false)
+        } else {
+            let server_status = ServerStatus::load()?;
+            let server_status = Self::update_server_status(&ssh, server_status).await?;
+            let has_completed = Self::server_status_is_complete(&server_status);
+            let has_error = Self::has_error(&server_status);
+            (has_completed, has_error)
+        };
+
+        if has_completed {
+            info!("Server is provisioned, exiting Provisioner");
+            return Ok(());
+        } else if has_error {
+            info!("Server has error, exiting Provisioner");
+            return Ok(());
         }
 
-        Provisioner::monitor(app, ssh).await?;
+        server_connection.is_provisioned = false;
+        server_connection.save()?;
+
+        if !is_new_server {
+            ServerProgress::delete()?;
+            ServerStatus::delete()?;
+        }
+
+        let script_is_running = Provisioner::is_script_running(&ssh).await?;
+        info!("Starting script = {}", !script_is_running);
+
+        if !script_is_running {
+            Self::upload_sha256(&ssh).await?;
+            Self::start_script(&ssh).await?;
+        }
+
+        Self::monitor_setup(app, ssh).await?;
+        trace!("Is now monitoring");
 
         Ok(())
     }
@@ -50,7 +73,7 @@ impl Provisioner {
         let ssh = SSH::connect(sshconfig).await?;
         Self::upload_sha256(&ssh).await?;
 
-        let script_is_running = Provisioner::is_script_running(&ssh).await?;
+        let script_is_running = Self::is_script_running(&ssh).await?;
         if script_is_running {
             return Ok(());
         }
@@ -93,7 +116,19 @@ impl Provisioner {
                 .await?;
         }
 
+        Self::start_script(&ssh).await?;
+        Self::monitor_setup(app, ssh).await?;
+
         Ok(())
+    }
+
+    pub async fn is_new_server(ssh: &SSH) -> Result<bool> {
+        // Right now we're doing a simple check for the setup-script.sh file
+        // TODO: Add more checks
+        let (_output, code) = ssh.run_command("test -f ~/setup-script.sh").await?;
+
+        // code == 0 if the file exists, otherwise it's a new server
+        Ok(code != 0)
     }
 
     async fn is_script_running(ssh: &SSH) -> Result<bool> {
@@ -111,7 +146,29 @@ impl Provisioner {
     }
 
     async fn start_script(ssh: &SSH) -> Result<()> {
-        ssh.start_script().await?;
+        let chain = env::var("CHAIN").unwrap_or_else(|_| "mainnet".to_string());
+        let script_contents = include_str!("../../setup-script.sh");
+        let remote_script_path = "~/setup-script.sh";
+
+        ssh.upload_file(&script_contents, remote_script_path)
+            .await?;
+
+        // Now execute the script using run_command
+        let shell_command = format!(
+            "chmod +x {} && ARGON_CHAIN={} nohup {} > /dev/null 2>&1 &",
+            remote_script_path, chain, remote_script_path
+        );
+        info!("Running: {}", shell_command);
+        
+        // Execute the command - nohup will handle running in background
+        if let Err(e) = ssh.run_command(&shell_command).await {
+            error!("Error executing script: {}", e);
+            return Err(e.into());
+        }
+
+        // Give it a moment to start
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
         Ok(())
     }
 
@@ -123,24 +180,23 @@ impl Provisioner {
     ) -> Result<()> {
         server_status.error_type = Some(error_type);
         server_status.error_message = Some(error_message.to_string());
-        info!("EMITTING serverStatus1");
-        if let Err(e) = app.emit("serverStatus", server_status.clone()) {
+        if let Err(e) = app.emit("ServerStatus", server_status.clone()) {
             error!("Error sending server status: {}", e);
         }
         server_status.save()?;
         Ok(())
     }
 
-    pub async fn monitor(app: AppHandle, ssh: SSH) -> Result<()> {
-        if let Some(handle) = RUNNING_TASK.lock().unwrap().take() {
-            handle.abort();
+    pub async fn monitor_setup(app: AppHandle, ssh: SSH) -> Result<()> {
+        if let Some(_handle) = RUNNING_TASK.lock().unwrap().take() {
+            return Ok(());
         }
 
         let handle = tokio::spawn(async move {
             let mut server_status = ServerStatus::load().unwrap_or_default();
             let mut last_error = None;
             loop {
-                let filenames = match Provisioner::fetch_filenames(&ssh).await {
+                match Self::update_server_status(&ssh, server_status.clone()).await {
                     Ok(files) => files,
                     Err(e) => {
                         let _ = Self::emit_failed_status(
@@ -155,18 +211,29 @@ impl Provisioner {
                 };
 
                 match Provisioner::calculate_setup_status(&filenames, &ssh).await {
-                    Ok(latest_status) => {
-                        info!("EMITTING serverStatus2");
-                        if let Err(e) = app.emit("serverStatus", latest_status.clone()) {
+                    Ok(new_status) => {
+                        server_status = new_status;
+                        if let Err(e) = app.emit("ServerStatus", server_status.clone()) {
                             error!("Error sending server status: {}", e);
+                        }        
+                    }
+                    Err(e) => {
+                        error!("Error fetching server status: {}", e);
+                        if let Err(e) = app.emit("FatalServerError", server_status.clone()) {
+                            error!("Error sending FatalServerError: {}", e);
                         }
-                        latest_status.save().unwrap();
-                        server_status = latest_status.clone();
+                        break;
+                    }
+                }
 
-                        let mut should_retry_upload = false;
-                        if latest_status.error_type != last_error {
-                            last_error = latest_status.error_type.clone();
-                            should_retry_upload = last_error.is_some();
+                if Self::has_error(&server_status) {
+                    info!("Server has error, exiting Provisioner: {:?}", server_status);
+                    break;
+                } else if Self::server_status_is_complete(&server_status) {
+                    if let Err(e) = Self::finish().await {
+                        error!("Error finishing provisioning: {}", e);
+                        if let Err(e) = app.emit("FatalServerError", server_status.clone()) {
+                            error!("Error sending FatalServerError: {}", e);
                         }
 
                         if latest_status.system == 1
@@ -202,7 +269,7 @@ impl Provisioner {
                             break;
                         }
                     }
-                    Err(e) => {
+                    break;
                         let _ = Self::emit_failed_status(
                             &app,
                             &mut server_status,
@@ -222,7 +289,40 @@ impl Provisioner {
         Ok(())
     }
 
-    fn is_provisioned(server_status: &ServerStatus) -> bool {
+    async fn update_server_status(ssh: &SSH, mut server_status: ServerStatus) -> Result<ServerStatus> {
+        let filenames = match Self::fetch_filenames(&ssh).await {
+            Ok(files) => files,
+            Err(e) => {
+                server_status.error_type = Some(ServerStatusErrorType::Unknown);
+                server_status.error_message = Some(format!("{}", e));
+                server_status.save().unwrap();
+                return Ok(server_status);
+            }
+        };
+
+        match Self::calculate_setup_status(&filenames, &ssh).await {
+            Ok(latest_status) => {
+                latest_status.save().unwrap();
+                return Ok(latest_status);
+            }
+            Err(e) => {
+                server_status.error_type = Some(ServerStatusErrorType::Unknown);
+                server_status.error_message = Some(format!("{}", e));
+                server_status.save().unwrap();
+                return Ok(server_status);
+            }
+        }
+    }
+
+    async fn finish() -> Result<()> {
+        let mut server_connection = ServerConnection::load()?;
+        server_connection.is_provisioned = true;
+        server_connection.save().unwrap();
+
+        Ok(())
+    }
+
+    fn server_status_is_complete(server_status: &ServerStatus) -> bool {
         server_status.ubuntu >= 100
             && server_status.system >= 100
             && server_status.docker >= 100
@@ -323,7 +423,7 @@ impl Provisioner {
             status.error_type = Some(ServerStatusErrorType::MinerLaunch);
             Ok(status)
         } else if filenames.contains(&s("minerlaunch.started")) {
-            status.minerlaunch = Provisioner::fetch_minerlaunch_progress(ssh).await?;
+            status.minerlaunch = Self::fetch_minerlaunch_progress(ssh).await?;
             return Ok(status);
         } else {
             return Ok(status);

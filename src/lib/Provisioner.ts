@@ -119,7 +119,7 @@ export default class Provisioner {
   ]);
 
   constructor() {
-    listen('serverStatus', (event: any) => {
+    listen('ServerStatus', (event: any) => {
       this.updateServerStatus(event.payload, true);
       if (this.isRunning && !this.isRunningProgressCalculations) {
         this.runProgressCalculations();
@@ -142,6 +142,7 @@ export default class Provisioner {
   }
 
   public updateServerStatus(serverStatus: any, overrideExisting = false) {   
+    console.log('updateServerStatus', serverStatus);
     if (this._serverStatus && !overrideExisting) return
     this._serverStatus = serverStatus;
   }
@@ -318,7 +319,7 @@ export default class Provisioner {
       ...acc,
       [step.key]: step.progress
     }), {});
-    await invoke('update_server_progress', { progress });
+    await invoke('save_server_progress', { progress });
   }
 
   public resetStep(step: IStep) {

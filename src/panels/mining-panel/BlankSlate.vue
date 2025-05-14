@@ -5,25 +5,25 @@
         Earn Argons and Argonots
         <div>By Running Your Own Mining Node</div>
       </div>
-      <p class="text-md text-justify w-[650px] !mx-auto mt-10 text-[#4B2B4E]">
+      <p class="text-base text-justify w-[780px] !mx-auto mt-10 text-[#4B2B4E]">
         Argon uses a special auction process to determine who can mine. The winners of each auction hold the
         right to mine for ten days, then it goes back up for bidding. Argon's mining software is runnable on cheap virtual cloud machines, which makes getting involved easy and cost-effective. Click the button below to get started.</p>
     </div>
-    <button @click="openServerConnectOverlay" class="bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow text-xl font-bold text-white px-7 py-2 rounded-md mx-auto block mt-10 cursor-pointer">
+    <button @click="openServerConnectOverlay" class="bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow text-2xl font-bold text-white px-12 py-2 rounded-md mx-auto block mt-10 cursor-pointer">
       Connect Cloud Machine
     </button>
     <div class="flex-grow flex flex-row items-end w-full">
       <div class="flex flex-col w-full px-5 pb-5">
         <ul class="flex flex-row text-center text-sm text-[#4B2B4E] w-full py-7 border-t border-b border-slate-300 mb-5">
           <li class="w-1/4">
-            <div class="text-4xl font-bold">{{ blockchainStore.miningSeatCount ? addCommas(blockchainStore.miningSeatCount) : '---' }}</div>
+            <div class="text-4xl font-bold">{{ blockchainStore.miningSeatCount ? fmtCommas(blockchainStore.miningSeatCount) : '---' }}</div>
             <div>Mining Seats</div>
           </li>
           <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                <span :class="[currencySymbol === '₳' ? 'font-medium' : 'font-bold']">{{currencySymbol}}</span>{{ addCommas(argonTo(blockchainStore.aggregatedBidCosts), blockchainStore.aggregatedBidCosts > 1_000 ? 0 : 2) }}
+                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">{{currencySymbol}}</span>{{ fmtMoney(argonTo(blockchainStore.aggregatedBidCosts), 1_000) }}
               </template>
               <template v-else>
                 ---
@@ -35,7 +35,7 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                <span :class="[currencySymbol === '₳' ? 'font-medium' : 'font-bold']">{{currencySymbol}}</span>{{ addCommas(argonTo(aggregatedBlockRewards), aggregatedBlockRewards > 1_000 ? 0 : 2) }}
+                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">{{currencySymbol}}</span>{{ fmtMoney(argonTo(aggregatedBlockRewards), 1_000) }}
               </template>
               <template v-else>
                 ---
@@ -47,7 +47,7 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                {{ addCommas(Math.min(currentAPY, 999_999), currentAPY > 100 ? 0 : 2) }}%{{ currentAPY >= 9_999? '+' : ' ' }}
+                {{ fmtMoney(Math.min(currentAPY, 999_999), 100) }}%{{ currentAPY >= 9_999? '+' : ' ' }}
               </template>
               <template v-else>
                 ---
@@ -56,7 +56,7 @@
             <div>Annual Percentage Yield</div>
           </li>
         </ul>
-        <ul Blocks class="w-full flex flex-row justify-end" :style="{ opacity: blockchainStore.recentBlocksAreLoaded ? 1 : 0.1 }">
+        <ul Blocks class="w-full flex flex-row justify-end h-[137px]" :style="{ opacity: blockchainStore.recentBlocksAreLoaded ? 1 : 0.1 }">
           <template v-for="(block, index) in blockchainStore.recentBlocks" :key="`${block.hash}-${index}`">
             <li Block class="leading-6">
               <div class="border-b border-slate-300 pb-1 mb-2">#<span class="font-bold opacity-50">{{ block.number }}</span></div>
@@ -84,7 +84,6 @@
       </div>
     </div>
   </div>
-  
 </template>
 
 <script setup lang="ts">
@@ -94,7 +93,7 @@ import utc from 'dayjs/plugin/utc';
 import emitter from '../../emitters/basic';
 import { useBlockchainStore } from '../../stores/blockchain';
 import { useConfigStore } from '../../stores/config';
-import { addCommas, calculateAPY } from '../../lib/Utils';
+import { fmtCommas, fmtMoney, calculateAPY } from '../../lib/Utils';
 import { storeToRefs } from 'pinia';
 
 dayjs.extend(utc);
@@ -145,7 +144,6 @@ Vue.onMounted(async () => {
     isLoaded.value = true;
   });
 });
-
 </script>
 
 <style lang="scss" scoped>

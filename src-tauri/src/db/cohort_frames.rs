@@ -4,7 +4,7 @@ use super::prelude::*;
 #[serde(rename_all = "camelCase")]
 pub struct CohortFrameRecord {
     pub frame_id: u32,
-    pub frame_id_at_cohort_activation: u32,
+    pub cohort_id: u32,
     pub blocks_mined: u32,
     pub argonots_mined: u64,
     pub argons_mined: u64,
@@ -26,7 +26,7 @@ pub struct CohortFrames;
 impl CohortFrames {
     pub fn insert_or_update(
         frame_id: u32,
-        frame_id_at_cohort_activation: u32,
+        cohort_id: u32,
         blocks_mined: u32,
         argonots_mined: u64,
         argons_mined: u64,
@@ -34,12 +34,12 @@ impl CohortFrames {
     ) -> Result<CohortFrameRecord> {
         DB::query_one(
             "INSERT OR REPLACE INTO cohort_frames 
-             (frame_id, frame_id_at_cohort_activation, blocks_mined, argonots_mined, argons_mined, argons_minted) 
+             (frame_id, cohort_id, blocks_mined, argonots_mined, argons_mined, argons_minted) 
              VALUES (?1, ?2, ?3, ?4, ?5, ?6) 
              RETURNING *",
             (
                 frame_id,
-                frame_id_at_cohort_activation,
+                cohort_id,
                 blocks_mined,
                 argonots_mined,
                 argons_mined,
@@ -67,15 +67,15 @@ impl CohortFrames {
         ))
     }
 
-    pub fn fetch_cohort_stats(frame_id_at_cohort_activation: u32) -> Result<(u32, u64, u64, u64)> {
+    pub fn fetch_cohort_stats(cohort_id: u32) -> Result<(u32, u64, u64, u64)> {
         let stats: CohortFrameStats = DB::query_one(
             "SELECT 
             COALESCE(sum(blocks_mined), 0) as total_blocks_mined,
             COALESCE(sum(argonots_mined), 0) as total_argonots_mined,
             COALESCE(sum(argons_mined), 0) as total_argons_mined,
             COALESCE(sum(argons_minted), 0) as total_argons_minted
-        FROM cohort_frames WHERE frame_id_at_cohort_activation = ?1",
-            (frame_id_at_cohort_activation, ),
+        FROM cohort_frames WHERE starting_frame_id = ?1",
+            (cohort_id, ),
         )?;
 
         Ok((

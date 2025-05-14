@@ -3,8 +3,8 @@ use super::prelude::*;
 #[derive(Debug, Clone, serde::Serialize, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct CohortAccountRecord {
-    pub frame_id_at_cohort_activation: u32,
     pub idx: u32,
+    pub cohort_id: u32,
     pub address: String,
     pub argons_bid: u64,
     pub bid_position: u32,
@@ -15,28 +15,28 @@ pub struct CohortAccountRecord {
 pub struct CohortAccounts;
 
 impl CohortAccounts {
-    pub fn delete_for_cohort(frame_id_at_cohort_activation: u32) -> Result<()> {
+    pub fn delete_for_cohort(cohort_id: u32) -> Result<()> {
         let _ = DB::execute(
-            "DELETE FROM cohort_accounts WHERE frame_id_at_cohort_activation = ?",
-            (frame_id_at_cohort_activation,),
+            "DELETE FROM cohort_accounts WHERE cohort_id = ?",
+            (cohort_id,),
         );
         Ok(())
     }
 
     pub fn insert(
-        frame_id_at_cohort_activation: u32,
         idx: u32,
+        cohort_id: u32,
         address: String,
         argons_bid: u64,
         bid_position: u32,
     ) -> Result<CohortAccountRecord> {
         DB::query_one(
-            "INSERT INTO cohort_accounts (frame_id_at_cohort_activation, idx, address, argons_bid, bid_position) 
+            "INSERT INTO cohort_accounts (idx, cohort_id, address, argons_bid, bid_position) 
              VALUES (?1, ?2, ?3, ?4, ?5) 
              RETURNING *",
             (
-                frame_id_at_cohort_activation,
                 idx,
+                cohort_id,
                 address,
                 argons_bid,
                 bid_position,

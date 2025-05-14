@@ -180,7 +180,7 @@ export class Mainchain {
     );
   }
 
-  public async fetchExchangeRates() {
+  public async fetchExchangeRates(): Promise<{ USD: number, ARGNOT: number, ARGN: number, BTC: number }> {
     const client = await this.client;
     const priceIndex = (await client.query.priceIndex.current()).value;
     const USD = convertFixedU128ToBigNumber(
@@ -190,9 +190,10 @@ export class Mainchain {
       convertFixedU128ToBigNumber(
         priceIndex.argonotUsdPrice.toBigInt(),
       ).toNumber() / USD;
+    const BTC = convertFixedU128ToBigNumber(priceIndex.btcUsdPrice.toBigInt()).toNumber() / USD;
     const ARGN = 1;
 
-    return { USD, ARGNOT, ARGN };
+    return { USD, ARGNOT, ARGN, BTC };
   }
 
   public async getNextSlotRange(): Promise<[bigint, bigint]> {
@@ -225,4 +226,27 @@ export class Mainchain {
     const tickAtStartOfNextCohort = await this.getTickAtStartOfNextCohort();
     return tickAtStartOfNextCohort - 1_440n;
   }
+
+  public async fetchVaults() {
+    const client = await this.client;
+    const vaultEntries = await client.query.vaults.vaultsById.entries();
+    
+    const vaults: IVault[] = [];
+    for (const [idxRaw, vaultRaw] of vaultEntries) {
+      const idx = idxRaw.args[0].toNumber();
+      const vaultData = vaultRaw.unwrap();
+      const satoshiLocked = 15_000_000; //vaultData.bitcoinLocked.toNumber()
+      vaults.push({
+        idx,
+        bitcoinLocked: satoshiLocked / 100_000_000,
+      });
+    }
+
+    return vaults;
+  }
+}
+
+export interface IVault {
+  idx: number;
+  bitcoinLocked: number;
 }

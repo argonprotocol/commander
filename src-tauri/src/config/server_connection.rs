@@ -8,7 +8,8 @@ pub struct ServerConnection {
     pub ip_address: String,
     pub ssh_public_key: String,
     pub ssh_private_key: String,
-    pub user: String,
+    pub ssh_user: String,
+    pub oldest_frame_id_to_sync: Option<u32>,
     pub is_connected: bool,
     pub is_provisioned: bool,
     pub is_ready_for_mining: bool,
@@ -24,7 +25,7 @@ impl ServerConnection {
         SSHConfig::new(
             &self.ip_address,
             22,
-            self.user.clone(),
+            self.ssh_user.clone(),
             self.ssh_private_key.clone(),
         )
     }
@@ -39,7 +40,8 @@ impl Default for ServerConnection {
             ip_address: "".to_string(),
             ssh_public_key,
             ssh_private_key,
-            user: "root".to_string(),
+            ssh_user: "root".to_string(),
+            oldest_frame_id_to_sync: None,
             is_connected: false,
             is_provisioned: false,
             is_ready_for_mining: false,

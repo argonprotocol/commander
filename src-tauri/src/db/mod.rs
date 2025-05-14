@@ -8,9 +8,10 @@ use rusqlite_migration::Migrations;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, LazyLock, Mutex};
 use tokio::sync::OnceCell;
+use crate::config::Config;
 
 pub mod argon_activities;
 pub mod bitcoin_activities;
@@ -20,7 +21,7 @@ pub mod cohort_frames;
 pub mod cohorts;
 pub mod frames;
 
-use crate::config::Config;
+pub use frames::Frames;
 pub use argon_activities::ArgonActivities;
 pub use argon_activities::ArgonActivityRecord;
 pub use bitcoin_activities::BitcoinActivities;
@@ -30,7 +31,6 @@ pub use bot_activities::BotActivityRecord;
 pub use cohort_accounts::CohortAccounts;
 pub use cohort_frames::CohortFrames;
 pub use cohorts::Cohorts;
-pub use frames::Frames;
 
 lazy_static! {
     static ref DB_CONN: OnceCell<Arc<Mutex<Connection>>> = OnceCell::new();
@@ -73,7 +73,7 @@ impl DB {
         }
 
         // Create the database file.
-        info!("Create/update database file at {}", db_path);
+        info!("Create/update database file at {}", db_path.display());
 
         // TODO: auth is always None for now. We need to figure out how to handle in UI.
         let auth_type = DbAuthType::None;
@@ -154,7 +154,7 @@ impl DB {
     }
 
     pub fn get_or_encrypt_db(db_path: &PathBuf, key: Option<String>) -> Result<Connection> {
-        info!("Opening database file at {}", db_path);
+        info!("Opening database file at {}", db_path.display());
         let mut conn = Connection::open(&db_path)?;
         let Some(key) = key else {
             return Ok(conn);
@@ -162,13 +162,13 @@ impl DB {
 
         if Self::is_existing_db_unencrypted(db_path) {
             conn.close().map_err(|(_c, e)| anyhow!(e))?;
-            let encrypted_path = format!("{}.enc", db_path);
+            let encrypted_path = format!("{}.enc", db_path.display());
             info!("Database needs to be encrypted");
             let conn_encrypted = Connection::open(&encrypted_path)?;
             conn_encrypted.pragma_update(None, "key", &key)?;
 
             conn_encrypted.execute(
-                &format!("ATTACH DATABASE '{db_path}' AS plaintext KEY ''",),
+                &format!("ATTACH DATABASE '{}' AS plaintext KEY ''", db_path.display()),
                 (),
             )?;
 
@@ -177,7 +177,7 @@ impl DB {
             })?;
             conn_encrypted.execute("DETACH DATABASE plaintext", ())?;
             conn_encrypted.close().map_err(|(_c, e)| anyhow!(e))?;
-            fs::rename(db_path, format!("{}.old", db_path))?;
+            fs::rename(db_path, format!("{}.old", db_path.display()))?;
             fs::rename(encrypted_path, db_path)?;
             conn = Connection::open(db_path)?;
         }
@@ -199,7 +199,6 @@ impl DB {
     // Get the path where the database file should be located.
     pub fn get_db_path() -> PathBuf {
         Config::get_config_dir()
-            .join("argon-commander")
             .join("database.sqlite")
     }
 }

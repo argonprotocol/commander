@@ -1,16 +1,6 @@
 <template>
   <div class="flex flex-col h-full">
-    <div v-if="false" @click="openFundMiningWalletOverlay" class="flex flex-row items-center gap-x-3 cursor-pointer bg-[#C253E1] text-white px-3.5 py-2 border-b border-[#A601D4]" style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)">
-      <AlertIcon class="w-4 h-4 text-white relative left-1 inline-block" />
-      <div class="font-bold grow">Your Mining Wallet is low on funds which may inhibit bidding. </div>
-      <span class="cursor-pointer inline-block rounded-full bg-[#79009B] px-3">Add Funds</span>
-    </div>
-    <div v-else-if="configStore.isDataSyncing" class="flex flex-row items-center gap-x-3 cursor-pointer bg-[#C253E1] text-white px-3.5 py-2 border-b border-[#A601D4]" style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)">
-      <AlertIcon class="w-4 h-4 text-white relative left-1 inline-block" />
-      <div v-if="configStore.dataSync.type === 'server'" class="font-bold grow">Your server data is being synced </div>
-      <div v-else-if="configStore.dataSync.type === 'db'" class="font-bold grow">Updating your stats database </div>
-      <div>{{ configStore.dataSync.progress.toFixed(0) }}%</div>
-    </div>
+    <AlertBars />
 
     <div :class="configStore.isDataSyncing ? 'opacity-30 pointer-events-none' : ''" class="flex flex-col h-full px-3.5 py-3 gap-y-2.5 justify-stretch grow">
       <section class="flex flex-row gap-x-3">
@@ -35,7 +25,7 @@
           <label>Total Earned</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ addCommas(globalAPY) }}%</span>
+          <span>{{ fmtCommas(globalAPY) }}%</span>
           <label>Current APY</label>
         </div>
       </section>
@@ -99,29 +89,29 @@
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
-                <span>{{ addCommas((cohortStats.argonsMined + cohortStats.argonsMinted) / 1_000_000) }}</span>
+                <span>{{ fmtCommas(fmtDecimalsMax((cohortStats.argonsMined + cohortStats.argonsMinted) / 1_000_000, 2)) }}</span>
                 <label>Argons Earned</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
-                <span>{{ addCommas(cohortStats.argonotsMined / 1_000_000) }}</span>
+                <span>{{ fmtCommas(fmtDecimalsMax(cohortStats.argonotsMined / 1_000_000, 2)) }}</span>
                 <label>Argonots Earned</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
             </div>
             <div class="flex flex-row w-full h-1/2 gap-x-2">
               <div stat-box class="flex flex-col w-1/3 h-full">
-                <span>{{ currencySymbol }}{{ addCommas(cohortArgonsInvested / 1_000_000) }}</span>
+                <span>{{ currencySymbol }}{{ fmtMoney(cohortArgonsInvested / 1_000_000) }}</span>
                 <label>Total Invested</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full">
-                <span>{{ currencySymbol }}{{ addCommas(cohortArgonsEarned / 1_000_000) }}</span>
+                <span>{{ currencySymbol }}{{ fmtMoney(cohortArgonsEarned / 1_000_000) }}</span>
                 <label>Expected Earnings</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full">
-                <span>{{ addCommas(cohortAPY) }}%</span>
+                <span>{{ fmtCommas(cohortAPY) }}%</span>
                 <label>Expected APY</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
@@ -187,12 +177,11 @@ import { storeToRefs } from 'pinia';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import utc from 'dayjs/plugin/utc';
-import { addCommas, calculateAPY, showDecimalsIfNeeded } from '../../lib/Utils';
+import { fmtCommas, fmtMoney, calculateAPY, fmtDecimals, fmtDecimalsMax } from '../../lib/Utils';
 import { useConfigStore } from '../../stores/config';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
-import AlertIcon from '../../assets/alert.svg';
-import emitter from '../../emitters/basic';
 import CountupClock from '../../components/CountupClock.vue';
+import AlertBars from '../../components/AlertBars.vue';
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
@@ -258,18 +247,13 @@ const lastBotActivityAt = Vue.computed(() => {
   return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
 });
 
-function openFundMiningWalletOverlay() {
-  emitter.emit('openWalletOverlay', { walletId: 'mng', screen: 'receive' });
-}
-
 function formatLargeNumber(number: number, maxLength = 5) {
   if (number < (10 ** (maxLength - 2))) { // 1_000
-    return showDecimalsIfNeeded(number, 2, 2);
+    return fmtDecimalsMax(number, 2, 2);
   } else if (number < (99 ** (maxLength - 2))) { // 99_000
-    return addCommas(number, 0);
+    return fmtCommas(fmtDecimals(number, 0));
   }
   return number;
-  // return (number / 1_000_000).toFixed(1) + 'M';
 }
 </script>
 

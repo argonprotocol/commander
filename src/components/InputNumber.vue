@@ -38,7 +38,7 @@
               <MenuItem v-for="option of props.options" v-slot="{ active: isActive }" :value="option.value" @click.stop="selectItem(option)" :class="option.description ? 'border-b border-gray-500/20 last:border-b-0' : ''" class="text-md font-mono text-left font-bold text-gray-800 py-1 first:rounded-t last:rounded-b">
                 <div :class="[ isActive ? 'bg-argon-button text-white' : '']" class="flex flex-col pr-3 pl-2 py-0 cursor-pointer">
                   <div class="flex flex-row justify-between items-center">
-                    <div class="whitespace-nowrap grow pr-3">{{ option.title || addCommas(option.value) }}</div>
+                    <div class="whitespace-nowrap grow pr-3">{{ option.title || fmtCommas(option.value) }}</div>
                     <div v-if="option.value !== undefined" class="opacity-70 font-light relative">{{ formatFn(option.value) }}</div>
                   </div>
                   <div v-if="option.description" class="font-sans opacity-50 font-light">{{ option.description }}</div>
@@ -69,7 +69,7 @@
 import * as Vue from 'vue';
 import { LightBulbIcon } from '@heroicons/vue/24/outline';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
-import { addCommas } from '../lib/Utils';
+import { fmtCommas, fmtDecimalsMax } from '../lib/Utils';
 import NumArrow from '../assets/num-arrow.svg';
 import { useConfigStore } from '../stores/config';
 
@@ -165,7 +165,7 @@ function insertIntoInputElem(convertedValue: number) {
 }
 
 function formatFn(value: number) {
-  return addCommas(value, props.format === 'integer' ? 0 : 2);
+  return fmtCommas(fmtDecimalsMax(value, 2, 2));
 }
 
 function moveCursorToEnd() {

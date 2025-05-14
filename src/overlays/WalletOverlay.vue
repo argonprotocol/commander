@@ -25,7 +25,7 @@
               </div>
             </div>
             <div class="w-full text-center py-14 text-5xl font-bold border-b border-black/20">
-              {{currencySymbol}}{{ addCommas(argonTo(wallet.totalValue), 2).split('.')[0] }}<span class="opacity-50">.{{ wallet.totalValue.toFixed(2).split('.')[1] }}</span>
+              {{currencySymbol}}{{ fmtCommas(argonTo(wallet.totalValue).toFixed()).split('.')[0] }}<span class="opacity-50">.{{ wallet.totalValue.toFixed(2).split('.')[1] }}</span>
             </div>
             <div class="flex flex-row justify-between items-center w-full text-center pt-5 pb-2 px-3 space-x-4 font-bold">
               <ul class="flex flex-row space-x-4 grow">
@@ -51,7 +51,7 @@ import * as Vue from 'vue';
 import { TransitionChild, TransitionRoot } from '@headlessui/vue';
 import emitter from '../emitters/basic';
 import { useConfigStore } from '../stores/config';
-import { addCommas, abreviateAddress } from '../lib/Utils';
+import { fmtCommas, abreviateAddress } from '../lib/Utils';
 import { storeToRefs } from 'pinia';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import Tokens from './wallet-overlay/Tokens.vue';

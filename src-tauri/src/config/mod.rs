@@ -5,14 +5,14 @@ use tauri::{AppHandle, Manager};
 
 pub mod base;
 pub mod bidding_rules;
-pub mod mnemonics;
+pub mod security;
 pub mod server_connection;
 pub mod server_progress;
 pub mod server_status;
 
 pub use base::Base;
 pub use bidding_rules::BiddingRules;
-pub use mnemonics::Mnemonics;
+pub use security::Security;
 pub use server_connection::ServerConnection;
 pub use server_progress::ServerProgress;
 pub use server_status::{ServerStatus, ServerStatusErrorType};
@@ -24,7 +24,7 @@ pub struct Config {
     pub server_status: ServerStatus,
     pub server_progress: ServerProgress,
     pub bidding_rules: Option<BiddingRules>,
-    pub mnemonics: Option<Mnemonics>,
+    pub security: Option<Security>,
 }
 
 impl Config {
@@ -41,7 +41,7 @@ impl Config {
         let server_connection = ServerConnection::load()?;
         let server_status = ServerStatus::load()?;
         let server_progress = ServerProgress::load()?;
-        let mnemonics = Mnemonics::load()?;
+        let security = Security::load()?;
 
         Ok(Self {
             requires_password: base.requires_password,
@@ -49,15 +49,13 @@ impl Config {
             server_status,
             server_progress,
             bidding_rules,
-            mnemonics,
+            security,
         })
     }
     // Get the path where the config files should be located.
     pub fn get_config_dir() -> PathBuf {
-        dirs::home_dir()
-            .unwrap()
-            .join(".config")
-            .join("argon-commander")
+        let folder_name = std::env::var("COMMANDER_INSTANCE_NAME").unwrap_or("argon-commander".to_string());
+        dirs::home_dir().unwrap().join(".config").join(folder_name)
     }
 }
 
@@ -101,9 +99,12 @@ where
         Ok(())
     }
 
-    fn remove_file(&self) -> anyhow::Result<()> {
+    fn delete() -> anyhow::Result<()> {
         let file_path = Self::get_file_path();
-        Ok(fs::remove_file(file_path)?)
+        if file_path.exists() {
+            fs::remove_file(file_path)?;
+        }
+        Ok(())
     }
 
     fn get_file_path() -> PathBuf {

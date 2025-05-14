@@ -2,7 +2,7 @@ import {createApp} from 'vue';
 import {createPinia} from 'pinia';
 import App from './App.vue';
 import './main.css';
-import {attachLogger, debug, error, info, LogLevel, trace, warn} from "@tauri-apps/plugin-log";
+// import {attachLogger, debug, error, info, LogLevel, trace, warn} from "@tauri-apps/plugin-log";
 
 // const ConsoleLogger = {
 //     [LogLevel.Trace]: console.log.bind(console),
@@ -14,21 +14,21 @@ import {attachLogger, debug, error, info, LogLevel, trace, warn} from "@tauri-ap
 // void attachLogger(({ level, message }) => {
 //     ConsoleLogger[level]?.(message);
 // });
-function forwardConsole(
-    fnName: 'log' | 'debug' | 'info' | 'warn' | 'error',
-    logger: (message: string) => Promise<void>
-) {
-    const original = console[fnName];
-    console[fnName] = (message) => {
-        original(message);
-        logger(message);
-    };
-}
-forwardConsole('log', trace);
-forwardConsole('debug', debug);
-forwardConsole('info', info);
-forwardConsole('warn', warn);
-forwardConsole('error', error);
+// function forwardConsole(
+//     fnName: 'log' | 'debug' | 'info' | 'warn' | 'error',
+//     logger: (message: string) => Promise<void>
+// ) {
+//     const original = console[fnName];
+//     console[fnName] = (...args: any[]) => {
+//         original(...args);
+//         logger(args.join(' '));
+//     };
+// }
+// forwardConsole('log', trace);
+// forwardConsole('debug', debug);
+// forwardConsole('info', info);
+// forwardConsole('warn', warn);
+// forwardConsole('error', error);
 
 const app = createApp(App)
 

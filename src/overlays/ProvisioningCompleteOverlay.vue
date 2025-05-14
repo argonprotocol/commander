@@ -12,7 +12,13 @@
           </h2>
 
           <p>
-            We verified your server configurations, installed all required software, and double-checked that everything is in working order. Only two items remain. Click the Let's Go button and we'll guide you through the final steps.
+            We verified your server configurations, installed all required software, and double-checked that everything is in working order. 
+            <template v-if="configStore.serverConnection.isReadyForMining">
+              Click the Let's Go button to get started.
+            </template>
+            <template v-else>
+              Only two items remain. Click the Let's Go button and we'll guide you through the final steps.
+            </template>
           </p>
 
           <div class="flex flex-row justify-end gap-4 mt-6 border-t border-slate-300 pt-4">
@@ -29,8 +35,10 @@ import * as Vue from 'vue';
 import { TransitionChild, TransitionRoot } from '@headlessui/vue';
 import emitter from '../emitters/basic';
 import BgOverlay from '../components/BgOverlay.vue';
+import { useConfigStore } from '../stores/config';
 
 const isOpen = Vue.ref(false);
+const configStore = useConfigStore();
 
 emitter.on('openProvisioningCompleteOverlay', () => {
   isOpen.value = true;

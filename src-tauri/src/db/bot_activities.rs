@@ -4,19 +4,19 @@ use super::prelude::*;
 #[derive(Debug, Clone, serde::Serialize, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct BotActivityRecord {
-    pub action: String,
+    pub tag: String,
     pub inserted_at: String,
 }
 
 pub struct BotActivities;
 
 impl BotActivities {
-    pub fn insert(action: &str, inserted_at: &str) -> Result<BotActivityRecord> {
+    pub fn insert(tag: &str, inserted_at: &str) -> Result<BotActivityRecord> {
         DB::query_one(
-            "INSERT INTO bot_activities (action, inserted_at) 
+            "INSERT INTO bot_activities (tag, inserted_at) 
              VALUES (?1, ?2) 
              RETURNING *",
-            (action, inserted_at),
+            (tag, inserted_at),
         )
     }
 

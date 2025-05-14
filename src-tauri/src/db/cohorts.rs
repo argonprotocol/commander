@@ -3,7 +3,7 @@ use super::prelude::*;
 #[derive(Debug, Clone, serde::Serialize, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct CohortRecord {
-    pub frame_id_at_cohort_activation: u32,
+    pub id: u32,
     pub progress: f32,
     pub transaction_fees: u64,
     pub argonots_staked: u64,
@@ -14,7 +14,7 @@ pub struct CohortRecord {
 }
 
 pub struct CohortRecordWithTicks {
-    pub frame_id_at_cohort_activation: u32,
+    pub id: u32,
     pub frame_tick_start: u32,
     pub frame_tick_end: u32,
     pub transaction_fees: u64,
@@ -27,7 +27,7 @@ pub struct Cohorts;
 
 impl Cohorts {
     pub fn insert_or_update(
-        frame_id_at_cohort_activation: u32,
+        id: u32,
         progress: f32,
         transaction_fees: u64,
         argonots_staked: u64,
@@ -36,11 +36,11 @@ impl Cohorts {
     ) -> Result<CohortRecord> {
         DB::query_one(
             "INSERT OR REPLACE INTO cohorts 
-             (frame_id_at_cohort_activation, progress, transaction_fees, argonots_staked, argons_bid, seats_won) 
+             (id, progress, transaction_fees, argonots_staked, argons_bid, seats_won) 
              VALUES (?1, ?2, ?3, ?4, ?5, ?6) 
              RETURNING *",
             (
-                frame_id_at_cohort_activation,
+                id,
                 progress,
                 transaction_fees,
                 argonots_staked,
@@ -53,14 +53,14 @@ impl Cohorts {
     pub fn fetch_latest() -> Result<Option<CohortRecordWithTicks>> {
         let record = DB::query_map(
             "SELECT cohorts.*, frames.tick_start FROM cohorts
-            LEFT JOIN frames ON cohorts.frame_id_at_cohort_activation = frames.id
+            LEFT JOIN frames ON cohorts.id = frames.id
             WHERE seats_won > 0
-            ORDER BY frame_id_at_cohort_activation
+            ORDER BY id
             DESC LIMIT 1",
             [],
             |row| {
                 Ok(CohortRecordWithTicks {
-                    frame_id_at_cohort_activation: row.get("frame_id_at_cohort_activation")?,
+                    id: row.get("id")?,
                     frame_tick_start: row.get::<_, u32>("tick_start")?,
                     frame_tick_end: row.get::<_, u32>("tick_start")? + (1440 * 10),
                     transaction_fees: row.get("transaction_fees")?,
@@ -92,9 +92,9 @@ impl Cohorts {
         let oldest_active_frame_id = std::cmp::max(1, current_frame_id.saturating_sub(10));
         let (total_active_cohorts, total_active_seats) = DB::query_one_map(
             "SELECT 
-            COALESCE(count(frame_id_at_cohort_activation), 0) as active_cohorts,
+            COALESCE(count(id), 0) as active_cohorts,
             COALESCE(sum(seats_won), 0) as active_seats
-        FROM cohorts WHERE frame_id_at_cohort_activation >= ?",
+        FROM cohorts WHERE id >= ?",
             (oldest_active_frame_id,),
             |row| {
                 Ok((

@@ -8,6 +8,7 @@ import emitter from '../emitters/basic';
 import { listen } from '@tauri-apps/api/event';
 import { message } from '@tauri-apps/plugin-dialog';
 import { getMainchain, getMainchainClient } from '../lib/mainchain.ts';
+import { exit } from '@tauri-apps/plugin-process';
 
 export interface ICurrencyRecord {
   id: ICurrency;
@@ -111,13 +112,14 @@ export const useConfigStore = defineStore('config', () => {
     steps: provisioner.steps,
   });
 
-  const exchangeRates = <Record<ICurrency | 'ARGNOT', number>>{
+  const exchangeRates = <Record<ICurrency | 'ARGNOT' | 'BTC', number>>{
     ARGN: 1,
     ARGNOT: 1,
     USD: 1,
     EURO: 1,
     GBP: 1,
     INR: 1,
+    BTC: 1,
   };
 
   const walletMnemonic = Vue.ref('');
@@ -217,6 +219,7 @@ export const useConfigStore = defineStore('config', () => {
 
     exchangeRates.USD = argonResponse.USD;
     exchangeRates.ARGNOT = argonResponse.ARGNOT || 5;
+    exchangeRates.BTC = argonResponse.BTC;
 
     const otherData = await otherResponse.json();
     if (!otherData.rates) return;
@@ -308,14 +311,22 @@ export const useConfigStore = defineStore('config', () => {
     return qty * exchangeRates.ARGNOT;
   }
 
-  async function loadAccounts(mnemonics?: { wallet: string; session: string }) {
-    mnemonics = mnemonics || (await createMnemonics());
+  function btcTo(qty: number) {
+    return argonTo(btcToArgon(qty));
+  }
+  
+  function btcToArgon(qty: number) {
+    return qty * exchangeRates.BTC;
+  }
 
-    walletMnemonic.value = mnemonics.wallet;
-    sessionMnemonic.value = mnemonics.session;
+  async function loadAccounts(security?: { walletMnemonic: string; sessionMnemonic: string }) {
+    security = security || (await createSecurity());
+
+    walletMnemonic.value = security.walletMnemonic;
+    sessionMnemonic.value = security.sessionMnemonic;
 
     const seedAccount = new Keyring({ type: 'sr25519' }).createFromUri(
-      mnemonics.wallet,
+      security.walletMnemonic,
     );
     const mngAccount = seedAccount.derive(`//mng`);
     const llbAccount = seedAccount.derive(`//llb`);
@@ -326,18 +337,25 @@ export const useConfigStore = defineStore('config', () => {
     vltWallet.address = vltAccount.address;
   }
 
-  async function createMnemonics(): Promise<{
-    wallet: string;
-    session: string;
+  async function createSecurity(): Promise<{
+    walletMnemonic: string;
+    sessionMnemonic: string;
   }> {
-    const mnemonics = {
-      wallet: mnemonicGenerate(),
-      session: mnemonicGenerate(),
+    const security = {
+      walletMnemonic: mnemonicGenerate(),
+      sessionMnemonic: mnemonicGenerate(),
     };
+    
+    const seedAccount = new Keyring({ type: 'sr25519' }).createFromUri(
+      security.walletMnemonic,
+    );
+    const mngAccount = seedAccount.derive(`//mng`);
+    const walletJson = JSON.stringify(mngAccount.toJson(''));
 
-    await invoke('create_mnemonics', mnemonics);
+    // await invoke('create_security', { ...security, walletJson });
+    console.log(walletJson)
 
-    return mnemonics;
+    return security;
   }
 
   async function connectServer(ipAddress: string) {
@@ -363,32 +381,16 @@ export const useConfigStore = defineStore('config', () => {
     await invoke('retry_provisioning', { stepKey });
   }
 
-  async function createServerSecurityVariables() {
-    const seedAccount = new Keyring({ type: 'sr25519' }).createFromUri(
-      walletMnemonic.value,
-    );
-    const mngAccount = seedAccount.derive(`//mng`);
-    const walletJson = JSON.stringify(mngAccount.toJson(''));
-
-    return { walletJson, sessionMnemonic: sessionMnemonic.value };
-  }
-
   async function launchMiningBot() {
-    const { walletJson, sessionMnemonic } =
-      await createServerSecurityVariables();
-    await invoke('launch_mining_bot', { walletJson, sessionMnemonic });
+    await invoke('launch_mining_bot', {});
 
     await new Promise(resolve => setTimeout(resolve, 1000));
     serverConnection.isReadyForMining = true;
   }
 
   async function updateBiddingRules(rules: IBiddingRules) {
-    const { walletJson, sessionMnemonic } =
-      await createServerSecurityVariables();
     await invoke('update_bidding_rules', {
       biddingRules: rules,
-      walletJson,
-      sessionMnemonic,
     });
     biddingRules.value = rules;
   }
@@ -403,39 +405,47 @@ export const useConfigStore = defineStore('config', () => {
   //////////////////////////////////////////////////////////////////////////////
 
   async function load() {
-    await listen('currentBids', (event: any) => {
+    await listen('FatalServerError', async (event: any) => {
+      await message('An unknown server error occurred. Please restart the application.', {
+        title: 'Unknown Server Error',
+        kind: 'error',
+      });
+      await exit(1);
+    });
+
+    await listen('CurrentBids', (event: any) => {
       for (const callbackFn of myBidsCallbackFns) {
         callbackFn(event.payload);
       }
     });
 
-    await listen('argonActivity', (event: any) => {
+    await listen('ArgonActivity', (event: any) => {
       argonActivity.value.unshift(event.payload);
       argonActivity.value.splice(10);
     });
 
-    await listen('bitcoinActivity', (event: any) => {
+    await listen('BitcoinActivity', (event: any) => {
       bitcoinActivity.value.unshift(event.payload);
       bitcoinActivity.value.splice(10);
     });
 
-    await listen('botActivity', (event: any) => {
+    await listen('BotActivity', (event: any) => {
       botActivity.value.unshift(event.payload);
       botActivity.value.splice(10);
     });
 
-    await listen('dataSync', (event: any) => {
+    await listen('DataSync', (event: any) => {
       isDataSyncing.value = event.payload.progress < 100;
       dataSync.value = event.payload;
     });
 
-    await listen('stats', (event: any) => {
+    await listen('Stats', (event: any) => {
       globalStats.value = { ...event.payload.globalStats };
       cohortStats.value = { ...event.payload.cohortStats };
     });
 
     const response = (await invoke('start', {})) as {
-      mnemonics?: { wallet: string; session: string };
+      security?: { walletMnemonic: string; sessionMnemonic: string };
       biddingRules: any;
       serverConnection: any;
       serverStatus: any;
@@ -475,7 +485,7 @@ export const useConfigStore = defineStore('config', () => {
       provisioner.run(response.serverProgress);
     }
 
-    await loadAccounts(response.mnemonics);
+    await loadAccounts(response.security);
     try {
       await loadExchangeRates();
     } catch (error) {
@@ -517,6 +527,8 @@ export const useConfigStore = defineStore('config', () => {
     toArgon,
     argonotTo,
     argonotToArgon,
+    btcTo,
+    btcToArgon,
     connectServer,
     removeServer,
     runRetryStep,

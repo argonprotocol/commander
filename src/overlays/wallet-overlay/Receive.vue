@@ -32,12 +32,12 @@
               <tr>
                 <td>{{ biddingRules.desiredArgons }} ARGN</td>
                 <td>{{ wallet.argons }} ARGN</td>
-                <td>{{ addCommas(desiredArgonsStillNeeded) }} ARGN <span tag :class="desiredArgonsStillNeeded > 0 ? 'bg-green-600/90 border border-green-700' : 'bg-gray-400/90 border border-gray-500'">FOR OPTIMAL</span></td>
+                <td>{{ fmtCommas(desiredArgonsStillNeeded) }} ARGN <span tag :class="desiredArgonsStillNeeded > 0 ? 'bg-green-600/90 border border-green-700' : 'bg-gray-400/90 border border-gray-500'">FOR OPTIMAL</span></td>
               </tr>
               <tr>
                 <td>{{ biddingRules.desiredArgonots }} ARGNOT</td>
                 <td>{{ wallet.argonots }} ARGNOT</td>
-                <td>{{ addCommas(desiredArgonotsStillNeeded) }} ARGNOT <span tag :class="desiredArgonotsStillNeeded > 0 ? 'bg-green-500/90 border border-green-700' : 'bg-gray-400/90 border border-gray-500'">FOR OPTIMAL</span></td>
+                <td>{{ fmtCommas(desiredArgonotsStillNeeded) }} ARGNOT <span tag :class="desiredArgonotsStillNeeded > 0 ? 'bg-green-500/90 border border-green-700' : 'bg-gray-400/90 border border-gray-500'">FOR OPTIMAL</span></td>
               </tr>
             </tbody>
           </table>
@@ -56,12 +56,12 @@
               <tr>
                 <td>{{ biddingRules.requiredArgons }} ARGN</td>
                 <td>{{ wallet.argons }} ARGN</td>
-                <td>{{ addCommas(requiredArgonsStillNeeded) }} ARGN <span tag :class="requiredArgonsStillNeeded > 0 ? 'bg-red-500 border border-red-700' : 'bg-gray-400/90 border border-gray-500'">FOR MINIMUM</span></td>
+                <td>{{ fmtCommas(requiredArgonsStillNeeded) }} ARGN <span tag :class="requiredArgonsStillNeeded > 0 ? 'bg-red-500 border border-red-700' : 'bg-gray-400/90 border border-gray-500'">FOR MINIMUM</span></td>
               </tr>
               <tr>
                 <td>{{ biddingRules.requiredArgonots }} ARGNOT</td>
                 <td>{{ wallet.argonots }} ARGNOT</td>
-                <td>{{ addCommas(requiredArgonotsStillNeeded) }} ARGNOT <span tag :class="requiredArgonotsStillNeeded > 0 ? 'bg-red-500 border border-red-700' : 'bg-gray-400/90 border border-gray-500'">FOR MINIMUM</span></td>
+                <td>{{ fmtCommas(requiredArgonotsStillNeeded) }} ARGNOT <span tag :class="requiredArgonotsStillNeeded > 0 ? 'bg-red-500 border border-red-700' : 'bg-gray-400/90 border border-gray-500'">FOR MINIMUM</span></td>
               </tr>
             </tbody>
           </table>
@@ -96,7 +96,7 @@
 import * as Vue from 'vue';
 import QRCode from 'qrcode';
 import { useConfigStore } from '../../stores/config';
-import { addCommas, abreviateAddress } from '../../lib/Utils';
+import { fmtCommas, abreviateAddress } from '../../lib/Utils';
 import { storeToRefs } from 'pinia';
 import { ChevronLeftIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import CopyIcon from '../../assets/copy.svg';

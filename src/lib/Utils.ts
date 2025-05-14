@@ -1,40 +1,58 @@
-export function addCommas(num: string | number, decimals?: number) {
-  // Check if the number is in scientific notation
-  if (typeof num === 'number' && decimals === undefined && num.toString().includes('e')) {
-    return num.toString();
-  }
-  
-  const isInteger = isInt(num);
-  decimals ??= isInteger ? 0 : 2;
-  num = Number(num).toFixed(decimals);
-
-  return isInteger && decimals === 0 ? addCommasToInt(num) : addCommasToFloat(num, decimals);
+function isScientific(num: number): boolean {
+  return (Math.abs(num) < 1e-6 && num !== 0 || Math.abs(num) >= 1e21) ? true : false;
 }
 
-export function showDecimalsIfNeeded(num: number, decimals = 2, ifSomeThen?: number) {
+export function fmtMoney(numStr: number, removeDecimalsOver?: number) {
+  if (isScientific(numStr)) {
+    return numStr.toString();
+  }
+
+  let num: string;
+  if (removeDecimalsOver === undefined) {
+    num = fmtDecimals(numStr, 2);
+  } else if(numStr > removeDecimalsOver) {
+    num = fmtDecimals(numStr, 0);
+  } else {
+    num = fmtDecimals(numStr, 2);
+  }
+
+  return fmtCommas(num);
+}
+
+export function fmtCommas(num: string | number) {
+  if (typeof num === 'number') {
+    num = num.toString();
+  }
+
+  if (num.includes('e')) {
+    return num;
+  }
+
+  const arr = num.split('.');
+  const int = arr[0].replace(/(\d)(?=(\d{3})+$)/g, '$1,');
+  const dec = arr[1];
+
+  return dec ? `${int}.${dec}` : int;
+}
+
+export function fmtDecimals(num: number, decimals = 2): string {
+  if (isScientific(num)) {
+    return num.toString();
+  }
+
+  return num.toFixed(decimals);
+}
+
+export function fmtDecimalsMax(num: number, decimals = 2, ifDecimalsThenAtLeast?: number) {
+  if (isScientific(num)) {
+    return num.toString();
+  }
+
   let [intStr, decStr] = num.toFixed(decimals).split('.');
   decStr = (decStr ?? '').slice(0, decimals);
   decStr = decStr.replace(/0+$/, '');
   
-  return num.toFixed(decStr.length && ifSomeThen ? ifSomeThen : decStr.length);
-}
-
-export function addCommasToInt(str: string) {
-  const arr = str.toString().split('.');
-  const int = arr[0];
-  return int.replace(/(\d)(?=(\d{3})+$)/g, '$1,');
-}
-
-export function addCommasToFloat(str: string, decimals = 2) {
-  const arr = str.split('.');
-
-  const intRaw = arr[0];
-  const int = intRaw.replace(/(\d)(?=(\d{3})+$)/g, '$1,');
-
-  const decRaw = arr.length > 1 ? `${arr[1]}` : '';
-  const dec = decRaw.slice(0, decimals).padEnd(decimals, '0');
-
-  return dec ? `${int}.${dec}` : int;
+  return num.toFixed(decStr.length && ifDecimalsThenAtLeast ? ifDecimalsThenAtLeast : decStr.length);
 }
 
 export function isInt(n: any) {

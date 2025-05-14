@@ -6,7 +6,7 @@ use crate::db::{
 use crate::ssh::SSH;
 use bidder::stats::{BidderStats, ICohortStats, IGlobalStats};
 use bidder::Bidder;
-use config::{BiddingRules, Config, Mnemonics, ServerConnection, ServerProgress, ServerStatus};
+use config::{BiddingRules, Config, Security, ServerConnection, ServerProgress, ServerStatus};
 use log::{info, LevelFilter};
 use provisioner::Provisioner;
 use std::env;
@@ -15,6 +15,8 @@ use tauri::menu::{MenuItemBuilder, SubmenuBuilder};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use window_vibrancy::*;
+use lazy_static::lazy_static;
+use std::sync::Mutex;
 
 mod bidder;
 mod config;
@@ -22,11 +24,40 @@ mod db;
 mod provisioner;
 mod ssh;
 
+lazy_static! {
+    static ref SSH_CONNECTION: Mutex<Option<SSH>> = Mutex::new(None);
+}
+
+async fn get_ssh_connection(ssh_config: SSHConfig) -> Result<SSH, String> {
+    let mut ssh_connection = SSH_CONNECTION.lock().unwrap();
+    
+    // Check if we need to reconnect
+    let needs_reconnect = match &*ssh_connection {
+        Some(ssh) => ssh.config() != ssh_config,
+        None => true,
+    };
+
+    if needs_reconnect {
+        // Close existing connection if it exists
+        if let Some(ssh) = ssh_connection.take() {
+            ssh.close();
+        }
+        
+        // Create new connection
+        let new_ssh = SSH::connect(ssh_config).await.map_err(|e| e.to_string())?;
+        *ssh_connection = Some(new_ssh.clone());
+        Ok(new_ssh)
+    } else {
+        // Return existing connection
+        Ok(ssh_connection.as_ref().unwrap().clone())
+    }
+}
+
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct AppConfig {
     requires_password: bool,
-    mnemonics: Option<Mnemonics>,
+    security: Option<Security>,
     server_connection: ServerConnection,
     server_status: ServerStatus,
     server_progress: ServerProgress,
@@ -49,7 +80,7 @@ async fn start(app: AppHandle) -> Result<AppConfig, String> {
 
     let mut record = AppConfig {
         requires_password: config.requires_password,
-        mnemonics: config.mnemonics.clone(),
+        security: config.security.clone(),
         server_connection: config.server_connection.clone(),
         server_status: config.server_status.clone(),
         server_progress: config.server_progress.clone(),
@@ -66,15 +97,15 @@ async fn start(app: AppHandle) -> Result<AppConfig, String> {
         .ssh_config()
         .map_err(|e| e.to_string())?;
 
-    if config.server_connection.is_connected && !config.server_connection.is_provisioned {
-        Provisioner::reconnect(ssh_config, app)
-            .await
-            .map_err(|e| e.to_string())?;
-    } else if config.server_connection.is_ready_for_mining {
-        Bidder::reconnect(ssh_config, app)
-            .await
-            .map_err(|e| e.to_string())?;
-    }
+    let ssh = get_ssh_connection(ssh_config.clone()).await?;
+
+    Provisioner::try_start(app.clone(), &ssh)
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    Bidder::try_start(app, &ssh)
+        .await
+        .map_err(|e| e.to_string())?;
 
     if config.server_connection.has_mining_seats {
         record.global_stats = Some(BidderStats::fetch_global_stats().map_err(|e| e.to_string())?);
@@ -82,14 +113,18 @@ async fn start(app: AppHandle) -> Result<AppConfig, String> {
             BidderStats::fetch_latest_cohort_stats().map_err(|e| e.to_string())?;
     }
 
+    // server connection is updated in the provisioner, so we need to reload it
+    record.server_connection = ServerConnection::load().map_err(|e| e.to_string())?;
+
     Ok(record)
 }
 
 #[tauri::command]
-async fn create_mnemonics(wallet: String, session: String) -> Result<(), String> {
-    info!("create_mnemonics");
+async fn create_security(wallet_mnemonic: String, session_mnemonic: String, wallet_json: String) -> Result<(), String> {
+    info!("create_security");
 
-    Mnemonics::create(wallet, session).map_err(|e| e.to_string())?;
+    Security::create(wallet_mnemonic, session_mnemonic, wallet_json)
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -119,7 +154,7 @@ async fn connect_server(app: AppHandle, ip_address: String) -> Result<(), String
         .ssh_config()
         .map_err(|e| e.to_string())?;
 
-    Provisioner::start(ssh_config, app)
+    Provisioner::try_start(ssh_config, app)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -143,21 +178,15 @@ async fn remove_server() -> Result<(), String> {
     config.server_connection.is_provisioned = false;
     config.server_connection.save().map_err(|e| e.to_string())?;
 
-    config
-        .server_status
-        .remove_file()
-        .map_err(|e| e.to_string())?;
-    config
-        .server_progress
-        .remove_file()
-        .map_err(|e| e.to_string())?;
+    ServerStatus::delete().map_err(|e| e.to_string())?;
+    ServerProgress::delete().map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 #[tauri::command]
-async fn update_server_progress(progress: ServerProgress) -> Result<(), String> {
-    info!("update_server_progress");
+async fn save_server_progress(progress: ServerProgress) -> Result<(), String> {
+    info!("save_server_progress");
 
     let mut config = match Config::load() {
         Ok(config) => config,
@@ -166,6 +195,20 @@ async fn update_server_progress(progress: ServerProgress) -> Result<(), String> 
 
     config.server_progress = progress;
     config.server_progress.save().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn fetch_provisioning_status(app: AppHandle, server_progress: ServerProgress) -> Result<(), String> {
+    info!("fetch_server_status");
+
+    server_progress.save().map_err(|e| e.to_string())?;
+
+    let ssh = get_ssh_connection(ssh_config).await?;
+    Provisioner::fetch_provisioner_status(app, &ssh)
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -195,8 +238,6 @@ async fn retry_provisioning(app: AppHandle, step_key: String) -> Result<(), Stri
 async fn update_bidding_rules(
     app: AppHandle,
     bidding_rules: BiddingRules,
-    wallet_json: String,
-    session_mnemonic: String,
 ) -> Result<(), String> {
     info!("update_bidding_rules");
 
@@ -210,7 +251,7 @@ async fn update_bidding_rules(
     if server_connection.is_ready_for_mining {
         let ssh_config = server_connection.ssh_config().map_err(|e| e.to_string())?;
 
-        Bidder::start(app, ssh_config, wallet_json, session_mnemonic)
+        Bidder::try_start(app, ssh_config)
             .await
             .map_err(|e| e.to_string())?;
     }
@@ -246,18 +287,33 @@ async fn update_server_code(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 async fn launch_mining_bot(
     app: AppHandle,
-    wallet_json: String,
-    session_mnemonic: String,
 ) -> Result<(), String> {
     info!("launch_mining_bot");
 
-    let server_connection = match ServerConnection::load() {
+    let mut server_connection = match ServerConnection::load() {
         Ok(config) => config,
         Err(e) => return Err(format!("ConfigFailed: {}", e)),
     };
     let ssh_config = server_connection.ssh_config().map_err(|e| e.to_string())?;
 
-    Bidder::start(app, ssh_config, wallet_json, session_mnemonic)
+    if !server_connection.is_ready_for_mining {
+        server_connection.is_ready_for_mining = true;
+        server_connection.save().map_err(|e| e.to_string())?;
+    }
+
+    Bidder::try_start(app, ssh_config)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn fetch_bidding_status(app: AppHandle) -> Result<(), String> {
+    info!("fetch_bidding_status");
+
+    let ssh = get_ssh_connection(ssh_config).await?;
+    Bidder::fetch_bidding_status(app, &ssh)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -319,7 +375,7 @@ pub fn run() {
     }
 
     let rust_log =
-        env::var("RUST_LOG").unwrap_or("debug, tauri=info, hyper=info, russh=info".into());
+        env::var("RUST_LOG").unwrap_or("debug, tauri=info, hyper=info, russh=error".into());
     for part in rust_log.split(',') {
         if let Some((target, level)) = part.split_once('=') {
             if let Ok(level) = level.parse::<LevelFilter>() {
@@ -383,10 +439,10 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
             start,
-            create_mnemonics,
+            create_security,
             connect_server,
             remove_server,
-            update_server_progress,
+            save_server_progress,
             update_bidding_rules,
             retry_provisioning,
             launch_mining_bot,
