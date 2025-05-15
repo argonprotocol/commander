@@ -1,0 +1,7 @@
+src
+src-tauri
+dist
+node_modules
+.idea
+.gitignore
+bun.lockb

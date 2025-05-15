@@ -1,13 +1,13 @@
-import * as Vue from 'vue'
-import { defineStore } from 'pinia'
-import mainchain, { type MainchainClient } from '../lib/bidding-calculator/Mainchain';
-import { invoke } from "@tauri-apps/api/core";
+import * as Vue from 'vue';
+import { defineStore } from 'pinia';
+import { type IBiddingRules } from '@argonprotocol/bidding-calculator';
+import { invoke } from '@tauri-apps/api/core';
 import { Keyring, mnemonicGenerate } from '@argonprotocol/mainchain';
 import Provisioner, { IStep } from '../lib/Provisioner';
 import emitter from '../emitters/basic';
-import type IBiddingRules from '../lib/bidding-calculator/IBiddingRules';
 import { listen } from '@tauri-apps/api/event';
 import { message } from '@tauri-apps/plugin-dialog';
+import { getMainchain, getMainchainClient } from '../lib/mainchain.ts';
 
 export interface ICurrencyRecord {
   id: ICurrency;
@@ -77,7 +77,12 @@ export interface ICohortStats {
   frameTickEnd: number;
 }
 
-export type ICurrency = Currency.ARGN | Currency.USD | Currency.EURO | Currency.GBP | Currency.INR;
+export type ICurrency =
+  | Currency.ARGN
+  | Currency.USD
+  | Currency.EURO
+  | Currency.GBP
+  | Currency.INR;
 
 export const useConfigStore = defineStore('config', () => {
   const isLoaded = Vue.ref(false);
@@ -92,7 +97,7 @@ export const useConfigStore = defineStore('config', () => {
 
   provisioner.finishedFn = () => {
     emitter.emit('openProvisioningCompleteOverlay');
-  }
+  };
 
   const serverConnection = Vue.reactive({
     isConnected: false,
@@ -188,12 +193,17 @@ export const useConfigStore = defineStore('config', () => {
     [Currency.GBP]: { id: Currency.GBP, symbol: '£', name: 'Pound' },
     [Currency.INR]: { id: Currency.INR, symbol: '₹', name: 'Rupee' },
   };
-  const displayCurrency = Vue.ref<ICurrencyRecord>(displayCurrencies[Currency.USD]);
+  const displayCurrency = Vue.ref<ICurrencyRecord>(
+    displayCurrencies[Currency.USD],
+  );
   const currencySymbol = Vue.ref(displayCurrency.value.symbol);
 
-  Vue.watch(() => displayCurrency.value, () => {
-    currencySymbol.value = displayCurrency.value.symbol;
-  });
+  Vue.watch(
+    () => displayCurrency.value,
+    () => {
+      currencySymbol.value = displayCurrency.value.symbol;
+    },
+  );
 
   function setDisplayCurrency(currency: ICurrency) {
     displayCurrency.value = displayCurrencies[currency];
@@ -202,7 +212,7 @@ export const useConfigStore = defineStore('config', () => {
   async function loadExchangeRates() {
     const [otherResponse, argonResponse] = await Promise.all([
       fetch('https://open.er-api.com/v6/latest/USD'),
-      mainchain.fetchExchangeRates()
+      getMainchain().fetchExchangeRates(),
     ]);
 
     exchangeRates.USD = argonResponse.USD;
@@ -218,8 +228,8 @@ export const useConfigStore = defineStore('config', () => {
 
   function loadArgonBalance(wallet: IWallet) {
     return new Promise(async (resolve, _) => {
-      const client: MainchainClient = await mainchain.client;
-      client.query.system.account(wallet.address, (result) => {
+      const client = await getMainchainClient();
+      client.query.system.account(wallet.address, result => {
         const argons = Number(result.data.free.toPrimitive()) / 1_000_000;
         const totalValue = argons + argonotToArgon(wallet.argonots);
 
@@ -238,8 +248,8 @@ export const useConfigStore = defineStore('config', () => {
 
   function loadArgonotBalance(wallet: IWallet) {
     return new Promise(async (resolve, _) => {
-      const client: MainchainClient = await mainchain.client;
-      client.query.ownership.account(wallet.address, (result) => {
+      const client = await getMainchainClient();
+      client.query.ownership.account(wallet.address, result => {
         const argonots = Number(result.free.toPrimitive()) / 1_000_000;
         const totalValue = wallet.argons + argonotToArgon(argonots);
 
@@ -258,10 +268,7 @@ export const useConfigStore = defineStore('config', () => {
 
   async function loadBalances() {
     for (const wallet of [mngWallet, llbWallet, vltWallet]) {
-      await Promise.all([
-        loadArgonBalance(wallet),
-        loadArgonotBalance(wallet)
-      ]);
+      await Promise.all([loadArgonBalance(wallet), loadArgonotBalance(wallet)]);
     }
   }
 
@@ -301,13 +308,15 @@ export const useConfigStore = defineStore('config', () => {
     return qty * exchangeRates.ARGNOT;
   }
 
-  async function loadAccounts(mnemonics?: { wallet: string, session: string }) {
-    mnemonics = mnemonics || await createMnemonics();
+  async function loadAccounts(mnemonics?: { wallet: string; session: string }) {
+    mnemonics = mnemonics || (await createMnemonics());
 
     walletMnemonic.value = mnemonics.wallet;
     sessionMnemonic.value = mnemonics.session;
 
-    const seedAccount = new Keyring({ type: 'sr25519' }).createFromUri(mnemonics.wallet);
+    const seedAccount = new Keyring({ type: 'sr25519' }).createFromUri(
+      mnemonics.wallet,
+    );
     const mngAccount = seedAccount.derive(`//mng`);
     const llbAccount = seedAccount.derive(`//llb`);
     const vltAccount = seedAccount.derive(`//vlt`);
@@ -317,11 +326,14 @@ export const useConfigStore = defineStore('config', () => {
     vltWallet.address = vltAccount.address;
   }
 
-  async function createMnemonics(): Promise<{ wallet: string, session: string }> {
+  async function createMnemonics(): Promise<{
+    wallet: string;
+    session: string;
+  }> {
     const mnemonics = {
       wallet: mnemonicGenerate(),
       session: mnemonicGenerate(),
-    }
+    };
 
     await invoke('create_mnemonics', mnemonics);
 
@@ -352,7 +364,9 @@ export const useConfigStore = defineStore('config', () => {
   }
 
   async function createServerSecurityVariables() {
-    const seedAccount = new Keyring({ type: 'sr25519' }).createFromUri(walletMnemonic.value);
+    const seedAccount = new Keyring({ type: 'sr25519' }).createFromUri(
+      walletMnemonic.value,
+    );
     const mngAccount = seedAccount.derive(`//mng`);
     const walletJson = JSON.stringify(mngAccount.toJson(''));
 
@@ -360,7 +374,8 @@ export const useConfigStore = defineStore('config', () => {
   }
 
   async function launchMiningBot() {
-    const { walletJson, sessionMnemonic } = await createServerSecurityVariables();
+    const { walletJson, sessionMnemonic } =
+      await createServerSecurityVariables();
     await invoke('launch_mining_bot', { walletJson, sessionMnemonic });
 
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -368,8 +383,13 @@ export const useConfigStore = defineStore('config', () => {
   }
 
   async function updateBiddingRules(rules: IBiddingRules) {
-    const { walletJson, sessionMnemonic } = await createServerSecurityVariables();
-    await invoke('update_bidding_rules', { biddingRules: rules, walletJson, sessionMnemonic });
+    const { walletJson, sessionMnemonic } =
+      await createServerSecurityVariables();
+    await invoke('update_bidding_rules', {
+      biddingRules: rules,
+      walletJson,
+      sessionMnemonic,
+    });
     biddingRules.value = rules;
   }
 
@@ -414,18 +434,18 @@ export const useConfigStore = defineStore('config', () => {
       cohortStats.value = { ...event.payload.cohortStats };
     });
 
-    const response = await invoke('start', {}) as {
-      mnemonics?: { wallet: string, session: string },
-      biddingRules: any,
-      serverConnection: any,
-      serverStatus: any,
-      serverProgress: any,
-      requiresPassword: boolean,
-      argonActivity: IArgonActivity[],
-      bitcoinActivity: IBitcoinActivity[],
-      botActivity: IBotActivity[],
-      globalStats: any,
-      cohortStats: any,
+    const response = (await invoke('start', {})) as {
+      mnemonics?: { wallet: string; session: string };
+      biddingRules: any;
+      serverConnection: any;
+      serverStatus: any;
+      serverProgress: any;
+      requiresPassword: boolean;
+      argonActivity: IArgonActivity[];
+      bitcoinActivity: IBitcoinActivity[];
+      botActivity: IBotActivity[];
+      globalStats: any;
+      cohortStats: any;
     };
     biddingRules.value = response.biddingRules;
     requiresPassword.value = response.requiresPassword;
@@ -440,9 +460,12 @@ export const useConfigStore = defineStore('config', () => {
     }
 
     serverConnection.isConnected = response.serverConnection.isConnected;
-    serverConnection.isProvisioned = response.serverConnection.isProvisioned || false;
-    serverConnection.isReadyForMining = response.serverConnection.isReadyForMining || false;
-    serverConnection.hasMiningSeats = response.serverConnection.hasMiningSeats || false;
+    serverConnection.isProvisioned =
+      response.serverConnection.isProvisioned || false;
+    serverConnection.isReadyForMining =
+      response.serverConnection.isReadyForMining || false;
+    serverConnection.hasMiningSeats =
+      response.serverConnection.hasMiningSeats || false;
     serverConnection.ipAddress = response.serverConnection.ipAddress;
     serverConnection.sshPublicKey = response.serverConnection.sshPublicKey;
     provisioner.setIpAddress(response.serverConnection.ipAddress);
@@ -456,7 +479,10 @@ export const useConfigStore = defineStore('config', () => {
     try {
       await loadExchangeRates();
     } catch (error) {
-      await message('Failed to load exchange rates.', { title: 'Argon Commander', kind: 'error' });
+      await message('Failed to load exchange rates.', {
+        title: 'Argon Commander',
+        kind: 'error',
+      });
     }
     await loadBalances();
 

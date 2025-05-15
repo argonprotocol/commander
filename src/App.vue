@@ -24,22 +24,24 @@
 </template>
 
 <script setup lang="ts">
-import MiningPanel from "./panels/MiningPanel.vue";
-import VaultingPanel from "./panels/VaultingPanel.vue";
-import LiquidLockingPanel from "./panels/LiquidLockingPanel.vue";
-import ServerConnectOverlay from "./overlays/ServerConnectOverlay.vue";
-import BiddingRulesOverlay from "./overlays/BiddingRulesOverlay.vue";
-import WalletOverlay from "./overlays/WalletOverlay.vue";
-import ServerRemoveOverlay from "./overlays/ServerRemoveOverlay.vue";
-import ServerConfigureOverlay from "./overlays/ServerConfigureOverlay.vue";
-import SecuritySettingsOverlay from "./overlays/SecuritySettingsOverlay.vue";
-import ProvisioningCompleteOverlay from "./overlays/ProvisioningCompleteOverlay.vue";
-import TopBar from "./components/TopBar.vue";
-import { useBasicStore } from "./stores/basic";
-import { useConfigStore } from "./stores/config";
-import { checkForUpdates } from "./tauri-controls/utils/checkForUpdates.ts";
-import {onBeforeMount, onBeforeUnmount, onMounted} from "vue";
-import {waitForLoad} from "@argonprotocol/mainchain";
+import MiningPanel from './panels/MiningPanel.vue';
+import VaultingPanel from './panels/VaultingPanel.vue';
+import LiquidLockingPanel from './panels/LiquidLockingPanel.vue';
+import ServerConnectOverlay from './overlays/ServerConnectOverlay.vue';
+import BiddingRulesOverlay from './overlays/BiddingRulesOverlay.vue';
+import WalletOverlay from './overlays/WalletOverlay.vue';
+import ServerRemoveOverlay from './overlays/ServerRemoveOverlay.vue';
+import ServerConfigureOverlay from './overlays/ServerConfigureOverlay.vue';
+import SecuritySettingsOverlay from './overlays/SecuritySettingsOverlay.vue';
+import ProvisioningCompleteOverlay from './overlays/ProvisioningCompleteOverlay.vue';
+import TopBar from './components/TopBar.vue';
+import { useBasicStore } from './stores/basic';
+import { useConfigStore } from './stores/config';
+import { checkForUpdates } from './tauri-controls/utils/checkForUpdates.ts';
+import { onBeforeMount, onBeforeUnmount, onMounted } from 'vue';
+import { waitForLoad } from '@argonprotocol/mainchain';
+import { getVersion } from '@tauri-apps/api/app';
+import { invoke } from '@tauri-apps/api/core';
 
 const basicStore = useBasicStore();
 const configStore = useConfigStore();
@@ -49,8 +51,16 @@ onBeforeMount(async () => {
   // need to wait for crypto to load
   await waitForLoad();
 });
-onMounted(() => {
-  timeout = setInterval(() => checkForUpdates(), 60000) as unknown as number;
+onMounted(async () => {
+  const currentVersion = await getVersion();
+  const storedVersion = localStorage.getItem('lastVersion');
+
+  if (storedVersion !== currentVersion) {
+    console.log(`App updated applied ${currentVersion}`);
+    localStorage.setItem('lastVersion', currentVersion);
+    void invoke('update_bot_src');
+  }
+  timeout = setInterval(() => checkForUpdates(), 60e3) as unknown as number;
 });
 onBeforeUnmount(() => {
   if (timeout) {

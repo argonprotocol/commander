@@ -20,7 +20,8 @@
 
     // Some stricter flags
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "rootDir": "."
   },
-  "include": ["./*.ts", "bidding-calculator", "__test__"]
+  "include": ["vitest.config.ts", "src", "__test__"]
 }

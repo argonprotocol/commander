@@ -25,6 +25,7 @@ impl Provisioner {
         let script_is_running = Provisioner::is_script_running(&ssh).await?;
         if !script_is_running {
             Provisioner::start_script(&ssh).await?;
+
         }
 
         Provisioner::monitor(app, ssh).await?;

@@ -5,15 +5,23 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
+"@argonprotocol/bidding-calculator@workspace:*, @argonprotocol/bidding-calculator@workspace:bidding-calculator":
+  version: 0.0.0-use.local
+  resolution: "@argonprotocol/bidding-calculator@workspace:bidding-calculator"
+  dependencies:
+    "@argonprotocol/mainchain": "npm:^1.1.0"
+  languageName: unknown
+  linkType: soft
+
 "@argonprotocol/commander-bot@workspace:bot":
   version: 0.0.0-use.local
   resolution: "@argonprotocol/commander-bot@workspace:bot"
   dependencies:
+    "@argonprotocol/bidding-calculator": "workspace:*"
     "@argonprotocol/mainchain": "npm:^1.1.0"
     "@argonprotocol/testing": "npm:^1.1.0"
     "@types/express": "npm:^5.0.1"
     express: "npm:^5.1.0"
-    prettier: "npm:^3.5.3"
     tiny-lru: "npm:^11.2.11"
     tsx: "npm:^4.19.3"
     typescript: "npm:^5.8.3"
@@ -44,32 +52,6 @@ __metadata:
   bin:
     mainchain: lib/cli.js
   checksum: 10c0/24955e400fe43fb36d60b28a2786f403f9a37d8895b17edeeb35045f4d0d1bf167f3d19bf941a08f5d77c645078d8e941b30de80ebd136d11c5b740606565134
-  languageName: node
-  linkType: hard
-
-"@argonprotocol/mainchain@npm:1.1.0-rc.6":
-  version: 1.1.0-rc.6
-  resolution: "@argonprotocol/mainchain@npm:1.1.0-rc.6"
-  dependencies:
-    "@commander-js/extra-typings": "npm:^13.1.0"
-    "@polkadot/api": "npm:^15.8.1"
-    "@polkadot/keyring": "npm:^13.4.3"
-    "@polkadot/util-crypto": "npm:^13.4.3"
-    bignumber.js: "npm:^9.1.2"
-    commander: "npm:^13.1.0"
-    console-table-printer: "npm:^2.12.1"
-    dotenv: "npm:^16.4.7"
-    nanoevents: "npm:^9.1.0"
-  dependenciesMeta:
-    "@commander-js/extra-typings":
-      optional: true
-    commander:
-      optional: true
-    dotenv:
-      optional: true
-  bin:
-    mainchain: lib/cli.js
-  checksum: 10c0/140343d596fc115b89962b39ece6f5a85dca4c9c87045cf550179a2aa67f32dc9c2956f3ac1a4af6843d25be5662e59583dc67d09d7c786c0cdccd3d31aaeeba
   languageName: node
   linkType: hard
 
@@ -2232,7 +2214,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "argon-commander@workspace:."
   dependencies:
-    "@argonprotocol/mainchain": "npm:1.1.0-rc.6"
+    "@argonprotocol/bidding-calculator": "workspace:*"
+    "@argonprotocol/mainchain": "npm:1.1.0"
     "@chenfengyuan/vue-countdown": "npm:^2.1.3"
     "@headlessui/vue": "npm:^1.7.23"
     "@heroicons/vue": "npm:^2.2.0"
@@ -2249,18 +2232,18 @@ __metadata:
     "@tauri-controls/vue": "npm:^0.4.0"
     "@types/qrcode": "npm:^1.5.5"
     "@vitejs/plugin-vue": "npm:^5.2.1"
-    bignumber.js: "npm:^9.1.2"
     clsx: "npm:^2.1.1"
     dayjs: "npm:^1.11.13"
     mitt: "npm:^3.0.1"
     ordinal: "npm:^1.0.3"
     pinia: "npm:^3.0.1"
+    prettier: "npm:^3.5.3"
     qrcode: "npm:^1.5.4"
     sass-embedded: "npm:^1.85.1"
     svgo: "npm:^3.3.2"
     tailwind-merge: "npm:^3.0.1"
     tailwindcss: "npm:^4.0.3"
-    typescript: "npm:~5.6.2"
+    typescript: "npm:~5.8.3"
     vite: "npm:^6.0.3"
     vite-svg-loader: "npm:^5.1.0"
     vue: "npm:^3.5.13"
@@ -5744,7 +5727,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5.8.3":
+"typescript@npm:^5.8.3, typescript@npm:~5.8.3":
   version: 5.8.3
   resolution: "typescript@npm:5.8.3"
   bin:
@@ -5754,33 +5737,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:~5.6.2":
-  version: 5.6.3
-  resolution: "typescript@npm:5.6.3"
-  bin:
-    tsc: bin/tsc
-    tsserver: bin/tsserver
-  checksum: 10c0/44f61d3fb15c35359bc60399cb8127c30bae554cd555b8e2b46d68fa79d680354b83320ad419ff1b81a0bdf324197b29affe6cc28988cd6a74d4ac60c94f9799
-  languageName: node
-  linkType: hard
-
-"typescript@patch:typescript@npm%3A^5.8.3#optional!builtin<compat/typescript>":
+"typescript@patch:typescript@npm%3A^5.8.3#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A~5.8.3#optional!builtin<compat/typescript>":
   version: 5.8.3
   resolution: "typescript@patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: 10c0/39117e346ff8ebd87ae1510b3a77d5d92dae5a89bde588c747d25da5c146603a99c8ee588c7ef80faaf123d89ed46f6dbd918d534d641083177d5fac38b8a1cb
-  languageName: node
-  linkType: hard
-
-"typescript@patch:typescript@npm%3A~5.6.2#optional!builtin<compat/typescript>":
-  version: 5.6.3
-  resolution: "typescript@patch:typescript@npm%3A5.6.3#optional!builtin<compat/typescript>::version=5.6.3&hash=8c6c40"
-  bin:
-    tsc: bin/tsc
-    tsserver: bin/tsserver
-  checksum: 10c0/7c9d2e07c81226d60435939618c91ec2ff0b75fbfa106eec3430f0fcf93a584bc6c73176676f532d78c3594fe28a54b36eb40b3d75593071a7ec91301533ace7
   languageName: node
   linkType: hard
 

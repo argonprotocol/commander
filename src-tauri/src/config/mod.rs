@@ -1,6 +1,8 @@
 use std::error::Error;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use tauri::{AppHandle, Manager};
+use tauri::path::BaseDirectory;
 
 pub mod base;
 pub mod bidding_rules;
@@ -27,6 +29,13 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn get_embedded_path(app: &AppHandle, path: &PathBuf) -> anyhow::Result<PathBuf> {
+        let local_base_path = app
+            .path()
+            .resolve(PathBuf::from("..").join(path), BaseDirectory::Resource)?;
+        Ok(local_base_path)
+    }
+
     pub fn load() -> Result<Self, Box<dyn Error>> {
         let base = Base::load()?;
         let bidding_rules = BiddingRules::load()?;

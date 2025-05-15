@@ -1,4 +1,4 @@
-import BiddingCalculatorData from './BiddingCalculatorData';
+import BiddingCalculatorData from './BiddingCalculatorData.js';
 
 export default class BiddingCalculator {
   public scenarioName: string = '';
@@ -29,24 +29,33 @@ export default class BiddingCalculator {
 
   public get costOfArgonotLoss() {
     const lossMultiplier = this.argonotPriceChange / 100;
-    return Math.max(0, -this.argonotToArgon(this.data.argonotsRequiredForBid * lossMultiplier));
+    return Math.max(
+      0,
+      -this.argonotToArgon(this.data.argonotsRequiredForBid * lossMultiplier),
+    );
   }
-  
+
   public get totalCost() {
-    return this.argonBidPremium + this.data.transactionFee + this.costOfArgonotLoss;
+    return (
+      this.argonBidPremium + this.data.transactionFee + this.costOfArgonotLoss
+    );
   }
-  
+
   public get argonotRewardsAsArgonValue() {
     const argonots = this.data.argonotRewardsForThisSeat;
     const argonPrice = this.argonotToArgon(argonots);
-    const priceChangeMultiplier = 1 + (this.argonotPriceChange / 100);
+    const priceChangeMultiplier = 1 + this.argonotPriceChange / 100;
     return argonPrice * priceChangeMultiplier;
   }
-  
+
   public get totalRewards() {
-    return this.data.argonRewardsForThisSeat + this.argonotRewardsAsArgonValue + this.argonsToMintThisSeat;
+    return (
+      this.data.argonRewardsForThisSeat +
+      this.argonotRewardsAsArgonValue +
+      this.argonsToMintThisSeat
+    );
   }
-  
+
   public get TDPR() {
     const tdpr = ((this.totalRewards - this.totalCost) / this.totalCost) * 100;
     return Math.max(tdpr, -100);
@@ -58,12 +67,14 @@ export default class BiddingCalculator {
   }
 
   public get APY() {
-    const apy = Math.pow(1 + (this.TDPR / 100), 36.5) * 100 - 100;
+    const apy = Math.pow(1 + this.TDPR / 100, 36.5) * 100 - 100;
     return Math.max(apy, -100);
   }
-  
+
   public get breakevenBid() {
-    return this.totalRewards - (this.data.transactionFee + this.costOfArgonotLoss);
+    return (
+      this.totalRewards - (this.data.transactionFee + this.costOfArgonotLoss)
+    );
   }
 
   private argonotToArgon(qty: number) {

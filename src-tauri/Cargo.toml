@@ -42,6 +42,8 @@ window-vibrancy = "0.6.0"
 ssh-key = { version = "0.6", features = ["ed25519"] }
 rand = "0.8"
 dirs = "6.0.0"
+semver = "1.0.26"
+dotenv = "0.15"
 rusqlite = { version = "0.35.0", features = ["bundled", "bundled-sqlcipher-vendored-openssl"] }
 lazy_static = "1.4.0"
 anyhow = "1.0"

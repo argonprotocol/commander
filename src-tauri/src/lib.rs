@@ -1,10 +1,15 @@
-use crate::db::{DB, ArgonActivities, ArgonActivityRecord, BitcoinActivities, BitcoinActivityRecord, BotActivities, BotActivityRecord};
+use crate::db::{
+    ArgonActivities, ArgonActivityRecord, BitcoinActivities, BitcoinActivityRecord, BotActivities,
+    BotActivityRecord, DB,
+};
+use crate::ssh::SSH;
+use bidder::stats::{BidderStats, ICohortStats, IGlobalStats};
 use bidder::Bidder;
-use bidder::stats::{BidderStats, IGlobalStats, ICohortStats};
 use config::{BiddingRules, Config, Mnemonics, ServerConnection, ServerProgress, ServerStatus};
 use log::{info, LevelFilter};
 use provisioner::Provisioner;
 use std::env;
+use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use window_vibrancy::*;
@@ -48,27 +53,22 @@ async fn start(app: AppHandle) -> Result<AppConfig, String> {
         server_progress: config.server_progress.clone(),
         bidding_rules: config.bidding_rules.clone(),
         argon_activity: ArgonActivities::fetch_last_five_records().map_err(|e| e.to_string())?,
-        bitcoin_activity: BitcoinActivities::fetch_last_five_records().map_err(|e| e.to_string())?,
+        bitcoin_activity: BitcoinActivities::fetch_last_five_records()
+            .map_err(|e| e.to_string())?,
         bot_activity: BotActivities::fetch_last_five_records().map_err(|e| e.to_string())?,
         global_stats: None,
         cohort_stats: None,
     };
+    let ssh_private_key = config.server_connection.ssh_private_key.clone();
+    let ip_address = config.server_connection.ip_address.clone();
+    let username = String::from("root");
+    let port = 22;
 
     if config.server_connection.is_connected && !config.server_connection.is_provisioned {
-        let ssh_private_key = config.server_connection.ssh_private_key.clone();
-        let ip_address = config.server_connection.ip_address.clone();
-        let username = String::from("root");
-        let port = 22;
-
         Provisioner::reconnect(ssh_private_key, username, ip_address, port, app)
             .await
             .map_err(|e| e.to_string())?;
     } else if config.server_connection.is_ready_for_mining {
-        let ssh_private_key = config.server_connection.ssh_private_key.clone();
-        let ip_address = config.server_connection.ip_address.clone();
-        let username = String::from("root");
-        let port = 22;
-
         Bidder::reconnect(ssh_private_key, username, ip_address, port, app)
             .await
             .map_err(|e| e.to_string())?;
@@ -76,7 +76,8 @@ async fn start(app: AppHandle) -> Result<AppConfig, String> {
 
     if config.server_connection.has_mining_seats {
         record.global_stats = Some(BidderStats::fetch_global_stats().map_err(|e| e.to_string())?);
-        record.cohort_stats = BidderStats::fetch_latest_cohort_stats().map_err(|e| e.to_string())?;
+        record.cohort_stats =
+            BidderStats::fetch_latest_cohort_stats().map_err(|e| e.to_string())?;
     }
 
     Ok(record)
@@ -89,6 +90,16 @@ async fn create_mnemonics(wallet: String, session: String) -> Result<(), String>
     Mnemonics::create(wallet, session).map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+#[tauri::command]
+async fn get_mainchain_url() -> Result<String, String> {
+    info!("get_mainchain_url");
+
+    let mainchain_url =
+        env::var("MAINCHAIN_URL").unwrap_or_else(|_| "wss://rpc.argon.network".to_string());
+
+    Ok(mainchain_url)
 }
 
 #[tauri::command]
@@ -220,6 +231,31 @@ async fn update_bidding_rules(
 }
 
 #[tauri::command]
+async fn update_bot_src(app: AppHandle) -> Result<(), String> {
+    info!("update_bot_src");
+    let server_connection = match ServerConnection::load() {
+        Ok(config) => config,
+        Err(e) => return Err(format!("ConfigFailed: {}", e)),
+    };
+
+    if server_connection.is_ready_for_mining {
+        let ssh_private_key = server_connection.ssh_private_key.clone();
+        let ip_address = server_connection.ip_address.clone();
+        let username = String::from("root");
+        let port = 22;
+
+        let ssh = SSH::connect(&ssh_private_key, &username, &ip_address, port)
+            .await
+            .map_err(|e| e.to_string())?;
+        Bidder::update_bot_if_needed(&app, &ssh)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn launch_mining_bot(
     app: AppHandle,
     wallet_json: String,
@@ -252,6 +288,16 @@ async fn launch_mining_bot(
     Ok(())
 }
 
+pub fn readdir(path: &PathBuf) -> anyhow::Result<Vec<String>> {
+    let dir = std::fs::read_dir(&path)?;
+    let files = dir
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.path().is_file())
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    Ok(files)
+}
+
 ////////////////////////////////////////////////////////////
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -272,7 +318,32 @@ pub fn run() {
         // ))
         .with_colors(ColoredLevelConfig::default());
 
-    let rust_log = env::var("RUST_LOG").unwrap_or("debug, tauri=info, hyper=info".into());
+    // testnet is default if debug or specified
+    let mut chain = if cfg!(debug_assertions) || env::args().any(|arg| arg == "--testnet") {
+        "testnet"
+    } else {
+        "mainnet"
+    }
+    .to_string();
+    if let Some(env_chain) = env::var("CHAIN").ok() {
+        chain = env_chain;
+    }
+    // allow for debug mode to hit mainnet
+    if env::args().any(|arg| arg == "--mainnet") {
+        chain = "mainnet".to_string();
+    }
+    let is_testnet = &chain == "testnet";
+    env::set_var("CHAIN", chain);
+    if !env::var("MAINCHAIN_URL").is_ok() {
+        if is_testnet {
+            env::set_var("MAINCHAIN_URL", "wss://rpc.testnet.argonprotocol.org");
+        } else {
+            env::set_var("MAINCHAIN_URL", "wss://rpc.argon.network");
+        }
+    }
+
+    let rust_log =
+        env::var("RUST_LOG").unwrap_or("debug, tauri=info, hyper=info, russh=info".into());
     for part in rust_log.split(',') {
         if let Some((target, level)) = part.split_once('=') {
             if let Ok(level) = level.parse::<LevelFilter>() {
@@ -296,7 +367,7 @@ pub fn run() {
             // test paths
 
             let local_base_path = Bidder::get_bidding_calculator_path(app.handle())?;
-            let filenames = Bidder::get_calculator_files(&local_base_path)?;
+            let filenames = readdir(&local_base_path)?;
             info!(
                 "Have bidding calculator embedded: {}. {:#?}",
                 local_base_path.display(),
@@ -320,6 +391,8 @@ pub fn run() {
             update_bidding_rules,
             retry_provisioning,
             launch_mining_bot,
+            get_mainchain_url,
+            update_bot_src,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,3 +1,5 @@
+use crate::config::Config;
+use crate::readdir;
 use anyhow::Result;
 use async_trait::async_trait;
 use log::{error, info};
@@ -6,8 +8,10 @@ use russh::client::Msg;
 use russh::*;
 use russh_keys::*;
 use ssh_key::{Algorithm, LineEnding, PrivateKey, PublicKey};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+use tauri::AppHandle;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::runtime::Handle;
@@ -173,7 +177,38 @@ impl SSH {
             }
         }
         let _ = channel.close().await;
-        Ok((output, code.expect("program did not exit cleanly")))
+        let exit_code = code.ok_or_else(|| {
+            anyhow::anyhow!("SSH command exited without status — likely failed early (e.g. bad command or missing file)")
+        })?;
+
+        Ok((output, exit_code))
+    }
+
+    pub async fn upload_directory(
+        &self,
+        app: &AppHandle,
+        local_path_to_copy: PathBuf,
+    ) -> Result<()> {
+        let embedded_path = Config::get_embedded_path(&app, &local_path_to_copy)?;
+        let filenames = readdir(&embedded_path)?;
+
+        for file in filenames {
+            let local_file_path = embedded_path.join(&file);
+            let remote_file_path = PathBuf::from("commander-config")
+                .join(&local_path_to_copy)
+                .join(file);
+
+            let script_contents = match std::fs::read_to_string(&local_file_path) {
+                Ok(contents) => contents,
+                Err(e) => {
+                    return Err(e.into());
+                }
+            };
+
+            self.upload_file(&script_contents, remote_file_path.to_str().unwrap())
+                .await?;
+        }
+        Ok(())
     }
 
     pub async fn upload_file(&self, contents: &str, remote_path: &str) -> Result<()> {
@@ -189,7 +224,7 @@ impl SSH {
         channel.eof().await?;
 
         // Wait for the copy to complete
-        while (channel.wait().await).is_some() {}
+        while channel.wait().await.is_some() {}
 
         Ok(())
     }
