@@ -18,6 +18,7 @@ dependencies = [
  "rusqlite",
  "russh",
  "russh-keys",
+ "semver",
  "serde",
  "serde_json",
  "ssh-key",

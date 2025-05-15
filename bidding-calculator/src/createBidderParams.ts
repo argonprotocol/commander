@@ -1,17 +1,19 @@
 import { type ArgonClient } from '@argonprotocol/mainchain';
-import type IBidderParams from '../IBidderParams';
-import type IBiddingRules from './IBiddingRules';
-import BiddingCalculator from './BiddingCalculator';
-import BiddingCalculatorData from './BiddingCalculatorData';
+import { type IBidderParams } from './IBidderParams.js';
+import type IBiddingRules from './IBiddingRules.js';
+import BiddingCalculator from './BiddingCalculator.js';
+import BiddingCalculatorData from './BiddingCalculatorData.js';
+import { Mainchain } from './Mainchain.ts';
 
 const MICROGONS_PER_ARGON = 1_000_000;
 
 export default async function createBidderParams(
-  cohortId: number,
+  _cohortId: number,
   client: ArgonClient,
   biddingRules: IBiddingRules,
 ): Promise<IBidderParams> {
-  const helper = new Helper(biddingRules);
+  const mainchain = new Mainchain(Promise.resolve(client));
+  const helper = new Helper(biddingRules, mainchain);
 
   const minBid = await helper.calculateMinBid();
   const maxBid = await helper.calculateMaxBid();
@@ -19,7 +21,9 @@ export default async function createBidderParams(
   const maxSeats = await helper.getMaxSeats();
   const maxBudget = helper.getMaxBalance(maxBid * BigInt(maxSeats));
   const bidDelay = biddingRules.rebiddingDelay || 0;
-  const bidIncrement = convertArgonToMicrogons(biddingRules.incrementAmount || 1);
+  const bidIncrement = convertArgonToMicrogons(
+    biddingRules.incrementAmount || 1,
+  );
   const bidderParams: IBidderParams = {
     minBid,
     maxBid,
@@ -40,13 +44,25 @@ export class Helper {
   private readonly finalMinimumCalculator: BiddingCalculator;
   private readonly finalOptimisticCalculator: BiddingCalculator;
 
-  constructor(biddingRules: IBiddingRules) {
+  constructor(biddingRules: IBiddingRules, mainchain: Mainchain) {
     this.biddingRules = biddingRules;
-    this.calculatorData = new BiddingCalculatorData();
-    this.startingMinimumCalculator = new BiddingCalculator('Minimum', this.calculatorData);
-    this.startingOptimisticCalculator = new BiddingCalculator('Optimistic', this.calculatorData);
-    this.finalMinimumCalculator = new BiddingCalculator('Minimum', this.calculatorData);
-    this.finalOptimisticCalculator = new BiddingCalculator('Optimistic', this.calculatorData);
+    this.calculatorData = new BiddingCalculatorData(mainchain);
+    this.startingMinimumCalculator = new BiddingCalculator(
+      'Minimum',
+      this.calculatorData,
+    );
+    this.startingOptimisticCalculator = new BiddingCalculator(
+      'Optimistic',
+      this.calculatorData,
+    );
+    this.finalMinimumCalculator = new BiddingCalculator(
+      'Minimum',
+      this.calculatorData,
+    );
+    this.finalOptimisticCalculator = new BiddingCalculator(
+      'Optimistic',
+      this.calculatorData,
+    );
   }
 
   public async getMaxSeats() {
@@ -57,11 +73,15 @@ export class Helper {
       maxSeats = this.biddingRules.throttleSeatCount || 0;
     }
 
-    return (maxSeats > 0 && this.biddingRules.disableBot === 'AfterFirstSeat') ? 1 : maxSeats;
+    return maxSeats > 0 && this.biddingRules.disableBot === 'AfterFirstSeat'
+      ? 1
+      : maxSeats;
   }
 
   public getMaxBalance(defaultMaxBalance: bigint): bigint {
-    return this.biddingRules.throttleSpending ? BigInt(this.biddingRules.throttleSpendingAmount || 0) : defaultMaxBalance;
+    return this.biddingRules.throttleSpending
+      ? BigInt(this.biddingRules.throttleSpendingAmount || 0)
+      : defaultMaxBalance;
   }
 
   public async calculateMinBid(): Promise<bigint> {
@@ -74,13 +94,19 @@ export class Helper {
 
     if (this.biddingRules.startingAmountFormulaType === 'PreviousLowestBid') {
       formulaAmount = this.calculatorData.previousLowestBid;
-    } else if (this.biddingRules.startingAmountFormulaType === 'MinimumBreakeven') {
+    } else if (
+      this.biddingRules.startingAmountFormulaType === 'MinimumBreakeven'
+    ) {
       formulaAmount = this.startingMinimumCalculator.breakevenBid;
-    } else if (this.biddingRules.startingAmountFormulaType === 'OptimisticBreakeven') {
+    } else if (
+      this.biddingRules.startingAmountFormulaType === 'OptimisticBreakeven'
+    ) {
       formulaAmount = this.startingOptimisticCalculator.breakevenBid;
     }
 
-    const minBid = formulaAmount * (1 + this.biddingRules.startingAmountFormulaIncrease / 100);
+    const minBid =
+      formulaAmount *
+      (1 + this.biddingRules.startingAmountFormulaIncrease / 100);
 
     return convertArgonToMicrogons(minBid);
   }
@@ -95,13 +121,18 @@ export class Helper {
 
     if (this.biddingRules.finalAmountFormulaType === 'PreviousHighestBid') {
       formulaAmount = this.calculatorData.previousHighestBid;
-    } else if (this.biddingRules.finalAmountFormulaType === 'MinimumBreakeven') {
+    } else if (
+      this.biddingRules.finalAmountFormulaType === 'MinimumBreakeven'
+    ) {
       formulaAmount = this.finalMinimumCalculator.breakevenBid;
-    } else if (this.biddingRules.finalAmountFormulaType === 'OptimisticBreakeven') {
+    } else if (
+      this.biddingRules.finalAmountFormulaType === 'OptimisticBreakeven'
+    ) {
       formulaAmount = this.finalOptimisticCalculator.breakevenBid;
     }
 
-    const maxBid = formulaAmount * (1 + this.biddingRules.finalAmountFormulaIncrease / 100);
+    const maxBid =
+      formulaAmount * (1 + this.biddingRules.finalAmountFormulaIncrease / 100);
 
     return convertArgonToMicrogons(maxBid);
   }

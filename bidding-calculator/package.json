@@ -1,0 +1,11 @@
+{
+  "name": "@argonprotocol/bidding-calculator",
+  "private": true,
+  "version": "0.0.1",
+  "description": "An api for integration with commander",
+  "type": "module",
+  "main": "src/index.ts",
+  "dependencies": {
+    "@argonprotocol/mainchain": "^1.1.0"
+  }
+}

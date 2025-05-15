@@ -4,10 +4,11 @@ use crate::ssh::SSH;
 use anyhow::Result;
 use lazy_static::lazy_static;
 use log::{error, info};
+use semver::Version;
+use std::env;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use tauri::path::BaseDirectory;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 pub mod stats;
 
@@ -29,6 +30,7 @@ impl Bidder {
         let ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
 
         Self::upload_files(&app, &ssh, wallet_json, session_mnemonic).await?;
+        Self::update_bot_if_needed(&app, &ssh).await?;
         Self::start_docker(&ssh).await?;
 
         let mut server_connection = ServerConnection::load().unwrap();
@@ -54,21 +56,63 @@ impl Bidder {
         Ok(())
     }
 
-    pub fn get_bidding_calculator_path(app: &AppHandle) -> Result<PathBuf> {
-        let local_base_path = app
-            .path()
-            .resolve("../src/lib/bidding-calculator", BaseDirectory::Resource)?;
-        Ok(local_base_path)
+    pub async fn update_bot_if_needed(app: &AppHandle, ssh: &SSH) -> Result<()> {
+        if Self::needs_new_bot_version(ssh, app).await? {
+            ssh.upload_directory(app, "bot".into()).await?;
+            ssh.upload_directory(app, "bot/src".into()).await?;
+            Self::start_docker(ssh).await?;
+        }
+        Ok(())
     }
 
-    pub fn get_calculator_files(path: &PathBuf) -> Result<Vec<String>> {
-        let dir = std::fs::read_dir(&path)?;
-        let files = dir
-            .filter_map(|entry| entry.ok())
-            .filter(|entry| entry.path().is_file())
-            .map(|entry| entry.file_name().to_string_lossy().into_owned())
-            .collect::<Vec<_>>();
-        Ok(files)
+    async fn needs_new_bot_version(ssh: &SSH, app: &AppHandle) -> Result<bool> {
+        let embedded_path = Config::get_embedded_path(&app, &PathBuf::from("bot"))?;
+        let package_json = std::fs::read_to_string(&embedded_path.join("package.json"))?;
+        let remote_version = match ssh
+            .run_command("cat commander-config/bot/package.json")
+            .await
+        {
+            Ok((output, _)) => output,
+            Err(e) => {
+                error!("Error fetching remote version: {}", e);
+                return Ok(true);
+            }
+        };
+
+        Self::is_package_json_newer(package_json, remote_version)
+    }
+
+    pub fn get_bidding_calculator_path(app: &AppHandle) -> Result<PathBuf> {
+        crate::Config::get_embedded_path(app,  &PathBuf::from("bidding-calculator/src"))
+    }
+
+    fn is_package_json_newer(
+        local_package_json: String,
+        remote_package_json: String,
+    ) -> Result<bool> {
+        let package_json: serde_json::Value = serde_json::from_str(&local_package_json)?;
+
+        let version = package_json
+            .get("version")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Version not found in package.json"))?;
+
+        let remote_package_json: serde_json::Value = serde_json::from_str(&remote_package_json)?;
+        let remote_version = remote_package_json
+            .get("version")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Version not found in remote package.json"))?;
+
+        let local_version = Version::parse(version)?;
+        let remote_version = Version::parse(remote_version)?;
+        if local_version > remote_version {
+            info!(
+                "Local version {} is newer than remote version {}",
+                local_version, remote_version
+            );
+            return Ok(true);
+        }
+        Ok(false)
     }
 
     async fn upload_files(
@@ -93,32 +137,23 @@ impl Bidder {
 
         ssh.run_command("mkdir -p commander-config/bidding-calculator")
             .await?;
-        let local_base_path = Self::get_bidding_calculator_path(app)?;
-        let filenames = Self::get_calculator_files(&local_base_path)?;
-        info!("Calculator files: {:?}", filenames);
 
-        for file in filenames {
-            let local_file_path = format!("{}/{}", local_base_path.display(), file);
-            let remote_file_path = format!("commander-config/bidding-calculator/{}", file);
-            let script_contents = match std::fs::read_to_string(&local_file_path) {
-                Ok(contents) => contents,
-                Err(e) => {
-                    return Err(e.into());
-                }
-            };
-
-            ssh.upload_file(&script_contents, remote_file_path.as_str())
-                .await?;
-        }
+        ssh.upload_directory(app, "bidding-calculator/src".into())
+            .await?;
 
         Ok(())
     }
 
     pub async fn start_docker(ssh: &SSH) -> Result<()> {
-        ssh.run_command("cd commander-deploy && docker compose down bot")
-            .await?;
-        ssh.run_command("cd commander-deploy && docker compose --env-file=.env.testnet up -d bot")
-            .await?;
+        let env_file = if env::var("CHAIN").unwrap_or_default() == "testnet" {
+            ".env.testnet"
+        } else {
+            ".env"
+        };
+        ssh.run_command(&format!(
+            "cd commander-deploy && docker compose --env-file={env_file} up -d bot"
+        ))
+        .await?;
         Ok(())
     }
 

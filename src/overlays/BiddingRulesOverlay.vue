@@ -5,9 +5,9 @@
       <DialogPanel class="absolute top-0 left-0 right-0 bottom-0 z-10">
         <BgOverlay @close="maybeCloseOverlay" />
         <div ref="dialogPanel" class="absolute top-[40px] left-3 right-3 bottom-3 flex flex-col overflow-hidden rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all" style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255,255,255,1)">
-          
+
           <BidBreakdownTooltip v-if="isShowingBreakdownTooltip" :data="scenarioData" />
-          
+
           <div v-if="isLoaded" class="flex flex-col h-full w-full">
             <h2 class="relative text-3xl font-bold text-center border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 cursor-pointer text-[#672D73]" style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)">
               Configure Bidding Rules
@@ -15,7 +15,7 @@
                 <XMarkIcon class="w-5 h-5 text-[#B74CBA] stroke-4" />
               </div>
             </h2>
-            
+
             <div class="grow relative w-full">
               <div class="absolute h-[20px] left-0 right-0 bottom-0 z-10 bg-gradient-to-b from-transparent to-argon-menu-bg pointer-events-none"></div>
               <div class="absolute top-0 left-0 right-0 bottom-0 px-[6%] overflow-y-scroll pt-8 pb-[50px]">
@@ -61,9 +61,9 @@
                     <label class="font-bold mt-6 mb-1.5">Starting Amount</label>
                     <div class="flex flex-row items-center gap-2">
                       <InputMenu v-model="startingAmountFormulaType" :options="[
-                        { name: 'Previous Day\'s Lowest Bid', value: 'PreviousLowestBid' }, 
-                        { name: 'Minimum Breakeven', value: 'MinimumBreakeven' }, 
-                        { name: 'Optimistic Breakeven', value: 'OptimisticBreakeven' }, 
+                        { name: 'Previous Day\'s Lowest Bid', value: 'PreviousLowestBid' },
+                        { name: 'Minimum Breakeven', value: 'MinimumBreakeven' },
+                        { name: 'Optimistic Breakeven', value: 'OptimisticBreakeven' },
                         { name: 'Custom Amount', value: 'Custom' }
                       ]" />
                       <template v-if="startingAmountFormulaType !== 'Custom'">
@@ -72,7 +72,7 @@
                         +
                         <InputNumber v-model="startingAmountFormulaIncrease" :min="-100" :dragBy="0.01" format="percent" />
                       </template>
-                      = 
+                      =
                       <InputNumber v-model="startingAmount" :min="0" format="argons" :disabled="startingAmountFormulaType !== 'Custom'" :class="[startingAmountFormulaType === 'Custom' ? 'min-w-60' : '']" />
                     </div>
                   </div>
@@ -81,7 +81,7 @@
                     <div class="flex flex-col bg-yellow-50/30 border border-yellow-800/20 rounded-md shadow-md p-4 pt-5 mt-[3px] text-center ml-5">
                       <div class="font-bold text-[22px] py-1">If You Buy @ Starting Bid</div>
                       <div class="font-light text-sm leading-6">This box calculates your APR (Annual Percentage Rate) on a bid of {{currencySymbol}}{{ argonTo(startingAmount) < 10 ? argonTo(startingAmount).toFixed(2) : argonTo(startingAmount).toFixed(0) }}.</div>
-                      
+
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
                       <div class="relative flex flex-col pt-6 pb-5 hover:bg-yellow-700/5 cursor-pointer group" @mousemove="showBreakdownTooltip(startingOptimisticCalculator)" @mouseleave="hideBreakdownTooltip()">
                         <BidBreakdownTooltipArrow />
@@ -108,7 +108,7 @@
                     <label class="font-bold mt-6 mb-1.5">Delay Before Submitting Next Bid</label>
                     <!-- <p class="opacity-80 font-light">By default your bot tries to reup your losing bids in the next block (next minute), however, you can increase this delay.</p> -->
                     <InputNumber v-model="rebiddingDelay" :min="1" class="w-8/12" />
-                    
+
                     <label class="font-bold mt-6 mb-1.5">Increment By</label>
                     <!-- <p class="opacity-80 font-light">The amount you want to increment your losing bids in order to get back in the game.</p> -->
                     <InputNumber v-model="incrementAmount" :min="0.01" :dragBy="1" :dragByMin="0.01" format="argons" class="w-8/12" />
@@ -136,13 +136,13 @@
                   <div class="flex flex-col w-8/12">
                     <header>Final Ceiling</header>
                     <p class="opacity-80 font-light">This section sets your bid ceiling. If the auction goes above this price, your bot will stop participating. We recommend setting this to the highest price you're willing to pay.</p>
-                    
+
                     <label class="font-bold mt-6 mb-1.5">Your Final Bid Price</label>
                     <div class="flex flex-row items-center gap-2">
                       <InputMenu v-model="finalAmountFormulaType" :options="[
-                        { name: 'Previous Day\'s Winning Bid', value: 'PreviousHighestBid' }, 
-                        { name: 'Minimum Breakeven', value: 'MinimumBreakeven' }, 
-                        { name: 'Optimistic Breakeven', value: 'OptimisticBreakeven' }, 
+                        { name: 'Previous Day\'s Winning Bid', value: 'PreviousHighestBid' },
+                        { name: 'Minimum Breakeven', value: 'MinimumBreakeven' },
+                        { name: 'Optimistic Breakeven', value: 'OptimisticBreakeven' },
                         { name: 'Custom Amount', value: 'Custom' }
                       ]" />
                       <template v-if="finalAmountFormulaType !== 'Custom'">
@@ -151,7 +151,7 @@
                         +
                         <InputNumber v-model="finalAmountFormulaIncrease" :min="-100" :dragBy="0.01" format="percent" />
                       </template>
-                      = 
+                      =
                       <InputNumber v-model="finalAmount" :min="0" format="argons" :disabled="finalAmountFormulaType !== 'Custom'" :class="[finalAmountFormulaType === 'Custom' ? 'min-w-60' : '']" />
                     </div>
                   </div>
@@ -183,7 +183,7 @@
                   <div class="flex flex-col w-8/12">
                     <header>Throttling Strategies</header>
                     <p class="opacity-80 font-light">
-                      By default, your bidding bot will try to win as may seats as it can, and sometimes this means you'll win all your seats on a single day. Unless this is your strategy, you'll probably want to 
+                      By default, your bidding bot will try to win as may seats as it can, and sometimes this means you'll win all your seats on a single day. Unless this is your strategy, you'll probably want to
                       set one or more throttles to ensure you win seats across multiple slots.
                     </p>
 
@@ -243,7 +243,7 @@
                       </div>
                       <div class="font-bold text-2xl pt-3">Recommendation</div>
                       <p class="font-light text-md pt-2 text-justify">
-                        We suggest only using a single throttle, and we believe distributing seat bids as evenly as possible across all slots is the most important. By spreading your bids, you'll have a better chance of capturing demand spikes that drive 
+                        We suggest only using a single throttle, and we believe distributing seat bids as evenly as possible across all slots is the most important. By spreading your bids, you'll have a better chance of capturing demand spikes that drive
                         lucerative minting opportunities.
                       </p>
                       <button @click="applyRecommendedThrottles" :class="appliedRecommendedThrottles ? 'pointer-events-none opacity-40' : ''" class="border border-yellow-700 text-yellow-800 hover:bg-yellow-700 hover:text-white py-1 mt-5 rounded-md cursor-pointer">
@@ -258,7 +258,7 @@
                   <div class="flex flex-col w-8/12">
                     <header>Bot Longevity</header>
                     <p class="opacity-80 font-light">You choose how long you want your bidding bot to work. We recommend setting your bot to Continuous. If you select otherwise, the bot will stop bidding and turn off once its time limit has been reached.</p>
-                    
+
                     <ul class="flex flex-col gap-y-2 mt-4">
 
                       <li class="flex flex-row w-full font-mono text-md items-center h-[32px]">
@@ -302,7 +302,7 @@
                       <div v-if="disableBot === 'AfterFirstSeat'" class="font-light text-sm leading-6">This box calculates your expected range<br /> of returns based on shutting down after<br /> winning a single seat.</div>
                       <div v-if="disableBot === 'AfterFirstSlot'" class="font-light text-sm leading-6">This box calculates your expected range<br /> of returns based on shutting down after<br /> winning a single slot.</div>
                       <div v-else-if="disableBot === 'Never'" class="font-light text-sm leading-6">This box calculates your expected range<br /> of returns based on a full year of mining.</div>
-                      
+
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
                       <div v-if="disableBot === 'Now'" class="text-sm uppercase px-10 py-10 opacity-50">Use the settings on the left to enable the bot so we can calculate your returns.</div>
                       <div v-else>
@@ -347,12 +347,12 @@
 
               </div>
             </div>
-            
+
             <div class="flex flex-row justify-end px-14 border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
               <div class="grow font-bold text-lg text-slate-900/70">
-                Tokens Needed: 
-                <template v-if="requiredArgons !== desiredArgons">{{ addCommas(requiredArgons) }} - </template>{{ addCommas(desiredArgons) }} Argon{{ desiredArgons === 1 ? '' : 's' }} 
-                + 
+                Tokens Needed:
+                <template v-if="requiredArgons !== desiredArgons">{{ addCommas(requiredArgons) }} - </template>{{ addCommas(desiredArgons) }} Argon{{ desiredArgons === 1 ? '' : 's' }}
+                +
                 <template v-if="requiredArgonots !== desiredArgonots">{{ addCommas(requiredArgonots) }} - </template>{{ addCommas(desiredArgonots) }} Argonot{{ desiredArgonots === 1 ? '' : 's' }}
               </div>
               <div class="flex flex-row space-x-4">
@@ -388,12 +388,11 @@ import { XMarkIcon, LightBulbIcon } from '@heroicons/vue/24/outline';
 import RadioButton from '../components/RadioButton.vue';
 import InputNumber from '../components/InputNumber.vue';
 import InputMenu from '../components/InputMenu.vue';
-import BiddingCalculator, { type IBiddingRules } from '../lib/bidding-calculator';
+import BiddingCalculator, { BiddingCalculatorData, type IBiddingRules } from '@argonprotocol/bidding-calculator';
 import InfoTip from '../components/InfoTip.vue';
 import BidBreakdownTooltip from './BidBreakdownTooltip.vue';
 import BidBreakdownTooltipArrow from './BidBreakdownTooltipArrow.vue';
-import BiddingCalculatorData from '../lib/bidding-calculator/BiddingCalculatorData';
-import { invoke } from '@tauri-apps/api/core';
+import { getMainchain } from '../stores/mainchain.ts';
 
 const configStore = useConfigStore();
 
@@ -415,7 +414,7 @@ const requiredArgonots = Vue.ref(1);
 const desiredArgons = Vue.ref(1);
 const desiredArgonots = Vue.ref(1);
 
-const calculatorData = new BiddingCalculatorData();
+const calculatorData = new BiddingCalculatorData(getMainchain());
 const startingMinimumCalculator = new BiddingCalculator('Minimum', calculatorData);
 const startingOptimisticCalculator = new BiddingCalculator('Optimistic', calculatorData);
 const finalMinimumCalculator = new BiddingCalculator('Minimum', calculatorData);
@@ -567,7 +566,7 @@ function updateFinalAmount() {
   if (finalAmountFormulaType.value !== 'Custom') {
     finalAmount.value = finalAmountFormulaPrice.value * (1 + finalAmountFormulaIncrease.value / 100);
   }
-      
+
   updateFinalCalculators();
 }
 
@@ -579,7 +578,7 @@ function updateFinalCalculators() {
   finalOptimisticCalculator.setBid(finalAmount.value);
 
   finalOptimisticAPR.value = finalOptimisticCalculator.APR;
-  finalOptimisticTDPR.value = finalOptimisticCalculator.TDPR;  
+  finalOptimisticTDPR.value = finalOptimisticCalculator.TDPR;
   finalMinimumAPR.value = finalMinimumCalculator.APR;
   finalMinimumAPY.value = finalMinimumCalculator.APY;
   finalMinimumTDPR.value = finalMinimumCalculator.TDPR;
@@ -689,7 +688,7 @@ async function saveRules() {
 function maybeCloseOverlay() {
   const secondsSinceOpened = dayjs().diff(openedAt, 'seconds');
   if (secondsSinceOpened < 2) {
-    closeOverlay();   
+    closeOverlay();
   }
 };
 
@@ -717,7 +716,7 @@ function showBreakdownTooltip(calculator: BiddingCalculator) {
     APR: calculator.APR,
     APY: calculator.APY,
   };
-} 
+}
 
 function hideBreakdownTooltip() {
   isShowingBreakdownTooltip.value = false;

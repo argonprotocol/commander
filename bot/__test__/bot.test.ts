@@ -11,7 +11,7 @@ import { afterAll, afterEach, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import Path from 'node:path';
 import Bot from '../Bot.ts';
-import * as BiddingCalculator from '../bidding-calculator/index.ts';
+import * as BiddingCalculator from '@argonprotocol/bidding-calculator';
 
 afterEach(teardown);
 afterAll(teardown);

@@ -97,15 +97,14 @@
 import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import mainchain from '../../lib/bidding-calculator/Mainchain';
-import IBiddingRules from '../../lib/bidding-calculator/IBiddingRules';
+import {  IBiddingRules, BiddingParamsHelper } from '@argonprotocol/bidding-calculator';
 import { useConfigStore } from '../../stores/config';
-import { Helper as BiddingParamsHelper } from '../../lib/bidding-calculator/createBidderParams';
 import { addCommas } from '../../lib/Utils';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { useBlockchainStore, type IActiveBid } from '../../stores/blockchain';
 import CountdownClock from '../../components/CountdownClock.vue';
 import ConfettiIcon from '../../assets/confetti.svg';
+import { getMainchain } from '../../stores/mainchain.ts';
 
 dayjs.extend(utc);
 
@@ -176,6 +175,7 @@ Vue.onMounted(async () => {
   });
 
   if (!startOfAuctionClosing || !startOfNextCohort) {
+    const mainchain = getMainchain();
     const tickAtStartOfAuctionClosing = await mainchain.getTickAtStartOfAuctionClosing();
     const tickAtStartOfNextCohort = await mainchain.getTickAtStartOfNextCohort();
     startOfAuctionClosing.value = dayjs.utc(Number(tickAtStartOfAuctionClosing) * 60 * 1000);

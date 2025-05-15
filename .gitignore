@@ -31,3 +31,4 @@ ssh_key2.pem
 bot/alice.json
 bot/caleb.json
 bot/.env
+tsconfig.*.tsbuildinfo
