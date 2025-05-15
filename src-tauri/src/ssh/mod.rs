@@ -177,7 +177,11 @@ impl SSH {
             }
         }
         let _ = channel.close().await;
-        Ok((output, code.expect("program did not exit cleanly")))
+        let exit_code = code.ok_or_else(|| {
+            anyhow::anyhow!("SSH command exited without status — likely failed early (e.g. bad command or missing file)")
+        })?;
+
+        Ok((output, exit_code))
     }
 
     pub async fn upload_directory(

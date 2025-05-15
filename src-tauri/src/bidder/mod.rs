@@ -58,6 +58,8 @@ impl Bidder {
 
     pub async fn update_bot_if_needed(app: &AppHandle, ssh: &SSH) -> Result<()> {
         if Self::needs_new_bot_version(ssh, app).await? {
+            ssh.run_command("mkdir -p commander-config/bot")
+                .await?;
             ssh.upload_directory(app, "bot".into()).await?;
             ssh.upload_directory(app, "bot/src".into()).await?;
             Self::start_docker(ssh).await?;
@@ -66,24 +68,30 @@ impl Bidder {
     }
 
     async fn needs_new_bot_version(ssh: &SSH, app: &AppHandle) -> Result<bool> {
-        let embedded_path = Config::get_embedded_path(&app, &PathBuf::from("bot"))?;
-        let package_json = std::fs::read_to_string(&embedded_path.join("package.json"))?;
         let remote_version = match ssh
             .run_command("cat commander-config/bot/package.json")
             .await
         {
-            Ok((output, _)) => output,
+            Ok((output, code)) => {
+                if code != 0 {
+                    error!("Error fetching remote version: {}", code);
+                    return Ok(true);
+                }
+                output
+            },
             Err(e) => {
                 error!("Error fetching remote version: {}", e);
                 return Ok(true);
             }
         };
 
+        let embedded_path = Config::get_embedded_path(&app, &PathBuf::from("bot"))?;
+        let package_json = std::fs::read_to_string(&embedded_path.join("package.json"))?;
         Self::is_package_json_newer(package_json, remote_version)
     }
 
     pub fn get_bidding_calculator_path(app: &AppHandle) -> Result<PathBuf> {
-        crate::Config::get_embedded_path(app,  &PathBuf::from("bidding-calculator/src"))
+        crate::Config::get_embedded_path(app, &PathBuf::from("bidding-calculator/src"))
     }
 
     fn is_package_json_newer(
