@@ -392,7 +392,7 @@ import BiddingCalculator, { BiddingCalculatorData, type IBiddingRules } from '@a
 import InfoTip from '../components/InfoTip.vue';
 import BidBreakdownTooltip from './BidBreakdownTooltip.vue';
 import BidBreakdownTooltipArrow from './BidBreakdownTooltipArrow.vue';
-import { getMainchain } from '../stores/mainchain.ts';
+import { getMainchain } from '../lib/mainchain.ts';
 
 const configStore = useConfigStore();
 

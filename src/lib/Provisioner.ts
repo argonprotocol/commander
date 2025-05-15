@@ -101,9 +101,9 @@ export default class Provisioner {
       progress: 0,
       status: 'pending',
       labels: [
-        `Install Argon Miner v1.0.16 and Sync Argon Block Data`,
-        `Installing Argon Miner v1.0.16 and Syncing Argon Block Data`,
-        `Installed Argon Miner v1.0.16 and Synced Argon Block Data`,
+        `Install Argon Miner v1.1.0 and Sync Argon Block Data`,
+        `Installing Argon Miner v1.1.0 and Syncing Argon Block Data`,
+        `Installed Argon Miner v1.1.0 and Synced Argon Block Data`,
       ],
     },
     {

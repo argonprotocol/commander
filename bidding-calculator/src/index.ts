@@ -5,7 +5,7 @@ import createBidderParams, {
 import type IBiddingRules from './IBiddingRules.js';
 import { type IBidderParams } from './IBidderParams.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
-import { Mainchain, MainchainClient } from './Mainchain.js';
+import { Mainchain, type MainchainClient } from './Mainchain.js';
 
 export default BiddingCalculator;
 export {

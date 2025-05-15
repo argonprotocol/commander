@@ -7,7 +7,7 @@ import Provisioner, { IStep } from '../lib/Provisioner';
 import emitter from '../emitters/basic';
 import { listen } from '@tauri-apps/api/event';
 import { message } from '@tauri-apps/plugin-dialog';
-import { getMainchain, getMainchainClient } from './mainchain.ts';
+import { getMainchain, getMainchainClient } from '../lib/mainchain.ts';
 
 export interface ICurrencyRecord {
   id: ICurrency;

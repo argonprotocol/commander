@@ -2,7 +2,7 @@ import * as Vue from 'vue';
 import { defineStore } from 'pinia';
 import { type MainchainClient } from '@argonprotocol/bidding-calculator';
 import { type UnsubscribePromise } from '@polkadot/api-base/types/base';
-import { getMainchain, getMainchainClient } from './mainchain.ts';
+import { getMainchain, getMainchainClient } from '../lib/mainchain.ts';
 
 export type IActiveBid = {
   cohortId: number;
