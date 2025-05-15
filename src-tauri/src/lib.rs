@@ -318,6 +318,30 @@ pub fn run() {
         // ))
         .with_colors(ColoredLevelConfig::default());
 
+    // testnet is default if debug or specified
+    let mut chain = if cfg!(debug_assertions) || env::args().any(|arg| arg == "--testnet") {
+        "testnet"
+    } else {
+        "mainnet"
+    }
+    .to_string();
+    if let Some(env_chain) = env::var("CHAIN").ok() {
+        chain = env_chain;
+    }
+    // allow for debug mode to hit mainnet
+    if env::args().any(|arg| arg == "--mainnet") {
+        chain = "mainnet".to_string();
+    }
+    let is_testnet = &chain == "testnet";
+    env::set_var("CHAIN", chain);
+    if !env::var("MAINCHAIN_URL").is_ok() {
+        if is_testnet {
+            env::set_var("MAINCHAIN_URL", "wss://rpc.testnet.argonprotocol.org");
+        } else {
+            env::set_var("MAINCHAIN_URL", "wss://rpc.argon.network");
+        }
+    }
+
     let rust_log =
         env::var("RUST_LOG").unwrap_or("debug, tauri=info, hyper=info, russh=info".into());
     for part in rust_log.split(',') {
