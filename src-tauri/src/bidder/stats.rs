@@ -1,4 +1,4 @@
-use crate::config::ServerConnection;
+use crate::config::{ConfigFile, ServerConnection};
 use crate::db::{
     ArgonActivities, BitcoinActivities, BotActivities, CohortAccounts, CohortFrames, Cohorts,
     Frames,

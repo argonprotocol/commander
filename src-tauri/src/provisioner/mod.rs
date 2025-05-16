@@ -1,4 +1,4 @@
-use crate::config::{ ServerConnection, ServerStatus, ServerStatusErrorType};
+use crate::config::{ConfigFile, ServerConnection, ServerStatus, ServerStatusErrorType};
 use crate::ssh::{SSHConfig, SSH};
 use anyhow::Result;
 use lazy_static::lazy_static;

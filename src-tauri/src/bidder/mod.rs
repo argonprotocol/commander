@@ -1,7 +1,7 @@
 use crate::bidder::stats::BidderStats;
-use crate::config::{Config, ServerConnection};
+use crate::config::{BiddingRules, Config, ConfigFile, ServerConnection};
 use crate::ssh::{SSHConfig, SSH};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
 use log::{error, info};
 use semver::Version;
@@ -117,7 +117,7 @@ impl Bidder {
         wallet_json: String,
         session_mnemonic: String,
     ) -> Result<()> {
-        let bidding_rules = Config::load_from_file("biddingRules.json").unwrap();
+        let bidding_rules = BiddingRules::load_raw()?.ok_or(anyhow!("Bidding rules not found"))?;
         let security_env = format!(
             "SESSION_KEYS_MNEMONIC=\"{}\"\nKEYPAIR_PASSPHRASE=",
             session_mnemonic
