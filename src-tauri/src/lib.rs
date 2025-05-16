@@ -1,3 +1,4 @@
+use crate::config::ConfigFile;
 use crate::db::{
     ArgonActivities, ArgonActivityRecord, BitcoinActivities, BitcoinActivityRecord, BotActivities,
     BotActivityRecord, DB,
@@ -141,7 +142,10 @@ async fn remove_server() -> Result<(), String> {
     config.server_connection.is_provisioned = false;
     config.server_connection.save().map_err(|e| e.to_string())?;
 
-    config.server_status.remove_file()?;
+    config
+        .server_status
+        .remove_file()
+        .map_err(|e| e.to_string())?;
     config
         .server_progress
         .remove_file()

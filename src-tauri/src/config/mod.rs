@@ -1,8 +1,7 @@
-use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Manager};
 use tauri::path::BaseDirectory;
+use tauri::{AppHandle, Manager};
 
 pub mod base;
 pub mod bidding_rules;
@@ -29,14 +28,14 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn get_embedded_path(app: &AppHandle, path: &PathBuf) -> anyhow::Result<PathBuf> {
+    pub fn get_embedded_path(app: &AppHandle, path: impl AsRef<Path>) -> anyhow::Result<PathBuf> {
         let local_base_path = app
             .path()
             .resolve(PathBuf::from("..").join(path), BaseDirectory::Resource)?;
         Ok(local_base_path)
     }
 
-    pub fn load() -> Result<Self, Box<dyn Error>> {
+    pub fn load() -> anyhow::Result<Self> {
         let base = Base::load()?;
         let bidding_rules = BiddingRules::load()?;
         let server_connection = ServerConnection::load()?;
@@ -53,59 +52,58 @@ impl Config {
             mnemonics,
         })
     }
+    // Get the path where the config files should be located.
+    fn get_config_dir() -> PathBuf {
+        dirs::home_dir().unwrap().join(".config/argon-commander")
+    }
+}
 
-    pub fn save_to_file(file_name: &str, data: String) -> Result<(), Box<dyn Error>> {
-        let file_path = Self::get_full_path(file_name);
+pub trait ConfigFile<T>
+where
+    T: Default + Clone + serde::Serialize + serde::de::DeserializeOwned,
+    Self: Clone + serde::Serialize + serde::de::DeserializeOwned,
+{
+    const FILENAME: &'static str;
+
+    fn load() -> anyhow::Result<T> {
+        if let Some(contents) = Self::load_raw()? {
+            // Try to parse the JSON, return None if parsing fails
+            serde_json::from_str(&contents).map_err(|e| e.into())
+        } else {
+            Ok(T::default())
+        }
+    }
+
+    fn load_raw() -> anyhow::Result<Option<String>> {
+        let file_path = Self::get_file_path();
+        if file_path.exists() {
+            // Try to read the file, return error if it doesn't exist
+            let contents = fs::read_to_string(&file_path)?;
+            Ok(Some(contents))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn save(&self) -> anyhow::Result<()> {
+        let file_path = Self::get_file_path();
 
         // Ensure the directory exists
-        let path = Path::new(&file_path);
-        if let Some(parent) = path.parent() {
+        if let Some(parent) = file_path.parent() {
             fs::create_dir_all(parent)?;
         }
 
-        // Write the string to the file
-        fs::write(&file_path, data)?;
-
+        let json = serde_json::to_string_pretty(&self)?;
+        fs::write(&file_path, json)?;
         Ok(())
     }
 
-    pub fn save_to_json_file<T: serde::Serialize>(
-        file_name: &str,
-        data: T,
-    ) -> Result<(), Box<dyn Error>> {
-        // Serialize the data to JSON
-        let json = serde_json::to_string_pretty(&data)?;
-
-        // Delegate the actual file writing to save_raw
-        Self::save_to_file(file_name, json)
+    fn remove_file(&self) -> anyhow::Result<()> {
+        let file_path = Self::get_file_path();
+        Ok(fs::remove_file(file_path)?)
     }
 
-    pub fn load_from_file(file_name: &str) -> Result<String, Box<dyn Error>> {
-        let file_path = Self::get_full_path(file_name);
-
-        // Try to read the file, return error if it doesn't exist
-        fs::read_to_string(&file_path).map_err(|e| e.into())
-    }
-
-    pub fn load_from_json_file<T: serde::de::DeserializeOwned>(
-        file_name: &str,
-    ) -> Result<T, Box<dyn Error>> {
-        // Get the raw string content from the file
-        let json = Self::load_from_file(file_name)?;
-
-        // Try to parse the JSON, return None if parsing fails
-        serde_json::from_str(&json).map_err(|e| e.into())
-    }
-
-    pub fn get_full_path(file_name: &str) -> String {
-        let config_dir = Self::get_config_dir();
-        let file_path = Path::new(&config_dir).join(file_name);
-        file_path.to_str().unwrap().to_string()
-    }
-
-    // Get the path where the config files should be located.
-    fn get_config_dir() -> String {
-        let home_dir = dirs::home_dir().unwrap();
-        home_dir.to_str().unwrap().to_string() + "/.config/argon-commander"
+    fn get_file_path() -> PathBuf {
+        Config::get_config_dir().join(Self::FILENAME)
     }
 }
