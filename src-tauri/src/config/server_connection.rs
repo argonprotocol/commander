@@ -1,5 +1,5 @@
 use super::Config;
-use crate::ssh::SSH;
+use crate::ssh::{SSHConfig, SSH};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::path::Path;
@@ -10,6 +10,7 @@ pub struct ServerConnection {
     pub ip_address: String,
     pub ssh_public_key: String,
     pub ssh_private_key: String,
+    pub user: String,
     pub is_connected: bool,
     pub is_provisioned: bool,
     pub is_ready_for_mining: bool,
@@ -34,6 +35,15 @@ impl ServerConnection {
     pub fn save(&self) -> Result<(), Box<dyn Error>> {
         Config::save_to_json_file(Self::FILENAME, self.clone())
     }
+    
+    pub fn ssh_config(&self) -> anyhow::Result<SSHConfig> {
+        SSHConfig::new(
+            &self.ip_address,
+            22,
+            self.user.clone(),
+            self.ssh_private_key.clone(),
+        )
+    }
 }
 
 impl Default for ServerConnection {
@@ -45,6 +55,7 @@ impl Default for ServerConnection {
             ip_address: "".to_string(),
             ssh_public_key,
             ssh_private_key,
+            user: "root".to_string(),
             is_connected: false,
             is_provisioned: false,
             is_ready_for_mining: false,

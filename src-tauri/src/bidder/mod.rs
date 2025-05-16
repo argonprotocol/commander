@@ -1,6 +1,6 @@
 use crate::bidder::stats::BidderStats;
 use crate::config::{Config, ServerConnection};
-use crate::ssh::SSH;
+use crate::ssh::{SSHConfig, SSH};
 use anyhow::Result;
 use lazy_static::lazy_static;
 use log::{error, info};
@@ -20,14 +20,11 @@ pub struct Bidder;
 impl Bidder {
     pub async fn start(
         app: AppHandle,
-        ssh_private_key: String,
-        username: String,
-        host: String,
-        port: u16,
+        sshconfig: SSHConfig,
         wallet_json: String,
         session_mnemonic: String,
     ) -> Result<()> {
-        let ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
+        let ssh = SSH::connect(sshconfig).await?;
 
         Self::upload_files(&app, &ssh, wallet_json, session_mnemonic).await?;
         Self::update_bot_if_needed(&app, &ssh).await?;
@@ -42,14 +39,8 @@ impl Bidder {
         Ok(())
     }
 
-    pub async fn reconnect(
-        ssh_private_key: String,
-        username: String,
-        host: String,
-        port: u16,
-        app: AppHandle,
-    ) -> Result<()> {
-        let ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
+    pub async fn reconnect(sshconfig: SSHConfig, app: AppHandle) -> Result<()> {
+        let ssh = SSH::connect(sshconfig).await?;
 
         Self::monitor(app, ssh).await?;
 
@@ -58,10 +49,7 @@ impl Bidder {
 
     pub async fn update_bot_if_needed(app: &AppHandle, ssh: &SSH) -> Result<()> {
         if Self::needs_new_bot_version(ssh, app).await? {
-            ssh.run_command("mkdir -p commander-config/bot")
-                .await?;
-            ssh.upload_directory(app, "bot".into()).await?;
-            ssh.upload_directory(app, "bot/src".into()).await?;
+            ssh.upload_directory(app, "bot", "commander-config").await?;
             Self::start_docker(ssh).await?;
         }
         Ok(())
@@ -78,7 +66,7 @@ impl Bidder {
                     return Ok(true);
                 }
                 output
-            },
+            }
             Err(e) => {
                 error!("Error fetching remote version: {}", e);
                 return Ok(true);
@@ -146,7 +134,7 @@ impl Bidder {
         ssh.run_command("mkdir -p commander-config/bidding-calculator")
             .await?;
 
-        ssh.upload_directory(app, "bidding-calculator/src".into())
+        ssh.upload_directory(app, "bidding-calculator/src", "commander-config")
             .await?;
 
         Ok(())
