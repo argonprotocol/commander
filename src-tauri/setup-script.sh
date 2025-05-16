@@ -78,6 +78,7 @@ already_ran() {
     [ -f "$finished_filepath" ] || [ -f "$failed_filepath" ]
 }
 
+
 ########################################################################################
 if ! (already_ran "ubuntu"); then
     started "ubuntu"
@@ -95,24 +96,32 @@ if ! (already_ran "ubuntu"); then
 fi
 
 ########################################################################################
-if ! (already_ran "git"); then
-    started "git"
+if ! (already_ran "system"); then
+    started "system"
 
     echo "-----------------------------------------------------------------"
-    echo "CHECKING GIT VERSION + CLONING REPO"
+    echo "CHECKING SYSTEM"
 
-    run_command "git --version"
-    command_output=$(fetch_output 1)
-    if ! echo "$command_output" | grep "version 2.45.2" > /dev/null; then
-        failed "git" "git version is not 2.45.2: $command_output"
+    run_command "./scripts/get_shasum.sh ~/commander-deploy"
+    shasum_output=$(fetch_output | tail -n1)
+
+    if [ -z "$shasum_output" ]; then
+        failed "system" "get_shasum command failed"
+    fi
+    echo "SHASUM: $shasum_output"
+    run_command "cat SHASUMS256"
+    shasum256_output=$(fetch_output)
+
+    if [ -z "$shasum256_output" ]; then
+        failed "system" "SHASUMS256 not found"
     fi
 
-    run_command "git clone https://github.com/argonprotocol/commander-deploy"
+    if ! echo "$shasum256_output" | grep "deploy $shasum_output" > /dev/null; then
+        failed "system" "SHASUMS256 does contain: $command_output"
+    fi
 
+    finished "system" "$command_output"
     cd commander-deploy
-    run_command "git checkout added-bot"
-
-    finished "git" "$command_output"
 else
     cd commander-deploy
 fi
@@ -171,14 +180,22 @@ if ! (already_ran "bitcoinsync"); then
         failed "bitcoinsync" "no configuration file provided: not found"
     fi
 
-    # echo "RUNNING BITCOIN-DATA CONTAINER"
-    # run_command "docker compose run --remove-orphans --pull=always bitcoin-data"
-    # command_output=$(fetch_output)
-    # if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
-    #     failed "bitcoinsync" "no configuration file provided: not found"
-    # fi
-
     finished "bitcoinsync"
+fi
+
+########################################################################################
+if ! (already_ran "bitcoindata"); then
+    started "bitcoindata"
+
+    echo "-----------------------------------------------------------------"
+    echo "RUNNING BITCOIN-DATA CONTAINER"
+#    run_command "docker compose run --remove-orphans --pull=always bitcoin-data"
+#    command_output=$(fetch_output)
+#    if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
+#         failed "bitcoindata" "no configuration file provided: not found"
+#    fi
+
+    finished "bitcoindata"
 fi
 
 ########################################################################################
@@ -193,13 +210,6 @@ if ! (already_ran "argonsync"); then
     if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
         failed "argonsync" "no configuration file provided: not found"
     fi
-
-    # echo "RUNNING ARGON-DATA CONTAINER"
-    # run_command "docker compose run --remove-orphans --pull=always argon-data"
-    # command_output=$(fetch_output)
-    # if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
-    #     failed "argonsync" "no configuration file provided: not found"
-    # fi
 
     finished "argonsync"
 fi

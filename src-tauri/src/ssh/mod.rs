@@ -4,14 +4,16 @@ use async_trait::async_trait;
 use log::{error, info};
 use rand::rngs::OsRng;
 use russh::client::{AuthResult, Msg};
-use russh::*;
+use russh::keys::ssh_key::LineEnding;
 use russh::keys::*;
+use russh::*;
+use std::fmt::Display;
 use std::fs;
 use std::future::Future;
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
-use russh::keys::ssh_key::LineEnding;
 use tauri::AppHandle;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
@@ -141,7 +143,7 @@ impl SSH {
         Ok(self.client.lock().await.channel_open_session().await?)
     }
 
-    pub async fn run_command(&self, command: &str) -> Result<(String, u32)> {
+    pub async fn run_command(&self, command: impl Display) -> Result<(String, u32)> {
         let shell_command = format!("bash -c '{}'", command);
         info!("Executing shell command: {}", shell_command);
         let mut channel = self.open_channel().await?;
@@ -189,20 +191,28 @@ impl SSH {
         local_relative_path: impl AsRef<Path>,
         remote_base_dir: &str,
     ) -> Result<()> {
-        let mut stack = vec![local_relative_path.as_ref().to_path_buf()];
+        let base = local_relative_path.as_ref().to_path_buf();
+        let mut stack = vec![PathBuf::new()];
 
+        self.run_command(format!("mkdir -p {remote_base_dir}"))
+            .await?;
         while let Some(rel_path) = stack.pop() {
-            let embedded_path = Config::get_embedded_path(app, &rel_path)?;
+            let embedded_path = Config::get_embedded_path(app, &base.join(&rel_path))?;
             for entry in fs::read_dir(&embedded_path)?.flatten() {
                 let local_file_path = entry.path();
                 let child_relative = rel_path.join(entry.file_name());
+                let remote_path = PathBuf::from(remote_base_dir).join(&child_relative);
+                let remote_path = remote_path.to_string_lossy();
                 if local_file_path.is_dir() {
                     stack.push(child_relative);
+                    self.run_command(format!("mkdir -p {remote_path}")).await?;
                 } else {
-                    let remote_file_path = PathBuf::from(remote_base_dir).join(&child_relative);
                     let script_contents = fs::read_to_string(&local_file_path)?;
-                    self.upload_file(&script_contents, remote_file_path.to_str().unwrap())
-                        .await?;
+                    self.upload_file(&script_contents, &remote_path).await?;
+                    let mode = local_file_path.metadata()?.mode();
+                    if mode & 0o100 != 0 {
+                        self.run_command(format!("chmod u+x {remote_path}")).await?;
+                    }
                 }
             }
         }
@@ -211,11 +221,11 @@ impl SSH {
 
     pub async fn upload_file(&self, contents: &str, remote_path: &str) -> Result<()> {
         // First, create the script in the remote server's home directory
+        info!("Creating remote file {}", remote_path);
         let mut channel = self.open_channel().await?;
         let scp_command = format!("cat > {}", remote_path);
-        channel.exec(true, scp_command).await?;
 
-        info!("Creating remote file {}", remote_path);
+        channel.exec(true, scp_command).await?;
 
         // Write the contents of the setup script
         channel.data(contents.as_bytes()).await?;
@@ -229,11 +239,17 @@ impl SSH {
 
     pub async fn start_script(&self) -> Result<()> {
         let script_contents = include_str!("../../setup-script.sh");
+        let shasum_script = include_str!("../../../scripts/get_shasum.sh");
 
         let remote_script_path = "~/setup-script.sh";
 
         self.upload_file(&script_contents, remote_script_path)
             .await?;
+
+        self.run_command("mkdir -p scripts").await?;
+        self.upload_file(&shasum_script, "~/scripts/get_shasum.sh")
+            .await?;
+        self.run_command("chmod +x ~/scripts/get_shasum.sh").await?;
 
         // Now execute the script
         let shell_command = format!(

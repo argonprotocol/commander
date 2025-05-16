@@ -4,12 +4,14 @@
   "version": "0.1.0-rc1",
   "type": "module",
   "scripts": {
+    "preinstall": "husky install",
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
     "lint": "prettier -w bot bidding-calculator",
-    "typecheck": "vue-tsc --noEmit && yarn workspaces foreach --all run tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit && yarn workspaces foreach --all run tsc --noEmit",
+    "prepare": "husky"
   },
   "dependencies": {
     "@argonprotocol/bidding-calculator": "workspace:*",
@@ -46,6 +48,7 @@
     "@types/qrcode": "^1.5.5",
     "@vitejs/plugin-vue": "^5.2.1",
     "clsx": "^2.1.1",
+    "husky": "^9.1.7",
     "prettier": "^3.5.3",
     "svgo": "^3.3.2",
     "typescript": "~5.8.3",

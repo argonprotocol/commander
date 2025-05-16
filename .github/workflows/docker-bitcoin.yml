@@ -1,13 +1,13 @@
 ---
-name: Public bot docker image
+name: Public bitcoin docker image
 
 on:
-  release:
-    types: [published]
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build'
+        required: true
+        default: '28.0'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,7 +15,7 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: argonprotocol/commander/bot
+  IMAGE_NAME: argonprotocol/commander/bitcoin
 
 jobs:
   docker:
@@ -46,14 +46,17 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}},value=v${{ github.event.inputs.version }}
+            type=pep440,pattern={{version}},value=${{ github.event.inputs.version }}
 
       - name: Build and push image to container registry
         uses: docker/build-push-action@v5
         id: push
         with:
           platforms: linux/amd64,linux/arm64
-          context: .
-          file: bot.Dockerfile
+          context: deploy/bitcoin
+          file: Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
