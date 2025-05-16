@@ -35,7 +35,7 @@
   },
   "bundle": {
     "active": true,
-    "resources": ["../bot/", "../bidding-calculator/"],
+    "resources": ["../bot/", "../bidding-calculator/", "../deploy/"],
     "category": "DeveloperTool",
     "createUpdaterArtifacts": true,
     "targets": "all",

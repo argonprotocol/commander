@@ -2,11 +2,11 @@ use super::ConfigFile;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ServerStatusErrorType {
     Ubuntu,
-    Git,
+    System,
     Docker,
     BitcoinSync,
     ArgonSync,
@@ -24,7 +24,7 @@ impl Display for ServerStatusErrorType {
 #[serde(rename_all = "camelCase")]
 pub struct ServerStatus {
     pub ubuntu: i32,
-    pub git: i32,
+    pub system: i32,
     pub docker: i32,
     pub bitcoinsync: i32,
     pub argonsync: i32,

@@ -7,12 +7,12 @@ type StepStatus = 'pending' | 'working' | 'completing' | 'completed' | 'failed' 
 export interface IServerStatus {
   ssh: number;
   ubuntu: number;
-  git: number;
+  system: number;
   docker: number;
   bitcoinsync: number;
   argonsync: number;
   minerlaunch: number;
-  errorType: 'ssh' | 'ubuntu' | 'git' | 'docker' | 'bitcoinsync' | 'argonsync' | 'minerlaunch' | 'unknown' | '';
+  errorType: 'ssh' | 'ubuntu' | 'system' | 'docker' | 'bitcoinsync' | 'argonsync' | 'minerlaunch' | 'unknown' | '';
   errorMessage: string;
 }
 
@@ -34,7 +34,7 @@ export default class Provisioner {
   public finishedFn: (() => void) | null = null;
 
   private isRunning = false;
-  private isRunnigProgressCalculations = false;
+  private isRunningProgressCalculations = false;
 
   private startTimeOfStep: Dayjs | null = null;
   private currentStep: IStep | null = null;
@@ -67,13 +67,13 @@ export default class Provisioner {
       ],
     },
     {
-      key: 'git',
+      key: 'system',
       progress: 0,
       status: 'pending',
       labels: [
-        `Clone Argon Deployment Repository`,
-        `Cloning Argon Deployment Repository`,
-        `Cloned Argon Deployment Repository`,
+        `Install Argon Network Configuration`,
+        `Copying Argon Network Configuration`,
+        `Installed Argon Network Configuration`,
       ],
     },
     {
@@ -121,7 +121,7 @@ export default class Provisioner {
   constructor() {
     listen('serverStatus', (event: any) => {
       this.updateServerStatus(event.payload, true);
-      if (this.isRunning && !this.isRunnigProgressCalculations) {
+      if (this.isRunning && !this.isRunningProgressCalculations) {
         this.runProgressCalculations();
       }
     });
@@ -131,7 +131,7 @@ export default class Provisioner {
     return this._serverStatus || {
       ssh: 0,
       ubuntu: 0,
-      git: 0,
+      system: 0,
       docker: 0,
       bitcoinsync: 0,
       argonsync: 0,
@@ -166,7 +166,7 @@ export default class Provisioner {
       } else if (
         (step.key === 'ssh' && this.serverStatus.ubuntu > 0) ||
         (step.key === 'ubuntu' && this.serverStatus.ubuntu === 100) ||
-        (step.key === 'git' && this.serverStatus.git === 100) ||
+        (step.key === 'system' && this.serverStatus.system === 100) ||
         (step.key === 'docker' && this.serverStatus.docker === 100) ||
         (step.key === 'bitcoinsync' && this.serverStatus.bitcoinsync == 100) ||
         (step.key === 'argonsync' && this.serverStatus.argonsync === 100) ||
@@ -191,7 +191,7 @@ export default class Provisioner {
   }
 
   private async runProgressCalculations() {  
-    this.isRunnigProgressCalculations = true;
+    this.isRunningProgressCalculations = true;
 
     let currentStep = this.steps[0];
 
@@ -234,7 +234,7 @@ export default class Provisioner {
       } else if (step.key === 'ubuntu' && this.serverStatus.ubuntu >= 100) {
         stepIncrease = fastStepIncrease;
         serverStepIsComplete = true;
-      } else if (step.key === 'git' && this.serverStatus.git >= 100) {
+      } else if (step.key === 'system' && this.serverStatus.system >= 100) {
         stepIncrease = fastStepIncrease;
         serverStepIsComplete = true;
       } else if (step.key === 'docker' && this.serverStatus.docker >= 100) {
@@ -269,7 +269,7 @@ export default class Provisioner {
     await this.throttleSaveServerProgress();
     if (this.currentStep?.key === 'minerlaunch' && this.currentStep?.progress === 100) {
       this.isProvisioned.value = true;
-      this.isRunnigProgressCalculations = false;
+      this.isRunningProgressCalculations = false;
       if (this.finishedFn) {
         this.finishedFn();
       }
@@ -279,7 +279,7 @@ export default class Provisioner {
     } else if (!['hidden', 'failed'].includes(this.currentStep?.status ?? '')) {
       setTimeout(() => this.runProgressCalculations(), 10);
     } else {
-      this.isRunnigProgressCalculations = false;
+      this.isRunningProgressCalculations = false;
     }
   }
 
@@ -336,7 +336,7 @@ export default class Provisioner {
     }, true);
     this.hasError.value = false;
     this.errorType.value = '';
-    if (!this.isRunnigProgressCalculations) {
+    if (!this.isRunningProgressCalculations) {
       this.runProgressCalculations();
     }
   }

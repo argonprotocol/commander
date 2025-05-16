@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct ServerProgress {
     pub ssh: f32,
     pub ubuntu: f32,
-    pub git: f32,
+    pub system: f32,
     pub docker: f32,
     pub bitcoinsync: f32,
     pub argonsync: f32,
