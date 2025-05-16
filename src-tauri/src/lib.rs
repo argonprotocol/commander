@@ -59,17 +59,17 @@ async fn start(app: AppHandle) -> Result<AppConfig, String> {
         global_stats: None,
         cohort_stats: None,
     };
-    let ssh_private_key = config.server_connection.ssh_private_key.clone();
-    let ip_address = config.server_connection.ip_address.clone();
-    let username = String::from("root");
-    let port = 22;
+    let ssh_config = config
+        .server_connection
+        .ssh_config()
+        .map_err(|e| e.to_string())?;
 
     if config.server_connection.is_connected && !config.server_connection.is_provisioned {
-        Provisioner::reconnect(ssh_private_key, username, ip_address, port, app)
+        Provisioner::reconnect(ssh_config, app)
             .await
             .map_err(|e| e.to_string())?;
     } else if config.server_connection.is_ready_for_mining {
-        Bidder::reconnect(ssh_private_key, username, ip_address, port, app)
+        Bidder::reconnect(ssh_config, app)
             .await
             .map_err(|e| e.to_string())?;
     }
@@ -111,15 +111,16 @@ async fn connect_server(app: AppHandle, ip_address: String) -> Result<(), String
         Err(e) => return Err(format!("ConfigFailed: {}", e)),
     };
 
-    let ssh_private_key = config.server_connection.ssh_private_key.clone();
-    let username = String::from("root");
-    let port = 22;
+    config.server_connection.ip_address = ip_address;
+    let ssh_config = config
+        .server_connection
+        .ssh_config()
+        .map_err(|e| e.to_string())?;
 
-    Provisioner::start(ssh_private_key, username, ip_address.clone(), port, app)
+    Provisioner::start(ssh_config, app)
         .await
         .map_err(|e| e.to_string())?;
 
-    config.server_connection.ip_address = ip_address;
     config.server_connection.is_connected = true;
     config.server_connection.save().map_err(|e| e.to_string())?;
 
@@ -173,21 +174,14 @@ async fn retry_provisioning(app: AppHandle, step_key: String) -> Result<(), Stri
         Err(e) => return Err(format!("ConfigFailed: {}", e)),
     };
 
-    let ssh_private_key = config.server_connection.ssh_private_key.clone();
-    let ip_address = config.server_connection.ip_address.clone();
-    let username = String::from("root");
-    let port = 22;
+    let ssh_config = config
+        .server_connection
+        .ssh_config()
+        .map_err(|e| e.to_string())?;
 
-    Provisioner::retry_failure(
-        step_key,
-        ssh_private_key,
-        username,
-        ip_address.clone(),
-        port,
-        app,
-    )
-    .await
-    .map_err(|e| e.to_string())?;
+    Provisioner::retry_failure(step_key, ssh_config, app)
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -209,22 +203,11 @@ async fn update_bidding_rules(
     };
 
     if server_connection.is_ready_for_mining {
-        let ssh_private_key = server_connection.ssh_private_key.clone();
-        let ip_address = server_connection.ip_address.clone();
-        let username = String::from("root");
-        let port = 22;
+        let ssh_config = server_connection.ssh_config().map_err(|e| e.to_string())?;
 
-        Bidder::start(
-            app,
-            ssh_private_key,
-            username,
-            ip_address,
-            port,
-            wallet_json,
-            session_mnemonic,
-        )
-        .await
-        .map_err(|e| e.to_string())?;
+        Bidder::start(app, ssh_config, wallet_json, session_mnemonic)
+            .await
+            .map_err(|e| e.to_string())?;
     }
 
     Ok(())
@@ -239,14 +222,9 @@ async fn update_bot_src(app: AppHandle) -> Result<(), String> {
     };
 
     if server_connection.is_ready_for_mining {
-        let ssh_private_key = server_connection.ssh_private_key.clone();
-        let ip_address = server_connection.ip_address.clone();
-        let username = String::from("root");
-        let port = 22;
+        let ssh_config = server_connection.ssh_config().map_err(|e| e.to_string())?;
 
-        let ssh = SSH::connect(&ssh_private_key, &username, &ip_address, port)
-            .await
-            .map_err(|e| e.to_string())?;
+        let ssh = SSH::connect(ssh_config).await.map_err(|e| e.to_string())?;
         Bidder::update_bot_if_needed(&app, &ssh)
             .await
             .map_err(|e| e.to_string())?;
@@ -267,23 +245,11 @@ async fn launch_mining_bot(
         Ok(config) => config,
         Err(e) => return Err(format!("ConfigFailed: {}", e)),
     };
+    let ssh_config = server_connection.ssh_config().map_err(|e| e.to_string())?;
 
-    let ssh_private_key = server_connection.ssh_private_key.clone();
-    let ip_address = server_connection.ip_address.clone();
-    let username = String::from("root");
-    let port = 22;
-
-    Bidder::start(
-        app,
-        ssh_private_key,
-        username,
-        ip_address,
-        port,
-        wallet_json,
-        session_mnemonic,
-    )
-    .await
-    .map_err(|e| e.to_string())?;
+    Bidder::start(app, ssh_config, wallet_json, session_mnemonic)
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }

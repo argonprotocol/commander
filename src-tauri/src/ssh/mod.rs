@@ -1,16 +1,17 @@
 use crate::config::Config;
-use crate::readdir;
 use anyhow::Result;
 use async_trait::async_trait;
 use log::{error, info};
 use rand::rngs::OsRng;
-use russh::client::Msg;
+use russh::client::{AuthResult, Msg};
 use russh::*;
-use russh_keys::*;
-use ssh_key::{Algorithm, LineEnding, PrivateKey, PublicKey};
-use std::path::PathBuf;
+use russh::keys::*;
+use std::fs;
+use std::future::Future;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
+use russh::keys::ssh_key::LineEnding;
 use tauri::AppHandle;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
@@ -27,7 +28,19 @@ pub struct SSH {
 pub struct SSHConfig {
     addrs: (String, u16),
     username: String,
-    key_pair: russh_keys::key::KeyPair,
+    private_key: Arc<PrivateKey>,
+}
+
+impl SSHConfig {
+    pub fn new(host: &str, port: u16, username: String, private_key_str: String) -> Result<Self> {
+        let private_key = decode_secret_key(&private_key_str, None)?;
+        let addrs = (host.to_string(), port);
+        Ok(SSHConfig {
+            addrs,
+            username: username.to_string(),
+            private_key: Arc::new(private_key),
+        })
+    }
 }
 
 // Explicitly implement Send for SSH
@@ -71,23 +84,7 @@ impl SSH {
         }
     }
 
-    pub async fn connect(
-        private_key: &str,
-        mut username: &str,
-        host: &str,
-        port: u16,
-    ) -> Result<Self> {
-        let key_pair = decode_secret_key(private_key, None)?;
-        let addrs = (host.to_string(), port);
-        if username.is_empty() {
-            username = "root";
-        }
-        let config = SSHConfig {
-            addrs,
-            username: username.to_string(),
-            key_pair: key_pair.clone(),
-        };
-
+    pub async fn connect(config: SSHConfig) -> Result<Self> {
         let client = Self::authenticate(&config).await?;
         let ssh = SSH {
             client: Arc::new(Mutex::new(client)),
@@ -99,13 +96,6 @@ impl SSH {
     async fn authenticate(ssh_config: &SSHConfig) -> Result<client::Handle<ClientHandler>> {
         let config = client::Config {
             inactivity_timeout: Some(Duration::from_secs(5)),
-            preferred: Preferred {
-                kex: &[
-                    russh::kex::CURVE25519_PRE_RFC_8731,
-                    russh::kex::EXTENSION_SUPPORT_AS_CLIENT,
-                ],
-                ..Default::default()
-            },
             ..<_>::default()
         };
         let config = Arc::new(config);
@@ -116,13 +106,22 @@ impl SSH {
         // use publickey authentication, with or without certificate
         let auth_res = client
             .authenticate_publickey(
-                ssh_config.username.clone(),
-                Arc::new(ssh_config.key_pair.clone()),
+                &ssh_config.username,
+                PrivateKeyWithHashAlg::new(ssh_config.private_key.clone(), None),
             )
             .await?;
 
-        if !auth_res {
-            anyhow::bail!("Authentication (with publickey) failed");
+        if let AuthResult::Failure {
+            remaining_methods,
+            partial_success,
+        } = auth_res
+        {
+            anyhow::bail!(
+                "Authentication (with publickey) failed for {}: {:?} (partial success: {})",
+                ssh_config.username,
+                remaining_methods,
+                partial_success
+            );
         }
         Ok(client)
     }
@@ -187,26 +186,25 @@ impl SSH {
     pub async fn upload_directory(
         &self,
         app: &AppHandle,
-        local_path_to_copy: PathBuf,
+        local_relative_path: impl AsRef<Path>,
+        remote_base_dir: &str,
     ) -> Result<()> {
-        let embedded_path = Config::get_embedded_path(&app, &local_path_to_copy)?;
-        let filenames = readdir(&embedded_path)?;
+        let mut stack = vec![local_relative_path.as_ref().to_path_buf()];
 
-        for file in filenames {
-            let local_file_path = embedded_path.join(&file);
-            let remote_file_path = PathBuf::from("commander-config")
-                .join(&local_path_to_copy)
-                .join(file);
-
-            let script_contents = match std::fs::read_to_string(&local_file_path) {
-                Ok(contents) => contents,
-                Err(e) => {
-                    return Err(e.into());
+        while let Some(rel_path) = stack.pop() {
+            let embedded_path = Config::get_embedded_path(app, &rel_path)?;
+            for entry in fs::read_dir(&embedded_path)?.flatten() {
+                let local_file_path = entry.path();
+                let child_relative = rel_path.join(entry.file_name());
+                if local_file_path.is_dir() {
+                    stack.push(child_relative);
+                } else {
+                    let remote_file_path = PathBuf::from(remote_base_dir).join(&child_relative);
+                    let script_contents = fs::read_to_string(&local_file_path)?;
+                    self.upload_file(&script_contents, remote_file_path.to_str().unwrap())
+                        .await?;
                 }
-            };
-
-            self.upload_file(&script_contents, remote_file_path.to_str().unwrap())
-                .await?;
+            }
         }
         Ok(())
     }
@@ -470,10 +468,10 @@ unsafe impl Send for ClientHandler {}
 impl client::Handler for ClientHandler {
     type Error = russh::Error;
 
-    async fn check_server_key(
-        self,
-        _server_public_key: &russh_keys::key::PublicKey,
-    ) -> Result<(Self, bool), Self::Error> {
-        Ok((self, true))
+    fn check_server_key(
+        &mut self,
+        _server_public_key: &keys::PublicKey,
+    ) -> impl Future<Output = std::result::Result<bool, Self::Error>> + Send {
+        async { Ok(true) }
     }
 }

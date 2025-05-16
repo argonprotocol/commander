@@ -1,5 +1,5 @@
-use crate::config::{ServerConnection, ServerStatus, ServerStatusErrorType};
-use crate::ssh::SSH;
+use crate::config::{ ServerConnection, ServerStatus, ServerStatusErrorType};
+use crate::ssh::{SSHConfig, SSH};
 use anyhow::Result;
 use lazy_static::lazy_static;
 use log::{error, info, trace};
@@ -13,19 +13,12 @@ lazy_static! {
 pub struct Provisioner {}
 
 impl Provisioner {
-    pub async fn start(
-        ssh_private_key: String,
-        username: String,
-        host: String,
-        port: u16,
-        app: AppHandle,
-    ) -> Result<()> {
-        let ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
+    pub async fn start(sshconfig: SSHConfig, app: AppHandle) -> Result<()> {
+        let ssh = SSH::connect(sshconfig).await?;
 
         let script_is_running = Provisioner::is_script_running(&ssh).await?;
         if !script_is_running {
             Provisioner::start_script(&ssh).await?;
-
         }
 
         Provisioner::monitor(app, ssh).await?;
@@ -34,13 +27,10 @@ impl Provisioner {
     }
 
     pub async fn reconnect(
-        ssh_private_key: String,
-        username: String,
-        host: String,
-        port: u16,
+        sshconfig: SSHConfig,
         app: AppHandle,
     ) -> Result<()> {
-        let ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
+        let ssh = SSH::connect(sshconfig).await?;
 
         let script_is_running = Provisioner::is_script_running(&ssh).await?;
         info!("need to start script = {}", !script_is_running);
@@ -55,13 +45,10 @@ impl Provisioner {
 
     pub async fn retry_failure(
         step_key: String,
-        ssh_private_key: String,
-        username: String,
-        host: String,
-        port: u16,
+        sshconfig: SSHConfig,
         app: AppHandle,
     ) -> Result<()> {
-        let ssh = SSH::connect(&ssh_private_key, &username, &host, port).await?;
+        let ssh = SSH::connect(sshconfig).await?;
 
         let script_is_running = Provisioner::is_script_running(&ssh).await?;
         if script_is_running {
