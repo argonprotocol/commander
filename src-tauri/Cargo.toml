@@ -41,8 +41,9 @@ window-vibrancy = "0.6.0"
 rand = "0.8"
 dirs = "6.0.0"
 semver = "1.0.26"
-dotenv = "0.15"
 rusqlite = { version = "0.35.0", features = ["bundled", "bundled-sqlcipher-vendored-openssl"] }
+rusqlite_migration = { version = "2.1.0", features = ["from-directory"] }
+include_dir = "0.7"
 lazy_static = "1.4.0"
 anyhow = "1.0"
 reqwest = { version = "0.12", features = ["json"] }

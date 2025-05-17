@@ -1,35 +1,42 @@
 use anyhow::{anyhow, Result};
+use include_dir::{include_dir, Dir};
 use lazy_static::lazy_static;
 use log::info;
 use rand::RngCore;
 use rusqlite::Connection;
+use rusqlite_migration::Migrations;
 use std::fs;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use tokio::sync::OnceCell;
 
-pub mod frames;
-pub mod cohorts;
-pub mod cohort_frames;
-pub mod cohort_accounts;
 pub mod argon_activities;
 pub mod bitcoin_activities;
 pub mod bot_activities;
+pub mod cohort_accounts;
+pub mod cohort_frames;
+pub mod cohorts;
+pub mod frames;
 
-pub use frames::Frames;
-pub use cohorts::Cohorts;
-pub use cohort_frames::CohortFrames;
-pub use cohort_accounts::CohortAccounts;
 pub use argon_activities::ArgonActivities;
-pub use bitcoin_activities::BitcoinActivities;
-pub use bot_activities::BotActivities;
 pub use argon_activities::ArgonActivityRecord;
+pub use bitcoin_activities::BitcoinActivities;
 pub use bitcoin_activities::BitcoinActivityRecord;
+pub use bot_activities::BotActivities;
 pub use bot_activities::BotActivityRecord;
+pub use cohort_accounts::CohortAccounts;
+pub use cohort_frames::CohortFrames;
+pub use cohorts::Cohorts;
+pub use frames::Frames;
 
 lazy_static! {
     static ref DB_CONN: OnceCell<Arc<Mutex<Connection>>> = OnceCell::new();
 }
+
+static MIGRATIONS: LazyLock<Migrations<'static>> =
+    LazyLock::new(|| Migrations::from_directory(&MIGRATIONS_DIR).unwrap());
+
+static MIGRATIONS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/migrations");
 
 pub enum DbAuthType {
     None,
@@ -60,22 +67,9 @@ impl DB {
             DbAuthType::Keychain => Some(Self::get_key_from_keychain()?),
         };
 
-        let conn = Self::get_or_encrypt_db(&db_path, auth_key)?;
+        let mut conn = Self::get_or_encrypt_db(&db_path, auth_key)?;
 
-        // Create activity tables
-        let sql_files = [
-            include_str!("../db-sql/frames.sql"),
-            include_str!("../db-sql/cohorts.sql"),
-            include_str!("../db-sql/cohort_frames.sql"),
-            include_str!("../db-sql/cohort_accounts.sql"),
-            include_str!("../db-sql/argon_activities.sql"),
-            include_str!("../db-sql/bitcoin_activities.sql"),
-            include_str!("../db-sql/bot_activities.sql"),
-        ];
-
-        for sql_file in sql_files {
-            conn.execute(&sql_file, ())?;
-        }
+        MIGRATIONS.to_latest(&mut conn)?;
         DB_CONN.set(Arc::new(Mutex::new(conn)))?;
 
         Ok(())
