@@ -58,7 +58,7 @@ onMounted(async () => {
   if (storedVersion !== currentVersion) {
     console.log(`App updated applied ${currentVersion}`);
     localStorage.setItem('lastVersion', currentVersion);
-    void invoke('update_bot_src');
+    void invoke('update_server_code');
   }
   timeout = setInterval(() => checkForUpdates(), 60e3) as unknown as number;
 });

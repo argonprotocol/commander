@@ -16,6 +16,7 @@ impl Provisioner {
     pub async fn start(sshconfig: SSHConfig, app: AppHandle) -> Result<()> {
         let ssh = SSH::connect(sshconfig).await?;
 
+        Self::upload_sha256(&ssh).await?;
         let script_is_running = Provisioner::is_script_running(&ssh).await?;
         if !script_is_running {
             Provisioner::start_script(&ssh).await?;
@@ -26,12 +27,10 @@ impl Provisioner {
         Ok(())
     }
 
-    pub async fn reconnect(
-        sshconfig: SSHConfig,
-        app: AppHandle,
-    ) -> Result<()> {
+    pub async fn reconnect(sshconfig: SSHConfig, app: AppHandle) -> Result<()> {
         let ssh = SSH::connect(sshconfig).await?;
 
+        Self::upload_sha256(&ssh).await?;
         let script_is_running = Provisioner::is_script_running(&ssh).await?;
         info!("need to start script = {}", !script_is_running);
         if !script_is_running {
@@ -49,21 +48,50 @@ impl Provisioner {
         app: AppHandle,
     ) -> Result<()> {
         let ssh = SSH::connect(sshconfig).await?;
+        Self::upload_sha256(&ssh).await?;
 
         let script_is_running = Provisioner::is_script_running(&ssh).await?;
         if script_is_running {
             return Ok(());
         }
 
+        Self::clear_step(&ssh, step_key).await?;
+
+        Provisioner::start_script(&ssh).await?;
+        Provisioner::monitor(app, ssh).await?;
+
+        Ok(())
+    }
+
+    pub async fn upload_system_files(ssh: &SSH, app: &AppHandle) -> Result<()> {
+        ssh.upload_directory(&app, "deploy", "~/commander-deploy")
+            .await?;
+        Self::clear_step(ssh, ServerStatusErrorType::System.to_string()).await?;
+        // don't delete the data step
+        Self::clear_step(ssh, ServerStatusErrorType::BitcoinSync.to_string()).await?;
+        Self::clear_step(ssh, ServerStatusErrorType::ArgonSync.to_string()).await?;
+        Self::clear_step(ssh, ServerStatusErrorType::MinerLaunch.to_string()).await?;
+
+        Ok(())
+    }
+
+    pub async fn upload_system_files_and_monitor(ssh: SSH, app: AppHandle) -> Result<()> {
+        Self::upload_system_files(&ssh, &app).await?;
+        let script_is_running = Provisioner::is_script_running(&ssh).await?;
+        if !script_is_running {
+            Provisioner::start_script(&ssh).await?;
+            Provisioner::monitor(app, ssh).await?;
+        }
+        Ok(())
+    }
+
+    async fn clear_step(ssh: &SSH, step_key: String) -> Result<()> {
         if step_key == "all" {
             ssh.run_command("rm -rf ~/setup-logs/*").await?;
         } else {
             ssh.run_command(format!("rm -rf ~/setup-logs/{}.*", step_key).as_str())
                 .await?;
         }
-
-        Provisioner::start_script(&ssh).await?;
-        Provisioner::monitor(app, ssh).await?;
 
         Ok(())
     }
@@ -75,8 +103,31 @@ impl Provisioner {
         }
     }
 
+    async fn upload_sha256(ssh: &SSH) -> Result<()> {
+        let shasums = include_str!("../../../SHASUMS256");
+        ssh.upload_file(shasums, "~/SHASUMS256").await?;
+
+        Ok(())
+    }
+
     async fn start_script(ssh: &SSH) -> Result<()> {
         ssh.start_script().await?;
+        Ok(())
+    }
+
+    async fn emit_failed_status(
+        app: &AppHandle,
+        server_status: &mut ServerStatus,
+        error_message: &str,
+        error_type: ServerStatusErrorType,
+    ) -> Result<()> {
+        server_status.error_type = Some(error_type);
+        server_status.error_message = Some(error_message.to_string());
+        info!("EMITTING serverStatus1");
+        if let Err(e) = app.emit("serverStatus", server_status.clone()) {
+            error!("Error sending server status: {}", e);
+        }
+        server_status.save()?;
         Ok(())
     }
 
@@ -87,17 +138,18 @@ impl Provisioner {
 
         let handle = tokio::spawn(async move {
             let mut server_status = ServerStatus::load().unwrap_or_default();
+            let mut last_error = None;
             loop {
                 let filenames = match Provisioner::fetch_filenames(&ssh).await {
                     Ok(files) => files,
                     Err(e) => {
-                        server_status.error_type = Some(ServerStatusErrorType::Unknown);
-                        server_status.error_message = Some(format!("{}", e));
-                        info!("EMITTING serverStatus1");
-                        if let Err(e) = app.emit("serverStatus", server_status.clone()) {
-                            error!("Error sending server status: {}", e);
-                        }
-                        server_status.save().unwrap();
+                        let _ = Self::emit_failed_status(
+                            &app,
+                            &mut server_status,
+                            &format!("{}", e),
+                            ServerStatusErrorType::Unknown,
+                        )
+                        .await;
                         break;
                     }
                 };
@@ -110,6 +162,30 @@ impl Provisioner {
                         }
                         latest_status.save().unwrap();
                         server_status = latest_status.clone();
+
+                        let mut should_retry_upload = false;
+                        if latest_status.error_type != last_error {
+                            last_error = latest_status.error_type.clone();
+                            should_retry_upload = last_error.is_some();
+                        }
+
+                        if latest_status.system == 1
+                            || (latest_status.error_type == Some(ServerStatusErrorType::System)
+                                && should_retry_upload)
+                        {
+                            if let Err(e) = Self::upload_system_files(&ssh, &app).await {
+                                error!("Error uploading system files: {}", e);
+                                let _ = Self::emit_failed_status(
+                                    &app,
+                                    &mut server_status,
+                                    &format!("{}", e),
+                                    ServerStatusErrorType::Unknown,
+                                )
+                                .await;
+                                break;
+                            }
+                            continue;
+                        }
 
                         if Provisioner::has_error(&latest_status) {
                             break;
@@ -127,12 +203,13 @@ impl Provisioner {
                         }
                     }
                     Err(e) => {
-                        server_status.error_type = Some(ServerStatusErrorType::Unknown);
-                        server_status.error_message = Some(format!("{}", e));
-                        if let Err(e) = app.emit("serverStatus", server_status.clone()) {
-                            error!("Error sending server status: {}", e);
-                        }
-                        server_status.save().unwrap();
+                        let _ = Self::emit_failed_status(
+                            &app,
+                            &mut server_status,
+                            &format!("{}", e),
+                            ServerStatusErrorType::Unknown,
+                        )
+                        .await;
                         break;
                     }
                 }
@@ -147,7 +224,7 @@ impl Provisioner {
 
     fn is_provisioned(server_status: &ServerStatus) -> bool {
         server_status.ubuntu >= 100
-            && server_status.git >= 100
+            && server_status.system >= 100
             && server_status.docker >= 100
             && server_status.bitcoinsync >= 100
             && server_status.argonsync >= 100
@@ -192,13 +269,13 @@ impl Provisioner {
             return Ok(status);
         }
 
-        if filenames.contains(&s("git.finished")) {
-            status.git = 100;
-        } else if filenames.contains(&s("git.failed")) {
-            status.error_type = Some(ServerStatusErrorType::Git);
+        if filenames.contains(&s("system.finished")) {
+            status.system = 100;
+        } else if filenames.contains(&s("system.failed")) {
+            status.error_type = Some(ServerStatusErrorType::System);
             return Ok(status);
-        } else if filenames.contains(&s("git.started")) {
-            status.ubuntu = 1;
+        } else if filenames.contains(&s("system.started")) {
+            status.system = 1;
             return Ok(status);
         }
 
@@ -213,12 +290,22 @@ impl Provisioner {
         }
 
         if filenames.contains(&s("bitcoinsync.finished")) {
-            status.bitcoinsync = 100;
+            status.bitcoinsync += 50;
         } else if filenames.contains(&s("bitcoinsync.failed")) {
             status.error_type = Some(ServerStatusErrorType::BitcoinSync);
             return Ok(status);
         } else if filenames.contains(&s("bitcoinsync.started")) {
             status.bitcoinsync = 1;
+            return Ok(status);
+        }
+
+        // NOTE: combine bitcoinsync and bitcoin data status
+        if filenames.contains(&s("bitcoindata.finished")) {
+            status.bitcoinsync += 50;
+        } else if filenames.contains(&s("bitcoindata.failed")) {
+            status.error_type = Some(ServerStatusErrorType::BitcoinSync);
+            return Ok(status);
+        } else if filenames.contains(&s("bitcoindata.started")) {
             return Ok(status);
         }
 
