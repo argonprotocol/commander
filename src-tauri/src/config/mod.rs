@@ -53,8 +53,11 @@ impl Config {
         })
     }
     // Get the path where the config files should be located.
-    fn get_config_dir() -> PathBuf {
-        dirs::home_dir().unwrap().join(".config/argon-commander")
+    pub fn get_config_dir() -> PathBuf {
+        dirs::home_dir()
+            .unwrap()
+            .join(".config")
+            .join("argon-commander")
     }
 }
 

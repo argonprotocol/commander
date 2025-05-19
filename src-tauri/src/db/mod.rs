@@ -1,35 +1,45 @@
 use anyhow::{anyhow, Result};
+use include_dir::{include_dir, Dir};
 use lazy_static::lazy_static;
 use log::info;
 use rand::RngCore;
-use rusqlite::Connection;
+use rusqlite::{Connection, Params, Row};
+use rusqlite_migration::Migrations;
 use std::fs;
-use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::fs::File;
+use std::io::Read;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, LazyLock, Mutex};
 use tokio::sync::OnceCell;
 
-pub mod frames;
-pub mod cohorts;
-pub mod cohort_frames;
-pub mod cohort_accounts;
 pub mod argon_activities;
 pub mod bitcoin_activities;
 pub mod bot_activities;
+pub mod cohort_accounts;
+pub mod cohort_frames;
+pub mod cohorts;
+pub mod frames;
 
-pub use frames::Frames;
-pub use cohorts::Cohorts;
-pub use cohort_frames::CohortFrames;
-pub use cohort_accounts::CohortAccounts;
+use crate::config::Config;
 pub use argon_activities::ArgonActivities;
-pub use bitcoin_activities::BitcoinActivities;
-pub use bot_activities::BotActivities;
 pub use argon_activities::ArgonActivityRecord;
+pub use bitcoin_activities::BitcoinActivities;
 pub use bitcoin_activities::BitcoinActivityRecord;
+pub use bot_activities::BotActivities;
 pub use bot_activities::BotActivityRecord;
+pub use cohort_accounts::CohortAccounts;
+pub use cohort_frames::CohortFrames;
+pub use cohorts::Cohorts;
+pub use frames::Frames;
 
 lazy_static! {
     static ref DB_CONN: OnceCell<Arc<Mutex<Connection>>> = OnceCell::new();
 }
+
+static MIGRATIONS: LazyLock<Migrations<'static>> =
+    LazyLock::new(|| Migrations::from_directory(&MIGRATIONS_DIR).unwrap());
+
+static MIGRATIONS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/migrations");
 
 pub enum DbAuthType {
     None,
@@ -37,15 +47,28 @@ pub enum DbAuthType {
     Keychain,
 }
 
+pub mod prelude {
+    pub use super::RecordFromRow;
+    pub use super::DB;
+    pub use anyhow::Result;
+    pub use macros::FromRow;
+}
+
 pub struct DB;
+
+pub trait RecordFromRow {
+    fn from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Self>
+    where
+        Self: Sized;
+}
 
 impl DB {
     pub fn init() -> Result<()> {
         let db_path = Self::get_db_path();
-        let db_dir = Path::new(&db_path).parent().unwrap();
 
         // If the parent directory does not exist, create it.
-        if !db_dir.exists() {
+        if !db_path.exists() {
+            let db_dir = db_path.parent().unwrap();
             fs::create_dir_all(db_dir)?;
         }
 
@@ -60,28 +83,56 @@ impl DB {
             DbAuthType::Keychain => Some(Self::get_key_from_keychain()?),
         };
 
-        let conn = Self::get_or_encrypt_db(&db_path, auth_key)?;
+        let mut conn = Self::get_or_encrypt_db(&db_path, auth_key)?;
 
-        // Create activity tables
-        let sql_files = [
-            include_str!("../db-sql/frames.sql"),
-            include_str!("../db-sql/cohorts.sql"),
-            include_str!("../db-sql/cohort_frames.sql"),
-            include_str!("../db-sql/cohort_accounts.sql"),
-            include_str!("../db-sql/argon_activities.sql"),
-            include_str!("../db-sql/bitcoin_activities.sql"),
-            include_str!("../db-sql/bot_activities.sql"),
-        ];
-
-        for sql_file in sql_files {
-            conn.execute(&sql_file, ())?;
-        }
+        MIGRATIONS.to_latest(&mut conn)?;
         DB_CONN.set(Arc::new(Mutex::new(conn)))?;
 
         Ok(())
     }
 
-    pub fn get_connection() -> Result<Arc<Mutex<Connection>>> {
+    pub fn execute<P: Params>(sql: &str, params: P) -> Result<usize> {
+        let lock = Self::get_connection()?;
+        let conn = lock.lock().unwrap();
+        let mut stmt = conn.prepare(sql)?;
+        let rows_affected = stmt.execute(params)?;
+        Ok(rows_affected)
+    }
+
+    pub fn query_one<T: RecordFromRow, P: Params>(sql: &str, params: P) -> Result<T> {
+        Self::query_one_map(sql, params, T::from_row)
+    }
+
+    pub fn query_one_map<T, F: FnMut(&Row<'_>) -> rusqlite::Result<T>, P: Params>(
+        sql: &str,
+        params: P,
+        from_row: F,
+    ) -> Result<T> {
+        let lock = Self::get_connection()?;
+        let conn = lock.lock().unwrap();
+        let mut stmt = conn.prepare(sql)?;
+        let row = stmt.query_row(params, from_row)?;
+        Ok(row)
+    }
+
+    pub fn query<T: RecordFromRow, P: Params>(sql: &str, params: P) -> Result<Vec<T>> {
+        Self::query_map(sql, params, T::from_row)
+    }
+
+    pub fn query_map<T, F: FnMut(&Row<'_>) -> rusqlite::Result<T>, P: Params>(
+        sql: &str,
+        params: P,
+        map_rows: F,
+    ) -> Result<Vec<T>> {
+        let lock = Self::get_connection()?;
+        let conn = lock.lock().unwrap();
+        let mut stmt = conn.prepare(sql)?;
+        let rows = stmt.query_map(params, map_rows)?;
+        let records = rows.collect::<Result<Vec<_>, _>>()?;
+        Ok(records)
+    }
+
+    fn get_connection() -> Result<Arc<Mutex<Connection>>> {
         let conn = DB_CONN.get().ok_or_else(|| anyhow!("DB not initialized"))?;
         Ok(conn.clone())
     }
@@ -102,37 +153,33 @@ impl DB {
         Ok(key)
     }
 
-    pub fn get_or_encrypt_db(db_path: &str, key: Option<String>) -> Result<Connection> {
+    pub fn get_or_encrypt_db(db_path: &PathBuf, key: Option<String>) -> Result<Connection> {
         info!("Opening database file at {}", db_path);
         let mut conn = Connection::open(&db_path)?;
         let Some(key) = key else {
             return Ok(conn);
         };
 
-        if let Ok(bytes) = fs::read(db_path) {
-            if bytes.starts_with(b"SQLite format 3") {
-                conn.close().map_err(|(_c, e)| anyhow!(e))?;
-                let encrypted_path = format!("{}.enc", db_path);
-                info!("Database needs to be encrypted");
-                let conn_encrypted = Connection::open(&encrypted_path)?;
-                conn_encrypted.pragma_update(None, "key", &key)?;
+        if Self::is_existing_db_unencrypted(db_path) {
+            conn.close().map_err(|(_c, e)| anyhow!(e))?;
+            let encrypted_path = format!("{}.enc", db_path);
+            info!("Database needs to be encrypted");
+            let conn_encrypted = Connection::open(&encrypted_path)?;
+            conn_encrypted.pragma_update(None, "key", &key)?;
 
-                conn_encrypted.execute(
-                    &format!("ATTACH DATABASE '{db_path}' AS plaintext KEY ''",),
-                    (),
-                )?;
+            conn_encrypted.execute(
+                &format!("ATTACH DATABASE '{db_path}' AS plaintext KEY ''",),
+                (),
+            )?;
 
-                conn_encrypted.query_row(
-                    "SELECT sqlcipher_export('main', 'plaintext')",
-                    (),
-                    |_| Ok(()),
-                )?;
-                conn_encrypted.execute("DETACH DATABASE plaintext", ())?;
-                conn_encrypted.close().map_err(|(_c, e)| anyhow!(e))?;
-                fs::rename(db_path, format!("{}.old", db_path))?;
-                fs::rename(encrypted_path, db_path)?;
-                conn = Connection::open(db_path)?;
-            }
+            conn_encrypted.query_row("SELECT sqlcipher_export('main', 'plaintext')", (), |_| {
+                Ok(())
+            })?;
+            conn_encrypted.execute("DETACH DATABASE plaintext", ())?;
+            conn_encrypted.close().map_err(|(_c, e)| anyhow!(e))?;
+            fs::rename(db_path, format!("{}.old", db_path))?;
+            fs::rename(encrypted_path, db_path)?;
+            conn = Connection::open(db_path)?;
         }
 
         conn.pragma_update(None, "key", key)?;
@@ -140,15 +187,19 @@ impl DB {
         Ok(conn)
     }
 
+    fn is_existing_db_unencrypted(db_path: &PathBuf) -> bool {
+        let mut header = [0u8; 16];
+        let did_read = File::open(db_path)
+            .and_then(|mut f| f.read_exact(&mut header))
+            .is_ok();
+        // if the file is not encrypted, it will start with "SQLite format 3"
+        did_read && header.starts_with(b"SQLite format 3")
+    }
+
     // Get the path where the database file should be located.
-    pub fn get_db_path() -> String {
-        let home_dir = dirs::home_dir().unwrap();
-        home_dir
-            .join(".config")
+    pub fn get_db_path() -> PathBuf {
+        Config::get_config_dir()
             .join("argon-commander")
             .join("database.sqlite")
-            .to_str()
-            .unwrap()
-            .to_string()
     }
 }
