@@ -1,7 +1,6 @@
-use super::DB;
-use anyhow::Result;
+use super::prelude::*;
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct BitcoinActivityRecord {
     pub localhost_block_number: u32,
@@ -16,38 +15,18 @@ impl BitcoinActivities {
         localhost_block_number: u32,
         mainchain_block_number: u32,
     ) -> Result<BitcoinActivityRecord> {
-        let lock = DB::get_connection()?;
-        let conn = lock.lock().unwrap();
-        let mut stmt = conn.prepare(
+        DB::query_one(
             "INSERT INTO bitcoin_activities (localhost_block_number, mainchain_block_number) 
              VALUES (?1, ?2) 
              RETURNING *",
-        )?;
-        let bitcoin_activity =
-            stmt.query_row((localhost_block_number, mainchain_block_number), |row| {
-                Ok(BitcoinActivityRecord {
-                    localhost_block_number: row.get("localhost_block_number")?,
-                    mainchain_block_number: row.get("mainchain_block_number")?,
-                    inserted_at: row.get("inserted_at")?,
-                })
-            })?;
-        Ok(bitcoin_activity)
+            (localhost_block_number, mainchain_block_number),
+        )
     }
 
     pub fn fetch_last_five_records() -> Result<Vec<BitcoinActivityRecord>> {
-        let lock = DB::get_connection()?;
-        let conn = lock.lock().unwrap();
-        let mut stmt =
-            conn.prepare("SELECT * FROM bitcoin_activities ORDER BY inserted_at DESC LIMIT 5")?;
-        let bitcoin_activity_list = stmt
-            .query_map([], |row| {
-                Ok(BitcoinActivityRecord {
-                    localhost_block_number: row.get("localhost_block_number")?,
-                    mainchain_block_number: row.get("mainchain_block_number")?,
-                    inserted_at: row.get("inserted_at")?,
-                })
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(bitcoin_activity_list)
+        DB::query(
+            "SELECT * FROM bitcoin_activities ORDER BY inserted_at DESC LIMIT 5",
+            (),
+        )
     }
 }

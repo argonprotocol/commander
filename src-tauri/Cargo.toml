@@ -5,6 +5,13 @@ description = "Desktop management app for Argon"
 authors = ["Caleb Clark", "Blake Byrnes"]
 edition = "2021"
 
+[workspace.package]
+version = "1.1.0"
+edition = "2021"
+
+[workspace]
+members = ["macros"]
+
 [workspace.metadata.tauri]
 bundle.identifier = "com.argon.commander.app"
 bundle.name = "Argon Commander"   # This is used as CFBundleName
@@ -25,6 +32,9 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
+[workspace.dependencies]
+rusqlite = { version = "0.35.0", features = ["bundled", "bundled-sqlcipher-vendored-openssl"] }
+
 [dependencies]
 tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"
@@ -41,7 +51,7 @@ window-vibrancy = "0.6.0"
 rand = "0.8"
 dirs = "6.0.0"
 semver = "1.0.26"
-rusqlite = { version = "0.35.0", features = ["bundled", "bundled-sqlcipher-vendored-openssl"] }
+rusqlite = { workspace = true }
 rusqlite_migration = { version = "2.1.0", features = ["from-directory"] }
 include_dir = "0.7"
 lazy_static = "1.4.0"
@@ -50,6 +60,7 @@ reqwest = { version = "0.12", features = ["json"] }
 tauri-plugin-log = { version = "2", features = ["colored" ] }
 keyring = {version = "3", features = ["apple-native", "windows-native"] }
 hex = "0.4.3"
+macros = { path = "macros" }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"

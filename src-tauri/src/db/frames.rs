@@ -1,7 +1,6 @@
-use super::DB;
-use anyhow::Result;
+use super::prelude::*;
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct FrameRecord {
     pub id: u32,
@@ -23,70 +22,38 @@ impl Frames {
         progress: f32,
         is_processed: bool,
     ) -> Result<FrameRecord> {
-        let lock = DB::get_connection()?;
-        let conn = lock.lock().unwrap();
-        let mut stmt = conn.prepare(
+        DB::query_one(
             "INSERT OR REPLACE INTO frames (id, tick_start, tick_end, progress, is_processed) 
              VALUES (?1, ?2, ?3, ?4, ?5) 
              RETURNING *",
-        )?;
-        let new_record = stmt.query_row((id, tick_start, tick_end, progress, is_processed), |row| {
-            Ok(FrameRecord {
-                id: row.get("id")?,
-                progress: row.get("progress")?,
-                tick_start: row.get("tick_start")?,
-                tick_end: row.get("tick_end")?,
-                is_processed: row.get("is_processed")?,
-                created_at: row.get("created_at")?,
-                updated_at: row.get("updated_at")?,
-            })
-        })?;
-
-        Ok(new_record)
+            (id, tick_start, tick_end, progress, is_processed),
+        )
     }
 
-    pub fn update(id: u32, tick_start: u32, tick_end: u32, progress: f32, is_processed: bool) -> Result<()> {
-        let lock = DB::get_connection()?;
-        let conn = lock.lock().unwrap();
-        let mut stmt = conn.prepare("UPDATE frames SET tick_start = ?, tick_end = ?, progress = ?, is_processed = ? WHERE id = ?")?;
-        stmt.execute((tick_start, tick_end, progress, is_processed, id))?;
-        
+    pub fn update(
+        id: u32,
+        tick_start: u32,
+        tick_end: u32,
+        progress: f32,
+        is_processed: bool,
+    ) -> Result<()> {
+        DB::execute("UPDATE frames SET tick_start = ?, tick_end = ?, progress = ?, is_processed = ? WHERE id = ?",
+                    (tick_start, tick_end, progress, is_processed, id))?;
+
         Ok(())
     }
 
     pub fn fetch_by_id(id: u32) -> Result<FrameRecord> {
-        let lock = DB::get_connection()?;
-        let conn = lock.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT * FROM frames WHERE id = ?")?;
-        let record = stmt.query_row((id,), |row| {
-            Ok(FrameRecord {
-                id: row.get("id")?,
-                tick_start: row.get("tick_start")?,
-                tick_end: row.get("tick_end")?,
-                progress: row.get("progress")?,
-                is_processed: row.get("is_processed")?,
-                created_at: row.get("created_at")?,
-                updated_at: row.get("updated_at")?,
-            })
-        })?;
-
-        Ok(record)
+        DB::query_one("SELECT * FROM frames WHERE id = ?", (id,))
     }
 
     pub fn fetch_record_count() -> Result<u32> {
-        let lock = DB::get_connection()?;
-        let conn = lock.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT COUNT(*) FROM frames")?;
-        let count = stmt.query_row([], |row| row.get(0))?;
-        Ok(count)
+        DB::query_one_map("SELECT COUNT(*) FROM frames", (), |row| row.get(0))
     }
 
     pub fn latest_id() -> Result<u32> {
-        let lock = DB::get_connection()?;
-        let conn = lock.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT COALESCE(MAX(id), 0) FROM frames")?;
-        let latest_id = stmt.query_row([], |row| row.get(0))?;
-        
-        Ok(latest_id)
+        DB::query_one_map("SELECT COALESCE(MAX(id), 0) FROM frames", (), |row| {
+            row.get(0)
+        })
     }
 }
