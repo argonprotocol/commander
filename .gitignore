@@ -32,3 +32,4 @@ bot/alice.json
 bot/caleb.json
 bot/.env
 tsconfig.*.tsbuildinfo
+data

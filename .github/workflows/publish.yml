@@ -55,6 +55,9 @@ jobs:
       - name: install frontend dependencies
         run: yarn install
 
+      - name: Update the shasums just in case
+        run: scripts/update_shasums.sh
+
       - name: build and publish
         uses: tauri-apps/tauri-action@v0
         env:

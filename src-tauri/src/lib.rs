@@ -11,6 +11,7 @@ use log::{info, LevelFilter};
 use provisioner::Provisioner;
 use std::env;
 use std::path::PathBuf;
+use tauri::menu::{MenuItemBuilder, SubmenuBuilder};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use window_vibrancy::*;
@@ -218,18 +219,23 @@ async fn update_bidding_rules(
 }
 
 #[tauri::command]
-async fn update_bot_src(app: AppHandle) -> Result<(), String> {
-    info!("update_bot_src");
-    let server_connection = match ServerConnection::load() {
+async fn update_server_code(app: AppHandle) -> Result<(), String> {
+    info!("update_server_code");
+    let mut server_connection = match ServerConnection::load() {
         Ok(config) => config,
         Err(e) => return Err(format!("ConfigFailed: {}", e)),
     };
 
-    if server_connection.is_ready_for_mining {
+    if server_connection.is_connected {
+        server_connection.is_provisioned = false;
+        server_connection.save().map_err(|e| e.to_string())?;
         let ssh_config = server_connection.ssh_config().map_err(|e| e.to_string())?;
 
         let ssh = SSH::connect(ssh_config).await.map_err(|e| e.to_string())?;
         Bidder::update_bot_if_needed(&app, &ssh)
+            .await
+            .map_err(|e| e.to_string())?;
+        Provisioner::upload_system_files_and_monitor(ssh, app)
             .await
             .map_err(|e| e.to_string())?;
     }
@@ -330,6 +336,29 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            if cfg!(debug_assertions) {
+                let push_latest = MenuItemBuilder::new("Push Latest")
+                    .id("push_latest")
+                    .build(app)?;
+
+                let docker_submenu = SubmenuBuilder::new(app, "Docker")
+                    .item(&push_latest)
+                    .build()?;
+                let menu = app.menu().unwrap();
+                menu.append(&docker_submenu)?;
+
+                app.on_menu_event(move |app, event| {
+                    if event.id() == "push_latest" {
+                        let app_handle = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            if let Err(e) = update_server_code(app_handle).await {
+                                log::error!("Error updating server code: {}", e);
+                            }
+                        });
+                    }
+                });
+            }
+
             let window = app.get_webview_window("main").unwrap();
 
             DB::init().map_err(|e| e.to_string())?;
@@ -362,7 +391,7 @@ pub fn run() {
             retry_provisioning,
             launch_mining_bot,
             get_mainchain_url,
-            update_bot_src,
+            update_server_code,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
