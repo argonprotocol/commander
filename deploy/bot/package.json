@@ -7,7 +7,7 @@
   },
   "workspaces": [
     "bot",
-    "bidding-calculator"
+    "calculator"
   ],
   "packageManager": "yarn@4.9.1"
 }

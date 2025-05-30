@@ -48,6 +48,8 @@ export interface ISubaccount {
 }
 
 export interface ISyncState extends ILastModifiedAt {
+  argonBlockNumbers: [number, number];
+  bitcoinBlockNumbers: [number, number];
   bidsLastModifiedAt: Date;
   earningsLastModifiedAt: Date;
   hasWonSeats: boolean;
@@ -143,6 +145,8 @@ export class CohortStorage {
     let entry = this.lruCache.get(key);
     if (!entry) {
       entry = new JsonStore<ISyncState>(Path.join(this.basedir, key), () => ({
+        argonBlockNumbers: [0, 0],
+        bitcoinBlockNumbers: [0, 0],
         bidsLastModifiedAt: new Date(),
         earningsLastModifiedAt: new Date(),
         hasWonSeats: false,

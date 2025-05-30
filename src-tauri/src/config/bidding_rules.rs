@@ -1,13 +1,13 @@
 use super::ConfigFile;
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum ArgonotPriceChangeType {
     Between,
     Exactly,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum StartingAmountFormulaType {
     PreviousLowestBid,
     MinimumBreakeven,
@@ -15,7 +15,7 @@ pub enum StartingAmountFormulaType {
     Custom,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum FinalAmountFormulaType {
     PreviousHighestBid,
     MinimumBreakeven,
@@ -23,7 +23,7 @@ pub enum FinalAmountFormulaType {
     Custom,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct BiddingRules {
     pub calculated_total_seats: i32,

@@ -2,7 +2,7 @@ use super::ConfigFile;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Security {
     pub wallet_mnemonic: String,

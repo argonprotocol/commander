@@ -1,6 +1,6 @@
 use super::prelude::*;
 
-#[derive(Debug, Clone, serde::Serialize, FromRow)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct ArgonActivityRecord {
     pub localhost_block_number: u32,
@@ -17,6 +17,13 @@ impl ArgonActivities {
              VALUES (?1, ?2)
              RETURNING *",
             (localhost_block, mainchain_block),
+        )
+    }
+
+    pub fn latest() -> Result<ArgonActivityRecord> {
+        DB::query_one(
+            "SELECT * FROM argon_activities ORDER BY inserted_at DESC LIMIT 1",
+            (),
         )
     }
 

@@ -13,7 +13,7 @@
 
           <p>
             We verified your server configurations, installed all required software, and double-checked that everything is in working order. 
-            <template v-if="configStore.serverConnection.isReadyForMining">
+            <template v-if="configStore.serverDetails.isReadyForMining">
               Click the Let's Go button to get started.
             </template>
             <template v-else>

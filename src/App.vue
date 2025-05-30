@@ -13,6 +13,7 @@
         </div>
       </div>
     </div>
+    <UpgradeOverlay v-if="requiresUpgrade" />
     <ServerConnectOverlay />
     <BiddingRulesOverlay />
     <WalletOverlay />
@@ -20,10 +21,13 @@
     <ServerConfigureOverlay />
     <SecuritySettingsOverlay />
     <ProvisioningCompleteOverlay />
+    <SyncingOverlay v-if="stats.isSyncing && !configStore.serverDetails.isInstalling" />
   </div>
 </template>
 
 <script setup lang="ts">
+import * as Vue from 'vue';
+import { storeToRefs } from 'pinia';
 import MiningPanel from './panels/MiningPanel.vue';
 import VaultingPanel from './panels/VaultingPanel.vue';
 import LiquidLockingPanel from './panels/LiquidLockingPanel.vue';
@@ -34,6 +38,8 @@ import ServerRemoveOverlay from './overlays/ServerRemoveOverlay.vue';
 import ServerConfigureOverlay from './overlays/ServerConfigureOverlay.vue';
 import SecuritySettingsOverlay from './overlays/SecuritySettingsOverlay.vue';
 import ProvisioningCompleteOverlay from './overlays/ProvisioningCompleteOverlay.vue';
+import UpgradeOverlay from './overlays/UpgradeOverlay.vue';
+import SyncingOverlay from './overlays/SyncingOverlay.vue';
 import TopBar from './components/TopBar.vue';
 import { useBasicStore } from './stores/basic';
 import { useConfigStore } from './stores/config';
@@ -45,12 +51,20 @@ import { invoke } from '@tauri-apps/api/core';
 
 const basicStore = useBasicStore();
 const configStore = useConfigStore();
+const { stats } = storeToRefs(configStore);
 
 let timeout: number | undefined;
+
+const requiresUpgrade = Vue.computed(() => {
+  return configStore.serverDetails.requiresUpgrade || 
+    (configStore.serverDetails.isInstalling && !configStore.serverDetails.isNewServer);
+});
+
 onBeforeMount(async () => {
   // need to wait for crypto to load
   await waitForLoad();
 });
+
 onMounted(async () => {
   const currentVersion = await getVersion();
   const storedVersion = localStorage.getItem('lastVersion');
@@ -58,10 +72,12 @@ onMounted(async () => {
   if (storedVersion !== currentVersion) {
     console.log(`App updated applied ${currentVersion}`);
     localStorage.setItem('lastVersion', currentVersion);
-    void invoke('update_server_code');
+    void invoke('upgrade_server');
   }
+
   timeout = setInterval(() => checkForUpdates(), 60e3) as unknown as number;
 });
+
 onBeforeUnmount(() => {
   if (timeout) {
     clearInterval(timeout);

@@ -43,4 +43,11 @@ impl CohortAccounts {
             )
         )
     }
+
+    pub fn fetch_for_cohort_id(cohort_id: u32) -> Result<Vec<CohortAccountRecord>> {
+        DB::query(
+            "SELECT * FROM cohort_accounts WHERE cohort_id = ?",
+            (cohort_id,),
+        )
+    }
 }

@@ -1,26 +1,27 @@
 #!/bin/bash
 
-localhost_block_number=$(bitcoin-cli --conf="$BITCOIN_CONFIG" getblockchaininfo | jq -r '.blocks')
-localhost_synced=true #$(bitcoin-cli --conf="$BITCOIN_CONFIG" getindexinfo | jq -r '.synced')
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-if [ "$BITCOIN_CHAIN" = "signet" ]; then
-  mainchain_block_number=$(bitcoin-cli --conf="$BITCOIN_CONFIG" getpeerinfo | jq 'map(.startingheight) | max')
-else
-  # Fetch latest block from blockchain.info
-  mainchain_block_number=$(curl -s -m 10 -H "Content-Type: application/json" "https://blockchain.info/latestblock" | jq -r '.block_index')  
-fi
-
-# Check if values were retrieved successfully
-if [[ -z "$mainchain_block_number" || -z "$localhost_block_number" ]]; then
+# Get block numbers from latestblocks.sh
+block_numbers=$("$SCRIPT_DIR/latestblocks.sh")
+if [ $? -ne 0 ]; then
   echo "Error: Could not retrieve block numbers"
   exit 1
 fi
 
-# Calculate sync percentage (capped at 100%)
+# Split the output into local and main chain block numbers
+localhost_block_number=$(echo "$block_numbers" | cut -d'-' -f1)
+mainchain_block_number=$(echo "$block_numbers" | cut -d'-' -f2)
+
+localhost_synced=true #$(bitcoin-cli --conf="$BITCOIN_CONFIG" getindexinfo | jq -r '.synced')
+
+# Calculate sync percentage (capped at 99%)
 sync_pct=$(awk -v local="$localhost_block_number" -v main="$mainchain_block_number" 'BEGIN { pct = (local / main) * 100; print (pct > 99 ? 99 : (pct < 0 ? 0 : pct)) }' | xargs printf "%.2f")
 
-if [ "$localhost_synced" = "true" ]; then
+if [ "$localhost_synced" = "true" ] && [ "$sync_pct" = "99.00" ]; then
   sync_pct=$(awk -v n="$sync_pct" 'BEGIN { printf "%.2f", n + 1 }')
 fi
 
+# Save output to file and display it
 echo "$sync_pct%"

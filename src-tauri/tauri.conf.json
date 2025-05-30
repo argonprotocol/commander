@@ -35,7 +35,7 @@
   },
   "bundle": {
     "active": true,
-    "resources": ["../bot/", "../bidding-calculator/", "../deploy/"],
+    "resources": ["../bot/", "../calculator/", "../deploy/", "../scripts/"],
     "category": "DeveloperTool",
     "createUpdaterArtifacts": true,
     "targets": "all",
@@ -49,7 +49,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ2NjE2QzAzOTJGMDQ4MzgKUldRNFNQQ1NBMnhoMW9IWDIrWDRJOVpDZnpqYjhUdGM5RW01eDdsM3phYmRtQWVleCtFaXlJOWoK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ2NjE2QzAzOTJGMDQ4MzgKUldRNFNQQ1NBMnhoMW9IWDIrWDREOVpDZnpqYjhUdGM5RW01eDdsM3phYmRtQWVleCtFaXlJOWoK",
       "endpoints": [
         "https://github.com/argonprotocol/commander/releases/latest/download/latest.json"
       ]

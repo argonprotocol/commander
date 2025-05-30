@@ -1,4 +1,3 @@
-use crate::config::Config;
 use anyhow::Result;
 use async_trait::async_trait;
 use log::{error, info};
@@ -10,7 +9,6 @@ use russh::*;
 use std::fmt::Display;
 use std::fs;
 use std::future::Future;
-use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -19,6 +17,10 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::runtime::Handle;
 use tokio::sync::{Mutex as TokioMutex, Mutex};
+use crate::utils::Utils;
+use std::collections::HashSet;
+
+pub mod singleton;
 
 #[derive(Clone)]
 pub struct SSH {
@@ -26,7 +28,7 @@ pub struct SSH {
     pub config: SSHConfig,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct SSHConfig {
     addrs: (String, u16),
     username: String,
@@ -185,48 +187,51 @@ impl SSH {
         Ok((output, exit_code))
     }
 
+
     pub async fn upload_directory(
         &self,
         app: &AppHandle,
-        local_relative_path: impl AsRef<Path>,
+        local_relative_dir: impl AsRef<Path>,
         remote_base_dir: &str,
     ) -> Result<()> {
-        let base = local_relative_path.as_ref().to_path_buf();
-        let mut stack = vec![PathBuf::new()];
+        let local_relative_path = local_relative_dir.as_ref().to_path_buf();
+        info!("Uploading directory {}", local_relative_path.to_string_lossy());
+        let files_to_upload = Utils::collect_files(app, &local_relative_path)?;
+        let mut remote_dirs_created = HashSet::new();
 
-        self.run_command(format!("mkdir -p {remote_base_dir}"))
-            .await?;
-        while let Some(rel_path) = stack.pop() {
-            let embedded_path = Config::get_embedded_path(app, &base.join(&rel_path))?;
-            for entry in fs::read_dir(&embedded_path)?.flatten() {
-                let local_file_path = entry.path();
-                let child_relative = rel_path.join(entry.file_name());
-                let remote_path = PathBuf::from(remote_base_dir).join(&child_relative);
-                let remote_path = remote_path.to_string_lossy();
-                if local_file_path.is_dir() {
-                    stack.push(child_relative);
-                    self.run_command(format!("mkdir -p {remote_path}")).await?;
-                } else {
-                    let script_contents = fs::read_to_string(&local_file_path)?;
-                    self.upload_file(&script_contents, &remote_path).await?;
-                    let mode = local_file_path.metadata()?.mode();
-                    if mode & 0o100 != 0 {
-                        self.run_command(format!("chmod u+x {remote_path}")).await?;
-                    }
+        // Upload each file
+        for file in files_to_upload {
+            let remote_file_path = PathBuf::from(remote_base_dir).join(&file.relative_path);
+            let remote_parent_dir = remote_file_path.parent().map(|p| p.to_string_lossy().to_string());
+            let remote_file_path = remote_file_path.to_string_lossy().to_string();
+
+            // Create remote parent directory if needed
+            if let Some(parent) = remote_parent_dir {
+                if remote_dirs_created.insert(parent.clone()) {
+                    info!("Creating remote directory {}", parent);
+                    self.run_command(format!("mkdir -p {}", parent)).await?;
                 }
             }
+
+            let script_contents = fs::read_to_string(&file.absolute_path)?;
+            self.upload_file(&script_contents, &remote_file_path).await?;
+
+            // Set executable bit if needed
+            if file.is_executable {
+                info!("Setting executable bit for {}", remote_file_path);
+                self.run_command(format!("chmod u+x {}", remote_file_path)).await?;
+            }
         }
+
         Ok(())
     }
 
     pub async fn upload_file(&self, contents: &str, remote_path: &str) -> Result<()> {
         // First, create the script in the remote server's home directory
-        info!("Creating remote file {}", remote_path);
+        info!("Uploading file {}", remote_path);
         let mut channel = self.open_channel().await?;
         let scp_command = format!("cat > {}", remote_path);
         channel.exec(true, scp_command).await?;
-
-        info!("Creating remote file {}", remote_path);
 
         // Write the contents of the setup script
         channel.data(contents.as_bytes()).await?;
@@ -234,33 +239,6 @@ impl SSH {
 
         // Wait for the copy to complete
         while channel.wait().await.is_some() {}
-
-        Ok(())
-    }
-
-    // Static version that doesn't need &self
-    async fn exec_and_print_output_static(
-        channel: &mut Channel<client::Msg>,
-        command: String,
-    ) -> Result<()> {
-        channel.exec(true, command).await?;
-
-        while let Some(msg) = channel.wait().await {
-            match msg {
-                russh::ChannelMsg::Data { ref data } => {
-                    info!("{}", String::from_utf8_lossy(data));
-                }
-                russh::ChannelMsg::ExtendedData { ref data, ext } => {
-                    if ext == 1 {
-                        info!("{}", String::from_utf8_lossy(data));
-                    }
-                }
-                russh::ChannelMsg::ExitStatus { exit_status } => {
-                    info!("Exit status: {}", exit_status);
-                }
-                _ => {}
-            }
-        }
 
         Ok(())
     }

@@ -1,21 +1,22 @@
 #!/bin/bash
 
 # get the parent directory of the script
-BASEDIR=$(dirname "$0")/..
+BASE_DIR=$(dirname "$0")/..
 TARGET_DIRS=(
   "deploy"
   "bot"
-  "bidding-calculator"
+  "calculator"
+  "scripts"
 );
-SCRIPTDIR=$(dirname "$0")
-
+SCRIPT_DIR=$(dirname "$0")
+OUTPUT_NAME="${1:-SHASUMS256}"
 
 SHASUMS=""
 # make an entry for each of the target directories
 for dir in "${TARGET_DIRS[@]}"; do
-  TARGET_DIR=$(cd "$BASEDIR/$dir" && pwd)
+  TARGET_DIR=$(cd "$BASE_DIR/$dir" && pwd)
   # get the sha256sum of the target directory
-  SHASUM=$($SCRIPTDIR/get_shasum.sh $TARGET_DIR)
+  SHASUM=$($SCRIPT_DIR/create_shasum.sh $TARGET_DIR)
   echo "SHASUMS256 of $dir is $SHASUM"
   # add a newline if SHASUMS is not empty
   if [ -n "$SHASUMS" ]; then
@@ -25,5 +26,5 @@ for dir in "${TARGET_DIRS[@]}"; do
 done
 
 # update the sha256sum file
-echo -e $SHASUMS > $BASEDIR/SHASUMS256
-echo "Updated SHASUMS256"
+echo -e $SHASUMS > $BASE_DIR/$OUTPUT_NAME
+echo "Updated $OUTPUT_NAME"

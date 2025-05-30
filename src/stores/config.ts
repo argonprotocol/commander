@@ -1,10 +1,8 @@
 import * as Vue from 'vue';
 import { defineStore } from 'pinia';
-import { type IBiddingRules } from '@argonprotocol/bidding-calculator';
+import { type IBiddingRules } from '@argonprotocol/commander-calculator';
 import { invoke } from '@tauri-apps/api/core';
 import { Keyring, mnemonicGenerate } from '@argonprotocol/mainchain';
-import Provisioner, { IStep } from '../lib/Provisioner';
-import emitter from '../emitters/basic';
 import { listen } from '@tauri-apps/api/event';
 import { message } from '@tauri-apps/plugin-dialog';
 import { getMainchain, getMainchainClient } from '../lib/mainchain.ts';
@@ -86,6 +84,7 @@ export type ICurrency =
   | Currency.INR;
 
 export const useConfigStore = defineStore('config', () => {
+  const version = Vue.ref('');
   const isLoaded = Vue.ref(false);
   const isDataSyncing = Vue.ref(false);
 
@@ -94,23 +93,8 @@ export const useConfigStore = defineStore('config', () => {
     progress: 0,
   });
 
-  const provisioner = new Provisioner();
-
-  provisioner.finishedFn = () => {
-    emitter.emit('openProvisioningCompleteOverlay');
-  };
-
-  const serverConnection = Vue.reactive({
-    isConnected: false,
-    isProvisioned: provisioner.isProvisioned,
-    isReadyForMining: false,
-    hasMiningSeats: false,
-    hasError: provisioner.hasError,
-    errorType: provisioner.errorType,
-    ipAddress: '',
-    sshPublicKey: '',
-    steps: provisioner.steps,
-  });
+  const serverDetails = Vue.ref<any>({});
+  const installStatus = Vue.ref<any>({});
 
   const exchangeRates = <Record<ICurrency | 'ARGNOT' | 'BTC', number>>{
     ARGN: 1,
@@ -156,37 +140,7 @@ export const useConfigStore = defineStore('config', () => {
   const biddingRules: Vue.Ref<IBiddingRules | null> = Vue.ref(null);
   const requiresPassword = Vue.ref(false);
 
-  const argonActivity = Vue.ref<IArgonActivity[]>([]);
-  const bitcoinActivity = Vue.ref<IBitcoinActivity[]>([]);
-  const botActivity = Vue.ref<IBotActivity[]>([]);
-
-  const globalStats = Vue.ref<IGlobalStats>({
-    activeCohorts: 0,
-    activeSeats: 0,
-    totalBlocksMined: 0,
-    totalArgonsBid: 0,
-    totalArgonsMinted: 0,
-    totalArgonsMined: 0,
-    totalTransactionFees: 0,
-    totalArgonotsMined: 0,
-    totalArgonsEarned: 0,
-    totalArgonsInvested: 0,
-  });
-  const cohortStats = Vue.ref<ICohortStats>({
-    frameIdAtCohortActivation: 0,
-    transactionFees: 0,
-    argonotsStaked: 0,
-    argonsBid: 0,
-    seatsWon: 0,
-    blocksMined: 0,
-    argonotsMined: 0,
-    argonsMined: 0,
-    argonsMinted: 0,
-    argonsInvested: 0,
-    argonsEarned: 0,
-    frameTickStart: 0,
-    frameTickEnd: 0,
-  });
+  const stats = Vue.ref<any>({});
 
   const displayCurrencies: Record<ICurrency, ICurrencyRecord> = {
     [Currency.ARGN]: { id: Currency.ARGN, symbol: '₳', name: 'Argon' },
@@ -195,9 +149,11 @@ export const useConfigStore = defineStore('config', () => {
     [Currency.GBP]: { id: Currency.GBP, symbol: '£', name: 'Pound' },
     [Currency.INR]: { id: Currency.INR, symbol: '₹', name: 'Rupee' },
   };
+  
   const displayCurrency = Vue.ref<ICurrencyRecord>(
     displayCurrencies[Currency.USD],
   );
+
   const currencySymbol = Vue.ref(displayCurrency.value.symbol);
 
   Vue.watch(
@@ -352,40 +308,32 @@ export const useConfigStore = defineStore('config', () => {
     const mngAccount = seedAccount.derive(`//mng`);
     const walletJson = JSON.stringify(mngAccount.toJson(''));
 
-    // await invoke('create_security', { ...security, walletJson });
-    console.log(walletJson)
+    await invoke('save_security', { ...security, walletJson });
 
     return security;
   }
 
-  async function connectServer(ipAddress: string) {
-    await invoke('connect_server', { ipAddress });
-
-    provisioner.setIpAddress(ipAddress);
-    serverConnection.isConnected = true;
-    serverConnection.ipAddress = ipAddress;
-    void provisioner.run();
+  async function addServer(ipAddress: string) {
+    await invoke('add_server', { ipAddress });
+    serverDetails.value.isConnected = true;
+    serverDetails.value.isInstalling = true;
+    serverDetails.value.isNewServer = true;
+    serverDetails.value.ipAddress = ipAddress;
   }
 
   async function removeServer() {
     await invoke('remove_server');
-    serverConnection.isConnected = false;
-    serverConnection.isProvisioned = false;
-    serverConnection.hasError = false;
-    serverConnection.ipAddress = '';
-  }
-
-  async function runRetryStep(step: IStep) {
-    const stepKey = step.key === 'ssh' ? 'all' : step.key;
-    provisioner.resetStep(step);
-    await invoke('retry_provisioning', { stepKey });
+    serverDetails.value.isConnected = false;
+    serverDetails.value.isInstalling = false;
+    serverDetails.value.hasError = false;
+    serverDetails.value.ipAddress = '';
   }
 
   async function launchMiningBot() {
     await invoke('launch_mining_bot', {});
 
     await new Promise(resolve => setTimeout(resolve, 1000));
-    serverConnection.isReadyForMining = true;
+    serverDetails.value.isReadyForMining = true;
   }
 
   async function updateBiddingRules(rules: IBiddingRules) {
@@ -404,13 +352,17 @@ export const useConfigStore = defineStore('config', () => {
 
   //////////////////////////////////////////////////////////////////////////////
 
+  async function handleUnknownFatalError() {
+    await message('An unknown server error occurred. Please restart the application.', {
+      title: 'Unknown Server Error',
+      kind: 'error',
+    });
+    await exit(1);
+  }
+
   async function load() {
     await listen('FatalServerError', async (event: any) => {
-      await message('An unknown server error occurred. Please restart the application.', {
-        title: 'Unknown Server Error',
-        kind: 'error',
-      });
-      await exit(1);
+      handleUnknownFatalError();
     });
 
     await listen('CurrentBids', (event: any) => {
@@ -419,71 +371,34 @@ export const useConfigStore = defineStore('config', () => {
       }
     });
 
-    await listen('ArgonActivity', (event: any) => {
-      argonActivity.value.unshift(event.payload);
-      argonActivity.value.splice(10);
-    });
-
-    await listen('BitcoinActivity', (event: any) => {
-      bitcoinActivity.value.unshift(event.payload);
-      bitcoinActivity.value.splice(10);
-    });
-
-    await listen('BotActivity', (event: any) => {
-      botActivity.value.unshift(event.payload);
-      botActivity.value.splice(10);
-    });
-
     await listen('DataSync', (event: any) => {
       isDataSyncing.value = event.payload.progress < 100;
       dataSync.value = event.payload;
     });
 
-    await listen('Stats', (event: any) => {
-      globalStats.value = { ...event.payload.globalStats };
-      cohortStats.value = { ...event.payload.cohortStats };
-    });
-
     const response = (await invoke('start', {})) as {
+      version: string;
       security?: { walletMnemonic: string; sessionMnemonic: string };
       biddingRules: any;
-      serverConnection: any;
-      serverStatus: any;
-      serverProgress: any;
+      serverDetails: any;
+      installStatus: {
+        server: any;
+        client: any;
+      };
       requiresPassword: boolean;
-      argonActivity: IArgonActivity[];
-      bitcoinActivity: IBitcoinActivity[];
-      botActivity: IBotActivity[];
-      globalStats: any;
-      cohortStats: any;
+      stats: any;
     };
+
+    console.log('response', response);
+    version.value = response.version;
+
     biddingRules.value = response.biddingRules;
     requiresPassword.value = response.requiresPassword;
 
-    argonActivity.value = response.argonActivity;
-    bitcoinActivity.value = response.bitcoinActivity;
-    botActivity.value = response.botActivity;
+    stats.value = response.stats;
 
-    globalStats.value = { ...response.globalStats };
-    if (response.cohortStats) {
-      cohortStats.value = { ...response.cohortStats };
-    }
-
-    serverConnection.isConnected = response.serverConnection.isConnected;
-    serverConnection.isProvisioned =
-      response.serverConnection.isProvisioned || false;
-    serverConnection.isReadyForMining =
-      response.serverConnection.isReadyForMining || false;
-    serverConnection.hasMiningSeats =
-      response.serverConnection.hasMiningSeats || false;
-    serverConnection.ipAddress = response.serverConnection.ipAddress;
-    serverConnection.sshPublicKey = response.serverConnection.sshPublicKey;
-    provisioner.setIpAddress(response.serverConnection.ipAddress);
-    provisioner.updateServerStatus(response.serverStatus);
-
-    if (serverConnection.isConnected && !serverConnection.isProvisioned) {
-      provisioner.run(response.serverProgress);
-    }
+    serverDetails.value = { ...response.serverDetails };
+    installStatus.value = { ...response.installStatus };
 
     await loadAccounts(response.security);
     try {
@@ -499,9 +414,13 @@ export const useConfigStore = defineStore('config', () => {
     isLoaded.value = true;
   }
 
-  load().catch(error => console.error(`Error loading config: ${error}`));
+  load().catch(error => {
+    console.error(`Error loading config: ${error}`);
+    handleUnknownFatalError();
+  });
 
   return {
+    version,
     isLoaded,
     isDataSyncing,
     dataSync,
@@ -516,12 +435,9 @@ export const useConfigStore = defineStore('config', () => {
     displayCurrencies,
     currencySymbol,
     biddingRules,
-    serverConnection,
-    argonActivity,
-    bitcoinActivity,
-    botActivity,
-    globalStats,
-    cohortStats,
+    serverDetails,
+    installStatus,
+    stats,
     setDisplayCurrency,
     argonTo,
     toArgon,
@@ -529,9 +445,8 @@ export const useConfigStore = defineStore('config', () => {
     argonotToArgon,
     btcTo,
     btcToArgon,
-    connectServer,
+    addServer,
     removeServer,
-    runRetryStep,
     launchMiningBot,
     updateBiddingRules,
     subscribeToMyBids,

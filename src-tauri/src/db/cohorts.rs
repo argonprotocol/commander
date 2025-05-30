@@ -50,14 +50,30 @@ impl Cohorts {
         )
     }
 
-    pub fn fetch_latest() -> Result<Option<CohortRecordWithTicks>> {
-        let record = DB::query_map(
-            "SELECT cohorts.*, frames.tick_start FROM cohorts
-            LEFT JOIN frames ON cohorts.id = frames.id
+    pub fn fetch_latest_active_id() -> Result<Option<u32>> {
+        let id = DB::query_map(
+            "SELECT id FROM cohorts
             WHERE seats_won > 0
             ORDER BY id
             DESC LIMIT 1",
             [],
+            |row| {
+                Ok(row.get("id")?)
+            },
+        )?
+        .pop();
+        Ok(id)
+    }
+
+    pub fn fetch_by_id(id: u32) -> Result<Option<CohortRecordWithTicks>> {
+        let record = DB::query_map(
+            "SELECT cohorts.*, frames.tick_start FROM cohorts
+            LEFT JOIN frames ON cohorts.id = frames.id
+            WHERE seats_won > 0
+            AND id = ?
+            ORDER BY id
+            DESC LIMIT 1",
+            [id],
             |row| {
                 Ok(CohortRecordWithTicks {
                     id: row.get("id")?,

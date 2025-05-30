@@ -96,7 +96,7 @@ import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { useConfigStore } from '../../stores/config';
-import {  IBiddingRules, BiddingParamsHelper } from '@argonprotocol/bidding-calculator';
+import {  IBiddingRules, BiddingParamsHelper } from '@argonprotocol/commander-calculator';
 import { fmtMoney } from '../../lib/Utils';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { useBlockchainStore, type IActiveBid } from '../../stores/blockchain';

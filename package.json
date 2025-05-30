@@ -9,13 +9,13 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "lint": "prettier -w bot bidding-calculator",
+    "lint": "prettier -w bot calculator",
     "typecheck": "vue-tsc --noEmit && yarn workspaces foreach --all run tsc --noEmit",
     "fetch-data": "yarn ts-node --project data-generators/tsconfig.json data-generators/all.ts",
     "prepare": "husky"
   },
   "dependencies": {
-    "@argonprotocol/bidding-calculator": "workspace:*",
+    "@argonprotocol/commander-calculator": "workspace:*",
     "@argonprotocol/mainchain": "1.1.0",
     "@chenfengyuan/vue-countdown": "^2.1.3",
     "@headlessui/vue": "^1.7.23",
@@ -45,7 +45,7 @@
   },
   "workspaces": [
     "bot",
-    "bidding-calculator"
+    "calculator"
   ],
   "devDependencies": {
     "@tauri-apps/cli": "^2",

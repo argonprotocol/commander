@@ -4,13 +4,13 @@
   "version": "0.0.1-rc7",
   "description": "An api for integration with commander",
   "scripts": {
-    "start": "tsx index.ts",
+    "start": "tsx src/index.ts",
     "test:local": "ARGON_PROJECT_ROOT=../../mainchain vitest --run"
   },
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
-    "@argonprotocol/bidding-calculator": "workspace:*",
+    "@argonprotocol/commander-calculator": "workspace:*",
     "@argonprotocol/mainchain": "^1.1.0",
     "express": "^5.1.0",
     "tiny-lru": "^11.2.11",

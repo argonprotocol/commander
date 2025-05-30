@@ -19,8 +19,8 @@
           </p>
 
           <label class="text-sm font-bold text-slate-800/70 mt-6 mb-2 block">Public SSH Key (ensure this is added to your server)</label>
-          <CopyToClipboard ref="sshPublicKeyInputWrapper" @click="highlightCopiedContent" :content="serverConnection.sshPublicKey" class="relative mb-3">
-            <input type="text" :value="serverConnection.sshPublicKey" class="bg-white py-3 pl-3 pr-8 border border-slate-300 rounded-md w-full pointer-events-none" readonly />
+          <CopyToClipboard ref="sshPublicKeyInputWrapper" @click="highlightCopiedContent" :content="serverDetails.sshPublicKey" class="relative mb-3">
+            <input type="text" :value="serverDetails.sshPublicKey" class="bg-white py-3 pl-3 pr-8 border border-slate-300 rounded-md w-full pointer-events-none" readonly />
             <div class="absolute right-8 top-1 w-10 bottom-1 bg-gradient-to-r from-transparent to-white pointer-events-auto"></div>
             <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
               <CopyIcon class="w-4 h-4" />
@@ -68,16 +68,16 @@ import { ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
 import CopyToClipboard from '../components/CopyToClipboard.vue';
 
 const configStore = useConfigStore();
-const { serverConnection } = storeToRefs(configStore);
+const { serverDetails } = storeToRefs(configStore);
 
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isRemoving = Vue.ref(false);
 
-const ipAddress = Vue.computed(() => serverConnection.value.ipAddress);
+const ipAddress = Vue.computed(() => serverDetails.value.ipAddress);
 
 const ipAddressError = Vue.ref(false);
-const serverConnectionError = Vue.ref(false);
+const serverDetailsError = Vue.ref(false);
 
 const sshPublicKeyInputWrapper = Vue.ref(null);
 

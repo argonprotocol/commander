@@ -5,15 +5,15 @@
     <div :class="configStore.isDataSyncing ? 'opacity-30 pointer-events-none' : ''" class="flex flex-col h-full px-3.5 py-3 gap-y-2.5 justify-stretch grow">
       <section class="flex flex-row gap-x-3">
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ globalStats.activeCohorts || 0 }}</span>
+          <span>{{ dashboard.global.activeCohorts || 0 }}</span>
           <label>Active Cohorts</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ globalStats.activeSeats || 0 }}</span>
+          <span>{{ dashboard.global.activeSeats || 0 }}</span>
           <label>Active Seats</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ formatLargeNumber(globalStats.totalBlocksMined || 0) }}</span>
+          <span>{{ formatLargeNumber(dashboard.global.totalBlocksMined || 0) }}</span>
           <label>Total Blocks Mined</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
@@ -72,7 +72,7 @@
             PREV SLOT
           </div>
           <span class="flex flex-row items-center">
-            COHORT #{{ cohortStats.frameIdAtCohortActivation }} ({{cohortStartDate}} - {{cohortEndDate}})
+            COHORT #{{ dashboard.cohort?.cohortId }} ({{cohortStartDate}} - {{cohortEndDate}})
             <span class="inline-block rounded-full bg-green-500/80 w-2.5 h-2.5 ml-2"></span>
           </span>
           <div class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer">
@@ -80,21 +80,21 @@
             <ChevronRightIcon class="w-6 h-6 opacity-50 mx-1" />
           </div>
         </header>
-        <div class="flex flex-row h-full">
+        <div v-if="dashboard.cohort" class="flex flex-row h-full">
           <div class="flex flex-col w-1/2 h-full pt-2 gap-y-2">
             <div class="flex flex-row w-full h-1/2 gap-x-2">
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
-                <span>{{ cohortStats.seatsWon }}</span>
+                <span>{{ dashboard.cohort.seatsWon }}</span>
                 <label>Active Seats</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
-                <span>{{ fmtCommas(fmtDecimalsMax((cohortStats.argonsMined + cohortStats.argonsMinted) / 1_000_000, 2)) }}</span>
+                <span>{{ fmtCommas(fmtDecimalsMax((dashboard.cohort.argonsMined + dashboard.cohort.argonsMinted) / 1_000_000, 2)) }}</span>
                 <label>Argons Earned</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
-                <span>{{ fmtCommas(fmtDecimalsMax(cohortStats.argonotsMined / 1_000_000, 2)) }}</span>
+                <span>{{ fmtCommas(fmtDecimalsMax(dashboard.cohort.argonotsMined / 1_000_000, 2)) }}</span>
                 <label>Argonots Earned</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
@@ -188,16 +188,54 @@ dayjs.extend(utc);
 
 const configStore = useConfigStore();
 const { argonTo, argonotToArgon } = configStore;
-const { currencySymbol, globalStats, cohortStats } = storeToRefs(configStore);
+const { currencySymbol, stats } = storeToRefs(configStore);
+
+const dashboard = Vue.computed(() => {
+  return stats.value.dashboard;
+});
+
+  // const argonActivity = Vue.ref<IArgonActivity[]>([]);
+  // const bitcoinActivity = Vue.ref<IBitcoinActivity[]>([]);
+  // const botActivity = Vue.ref<IBotActivity[]>([]);
+
+  // const globalStats = Vue.ref<IGlobalStats>({
+  //   activeCohorts: 0,
+  //   activeSeats: 0,
+  //   totalBlocksMined: 0,
+  //   totalArgonsBid: 0,
+  //   totalArgonsMinted: 0,
+  //   totalArgonsMined: 0,
+  //   totalTransactionFees: 0,
+  //   totalArgonotsMined: 0,
+  //   totalArgonsEarned: 0,
+  //   totalArgonsInvested: 0,
+  // });
+  // const cohortStats = Vue.ref<ICohortStats>({
+  //   frameIdAtCohortActivation: 0,
+  //   transactionFees: 0,
+  //   argonotsStaked: 0,
+  //   argonsBid: 0,
+  //   seatsWon: 0,
+  //   blocksMined: 0,
+  //   argonotsMined: 0,
+  //   argonsMined: 0,
+  //   argonsMinted: 0,
+  //   argonsInvested: 0,
+  //   argonsEarned: 0,
+  //   frameTickStart: 0,
+  //   frameTickEnd: 0,
+  // });
 
 const globalArgonsEarned = Vue.computed(() => {
-  return globalStats.value.totalArgonsMined +
-    globalStats.value.totalArgonsMinted +
-    argonotToArgon(globalStats.value.totalArgonotsMined);
+  const global = dashboard.value.global;
+  return global.totalArgonsMined +
+    global.totalArgonsMinted +
+    argonotToArgon(global.totalArgonotsMined);
 });
 
 const globalArgonsInvested = Vue.computed(() => {
-  return globalStats.value.totalArgonsBid + globalStats.value.totalTransactionFees;
+  const global = dashboard.value.global;
+  return global.totalArgonsBid + global.totalTransactionFees;
 });
 
 const globalAPY = Vue.computed(() => {
@@ -205,11 +243,15 @@ const globalAPY = Vue.computed(() => {
 });
 
 const cohortArgonsEarned = Vue.computed(() => {
-  return cohortStats.value.argonsMined + cohortStats.value.argonsMinted + argonotToArgon(cohortStats.value.argonotsMined);
+  const cohort = dashboard.value.cohort;
+  if (!cohort) return 0;
+  return cohort.argonsMined + cohort.argonsMinted + argonotToArgon(cohort.argonotsMined);
 });
 
 const cohortArgonsInvested = Vue.computed(() => {
-  return cohortStats.value.argonsBid + cohortStats.value.transactionFees;
+  const cohort = dashboard.value.cohort;
+  if (!cohort) return 0;
+  return cohort.argonsBid + cohort.transactionFees;
 });
 
 const cohortAPY = Vue.computed(() => {
@@ -217,33 +259,35 @@ const cohortAPY = Vue.computed(() => {
 });
 
 const cohortStartDate = Vue.computed(() => {
-  if (!cohortStats.value.frameTickStart) {
+  const cohort = dashboard.value.cohort;
+  if (!cohort?.frameTickStart) {
     return '-----';
   }
-  const date = dayjs.utc(cohortStats.value.frameTickStart * 60e3);
+  const date = dayjs.utc(cohort.frameTickStart * 60e3);
   return date.local().format('MMMM D');
 });
 
 const cohortEndDate = Vue.computed(() => {
-  if (!cohortStats.value.frameTickEnd) {
+  const cohort = dashboard.value.cohort;
+  if (!cohort?.frameTickEnd) {
     return '-----';
   }
-  const date = dayjs.utc(cohortStats.value.frameTickEnd * 60e3);
+  const date = dayjs.utc(cohort.frameTickEnd * 60e3);
   return date.local().format('MMMM D');
 });
 
 const lastBitcoinActivityAt = Vue.computed(() => {
-  const lastActivity = configStore.bitcoinActivity[0];
+  const lastActivity = stats.value.bitcoinActivity[0];
   return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
 });
 
 const lastArgonActivityAt = Vue.computed(() => {
-  const lastActivity = configStore.argonActivity[0];
+  const lastActivity = stats.value.argonActivity[0];
   return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
 });
 
 const lastBotActivityAt = Vue.computed(() => {
-  const lastActivity = configStore.botActivity[0];
+  const lastActivity = stats.value.botActivity[0];
   return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
 });
 

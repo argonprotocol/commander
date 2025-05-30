@@ -1,6 +1,6 @@
 use super::prelude::*;
 
-#[derive(Debug, Clone, serde::Serialize, FromRow)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct BitcoinActivityRecord {
     pub localhost_block_number: u32,
@@ -20,6 +20,13 @@ impl BitcoinActivities {
              VALUES (?1, ?2) 
              RETURNING *",
             (localhost_block_number, mainchain_block_number),
+        )
+    }
+
+    pub fn latest() -> Result<BitcoinActivityRecord> {
+        DB::query_one(
+            "SELECT * FROM bitcoin_activities ORDER BY inserted_at DESC LIMIT 1",
+            (),
         )
     }
 

@@ -388,7 +388,7 @@ import { XMarkIcon, LightBulbIcon } from '@heroicons/vue/24/outline';
 import RadioButton from '../components/RadioButton.vue';
 import InputNumber from '../components/InputNumber.vue';
 import InputMenu from '../components/InputMenu.vue';
-import BiddingCalculator, { BiddingCalculatorData, type IBiddingRules } from '@argonprotocol/bidding-calculator';
+import BiddingCalculator, { BiddingCalculatorData, type IBiddingRules } from '@argonprotocol/commander-calculator';
 import InfoTip from '../components/InfoTip.vue';
 import BidBreakdownTooltip from './BidBreakdownTooltip.vue';
 import BidBreakdownTooltipArrow from './BidBreakdownTooltipArrow.vue';

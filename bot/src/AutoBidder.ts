@@ -4,7 +4,7 @@ import {
   MiningBids,
 } from '@argonprotocol/mainchain';
 import type { CohortStorage } from './storage.ts';
-import { createBidderParams } from '@argonprotocol/bidding-calculator';
+import { createBidderParams } from '@argonprotocol/commander-calculator';
 import { readJsonFileOrNull } from './utils.ts';
 
 /**

@@ -11,7 +11,7 @@ import { afterAll, afterEach, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import Path from 'node:path';
 import Bot from '../src/Bot.ts';
-import * as BiddingCalculator from '@argonprotocol/bidding-calculator';
+import * as BiddingCalculator from '@argonprotocol/commander-calculator';
 
 afterEach(teardown);
 afterAll(teardown);
@@ -54,7 +54,7 @@ it('can autobid and store stats', async () => {
   );
 
   await expect(bot.start()).resolves.toBeTruthy();
-  const status = await bot.status();
+  const status = await bot.blockSync.status();
   expect(status.lastBlockNumber).toBeGreaterThanOrEqual(
     status.lastFinalizedBlockNumber,
   );
@@ -115,7 +115,7 @@ it('can autobid and store stats', async () => {
   // wait for sync state to equal latest finalized
   while (true) {
     await new Promise(resolve => setTimeout(resolve, 100));
-    const status = await bot.status();
+    const status = await bot.blockSync.status();
     if (status.lastBlockNumber >= lastFinalizedBlockNumber) break;
   }
 

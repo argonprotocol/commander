@@ -12,7 +12,9 @@
         valuable if the argon ever falls below target price.  
       </p>
       </div>
-    <button class="opacity-60 bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow text-2xl font-bold text-white px-12 py-2 rounded-lg mx-auto block mt-10 cursor-pointer">Liquid Lock Your Bitcoin</button>
+    <button class="opacity-60 bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow text-2xl font-bold text-white px-12 py-2 rounded-lg mx-auto block mt-10 cursor-pointer">
+      Liquid Lock Your Bitcoin
+    </button>
 
     <div class="flex-grow flex flex-row items-end w-full">
       <div class="flex flex-col w-full px-5 pb-5">

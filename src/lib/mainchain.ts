@@ -1,12 +1,11 @@
-import { Mainchain, MainchainClient } from '@argonprotocol/bidding-calculator';
+import { Mainchain, MainchainClient } from '@argonprotocol/commander-calculator';
 import { getClient } from '@argonprotocol/mainchain';
-import { invoke } from '@tauri-apps/api/core';
 
 let client: Promise<MainchainClient>;
 
-export async function getMainchainClient(): Promise<MainchainClient> {
+export function getMainchainClient(): Promise<MainchainClient> {
   if (!client) {
-    const mainchainUrl = await invoke<string>('get_mainchain_url');
+    const mainchainUrl = import.meta.env.VITE_MAINCHAIN_URL || 'wss://rpc.argon.network';
     client = getClient(mainchainUrl);
   }
   return client;

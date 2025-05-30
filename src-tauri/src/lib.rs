@@ -1,76 +1,42 @@
-use crate::config::ConfigFile;
-use crate::db::{
-    ArgonActivities, ArgonActivityRecord, BitcoinActivities, BitcoinActivityRecord, BotActivities,
-    BotActivityRecord, DB,
+use stats::{Stats, IStats};
+use config::{
+    Config, ConfigFile, Security, ServerDetails, BiddingRules, 
+    InstallStatus, InstallStatusClient, InstallStatusServer,
 };
-use crate::ssh::SSH;
-use bidder::stats::{BidderStats, ICohortStats, IGlobalStats};
-use bidder::Bidder;
-use config::{BiddingRules, Config, Security, ServerConnection, ServerProgress, ServerStatus};
 use log::{info, LevelFilter};
-use provisioner::Provisioner;
+use installer::Installer;
 use std::env;
 use std::path::PathBuf;
 use tauri::menu::{MenuItemBuilder, SubmenuBuilder};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use window_vibrancy::*;
-use lazy_static::lazy_static;
-use std::sync::Mutex;
+use db::DB;
+use installer::InstallerStatus;
+use utils::Utils;
+use ssh::singleton::*;
 
-mod bidder;
+mod stats;
 mod config;
 mod db;
-mod provisioner;
+mod installer;
 mod ssh;
+mod utils;
 
-lazy_static! {
-    static ref SSH_CONNECTION: Mutex<Option<SSH>> = Mutex::new(None);
-}
-
-async fn get_ssh_connection(ssh_config: SSHConfig) -> Result<SSH, String> {
-    let mut ssh_connection = SSH_CONNECTION.lock().unwrap();
-    
-    // Check if we need to reconnect
-    let needs_reconnect = match &*ssh_connection {
-        Some(ssh) => ssh.config() != ssh_config,
-        None => true,
-    };
-
-    if needs_reconnect {
-        // Close existing connection if it exists
-        if let Some(ssh) = ssh_connection.take() {
-            ssh.close();
-        }
-        
-        // Create new connection
-        let new_ssh = SSH::connect(ssh_config).await.map_err(|e| e.to_string())?;
-        *ssh_connection = Some(new_ssh.clone());
-        Ok(new_ssh)
-    } else {
-        // Return existing connection
-        Ok(ssh_connection.as_ref().unwrap().clone())
-    }
-}
-
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct AppConfig {
+struct AppStartData {
+    version: String,
     requires_password: bool,
     security: Option<Security>,
-    server_connection: ServerConnection,
-    server_status: ServerStatus,
-    server_progress: ServerProgress,
+    server_details: ServerDetails,
+    install_status: InstallStatus,
     bidding_rules: Option<BiddingRules>,
-    argon_activity: Vec<ArgonActivityRecord>,
-    bitcoin_activity: Vec<BitcoinActivityRecord>,
-    bot_activity: Vec<BotActivityRecord>,
-    global_stats: Option<IGlobalStats>,
-    cohort_stats: Option<ICohortStats>,
+    stats: IStats,
 }
 
 #[tauri::command]
-async fn start(app: AppHandle) -> Result<AppConfig, String> {
+async fn start(app: AppHandle) -> Result<AppStartData, String> {
     info!("start");
 
     let config = match Config::load() {
@@ -78,50 +44,32 @@ async fn start(app: AppHandle) -> Result<AppConfig, String> {
         Err(e) => panic!("ConfigFailed: {}", e),
     };
 
-    let mut record = AppConfig {
+    Installer::install_if_needed(&app, false)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let server_details = ServerDetails::load().map_err(|e| e.to_string())?;
+    let install_status = InstallStatus::load().map_err(|e| e.to_string())?;
+    let stats = Stats::fetch(&app, None).await.map_err(|e| e.to_string())?;
+
+    let record = AppStartData {
+        version: Utils::get_version(&app).map_err(|e| e.to_string())?,
         requires_password: config.requires_password,
         security: config.security.clone(),
-        server_connection: config.server_connection.clone(),
-        server_status: config.server_status.clone(),
-        server_progress: config.server_progress.clone(),
+        server_details: server_details.clone(),
+        install_status: install_status.clone(),
         bidding_rules: config.bidding_rules.clone(),
-        argon_activity: ArgonActivities::fetch_last_five_records().map_err(|e| e.to_string())?,
-        bitcoin_activity: BitcoinActivities::fetch_last_five_records()
-            .map_err(|e| e.to_string())?,
-        bot_activity: BotActivities::fetch_last_five_records().map_err(|e| e.to_string())?,
-        global_stats: None,
-        cohort_stats: None,
+        stats,
     };
-    let ssh_config = config
-        .server_connection
-        .ssh_config()
-        .map_err(|e| e.to_string())?;
 
-    let ssh = get_ssh_connection(ssh_config.clone()).await?;
-
-    Provisioner::try_start(app.clone(), &ssh)
-        .await
-        .map_err(|e| e.to_string())?;
-    
-    Bidder::try_start(app, &ssh)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    if config.server_connection.has_mining_seats {
-        record.global_stats = Some(BidderStats::fetch_global_stats().map_err(|e| e.to_string())?);
-        record.cohort_stats =
-            BidderStats::fetch_latest_cohort_stats().map_err(|e| e.to_string())?;
-    }
-
-    // server connection is updated in the provisioner, so we need to reload it
-    record.server_connection = ServerConnection::load().map_err(|e| e.to_string())?;
+    info!("Start Data: {:?}", record);
 
     Ok(record)
 }
 
 #[tauri::command]
-async fn create_security(wallet_mnemonic: String, session_mnemonic: String, wallet_json: String) -> Result<(), String> {
-    info!("create_security");
+async fn save_security(wallet_mnemonic: String, session_mnemonic: String, wallet_json: String) -> Result<(), String> {
+    info!("save_security");
 
     Security::create(wallet_mnemonic, session_mnemonic, wallet_json)
         .map_err(|e| e.to_string())?;
@@ -130,36 +78,23 @@ async fn create_security(wallet_mnemonic: String, session_mnemonic: String, wall
 }
 
 #[tauri::command]
-async fn get_mainchain_url() -> Result<String, String> {
-    info!("get_mainchain_url");
+async fn add_server(ip_address: String) -> Result<(), String> {
+    info!("add_server");
 
-    let mainchain_url =
-        env::var("MAINCHAIN_URL").unwrap_or_else(|_| "wss://rpc.argon.network".to_string());
+    let mut server_details = ServerDetails::load().map_err(|e| e.to_string())?;
 
-    Ok(mainchain_url)
-}
+    if server_details.ip_address == ip_address {
+        return Ok(());
+    }
 
-#[tauri::command]
-async fn connect_server(app: AppHandle, ip_address: String) -> Result<(), String> {
-    info!("connect_server");
+    server_details.ip_address = ip_address;
 
-    let mut config = match Config::load() {
-        Ok(config) => config,
-        Err(e) => return Err(format!("ConfigFailed: {}", e)),
-    };
+    let ssh_config = server_details.ssh_config().map_err(|e| e.to_string())?;
+    Installer::test_server_connection(ssh_config).await.map_err(|e| e.to_string())?;
 
-    config.server_connection.ip_address = ip_address;
-    let ssh_config = config
-        .server_connection
-        .ssh_config()
-        .map_err(|e| e.to_string())?;
-
-    Provisioner::try_start(ssh_config, app)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    config.server_connection.is_connected = true;
-    config.server_connection.save().map_err(|e| e.to_string())?;
+    server_details.is_new_server = true;
+    server_details.is_connected = true;
+    server_details.save().map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -168,45 +103,50 @@ async fn connect_server(app: AppHandle, ip_address: String) -> Result<(), String
 async fn remove_server() -> Result<(), String> {
     info!("remove_server");
 
-    let mut config = match Config::load() {
-        Ok(config) => config,
-        Err(e) => return Err(format!("ConfigFailed: {}", e)),
-    };
+    let mut server_details = ServerDetails::load().map_err(|e| e.to_string())?;
 
-    config.server_connection.ip_address = String::from("");
-    config.server_connection.is_connected = false;
-    config.server_connection.is_provisioned = false;
-    config.server_connection.save().map_err(|e| e.to_string())?;
+    server_details.ip_address = String::from("");
+    server_details.is_connected = false;
+    server_details.is_installing = false;
+    server_details.is_new_server = false;
+    server_details.save().map_err(|e| e.to_string())?;
 
-    ServerStatus::delete().map_err(|e| e.to_string())?;
-    ServerProgress::delete().map_err(|e| e.to_string())?;
+    Installer::shutdown_server().await.map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 #[tauri::command]
-async fn save_server_progress(progress: ServerProgress) -> Result<(), String> {
-    info!("save_server_progress");
+async fn fetch_install_status(install_status_client: InstallStatusClient) -> Result<InstallStatusServer, String> {
+    info!("fetch_install_status");
 
-    let mut config = match Config::load() {
-        Ok(config) => config,
-        Err(e) => return Err(format!("ConfigFailed: {}", e)),
-    };
+    let mut install_status = InstallStatus::load().map_err(|e| e.to_string())?;
+    
+    install_status.client = install_status_client;
+    install_status.save().map_err(|e| e.to_string())?;
 
-    config.server_progress = progress;
-    config.server_progress.save().map_err(|e| e.to_string())?;
+    let server_details = ServerDetails::load().map_err(|e| e.to_string())?;
+    let ssh_config = server_details.ssh_config().map_err(|e| e.to_string())?;
+    let ssh = get_ssh_connection(ssh_config).await.map_err(|e| e.to_string())?;
+    let install_status_server = InstallerStatus::fetch(&ssh).await.map_err(|e| e.to_string())?;
+
+    Ok(install_status_server)
+}
+
+#[tauri::command]
+async fn fetch_stats(app: AppHandle, cohort_id: u32) -> Result<(), String> {
+    info!("fetch_stats");
+
+    Stats::fetch(&app, Some(cohort_id)).await.map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 #[tauri::command]
-async fn fetch_provisioning_status(app: AppHandle, server_progress: ServerProgress) -> Result<(), String> {
-    info!("fetch_server_status");
+async fn retry_failed_step(app: AppHandle, step_key: String) -> Result<(), String> {
+    info!("retry_failed_step");
 
-    server_progress.save().map_err(|e| e.to_string())?;
-
-    let ssh = get_ssh_connection(ssh_config).await?;
-    Provisioner::fetch_provisioner_status(app, &ssh)
+    Installer::retry_failed_step(&app, step_key)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -214,108 +154,58 @@ async fn fetch_provisioning_status(app: AppHandle, server_progress: ServerProgre
 }
 
 #[tauri::command]
-async fn retry_provisioning(app: AppHandle, step_key: String) -> Result<(), String> {
-    info!("retry_provisioning");
-
-    let config = match Config::load() {
-        Ok(config) => config,
-        Err(e) => return Err(format!("ConfigFailed: {}", e)),
-    };
-
-    let ssh_config = config
-        .server_connection
-        .ssh_config()
-        .map_err(|e| e.to_string())?;
-
-    Provisioner::retry_failure(step_key, ssh_config, app)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
-#[tauri::command]
-async fn update_bidding_rules(
-    app: AppHandle,
-    bidding_rules: BiddingRules,
-) -> Result<(), String> {
+async fn update_bidding_rules(bidding_rules: BiddingRules) -> Result<(), String> {
     info!("update_bidding_rules");
 
     bidding_rules.save().map_err(|e| e.to_string())?;
 
-    let server_connection = match ServerConnection::load() {
-        Ok(config) => config,
-        Err(e) => return Err(format!("ConfigFailed: {}", e)),
-    };
-
-    if server_connection.is_ready_for_mining {
-        let ssh_config = server_connection.ssh_config().map_err(|e| e.to_string())?;
-
-        Bidder::try_start(app, ssh_config)
-            .await
-            .map_err(|e| e.to_string())?;
-    }
+    Installer::update_bidding_bot(true)
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 #[tauri::command]
-async fn update_server_code(app: AppHandle) -> Result<(), String> {
-    info!("update_server_code");
-    let mut server_connection = match ServerConnection::load() {
-        Ok(config) => config,
-        Err(e) => return Err(format!("ConfigFailed: {}", e)),
-    };
+async fn upgrade_server(app: AppHandle) -> Result<(), String> {
+    info!("upgrade_server");
+    let server_details = ServerDetails::load().map_err(|e| e.to_string())?;
 
-    if server_connection.is_connected {
-        server_connection.is_provisioned = false;
-        server_connection.save().map_err(|e| e.to_string())?;
-        let ssh_config = server_connection.ssh_config().map_err(|e| e.to_string())?;
-
-        let ssh = SSH::connect(ssh_config).await.map_err(|e| e.to_string())?;
-        Bidder::update_bot_if_needed(&app, &ssh)
-            .await
-            .map_err(|e| e.to_string())?;
-        Provisioner::upload_system_files_and_monitor(ssh, app)
-            .await
-            .map_err(|e| e.to_string())?;
+    if !server_details.is_connected {
+        return Err("Server not connected".to_string());
     }
+
+    if server_details.is_installing {
+        return Err("Server is installing".to_string());
+    }
+
+    Installer::install_if_needed(&app, true).await.map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 #[tauri::command]
-async fn launch_mining_bot(
-    app: AppHandle,
-) -> Result<(), String> {
+async fn launch_mining_bot() -> Result<(), String> {
     info!("launch_mining_bot");
 
-    let mut server_connection = match ServerConnection::load() {
-        Ok(config) => config,
-        Err(e) => return Err(format!("ConfigFailed: {}", e)),
-    };
-    let ssh_config = server_connection.ssh_config().map_err(|e| e.to_string())?;
+    let mut server_details = ServerDetails::load().map_err(|e| e.to_string())?;
 
-    if !server_connection.is_ready_for_mining {
-        server_connection.is_ready_for_mining = true;
-        server_connection.save().map_err(|e| e.to_string())?;
+    if !server_details.is_connected {
+        return Err("Server not connected".to_string());
     }
 
-    Bidder::try_start(app, ssh_config)
+    if server_details.is_installing {
+        return Err("Server is installing".to_string());
+    }
+
+    Installer::update_bidding_bot(true)
         .await
         .map_err(|e| e.to_string())?;
 
-    Ok(())
-}
-
-#[tauri::command]
-async fn fetch_bidding_status(app: AppHandle) -> Result<(), String> {
-    info!("fetch_bidding_status");
-
-    let ssh = get_ssh_connection(ssh_config).await?;
-    Bidder::fetch_bidding_status(app, &ssh)
-        .await
-        .map_err(|e| e.to_string())?;
+    if !server_details.is_ready_for_mining {
+        server_details.is_ready_for_mining = true;
+        server_details.save().map_err(|e| e.to_string())?;
+    }
 
     Ok(())
 }
@@ -334,6 +224,8 @@ pub fn readdir(path: &PathBuf) -> anyhow::Result<Vec<String>> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    dotenv::dotenv().ok();
+
     let mut log_builder = tauri_plugin_log::Builder::new()
         .target(tauri_plugin_log::Target::new(
             tauri_plugin_log::TargetKind::Folder {
@@ -366,6 +258,7 @@ pub fn run() {
     }
     let is_testnet = &chain == "testnet";
     env::set_var("CHAIN", chain);
+    
     if !env::var("MAINCHAIN_URL").is_ok() {
         if is_testnet {
             env::set_var("MAINCHAIN_URL", "wss://rpc.testnet.argonprotocol.org");
@@ -407,7 +300,7 @@ pub fn run() {
                     if event.id() == "push_latest" {
                         let app_handle = app.clone();
                         tauri::async_runtime::spawn(async move {
-                            if let Err(e) = update_server_code(app_handle).await {
+                            if let Err(e) = upgrade_server(app_handle).await {
                                 log::error!("Error updating server code: {}", e);
                             }
                         });
@@ -419,16 +312,6 @@ pub fn run() {
 
             DB::init().map_err(|e| e.to_string())?;
 
-            // test paths
-
-            let local_base_path = Bidder::get_bidding_calculator_path(app.handle())?;
-            let filenames = readdir(&local_base_path)?;
-            info!(
-                "Have bidding calculator embedded: {}. {:#?}",
-                local_base_path.display(),
-                filenames
-            );
-
             #[cfg(target_os = "macos")]
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(16.0))
                 .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
@@ -439,15 +322,15 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
             start,
-            create_security,
-            connect_server,
+            save_security,
+            add_server,
             remove_server,
-            save_server_progress,
+            fetch_install_status,
             update_bidding_rules,
-            retry_provisioning,
+            retry_failed_step,
             launch_mining_bot,
-            get_mainchain_url,
-            update_server_code,
+            upgrade_server,
+            fetch_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

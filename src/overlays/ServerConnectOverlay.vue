@@ -107,15 +107,15 @@
                         <p>
                           Copy and paste the following public key:
                         </p>
-                        <CopyToClipboard ref="copyToClipboard" :content="serverConnection.sshPublicKey" class="relative mb-3" @click="highlightCopiedContent">
-                          <input type="text" :value="serverConnection.sshPublicKey" class="bg-white py-4 pl-4 pr-8 border border-slate-300 rounded-md w-full pointer-events-none" readonly />
+                        <CopyToClipboard ref="copyToClipboard" :content="serverDetails.sshPublicKey" class="relative mb-3" @click="highlightCopiedContent">
+                          <input type="text" :value="serverDetails.sshPublicKey" class="bg-white py-4 pl-4 pr-8 border border-slate-300 rounded-md w-full pointer-events-none" readonly />
                           <div class="absolute right-8 top-1 w-10 bottom-1 bg-gradient-to-r from-transparent to-white pointer-events-auto"></div>
                           <div class="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer">
                             <CopyIcon class="w-4 h-4 opacity-80" />
                           </div>
                           <template #copied>
                             <div class="bg-white py-4 pl-4 pr-8 border border-slate-300 rounded-md w-full pointer-events-none overflow-hidden">
-                              <span class="bg-blue-200 whitespace-nowrap w-full inline-block">{{ serverConnection.sshPublicKey }}</span>
+                              <span class="bg-blue-200 whitespace-nowrap w-full inline-block">{{ serverDetails.sshPublicKey }}</span>
                             </div>
                             <div class="flex flex-row items-center absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none bg-white pl-2">
                               <div class="absolute -left-8 w-8 top-0 bottom-0 bg-gradient-to-r from-transparent to-white pointer-events-auto"></div>
@@ -173,7 +173,7 @@
           </div>
 
           <div class="flex flex-row justify-end px-4 border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
-            <div v-if="serverConnectionError" class="grow rounded-md bg-red-200 p-2 pl-4 flex items-center">
+            <div v-if="serverDetailsError" class="grow rounded-md bg-red-200 p-2 pl-4 flex items-center">
               <div class="flex">
                 <div class="shrink-0">
                   <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />
@@ -211,7 +211,7 @@ import { storeToRefs } from 'pinia';
 import CopyToClipboard from '../components/CopyToClipboard.vue';
 
 const configStore = useConfigStore();
-const { serverConnection } = storeToRefs(configStore);
+const { serverDetails } = storeToRefs(configStore);
 
 let openedAt = dayjs();
 
@@ -221,7 +221,7 @@ const isSaving = Vue.ref(false);
 
 const ipAddress = Vue.ref('');
 const ipAddressError = Vue.ref(false);
-const serverConnectionError = Vue.ref(false);
+const serverDetailsError = Vue.ref(false);
 
 const dialogPanel = Vue.ref(null);
 const copyToClipboard = Vue.ref<typeof CopyToClipboard>();
@@ -246,7 +246,7 @@ const closeOverlay = () => {
 async function addServer() {
   isSaving.value = true;
   ipAddressError.value = false;
-  serverConnectionError.value = false;
+  serverDetailsError.value = false;
 
   if (ipAddress.value === '') {
     ipAddressError.value = true;
@@ -254,10 +254,10 @@ async function addServer() {
     return;
   }
   try {
-    await configStore.connectServer(ipAddress.value);
+    await configStore.addServer(ipAddress.value);
     closeOverlay();
   } catch (error) {
-    serverConnectionError.value = true;
+    serverDetailsError.value = true;
   }
   isSaving.value = false;
 }

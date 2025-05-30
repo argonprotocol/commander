@@ -1,7 +1,8 @@
 <template>
-  <div class="Component ProgressBar" :disabled="props.disabled">
+  <div class="Component ProgressBar" :hasError="props.hasError">
     <div :style="{ width: `calc(${progress}% + 2px)` }">
-      <span :style="{ opacity: progress / 25 }">{{ progressLabel }}</span>
+      <span v-if="hasError">ERROR</span>
+      <span v-else :style="{ opacity: progress / 25 }">{{ progressLabel }}</span>
     </div>
   </div>
 </template>
@@ -12,7 +13,7 @@ import * as Vue from 'vue';
 const props = defineProps<{
   progress: number;
   isSlow?: boolean;
-  disabled?: boolean;
+  hasError?: boolean;
 }>();
 
 const progressLabel = Vue.computed(() => {
@@ -53,11 +54,15 @@ const progressLabel = Vue.computed(() => {
       background: linear-gradient(to right, white 10%, transparent 100%);
     }
   }
-  &[disabled="true"] {
+  &[hasError="true"] {
     div {
       @apply bg-[#FAD1D8];
+      opacity: 0.7;
+      width: calc(100% + 1px) !important;
+      box-shadow: inset 1px 1px 0 white !important;
       &:after {
         background: linear-gradient(to right, #FAD1D8 10%, transparent 100%);
+        left: 1px;
       }
     }
   }

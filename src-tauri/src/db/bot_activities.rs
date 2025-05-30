@@ -1,7 +1,7 @@
 use super::prelude::*;
 
 
-#[derive(Debug, Clone, serde::Serialize, FromRow)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct BotActivityRecord {
     pub tag: String,

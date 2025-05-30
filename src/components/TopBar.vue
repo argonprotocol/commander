@@ -162,7 +162,7 @@
             </div>
             <div class="flex flex-col shrink rounded bg-argon-menu-bg text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20">
               <ul AccountMenu>
-                <li v-if="serverConnection.isConnected" @click="openServerConfigureOverlay(close)" class="pt-3 pb-2" >
+                <li v-if="serverDetails.isConnected" @click="openServerConfigureOverlay(close)" class="pt-3 pb-2" >
                   <header>Configure Cloud Machine</header>
                   <p>
                     Configure and manage the cloud server<br />that runs your Argon mining operations
@@ -215,7 +215,7 @@ import { storeToRefs } from 'pinia';
 
 const basicStore = useBasicStore();
 const configStore = useConfigStore();
-const { serverConnection, mngWallet, llbWallet, vltWallet, currencySymbol } = storeToRefs(configStore);
+const { serverDetails, mngWallet, llbWallet, vltWallet, currencySymbol } = storeToRefs(configStore);
 const { argonotTo, argonTo } = configStore;
 
 const currencyMenuIsOpen = Vue.ref(false);

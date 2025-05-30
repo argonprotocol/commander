@@ -1,9 +1,9 @@
 <template>
-  <CloudMachineIsProvisioning v-if="serverConnection.isConnected && !serverConnection.isProvisioned" />
-  <Dashboard v-else-if="serverConnection.hasMiningSeats" />
-  <FirstAuction v-else-if="serverConnection.isReadyForMining" />
-  <FinalSetupChecklist v-else-if="serverConnection.isProvisioned" />  
-  <BlankSlate v-else />
+  <BlankSlate v-if="!serverDetails.isConnected" />
+  <CloudMachineIsProvisioning v-if="serverDetails.isInstalling && serverDetails.isNewServer" />
+  <Dashboard v-else-if="serverDetails.hasMiningSeats" />
+  <FirstAuction v-else-if="serverDetails.isReadyForMining" />
+  <FinalSetupChecklist v-else />  
 </template>
 
 <script setup lang="ts">
@@ -15,5 +15,5 @@ import Dashboard from './mining-panel/Dashboard.vue';
 import { useConfigStore } from '../stores/config';
 
 const configStore = useConfigStore();
-const serverConnection = configStore.serverConnection;
+const serverDetails = configStore.serverDetails;
 </script>

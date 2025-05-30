@@ -126,7 +126,7 @@ import { fmtMoney, fmtCommas, fmtDecimalsMax } from '../lib/Utils';
 import { useBlockchainStore } from '../stores/blockchain';
 import { useConfigStore } from '../stores/config';
 import { storeToRefs } from 'pinia';
-import { IVault } from '@argonprotocol/bidding-calculator';
+import { IVault } from '@argonprotocol/commander-calculator';
 import VaultImage from '../assets/vault.svg';
 import { getMainchain } from '../lib/mainchain';
 

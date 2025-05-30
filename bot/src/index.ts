@@ -29,8 +29,13 @@ const bot = new Bot({
 
 const app = express();
 
+app.get('/start', async (_req, res) => {
+  await bot.start();
+  jsonExt({ isStarted: bot.isStarted }, res);
+});
+
 app.get('/status', async (_req, res) => {
-  const status = await bot.status();
+  const status = await bot.blockSync.status();
   jsonExt(status, res);
 });
 app.get('/bids', async (_req, res) => {
@@ -61,5 +66,9 @@ const server = app.listen(process.env.PORT ?? 3000, () => {
 });
 onExit(() => new Promise<void>(resolve => server.close(() => resolve())));
 
-await bot.start();
+
+if (process.env.IS_READY_FOR_BIDDING === 'true') {
+  bot.startAfterDockersSynced();
+}
+
 onExit(() => bot.stop());

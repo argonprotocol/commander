@@ -20,6 +20,7 @@ import {
   JsonStore,
 } from './storage.ts';
 import { MiningFrames } from './MiningFrames.ts';
+import { Dockers } from './Dockers.ts';
 
 const defaultCohort = {
   blocksMined: 0,
@@ -87,11 +88,13 @@ export class BlockSync {
   async status(): Promise<Omit<ISyncState, 'lastBlockNumberByFrameId'>> {
     const statusFileData = (await this.statusFile.get())!;
     return {
+      argonBlockNumbers: await Dockers.getArgonBlockNumbers(),
+      bitcoinBlockNumbers: await Dockers.getBitcoinBlockNumbers(),
       bidsLastModifiedAt: statusFileData.bidsLastModifiedAt,
       earningsLastModifiedAt: statusFileData.earningsLastModifiedAt,
       hasWonSeats: statusFileData.hasWonSeats ?? false,
       lastBlockNumber: statusFileData.lastBlockNumber ?? 0,
-      lastFinalizedBlockNumber: this.latestFinalizedHeader.number.toNumber(),
+      lastFinalizedBlockNumber: this.latestFinalizedHeader?.number.toNumber() ?? 0,
       oldestFrameIdToSync: statusFileData.oldestFrameIdToSync ?? 0,
       currentFrameId: statusFileData.currentFrameId ?? 0,
       loadProgress: this.calculateProgress(this.currentTick, [
