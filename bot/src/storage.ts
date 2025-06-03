@@ -48,6 +48,9 @@ export interface ISubaccount {
 }
 
 export interface ISyncState extends ILastModifiedAt {
+  isWaitingToStart?: boolean;
+  isStarting?: boolean;
+  isStarted?: boolean;
   argonBlockNumbers: [number, number];
   bitcoinBlockNumbers: [number, number];
   bidsLastModifiedAt: Date;
@@ -145,6 +148,7 @@ export class CohortStorage {
     let entry = this.lruCache.get(key);
     if (!entry) {
       entry = new JsonStore<ISyncState>(Path.join(this.basedir, key), () => ({
+        isStarted: false,
         argonBlockNumbers: [0, 0],
         bitcoinBlockNumbers: [0, 0],
         bidsLastModifiedAt: new Date(),
@@ -192,14 +196,14 @@ export class CohortStorage {
     return entry;
   }
 
-  public bidsFile(cohortFrameId: number): JsonStore<IBidsFile> {
-    const cohortBiddingFrameId = cohortFrameId - 1;
-    const key = `bids/frame-${cohortBiddingFrameId}-${cohortFrameId}.json`;
+  public bidsFile(cohortActivatedFrameId: number): JsonStore<IBidsFile> {
+    const cohortBiddingFrameId = cohortActivatedFrameId - 1;
+    const key = `bids/frame-${cohortBiddingFrameId}-${cohortActivatedFrameId}.json`;
     let entry = this.lruCache.get(key);
     if (!entry) {
       entry = new JsonStore<IBidsFile>(Path.join(this.basedir, key), () => ({
         cohortBiddingFrameId,
-        cohortFrameId,
+        cohortFrameId: cohortActivatedFrameId,
         frameBiddingProgress: 0,
         lastBlockNumber: 0,
         seatsWon: 0,

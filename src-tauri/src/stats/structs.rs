@@ -6,6 +6,7 @@ use crate::db::{ArgonActivityRecord, BitcoinActivityRecord, BotActivityRecord};
 pub struct IStats {
     pub is_syncing: bool,
     pub sync_progress: f32,
+    pub sync_error: Option<String>,
     pub has_won_seats: bool,
     pub dashboard: IDashboardStats,
     pub active_bids: IActiveBids,
@@ -18,6 +19,7 @@ pub struct IStats {
 #[serde(rename_all = "camelCase")]
 pub struct IDashboardStats {
     pub global: IDashboardGlobalStats,
+    pub cohort_id: Option<u32>,
     pub cohort: Option<IDashboardCohortStats>,
 }
 
@@ -46,8 +48,8 @@ pub struct IBotStatus {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct IBidsFile {
-    pub frame_id_at_cohort_bidding: u32,
-    pub frame_id_at_cohort_activation: u32,
+    pub cohort_bidding_frame_id: u32,
+    pub cohort_frame_id: u32,
     pub frame_bidding_progress: f32,
     pub last_block_number: u32,
     #[serde(deserialize_with = "deserialize_from_bigint")]

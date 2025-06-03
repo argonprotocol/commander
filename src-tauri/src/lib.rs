@@ -109,6 +109,7 @@ async fn remove_server() -> Result<(), String> {
     server_details.is_connected = false;
     server_details.is_installing = false;
     server_details.is_new_server = false;
+    server_details.is_installing_fresh = false;
     server_details.save().map_err(|e| e.to_string())?;
 
     Installer::shutdown_server().await.map_err(|e| e.to_string())?;
@@ -134,10 +135,21 @@ async fn fetch_install_status(install_status_client: InstallStatusClient) -> Res
 }
 
 #[tauri::command]
-async fn fetch_stats(app: AppHandle, cohort_id: u32) -> Result<(), String> {
+async fn fetch_stats(app: AppHandle, cohort_id: Option<u32>) -> Result<IStats, String> {
     info!("fetch_stats");
 
-    Stats::fetch(&app, Some(cohort_id)).await.map_err(|e| e.to_string())?;
+    let stats = Stats::fetch(&app, cohort_id).await.map_err(|e| e.to_string())?;
+
+    Ok(stats)
+}
+
+#[tauri::command]
+async fn retry_stats_sync(app: AppHandle) -> Result<(), String> {
+    info!("retry_stats_sync");
+
+    let mut server_details = ServerDetails::load().map_err(|e| e.to_string())?;
+    server_details.sync_error = None;
+    server_details.save().map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -268,7 +280,7 @@ pub fn run() {
     }
 
     let rust_log =
-        env::var("RUST_LOG").unwrap_or("debug, tauri=info, hyper=info, russh=error".into());
+        env::var("RUST_LOG").unwrap_or("debug, tauri=info, hyper=info, russh=error, tao=error, reqwest::connect=error".into());
     for part in rust_log.split(',') {
         if let Some((target, level)) = part.split_once('=') {
             if let Ok(level) = level.parse::<LevelFilter>() {
@@ -331,6 +343,7 @@ pub fn run() {
             launch_mining_bot,
             upgrade_server,
             fetch_stats,
+            retry_stats_sync
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

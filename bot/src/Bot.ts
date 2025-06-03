@@ -8,44 +8,58 @@ import { AutoBidder } from './AutoBidder.ts';
 import { BlockSync } from './BlockSync.ts';
 import { Dockers } from './Dockers.ts';
 
+interface IBotOptions {
+  datadir: string;
+  pair: KeyringPair;
+  localRpcUrl: string;
+  archiveRpcUrl: string;
+  biddingRulesPath: string;
+  keysMnemonic: string;
+  oldestFrameIdToSync?: number;
+}
+
 export default class Bot {
-  readonly autobidder: AutoBidder;
-  readonly accountset: Accountset;
-  readonly blockSync: BlockSync;
-  readonly storage: CohortStorage;
+  public autobidder!: AutoBidder;
+  public accountset!: Accountset;
+  public blockSync!: BlockSync;
+  public storage!: CohortStorage;
   
-  isStarting: boolean = false;
-  isStarted: boolean = false;
+  public isInitialized: boolean = false;
+  public isWaitingToStart: boolean = false;
+  public isStarting: boolean = false;
+  public isStarted: boolean = false;
+
+  private options: IBotOptions;
 
   constructor(
-    readonly options: {
-      datadir: string;
-      pair: KeyringPair;
-      localRpcUrl: string;
-      archiveRpcUrl: string;
-      biddingRulesPath: string;
-      keysMnemonic: string;
-      oldestFrameIdToSync?: number;
-    },
+    options: IBotOptions,
   ) {
-    const client = getClient(options.localRpcUrl);
-    this.storage = new CohortStorage(options.datadir, client);
+    this.options = options;
+  }
+
+  private init() {
+    if (this.isInitialized) return;
+    this.isInitialized = true;
+
+    const client = getClient(this.options.localRpcUrl);
+    this.storage = new CohortStorage(this.options.datadir, client);
     this.accountset = new Accountset({
       client,
-      seedAccount: options.pair,
-      sessionKeyMnemonic: options.keysMnemonic,
+      seedAccount: this.options.pair,
+      sessionKeyMnemonic: this.options.keysMnemonic,
       subaccountRange: new Array(99).fill(0).map((_, i) => i),
     });
     this.autobidder = new AutoBidder(
       this.accountset,
       this.storage,
-      options.biddingRulesPath,
+      this.options.biddingRulesPath,
     );
     this.blockSync = new BlockSync(
+      this,
       this.accountset,
       this.storage,
-      options.archiveRpcUrl,
-      options.oldestFrameIdToSync,
+      this.options.archiveRpcUrl,
+      this.options.oldestFrameIdToSync,
     );
   }
 
@@ -54,32 +68,32 @@ export default class Bot {
     return state?.currentFrameId ?? 0;
   }
 
-  async areDockersSynced() {
-    const argonBlockNumbers = await Dockers.getArgonBlockNumbers();
-    if (argonBlockNumbers[0] < argonBlockNumbers[1]) return false;
-
-    const bitcoinBlockNumbers = await Dockers.getBitcoinBlockNumbers();
-    if (bitcoinBlockNumbers[0] < bitcoinBlockNumbers[1]) return false;
-
-    return true;
-  }
-
   async startAfterDockersSynced() {
-    if (this.isStarting || this.isStarted) return;
-    this.isStarting = true;
+    if (this.isWaitingToStart || this.isStarting || this.isStarted) return;
+    this.isWaitingToStart = true;
 
+    console.log('Waiting for dockers to sync...');
     while (true) {
       const dockersAreSynced = await this.areDockersSynced();
       if (dockersAreSynced) break;
 
+      console.log('Dockers are not synced, waiting 1 second');
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
+    const argonBlockNumbers = await Dockers.getArgonBlockNumbers();
+    const bitcoinBlockNumbers = await Dockers.getBitcoinBlockNumbers();
+    console.log('Dockers are synced, starting bot', { argonBlockNumbers, bitcoinBlockNumbers });
+    
+    this.isWaitingToStart = false;
     await this.start();
   }
 
   async start() {
+    if (this.isStarting || this.isStarted) return;
     this.isStarting = true;
+
+    this.init();
 
     try {
       await this.blockSync.start();
@@ -107,5 +121,15 @@ export default class Bot {
     await this.blockSync.stop();
     await this.autobidder.stop();
     await this.accountset.client.then(x => x.disconnect());
+  }
+  
+  private async areDockersSynced() {
+    const argonBlockNumbers = await Dockers.getArgonBlockNumbers();
+    if (argonBlockNumbers[0] < argonBlockNumbers[1]) return false;
+
+    const bitcoinBlockNumbers = await Dockers.getBitcoinBlockNumbers();
+    if (bitcoinBlockNumbers[0] < bitcoinBlockNumbers[1]) return false;
+
+    return true;
   }
 }

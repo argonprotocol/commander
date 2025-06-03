@@ -3,7 +3,7 @@
     <template v-for="step in installer.steps" :key="step.key">
       <li v-if="!['hidden', 'failed'].includes(step.status)" :status="step.status" :style="{ height: `${stepHeightPct}%`, opacity: hasError ? '0.5' : '1' }" class="relative flex flex-row items-center border-t border-slate-300 text-black/30 whitespace-nowrap w-full pl-1">
         <div v-if="step.status === 'working'" spinner />
-        <Checkbox v-if="step.status === 'completed'" :isChecked="true" class="absolute top-1/2 -translate-y-1/2 left-0 w-4 h-4 max-w-4 max-h-4" />
+        <Checkbox v-if="['completed', 'completing'].includes(step.status)" :isChecked="true" class="absolute top-1/2 -translate-y-1/2 left-0 w-4 h-4 max-w-4 max-h-4" />
         <label>{{ getLabel(step) }}</label>
         <ProgressBar v-if="['working', 'completing', 'completed', 'failed'].includes(step.status)" :hasError="step.status === 'failed'" :progress="step.progress" :is-slow="step.isSlow" />
       </li>
@@ -47,14 +47,19 @@ const props = defineProps<{
 }>();
 
 const configStore = useConfigStore();
-const { serverDetails, installStatus } = storeToRefs(configStore);
+const { serverDetails, installStatus, stats } = storeToRefs(configStore);
 
-const installer = new Installer(installStatus.value);
+const installer = new Installer(installStatus.value, serverDetails.value.isInstallingFresh);
 const isRetrying = Vue.ref(false);
 
 installer.finishedFn = () => {
   configStore.serverDetails.isInstalling = false;
-  emitter.emit('openProvisioningCompleteOverlay');
+  configStore.serverDetails.isRequiringUpgrade = false;
+  if (serverDetails.value.isNewServer) {
+    emitter.emit('openProvisioningCompleteOverlay');
+  } else {
+    configStore.stats.isSyncing = true;  
+  }
 };
 
 const hasError = Vue.computed(() => {

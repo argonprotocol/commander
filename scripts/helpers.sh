@@ -100,7 +100,6 @@ check_shasum() {
     fi
 
     echo "$dir_name: $local_shasum"
-    
     command_output=$(run_command "cat ~/SHASUMS256")
     expected_shasums=$(echo "$command_output")
     if [ -z "$expected_shasums" ]; then

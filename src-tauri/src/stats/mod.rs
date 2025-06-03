@@ -6,7 +6,7 @@ use crate::db::{
 use crate::ssh::SSH;
 use crate::ssh::singleton::*;
 use crate::stats::structs::{IDashboardGlobalStats, IDashboardCohortStats, IBidsFileSubaccount, IBotStatus};
-use crate::installer::Installer;
+use crate::stats::syncer::StatsSyncer;
 use anyhow::Result;
 use tauri::AppHandle;
 use fetcher::StatsFetcher;
@@ -17,6 +17,7 @@ pub use structs::IStats;
 
 pub mod structs;
 pub mod fetcher;
+pub mod syncer;
 
 pub struct Stats {
     app: AppHandle,
@@ -27,6 +28,7 @@ pub struct Stats {
     oldest_frame_id_to_sync: u32,
     current_frame_id: u32,
     last_processed_frame_id: u32,
+    is_missing_current_frame: bool,
 }
 
 impl Stats {
@@ -34,8 +36,11 @@ impl Stats {
         let ssh = get_ssh_connection(server_details.ssh_config()?).await?;
         let local_port = try_adding_tunnel_to_connection(&ssh).await?;
         
-        let bot_status = match StatsFetcher::fetch_bidding_bot_status(local_port).await {
-            Ok(status) => status,
+        let bot_status = match StatsFetcher::fetch_bot_status(local_port).await {
+            Ok(bot_status) => {
+                Self::update_server_details_from_bot_status(&bot_status)?;
+                bot_status
+            },
             Err(_) => IBotStatus {
                 argon_block_numbers: (0, 0),
                 bitcoin_block_numbers: (0, 0),
@@ -62,60 +67,87 @@ impl Stats {
             oldest_frame_id_to_sync,
             current_frame_id,
             last_processed_frame_id: Frames::latest_id().unwrap_or(0),
+            is_missing_current_frame: false,
         })
+    }
+
+    fn default(cohort_id: Option<u32>) -> IStats {
+        IStats {
+            is_syncing: false,
+            sync_progress: 0.0,
+            sync_error: None,
+            has_won_seats: false,
+            active_bids: IActiveBids {
+                subaccounts: Vec::new(),
+            },
+            dashboard: IDashboardStats {
+                global: IDashboardGlobalStats {
+                    active_cohorts: 0,
+                    active_seats: 0,
+                    total_blocks_mined: 0,
+                    total_argons_bid: 0,
+                    total_transaction_fees: 0,
+                    total_argonots_mined: 0,
+                    total_argons_mined: 0,
+                    total_argons_minted: 0,
+                },
+                cohort_id,
+                cohort: Some(IDashboardCohortStats {
+                    cohort_id: 0,
+                    frame_tick_start: 0,
+                    frame_tick_end: 0,
+                    transaction_fees: 0,
+                    argonots_staked: 0,
+                    argons_bid: 0,
+                    seats_won: 0,
+                    blocks_mined: 0,
+                    argonots_mined: 0,
+                    argons_mined: 0,
+                    argons_minted: 0,
+                }),
+            },
+            argon_activity: Vec::new(),
+            bitcoin_activity: Vec::new(),
+            bot_activity: Vec::new(),
+        }
     }
 
     pub async fn fetch(app: &AppHandle, cohort_id: Option<u32>) -> Result<IStats> {
         let server_details = ServerDetails::load()?;
+        let sync_error = server_details.sync_error.clone();
 
-        if server_details.is_installing {
-            return Ok(IStats {
-                is_syncing: false,
-                sync_progress: 0.0,
-                has_won_seats: false,
-                active_bids: IActiveBids {
-                    subaccounts: Vec::new(),
-                },
-                dashboard: IDashboardStats {
-                    global: IDashboardGlobalStats {
-                        active_cohorts: 0,
-                        active_seats: 0,
-                        total_blocks_mined: 0,
-                        total_argons_bid: 0,
-                        total_transaction_fees: 0,
-                        total_argonots_mined: 0,
-                        total_argons_mined: 0,
-                        total_argons_minted: 0,
-                    },
-                    cohort: Some(IDashboardCohortStats {
-                        cohort_id: 0,
-                        frame_tick_start: 0,
-                        frame_tick_end: 0,
-                        transaction_fees: 0,
-                        argonots_staked: 0,
-                        argons_bid: 0,
-                        seats_won: 0,
-                        blocks_mined: 0,
-                        argonots_mined: 0,
-                        argons_mined: 0,
-                        argons_minted: 0,
-                    }),
-                },
-                argon_activity: Vec::new(),
-                bitcoin_activity: Vec::new(),
-                bot_activity: Vec::new(),
-            });
+        if server_details.is_installing || server_details.is_requiring_upgrade {
+            return Ok(Self::default(cohort_id));
         }
 
         let mut stats = Self::new(app, server_details).await?;
-        println!("STATS: {:?}", stats.bot_status);
 
         let sync_progress = stats.calculate_sync_progress().await?;
-        let is_syncing = sync_progress < 100.0;
         let has_won_seats = stats.bot_status.has_won_seats;
+        let mut is_syncing = false;
 
-        if is_syncing {
-            // StatsSync::launch(app, ssh).await?;
+        if sync_error.is_some() {
+            let mut response = Self::default(cohort_id);
+            response.is_syncing = true;
+            response.sync_progress = sync_progress;
+            response.sync_error = sync_error;
+            return Ok(response);
+        }
+
+        if sync_progress < 100.0 {
+            StatsSyncer::launch_sync_thread(&stats.ssh, stats.local_port, stats.oldest_frame_id_to_sync, stats.current_frame_id).await?;
+            is_syncing = true;
+        } else {
+            let mut syncer = StatsSyncer::new(&stats.ssh, stats.local_port).await?;
+
+            if stats.is_missing_current_frame {
+                let yesterday_frame = Frames::fetch_by_id(stats.current_frame_id - 1)?;
+                if !yesterday_frame.is_processed {
+                    syncer.sync_db_frame(yesterday_frame.id).await?;
+                }
+            }
+
+            syncer.sync_db_frame(stats.current_frame_id).await?;
         }
         
         let active_bids = stats.fetch_active_bids()?;
@@ -125,6 +157,7 @@ impl Stats {
         Ok(IStats {
             is_syncing,
             sync_progress,
+            sync_error: None,
             has_won_seats,
             active_bids,
             dashboard,
@@ -135,27 +168,35 @@ impl Stats {
     }
 
     async fn calculate_sync_progress(&mut self) -> Result<f32> {
-        if self.bot_status.load_progress < 100.0 {
-            return Ok(self.bot_status.load_progress * 0.9);
+        let bot_load_progress = self.bot_status.load_progress * 0.9;
+
+        if bot_load_progress < 90.0 {
+            return Ok(bot_load_progress);
         }
 
-        if !self.is_db_synced().await? {
-            println!("DB is not synced");
-            return Ok(90.0);
-        }
+        let db_sync_progress = self.calculate_db_sync_progress()? * 0.1;
 
-        Ok(100.0)
+        Ok(bot_load_progress + db_sync_progress)
     }
 
-    async fn is_db_synced(&mut self) -> Result<bool> {
-        let db_rows_expected = self.current_frame_id - self.oldest_frame_id_to_sync;
+    fn calculate_db_sync_progress(&mut self) -> Result<f32> {
+        let db_rows_expected = self.current_frame_id - self.oldest_frame_id_to_sync + 1;
+        let db_rows_found = Frames::fetch_record_count().unwrap();
 
-        if Frames::fetch_record_count().unwrap() == db_rows_expected {
+        if db_rows_found == db_rows_expected {
             self.last_processed_frame_id = self.current_frame_id - 1;
-            return Ok(true);
+            self.is_missing_current_frame = false;
+            return Ok(100.0);
         }
 
-        Ok(false)
+        if db_rows_found == (db_rows_expected - 1) {
+            if let Err(_) = Frames::fetch_by_id(self.current_frame_id) {
+                self.is_missing_current_frame = true;
+                return Ok(100.0);
+            }
+        }
+
+        Ok(db_rows_found as f32 / db_rows_expected as f32 * 100.0)
     }
 
     fn fetch_active_bids(&self) -> Result<IActiveBids> {
@@ -174,9 +215,10 @@ impl Stats {
 
     pub fn fetch_dashboard(&self, cohort_id: Option<u32>) -> Result<IDashboardStats> {
         Ok(IDashboardStats {
-            global: Self::fetch_global_dashboard_stats()?,
+            global: Self::fetch_dashboard_global_stats()?,
+            cohort_id,
             cohort: match cohort_id {
-                Some(id) => Self::fetch_cohort_dashboard_stats(id)?,
+                Some(id) => Self::fetch_dashboard_cohort_stats(id)?,
                 None => None,
             },
         })
@@ -190,7 +232,7 @@ impl Stats {
         }
     }
 
-    fn fetch_global_dashboard_stats() -> Result<IDashboardGlobalStats> {
+    fn fetch_dashboard_global_stats() -> Result<IDashboardGlobalStats> {
         let current_frame_id = Frames::latest_id()?;
         let (active_cohorts, active_seats, total_transaction_fees, total_argons_bid) =
             Cohorts::fetch_global_stats(current_frame_id)?;
@@ -210,7 +252,7 @@ impl Stats {
         })
     }
 
-    fn fetch_cohort_dashboard_stats(cohort_id: u32) -> Result<Option<IDashboardCohortStats>> {
+    fn fetch_dashboard_cohort_stats(cohort_id: u32) -> Result<Option<IDashboardCohortStats>> {
         let cohort = match Cohorts::fetch_by_id(cohort_id)? {
             Some(cohort) => cohort,
             None => return Ok(None),
@@ -231,5 +273,19 @@ impl Stats {
             argons_mined,
             argons_minted,
         }))
+    }
+
+    fn update_server_details_from_bot_status(bot_status: &IBotStatus) -> Result<()> {
+        let mut server_details = ServerDetails::load()
+            .map_err(|e| anyhow::anyhow!("Failed to load server connection: {}", e))?;
+
+        if bot_status.oldest_frame_id_to_sync > 0 {
+            server_details.oldest_frame_id_to_sync = Some(bot_status.oldest_frame_id_to_sync);
+        }
+
+        server_details.has_mining_seats = bot_status.has_won_seats;
+        server_details.save()?;
+
+        Ok(())
     }
 }

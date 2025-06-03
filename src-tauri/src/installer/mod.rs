@@ -1,4 +1,4 @@
-use crate::config::{ConfigFile, ServerDetails, InstallStatus, Security, BiddingRules, InstallStatusErrorType, InstallStatusClient};
+use crate::config::{ConfigFile, ServerDetails, InstallStatus, Security, BiddingRules, InstallStatusErrorType, InstallStatusClient, InstallStatusServer};
 use crate::ssh::{SSH, SSHConfig};
 use crate::ssh::singleton::*;
 use crate::utils::Utils;
@@ -14,10 +14,16 @@ pub mod status;
 pub use status::InstallerStatus;
 
 lazy_static! {
-    static ref IS_RUNNING_INSTALL: Mutex<Option<tokio::task::JoinHandle<()>>> = Mutex::new(None);
+    static ref IS_RUNNING: Mutex<Option<tokio::task::JoinHandle<()>>> = Mutex::new(None);
 }
 
 const CORE_DIRS: [&'static str; 4] = ["deploy", "bot", "calculator", "scripts"];
+
+struct TmpInstallChecks {
+    pub is_installing_fresh: bool,
+    pub is_partial_install: bool,
+    pub has_completed_install: bool,
+}
 
 pub struct Installer {}
 
@@ -43,12 +49,16 @@ impl Installer {
         // We will begin by running through a series of checks to determine if the install process
         // should be started. We don't use server_details.is_installing because the local value could
         // be out of date with the server.
-        let (install_status, is_partially_installed, has_completed_install) 
-            = Self::check_install(&ssh).await?;
+        let (install_status, tmp_install_checks) = Self::check_install(&ssh).await?;
+        let is_installing_fresh = tmp_install_checks.is_installing_fresh;
+        let is_partially_installed = tmp_install_checks.is_partial_install;
+        let has_completed_install = tmp_install_checks.has_completed_install;
+
         if has_completed_install {
             info!("Server is up-to-date, skipping Installer");
-            server_details.requires_upgrade = false;
+            server_details.is_requiring_upgrade = false;
             server_details.is_installing = false;
+            server_details.is_installing_fresh = false;
             server_details.save()?;
             return Ok(());
         }
@@ -59,30 +69,36 @@ impl Installer {
             return Ok(());
         }
 
-        info!("is_partially_installed = {}, should_bypass_upgrade_check = {}, is_new_server = {}", 
+        info!("is_installing_fresh = {}, is_partially_installed = {}, should_bypass_upgrade_check = {}, is_new_server = {}", 
+            is_installing_fresh,
             is_partially_installed, 
             should_bypass_upgrade_check, 
             server_details.is_new_server
         );
         
         let has_started_install = server_details.is_installing;
-        let needs_explicit_upgrade_approval = !has_started_install && !is_partially_installed && !should_bypass_upgrade_check && !server_details.is_new_server;
+        let needs_explicit_upgrade_approval = !has_started_install && !is_partially_installed && !should_bypass_upgrade_check && !server_details.is_new_server && !is_installing_fresh;
         if needs_explicit_upgrade_approval {
             info!("Server is not new so upgrade requires user approval, skipping Installer");
-            server_details.requires_upgrade = true;
+            server_details.is_requiring_upgrade = true;
             server_details.save()?;
             return Ok(());
         }
 
         // At this point we know the server is either brand new or has not completed its install. We will postpone
         // if there is an error, otherwise we start the install process.
-        server_details.requires_upgrade = false;
+
+        server_details.is_requiring_upgrade = false;
         server_details.is_installing = true;
+        if tmp_install_checks.is_installing_fresh {
+            server_details.is_installing_fresh = true;
+        }
         server_details.save()?;
 
-        if !is_partially_installed {
-            let mut install_status = install_status.clone();
+        let mut install_status: InstallStatus = install_status.clone();
+        if is_installing_fresh {
             install_status.client = InstallStatusClient::default();
+            install_status.server = InstallStatusServer::default();
             install_status.save()?;
         }
 
@@ -92,8 +108,12 @@ impl Installer {
             return Ok(());
         }
 
-        info!("Starting install process");
-        Self::launch_install_thread(&app, ssh.config.clone()).await?;
+        if install_status.server.docker_launch == 0.0 {
+            info!("Starting install process");
+            Self::launch_install_thread(&app, ssh.config.clone()).await?;
+        } else {
+            info!("Install script has finished, only waiting for dockers to sync, exiting Installer");
+        }
 
         Ok(())
     }
@@ -110,7 +130,7 @@ impl Installer {
             return Ok(());
         }
 
-        Self::clear_step_files(&ssh, step_key).await?;
+        Self::clear_step_files(&ssh, vec![step_key]).await?;
         Self::install_if_needed(&app, true).await?;
 
         Ok(())
@@ -145,7 +165,7 @@ impl Installer {
     }
 
     pub async fn is_install_running(ssh: &SSH) -> Result<bool> {
-        if let Some(_handle) = IS_RUNNING_INSTALL.lock().unwrap().as_ref() {
+        if let Some(_handle) = IS_RUNNING.lock().unwrap().as_ref() {
             info!("Install process IS running locally");
             return Ok(true);
         } else {
@@ -169,30 +189,42 @@ impl Installer {
     /// PRIVATE FUNCTIONS
     ////////////////////////////////////////////////////////////
 
-    async fn check_install(ssh: &SSH) -> Result<(InstallStatus, bool, bool)> {
+    async fn check_install(ssh: &SSH) -> Result<(InstallStatus, TmpInstallChecks)> {
         let install_status = InstallStatus::load()?;
-        let is_partially_installed = InstallerStatus::has_server_install_started(&install_status.server);
 
-        let is_new_server = Self::is_new_server(&ssh).await?;
-        info!("Is new server = {}", is_new_server);
-        if is_new_server {
-            return Ok((install_status, is_partially_installed, false));
+        let is_installing_fresh = !Self::server_has_sha256_file(&ssh).await?;
+        
+        if is_installing_fresh {
+            return Ok((install_status, TmpInstallChecks {
+                is_installing_fresh,
+                is_partial_install: false,
+                has_completed_install: false,
+            }));
         }
 
+        let is_partial_install = InstallerStatus::has_server_install_started(&install_status.server);
         let remote_files_need_updating = !Self::remote_files_match_local_shasums(&ssh).await?;
+
         if remote_files_need_updating {
-            return Ok((install_status, is_partially_installed, false));
+            return Ok((install_status, TmpInstallChecks {
+                is_installing_fresh,
+                is_partial_install,
+                has_completed_install: false,
+            }));
         }
 
         let install_status = InstallerStatus::fetch_latest_install_status(&ssh, install_status).await?;
         let has_completed_install = InstallerStatus::is_server_install_complete(&install_status.server);
-        let is_partially_installed = InstallerStatus::has_server_install_started(&install_status.server);
 
-        Ok((install_status, is_partially_installed, has_completed_install))
+        Ok((install_status, TmpInstallChecks {
+            is_installing_fresh,
+            is_partial_install,
+            has_completed_install,
+        }))
     }
 
     async fn remote_files_match_local_shasums(ssh: &SSH) -> Result<bool> {
-        let (remote_shasums, _code) = ssh.run_command("cat ~/SHASUMS256.final 2>/dev/null || true").await?;
+        let (remote_shasums, _code) = ssh.run_command("cat ~/SHASUMS256.copied 2>/dev/null || true").await?;
         let local_shasums: &'static str = include_str!("../../../SHASUMS256");
         let remote_files_match_local_shasums = local_shasums == remote_shasums;
         info!("Remote files match local shusums = {}", remote_files_match_local_shasums);
@@ -239,17 +271,24 @@ impl Installer {
 
     async fn launch_install_thread(app: &AppHandle, ssh_config: SSHConfig) -> Result<()> {
         info!("Running install thread");
-        if let Some(_handle) = IS_RUNNING_INSTALL.lock().unwrap().take() {
+        if let Some(_handle) = IS_RUNNING.lock().unwrap().take() {
             info!("Install thread already running, skipping");
             return Ok(());
         }
 
         let app = app.clone();
         let ssh = SSH::connect(ssh_config).await?;
+        let steps_to_clear = vec![
+            InstallStatusErrorType::FileCheck.to_string(),
+            InstallStatusErrorType::BitcoinInstall.to_string(),
+            InstallStatusErrorType::ArgonInstall.to_string(),
+            InstallStatusErrorType::DockerLaunch.to_string(),
+        ];
 
+        Self::clear_step_files(&ssh, steps_to_clear).await?;
         Self::upload_sha256(&ssh).await?;
 
-        let handle = tokio::spawn(async move {
+        let handle: tokio::task::JoinHandle<()> = tokio::spawn(async move {
             let mut error_message: String = "".to_string();
 
             let result = async {
@@ -284,18 +323,23 @@ impl Installer {
             info!("Install thread finished");
             
             // Clear the running state when the thread completes
-            let _ = IS_RUNNING_INSTALL.lock().unwrap().take();
+            let _ = IS_RUNNING.lock().unwrap().take();
         });
 
-        let _ = IS_RUNNING_INSTALL.lock().unwrap().insert(handle);
+        let _ = IS_RUNNING.lock().unwrap().insert(handle);
 
         Ok(())
+    }
+
+    async fn server_has_sha256_file(ssh: &SSH) -> Result<bool> {
+        let (_output, code) = ssh.run_command("test -f ~/SHASUMS256").await?;
+        Ok(code == 0)
     }
 
     async fn upload_sha256(ssh: &SSH) -> Result<()> {
         let local_shasums: &'static str = include_str!("../../../SHASUMS256");
         ssh.upload_file(local_shasums, "~/SHASUMS256").await?;
-        ssh.run_command("rm ~/SHASUMS256.final").await?;
+        ssh.run_command("rm ~/SHASUMS256.copied").await?;
         
         Ok(())
     }
@@ -309,7 +353,7 @@ impl Installer {
                 .map_err(|e| anyhow::anyhow!("Failed to upload {} directory to {}: {}", local_dir, remote_dir, e))?;
         }
 
-        ssh.run_command("~/scripts/update_shasums.sh SHASUMS256.final").await?;
+        ssh.run_command("~/scripts/update_shasums.sh SHASUMS256.copied").await?;
 
         Ok(())
     }
@@ -392,30 +436,52 @@ impl Installer {
         env_file.to_string()
     }
     
-    async fn clear_step_files(ssh: &SSH, step_key: String) -> Result<()> {
-        if step_key == "all" {
+    async fn clear_step_files(ssh: &SSH, step_keys: Vec<String>) -> Result<()> {
+        if step_keys.contains(&"all".to_string()) {
             InstallStatus::delete()?;
             ssh.run_command("rm -rf ~/install-logs/*").await?;
-        } else {
-            let mut install_status = InstallStatus::load()?;
-            let mut install_status_server = install_status.server;
-            install_status_server.error_type = None;
-            install_status_server.error_message = None;
-            install_status.server = install_status_server;
-            install_status.save()?;
-            ssh.run_command(format!("rm -rf ~/install-logs/{}.*", step_key).as_str())
-                .await?;
+            return Ok(());
         }
 
-        Ok(())
-    }
+        let mut install_status = InstallStatus::load()?;
+        install_status.server.error_type = None;
+        install_status.server.error_message = None;
 
-    async fn is_new_server(ssh: &SSH) -> Result<bool> {
-        // Right now we're doing a simple check for the install_server.sh script.
-        // code == 0 if the file exists, otherwise it's a new server
-        let (_output, code) = ssh.run_command("test -f ~/scripts/install_server.sh").await?;
-        
-        Ok(code != 0)
+        for step_key in &step_keys {
+            match step_key.as_str() {
+                "UbuntuCheck" => {
+                    install_status.client.ubuntu_check = 0.0;
+                    install_status.server.ubuntu_check = 0;
+                }
+                "FileCheck" => {
+                    install_status.client.file_check = 0.0;
+                    install_status.server.file_check = 0;
+                }
+                "DockerInstall" => {
+                    install_status.client.docker_install = 0.0;
+                    install_status.server.docker_install = 0;
+                }
+                "BitcoinInstall" => {
+                    install_status.client.bitcoin_install = 0.0;
+                    install_status.server.bitcoin_install = 0;
+                }
+                "ArgonInstall" => {
+                    install_status.client.argon_install = 0.0;
+                    install_status.server.argon_install = 0;
+                }
+                "DockerLaunch" => {
+                    install_status.client.docker_launch = 0.0;
+                    install_status.server.docker_launch = 0.0;
+                }
+                _ => {}
+            }
+            ssh.run_command(format!("rm -rf ~/install-logs/{}.*", step_key).as_str())
+            .await?;
+        }
+
+        install_status.save()?;
+
+        Ok(())
     }
 
     async fn start_install_script(ssh: &SSH) -> Result<()> {

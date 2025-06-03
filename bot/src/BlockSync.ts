@@ -21,6 +21,7 @@ import {
 } from './storage.ts';
 import { MiningFrames } from './MiningFrames.ts';
 import { Dockers } from './Dockers.ts';
+import type Bot from './Bot.ts';
 
 const defaultCohort = {
   blocksMined: 0,
@@ -56,6 +57,7 @@ export class BlockSync {
 
   oldestTick: number = 0;
   latestTick: number = 0;
+  earliestQueuedTick: number = 0;
   currentTick: number = 0;
 
   bidChanges?: {
@@ -75,6 +77,7 @@ export class BlockSync {
   private miningFrames: MiningFrames;
 
   constructor(
+    public bot: Bot,
     public accountset: Accountset,
     public storage: CohortStorage,
     public archiveUrl: string,
@@ -87,7 +90,10 @@ export class BlockSync {
 
   async status(): Promise<Omit<ISyncState, 'lastBlockNumberByFrameId'>> {
     const statusFileData = (await this.statusFile.get())!;
+  
     return {
+      isStarting: this.bot.isStarting || undefined,
+      isStarted: this.bot.isStarted || undefined,
       argonBlockNumbers: await Dockers.getArgonBlockNumbers(),
       bitcoinBlockNumbers: await Dockers.getBitcoinBlockNumbers(),
       bidsLastModifiedAt: statusFileData.bidsLastModifiedAt,
@@ -97,12 +103,25 @@ export class BlockSync {
       lastFinalizedBlockNumber: this.latestFinalizedHeader?.number.toNumber() ?? 0,
       oldestFrameIdToSync: statusFileData.oldestFrameIdToSync ?? 0,
       currentFrameId: statusFileData.currentFrameId ?? 0,
-      loadProgress: this.calculateProgress(this.currentTick, [
-        this.oldestTick,
-        this.latestTick,
-      ]),
+      loadProgress: await this.calculateLoadProgress(),
       queueDepth: this.queue.length,
     };
+  }
+
+  async calculateLoadProgress(): Promise<number> {
+    const ticksQueued = this.latestTick - this.earliestQueuedTick;
+    const queueProgress = this.calculateProgress(this.oldestTick + ticksQueued, [
+      this.oldestTick,
+      this.latestTick,
+    ]);
+    const processingProgress = this.calculateProgress(this.currentTick, [
+      this.oldestTick,
+      this.latestTick,
+    ]);
+
+    const progress = (queueProgress + processingProgress) / 2;
+    
+    return Math.round(progress * 100) / 100;
   }
 
   async stop() {
@@ -139,7 +158,7 @@ export class BlockSync {
       statusFileData.oldestFrameIdToSync,
     );
     this.oldestTick = oldestTickRange[0];
-
+    
     // plug any gaps in the sync state
     let header = this.latestFinalizedHeader;
     let headerBlockNumber = header.number.toNumber();
@@ -151,6 +170,7 @@ export class BlockSync {
     ) {
       console.log(`Queuing frame ${headerFrameId} block ${headerBlockNumber}`);
       this.queue.unshift(header);
+      this.earliestQueuedTick = getTickFromHeader(this.localClient, header) ?? this.earliestQueuedTick;
       header = await this.getParentHeader(header);
       headerBlockNumber = header.number.toNumber();
       headerFrameId = await this.getFrameIdFromHeader(header);
@@ -562,7 +582,7 @@ export class BlockSync {
     return 0n;
   }
 
-  calculateProgress(
+  private calculateProgress(
     tick: number | undefined,
     tickRange: [number, number] | undefined,
   ): number {

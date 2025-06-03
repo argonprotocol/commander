@@ -1,24 +1,36 @@
 
 type StepStatus = 'pending' | 'working' | 'completing' | 'completed' | 'failed' | 'hidden';
 
+type IStepLabel = [string, string, string];
+
 export interface IStep {
   key: string;
   progress: number;
   status: StepStatus;
-  labels: [string, string, string];
+  templates?: IStepLabel;
+  labels: IStepLabel;
   isSlow?: boolean;
 }
+
+const serverConnectTemplates: IStepLabel = [
+  `Connect to {IP_ADDRESS}`,
+  `Connecting to {IP_ADDRESS}`,
+  `Connected to {IP_ADDRESS}`,
+];
+
+const fileCheckTemplates: IStepLabel = [
+  `{VERB} Core Server Files`,
+  `{VERB} Core Server Files`,
+  `{VERB} Core Server Files`,
+];
 
 export const defaultSteps: IStep[] = [
   {
     key: 'ServerConnect',
     progress: 0,
     status: 'working',
-    labels: [
-      `Connect to Server`,
-      `Connecting to Server`,
-      `Connected to Server`,
-    ],
+    templates: serverConnectTemplates,
+    labels: serverConnectTemplates.map(x => x.replace('{IP_ADDRESS}', 'Server')) as IStepLabel,
   },
   {
     key: 'UbuntuCheck',
@@ -34,11 +46,12 @@ export const defaultSteps: IStep[] = [
     key: 'FileCheck',
     progress: 0,
     status: 'pending',
+    templates: fileCheckTemplates,
     labels: [
-      `Install Core Server Files`,
-      `Installing Core Server Files`,
-      `Installed Core Server Files`,
-    ],
+      fileCheckTemplates[0].replace('{VERB}', 'Install'),
+      fileCheckTemplates[1].replace('{VERB}', 'Installing'),
+      fileCheckTemplates[2].replace('{VERB}', 'Installed'),
+    ] as IStepLabel,
   },
   {
     key: 'DockerInstall',
@@ -65,9 +78,9 @@ export const defaultSteps: IStep[] = [
     progress: 0,
     status: 'pending',
     labels: [
-      `Install Argon Miner v1.1.0 and Sync Argon Block Data`,
-      `Installing Argon Miner v1.1.0 and Syncing Argon Block Data`,
-      `Installed Argon Miner v1.1.0 and Synced Argon Block Data`,
+      `Install Argon v1.1.0 and Sync Argon Block Data`,
+      `Installing Argon v1.1.0 and Syncing Argon Block Data`,
+      `Installed Argon v1.1.0 and Synced Argon Block Data`,
     ],
   },
   {

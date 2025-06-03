@@ -45,8 +45,15 @@ export default class Installer {
 
   public steps: IStep[] = Vue.reactive(defaultSteps);
 
-  constructor(installStatus: IInstallStatus) {
+  constructor(installStatus: IInstallStatus, isInstallingFresh: boolean) {
     this.installStatusServer = installStatus.server;
+    const fileCheckStep = this.steps.find(step => step.key === 'FileCheck');
+    const fileCheckVerbs = isInstallingFresh ? ['Install', 'Installing', 'Installed'] : ['Update', 'Updating', 'Updated'];
+    if (fileCheckStep) {
+      fileCheckStep.labels[0] = fileCheckStep.templates?.[0].replace('{VERB}', fileCheckVerbs[0]) ?? fileCheckStep.labels[0];
+      fileCheckStep.labels[1] = fileCheckStep.templates?.[1].replace('{VERB}', fileCheckVerbs[1]) ?? fileCheckStep.labels[1];
+      fileCheckStep.labels[2] = fileCheckStep.templates?.[2].replace('{VERB}', fileCheckVerbs[2]) ?? fileCheckStep.labels[2];
+    }
     this.start(installStatus.client);
   }
 
@@ -168,6 +175,8 @@ export default class Installer {
         stepIncrease = 0.60;
         step.isSlow = false;
         serverStepIsComplete = true;
+      } else if (step.key === 'DockerLaunch' && step.progress > this.installStatusServer.DockerLaunch) {
+        stepIncrease = step.progress - this.installStatusServer.DockerLaunch;
       } else if (step.key === 'DockerLaunch' && this.installStatusServer.DockerLaunch > step.progress) {
         stepIncrease = Math.max(this.installStatusServer.DockerLaunch - step.progress, 0);
         stepIncrease = Math.min(stepIncrease, fastStepIncrease);

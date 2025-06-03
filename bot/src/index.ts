@@ -35,40 +35,53 @@ app.get('/start', async (_req, res) => {
 });
 
 app.get('/status', async (_req, res) => {
+  if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
   const status = await bot.blockSync.status();
   jsonExt(status, res);
 });
+
 app.get('/bids', async (_req, res) => {
+  if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
   const currentFrameId = await bot.currentFrameId();
   const nextFrameId = currentFrameId + 1;
   const data = await bot.storage.bidsFile(nextFrameId).get();
   jsonExt(data, res);
 });
-app.get('/bids/:cohortFrameId', async (req, res) => {
-  const cohortFrameId = Number(req.params.cohortFrameId);
-  const data = await bot.storage.bidsFile(cohortFrameId).get();
+
+app.get('/bids/:cohortActivatedFrameId', async (req, res) => {
+  if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
+  const cohortActivatedFrameId = Number(req.params.cohortActivatedFrameId);
+  const data = await bot.storage.bidsFile(cohortActivatedFrameId).get();
   jsonExt(data, res);
 });
-app.get('/earnings/:cohortFrameId', async (req, res) => {
-  const cohortFrameId = Number(req.params.cohortFrameId);
-  const data = await bot.storage.earningsFile(cohortFrameId).get();
+
+app.get('/earnings/:frameId', async (req, res) => {
+  if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
+  const frameId = Number(req.params.frameId);
+  const data = await bot.storage.earningsFile(frameId).get();
   jsonExt(data, res);
 });
+
 app.post('/restart-bidder', async (_req, res) => {
+  if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
   await bot.autobidder.restart();
   res.status(200).json({ ok: true });
 });
+
 app.use((_req, res) => {
   res.status(404).send('Not Found');
 });
+
 const server = app.listen(process.env.PORT ?? 3000, () => {
   console.log(`Server is running on port ${process.env.PORT ?? 3000}`);
 });
-onExit(() => new Promise<void>(resolve => server.close(() => resolve())));
 
+onExit(() => new Promise<void>(resolve => server.close(() => resolve())));
 
 if (process.env.IS_READY_FOR_BIDDING === 'true') {
   bot.startAfterDockersSynced();
+} else {
+  console.log('Bot must be started manually');
 }
 
 onExit(() => bot.stop());

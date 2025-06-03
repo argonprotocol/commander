@@ -42,11 +42,6 @@ impl InstallerStatus {
 
     pub fn has_server_install_started(status_server: &InstallStatusServer) -> bool {
       status_server.ubuntu_check > 0
-          || status_server.file_check > 0
-          || status_server.docker_install > 0
-          || status_server.bitcoin_install > 0
-          || status_server.argon_install > 0
-          || status_server.docker_launch > 0.0
     }
 
     pub async fn fetch_latest_install_status(ssh: &SSH, mut install_status: InstallStatus) -> Result<InstallStatus> {

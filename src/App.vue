@@ -13,7 +13,7 @@
         </div>
       </div>
     </div>
-    <UpgradeOverlay v-if="requiresUpgrade" />
+    <UpgradeOverlay v-if="isRequiringUpgrade" />
     <ServerConnectOverlay />
     <BiddingRulesOverlay />
     <WalletOverlay />
@@ -21,7 +21,7 @@
     <ServerConfigureOverlay />
     <SecuritySettingsOverlay />
     <ProvisioningCompleteOverlay />
-    <SyncingOverlay v-if="stats.isSyncing && !configStore.serverDetails.isInstalling" />
+    <SyncingOverlay v-if="stats.isSyncing && !configStore.serverDetails.isInstalling && !configStore.serverDetails.isRequiringUpgrade" />
   </div>
 </template>
 
@@ -55,8 +55,8 @@ const { stats } = storeToRefs(configStore);
 
 let timeout: number | undefined;
 
-const requiresUpgrade = Vue.computed(() => {
-  return configStore.serverDetails.requiresUpgrade || 
+const isRequiringUpgrade = Vue.computed(() => {
+  return configStore.serverDetails.isRequiringUpgrade || 
     (configStore.serverDetails.isInstalling && !configStore.serverDetails.isNewServer);
 });
 

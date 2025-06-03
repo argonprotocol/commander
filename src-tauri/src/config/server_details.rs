@@ -10,12 +10,14 @@ pub struct ServerDetails {
     pub ssh_private_key: String,
     pub ssh_user: String,
     pub is_new_server: bool,
-    pub requires_upgrade: bool,
+    pub is_requiring_upgrade: bool,
     pub is_installing: bool,
+    pub is_installing_fresh: bool,
     pub is_connected: bool,
     pub is_ready_for_mining: bool,
     pub has_mining_seats: bool,
     pub oldest_frame_id_to_sync: Option<u32>,
+    pub sync_error: Option<String>,
 }
 
 impl ConfigFile<Self> for ServerDetails {
@@ -44,12 +46,14 @@ impl Default for ServerDetails {
             ssh_private_key,
             ssh_user: "root".to_string(),
             is_new_server: false,
-            requires_upgrade: false,
+            is_requiring_upgrade: false,
             is_installing: false,
+            is_installing_fresh: false,
             is_connected: false,
             is_ready_for_mining: false,
             has_mining_seats: false,
             oldest_frame_id_to_sync: None,
+            sync_error: None,
         }
     }
 }

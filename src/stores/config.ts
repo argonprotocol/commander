@@ -318,6 +318,7 @@ export const useConfigStore = defineStore('config', () => {
     serverDetails.value.isConnected = true;
     serverDetails.value.isInstalling = true;
     serverDetails.value.isNewServer = true;
+    serverDetails.value.isInstallingFresh = true;
     serverDetails.value.ipAddress = ipAddress;
   }
 
@@ -325,6 +326,7 @@ export const useConfigStore = defineStore('config', () => {
     await invoke('remove_server');
     serverDetails.value.isConnected = false;
     serverDetails.value.isInstalling = false;
+    serverDetails.value.isInstallingFresh = false;
     serverDetails.value.hasError = false;
     serverDetails.value.ipAddress = '';
   }
@@ -357,7 +359,6 @@ export const useConfigStore = defineStore('config', () => {
       title: 'Unknown Server Error',
       kind: 'error',
     });
-    await exit(1);
   }
 
   async function load() {

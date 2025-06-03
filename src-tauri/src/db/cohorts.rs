@@ -70,8 +70,8 @@ impl Cohorts {
             "SELECT cohorts.*, frames.tick_start FROM cohorts
             LEFT JOIN frames ON cohorts.id = frames.id
             WHERE seats_won > 0
-            AND id = ?
-            ORDER BY id
+            AND cohorts.id = ?
+            ORDER BY cohorts.id
             DESC LIMIT 1",
             [id],
             |row| {

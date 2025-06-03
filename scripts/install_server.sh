@@ -41,20 +41,19 @@ if ! (already_ran "UbuntuCheck"); then
 fi
 
 ########################################################################################
-if ! (already_ran "FileCheck"); then
-    start "FileCheck"
+reset "FileCheck"
+start "FileCheck"
 
-    echo "-----------------------------------------------------------------"
-    echo "CHECKING COREFILES"
+echo "-----------------------------------------------------------------"
+echo "CHECKING COREFILES"
 
-    check_shasum "deploy"
-    check_shasum "bot"
-    check_shasum "calculator"
-    check_shasum "scripts"
-    run_command "cp ~/SHASUMS256 ~/SHASUMS256.local"
-    
-    finish "FileCheck"
-fi
+check_shasum "deploy"
+check_shasum "bot"
+check_shasum "calculator"
+check_shasum "scripts"
+run_command "cp ~/SHASUMS256 ~/SHASUMS256.validated"
+
+finish "FileCheck"
 
 ########################################################################################
 

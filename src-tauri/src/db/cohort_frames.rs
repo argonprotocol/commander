@@ -74,7 +74,7 @@ impl CohortFrames {
             COALESCE(sum(argonots_mined), 0) as total_argonots_mined,
             COALESCE(sum(argons_mined), 0) as total_argons_mined,
             COALESCE(sum(argons_minted), 0) as total_argons_minted
-        FROM cohort_frames WHERE starting_frame_id = ?1",
+        FROM cohort_frames WHERE cohort_id = ?1",
             (cohort_id, ),
         )?;
 
