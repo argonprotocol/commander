@@ -11,7 +11,7 @@
     "tauri": "tauri",
     "lint": "prettier -w bot calculator",
     "typecheck": "vue-tsc --noEmit && yarn workspaces foreach --all run tsc --noEmit",
-    "fetch-data": "yarn ts-node --project data-generators/tsconfig.json data-generators/all.ts",
+    "update-data": "yarn ts-node --project data-generators/tsconfig.json data-generators/all.ts",
     "prepare": "husky"
   },
   "dependencies": {

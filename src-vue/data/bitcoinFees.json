@@ -514,5 +514,101 @@
   {
     "date": "2025-05-09",
     "feeInBitcoins": 0.00002053
+  },
+  {
+    "date": "2025-05-10",
+    "feeInBitcoins": 0.0000134
+  },
+  {
+    "date": "2025-05-11",
+    "feeInBitcoins": 0.00001217
+  },
+  {
+    "date": "2025-05-12",
+    "feeInBitcoins": 0.00003422
+  },
+  {
+    "date": "2025-05-13",
+    "feeInBitcoins": 0.0000212
+  },
+  {
+    "date": "2025-05-14",
+    "feeInBitcoins": 0.00002206
+  },
+  {
+    "date": "2025-05-15",
+    "feeInBitcoins": 0.00001451
+  },
+  {
+    "date": "2025-05-16",
+    "feeInBitcoins": 0.00003361
+  },
+  {
+    "date": "2025-05-17",
+    "feeInBitcoins": 0.00002466
+  },
+  {
+    "date": "2025-05-18",
+    "feeInBitcoins": 0.00000941
+  },
+  {
+    "date": "2025-05-19",
+    "feeInBitcoins": 0.00001174
+  },
+  {
+    "date": "2025-05-20",
+    "feeInBitcoins": 0.00001303
+  },
+  {
+    "date": "2025-05-21",
+    "feeInBitcoins": 0.00001871
+  },
+  {
+    "date": "2025-05-22",
+    "feeInBitcoins": 0.00001696
+  },
+  {
+    "date": "2025-05-23",
+    "feeInBitcoins": 0.00001368
+  },
+  {
+    "date": "2025-05-24",
+    "feeInBitcoins": 0.00001322
+  },
+  {
+    "date": "2025-05-25",
+    "feeInBitcoins": 0.00001145
+  },
+  {
+    "date": "2025-05-26",
+    "feeInBitcoins": 0.00001435
+  },
+  {
+    "date": "2025-05-27",
+    "feeInBitcoins": 0.00001343
+  },
+  {
+    "date": "2025-05-28",
+    "feeInBitcoins": 0.00001485
+  },
+  {
+    "date": "2025-05-29",
+    "feeInBitcoins": 0.00001378
+  },
+  {
+    "date": "2025-05-30",
+    "feeInBitcoins": 0.00001494
+  },
+  {
+    "date": "2025-05-31",
+    "feeInBitcoins": 0.00001346
+  },
+  {
+    "date": "2025-06-01",
+    "feeInBitcoins": 0.00001358
+  },
+  {
+    "date": "2025-06-02",
+    "feeInBitcoins": 0.00001378
   }
 ]
