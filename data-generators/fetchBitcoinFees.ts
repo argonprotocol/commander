@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
-import BitcoinDataFetcher from '../src/lib/BitcoinDataFetcher.ts';
+import BitcoinDataFetcher from '../src-vue/lib/BitcoinDataFetcher.ts';
 
 dayjs.extend(utc);
 

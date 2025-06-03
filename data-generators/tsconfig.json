@@ -12,7 +12,7 @@
     "resolveJsonModule": true,
     "outDir": "dist"
   },
-  "include": ["./**/*.ts", "../src/**/*.ts"],
+  "include": ["./**/*.ts", "../src-vue/**/*.ts"],
   "ts-node": {
     "esm": true,
     "experimentalSpecifiers": true
