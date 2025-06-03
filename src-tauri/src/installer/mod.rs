@@ -21,8 +21,9 @@ const CORE_DIRS: [&'static str; 4] = ["deploy", "bot", "calculator", "scripts"];
 
 struct TmpInstallChecks {
     pub is_installing_fresh: bool,
-    pub is_partial_install: bool,
-    pub has_completed_install: bool,
+    pub has_server_install_started: bool,
+    pub has_server_install_completed: bool,
+    pub remote_files_need_updating: bool,
 }
 
 pub struct Installer {}
@@ -51,10 +52,18 @@ impl Installer {
         // be out of date with the server.
         let (install_status, tmp_install_checks) = Self::check_install(&ssh).await?;
         let is_installing_fresh = tmp_install_checks.is_installing_fresh;
-        let is_partially_installed = tmp_install_checks.is_partial_install;
-        let has_completed_install = tmp_install_checks.has_completed_install;
+        let has_server_install_started = tmp_install_checks.has_server_install_started;
+        let has_server_install_completed = tmp_install_checks.has_server_install_completed;
+        let remote_files_need_updating = tmp_install_checks.remote_files_need_updating;
 
-        if has_completed_install {
+        info!("is_installing_fresh = {}", is_installing_fresh);
+        info!("has_server_install_started = {}", has_server_install_started);
+        info!("has_server_install_completed = {}", has_server_install_completed);
+        info!("remote_files_need_updating = {}", remote_files_need_updating);
+        info!("should_bypass_upgrade_check = {}", should_bypass_upgrade_check);
+        info!("is_new_server = {}", server_details.is_new_server);
+        
+        if has_server_install_completed && !remote_files_need_updating {
             info!("Server is up-to-date, skipping Installer");
             server_details.is_requiring_upgrade = false;
             server_details.is_installing = false;
@@ -68,16 +77,9 @@ impl Installer {
             info!("Local shasums are not accurate, skipping Installer");
             return Ok(());
         }
-
-        info!("is_installing_fresh = {}, is_partially_installed = {}, should_bypass_upgrade_check = {}, is_new_server = {}", 
-            is_installing_fresh,
-            is_partially_installed, 
-            should_bypass_upgrade_check, 
-            server_details.is_new_server
-        );
         
-        let has_started_install = server_details.is_installing;
-        let needs_explicit_upgrade_approval = !has_started_install && !is_partially_installed && !should_bypass_upgrade_check && !server_details.is_new_server && !is_installing_fresh;
+        let is_within_install_process = (server_details.is_installing || has_server_install_started) && !has_server_install_completed;
+        let needs_explicit_upgrade_approval = !is_within_install_process && !should_bypass_upgrade_check && !is_installing_fresh;
         if needs_explicit_upgrade_approval {
             info!("Server is not new so upgrade requires user approval, skipping Installer");
             server_details.is_requiring_upgrade = true;
@@ -90,10 +92,19 @@ impl Installer {
 
         server_details.is_requiring_upgrade = false;
         server_details.is_installing = true;
+
         if tmp_install_checks.is_installing_fresh {
             server_details.is_installing_fresh = true;
         }
+
         server_details.save()?;
+
+        let has_install_error = InstallerStatus::has_error(&install_status.server);
+        if has_install_error {
+            // If the server has an error, we don't want to start the install process again.
+            info!("Server has error, exiting Installer: {:?}", install_status.server);
+            return Ok(());
+        }
 
         let mut install_status: InstallStatus = install_status.clone();
         if is_installing_fresh {
@@ -102,18 +113,14 @@ impl Installer {
             install_status.save()?;
         }
 
-        let has_install_error = InstallerStatus::has_error(&install_status.server);
-        if has_install_error {
-            info!("Server has error, exiting Installer: {:?}", install_status.server);
+        let is_waiting_for_dockers_to_sync: bool = install_status.server.docker_launch > 0.0;
+        if is_waiting_for_dockers_to_sync && !remote_files_need_updating {
+            info!("Install script has finished, only waiting for dockers to sync, exiting Installer");
             return Ok(());
         }
 
-        if install_status.server.docker_launch == 0.0 {
-            info!("Starting install process");
-            Self::launch_install_thread(&app, ssh.config.clone()).await?;
-        } else {
-            info!("Install script has finished, only waiting for dockers to sync, exiting Installer");
-        }
+        info!("Starting install process");
+        Self::launch_install_thread(&app, ssh.config.clone()).await?;
 
         Ok(())
     }
@@ -197,29 +204,32 @@ impl Installer {
         if is_installing_fresh {
             return Ok((install_status, TmpInstallChecks {
                 is_installing_fresh,
-                is_partial_install: false,
-                has_completed_install: false,
+                has_server_install_started: false,
+                has_server_install_completed: false,
+                remote_files_need_updating: true,
             }));
         }
 
-        let is_partial_install = InstallerStatus::has_server_install_started(&install_status.server);
+        let has_server_install_started = InstallerStatus::has_server_install_started(&install_status.server);
         let remote_files_need_updating = !Self::remote_files_match_local_shasums(&ssh).await?;
 
         if remote_files_need_updating {
             return Ok((install_status, TmpInstallChecks {
                 is_installing_fresh,
-                is_partial_install,
-                has_completed_install: false,
+                has_server_install_started,
+                has_server_install_completed: false,
+                remote_files_need_updating,
             }));
         }
 
         let install_status = InstallerStatus::fetch_latest_install_status(&ssh, install_status).await?;
-        let has_completed_install = InstallerStatus::is_server_install_complete(&install_status.server);
+        let has_server_install_completed = InstallerStatus::has_server_install_completed(&install_status.server);
 
         Ok((install_status, TmpInstallChecks {
             is_installing_fresh,
-            is_partial_install,
-            has_completed_install,
+            has_server_install_started,
+            has_server_install_completed,
+            remote_files_need_updating,
         }))
     }
 

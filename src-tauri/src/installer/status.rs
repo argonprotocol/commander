@@ -16,8 +16,8 @@ impl InstallerStatus {
             return Ok(install_status.server);
         }
 
-        println!("IS SERVER STATUS COMPLETE: {:?}: {:?}", Self::is_server_install_complete(&install_status.server), install_status.server);
-        if Self::is_server_install_complete(&install_status.server) {
+        println!("IS SERVER STATUS COMPLETE: {:?}: {:?}", Self::has_server_install_completed(&install_status.server), install_status.server);
+        if Self::has_server_install_completed(&install_status.server) {
             let mut server_details = ServerDetails::load()?;
             server_details.is_installing = false;
             server_details.is_new_server = false;
@@ -31,7 +31,7 @@ impl InstallerStatus {
       status_server.error_type.is_some()
     }
 
-    pub fn is_server_install_complete(status_server: &InstallStatusServer) -> bool {
+    pub fn has_server_install_completed(status_server: &InstallStatusServer) -> bool {
       status_server.ubuntu_check >= 100
           && status_server.file_check >= 100
           && status_server.docker_install >= 100
