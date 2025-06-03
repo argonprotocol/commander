@@ -67,17 +67,17 @@
 
       <section box class="flex flex-col grow text-center px-2">
         <header class="flex flex-row justify-between text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30">
-          <div class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer">
-            <ChevronLeftIcon class="w-6 h-6 opacity-50 mx-1" />
+          <div @click="goToPreviousCohort" class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer group hover:opacity-80">
+            <ChevronLeftIcon class="w-6 h-6 opacity-50 mx-1 group-hover:opacity-80" />
             PREV SLOT
           </div>
           <span class="flex flex-row items-center">
             COHORT #{{ dashboard.cohort?.cohortId }} ({{cohortStartDate}} - {{cohortEndDate}})
             <span class="inline-block rounded-full bg-green-500/80 w-2.5 h-2.5 ml-2"></span>
           </span>
-          <div class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer">
+          <div @click="goToNextCohort" class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer group hover:opacity-80">
             NEXT SLOT
-            <ChevronRightIcon class="w-6 h-6 opacity-50 mx-1" />
+            <ChevronRightIcon class="w-6 h-6 opacity-50 mx-1 group-hover:opacity-80" />
           </div>
         </header>
         <div v-if="dashboard.cohort" class="flex flex-row h-full">
@@ -182,6 +182,7 @@ import { useConfigStore } from '../../stores/config';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import CountupClock from '../../components/CountupClock.vue';
 import AlertBars from '../../components/AlertBars.vue';
+import { invoke } from '@tauri-apps/api/core';
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
@@ -193,38 +194,6 @@ const { currencySymbol, stats } = storeToRefs(configStore);
 const dashboard = Vue.computed(() => {
   return stats.value.dashboard;
 });
-
-  // const argonActivity = Vue.ref<IArgonActivity[]>([]);
-  // const bitcoinActivity = Vue.ref<IBitcoinActivity[]>([]);
-  // const botActivity = Vue.ref<IBotActivity[]>([]);
-
-  // const globalStats = Vue.ref<IGlobalStats>({
-  //   activeCohorts: 0,
-  //   activeSeats: 0,
-  //   totalBlocksMined: 0,
-  //   totalArgonsBid: 0,
-  //   totalArgonsMinted: 0,
-  //   totalArgonsMined: 0,
-  //   totalTransactionFees: 0,
-  //   totalArgonotsMined: 0,
-  //   totalArgonsEarned: 0,
-  //   totalArgonsInvested: 0,
-  // });
-  // const cohortStats = Vue.ref<ICohortStats>({
-  //   frameIdAtCohortActivation: 0,
-  //   transactionFees: 0,
-  //   argonotsStaked: 0,
-  //   argonsBid: 0,
-  //   seatsWon: 0,
-  //   blocksMined: 0,
-  //   argonotsMined: 0,
-  //   argonsMined: 0,
-  //   argonsMinted: 0,
-  //   argonsInvested: 0,
-  //   argonsEarned: 0,
-  //   frameTickStart: 0,
-  //   frameTickEnd: 0,
-  // });
 
 const globalArgonsEarned = Vue.computed(() => {
   const global = dashboard.value.global;
@@ -290,6 +259,25 @@ const lastBotActivityAt = Vue.computed(() => {
   const lastActivity = stats.value.botActivity[0];
   return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
 });
+
+async function goToPreviousCohort() {
+  const cohortId = dashboard.value.cohortId;
+  const previousCohortId = Math.max(cohortId - 1, 1);
+  const response = await invoke('fetch_stats', { cohortId: previousCohortId });
+  console.log(cohortId, previousCohortId, response);
+  if (response) {
+    stats.value = response;
+  }
+}
+
+async function goToNextCohort() {
+  const cohortId = dashboard.value.cohortId;
+  const nextCohortId = cohortId + 1;
+  const response = await invoke('fetch_stats', { cohortId: nextCohortId });
+  if (response) {
+    stats.value = response;
+  }
+}
 
 function formatLargeNumber(number: number, maxLength = 5) {
   if (number < (10 ** (maxLength - 2))) { // 1_000

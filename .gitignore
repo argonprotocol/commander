@@ -30,4 +30,3 @@ bot/caleb.json
 bot/.env
 tsconfig.*.tsbuildinfo
 *.pem
-data
