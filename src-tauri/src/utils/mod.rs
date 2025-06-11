@@ -1,4 +1,5 @@
 use anyhow::Result;
+use rand::RngCore;
 use sha2::{Digest, Sha256};
 use std::env as std_env;
 use std::fs;
@@ -17,27 +18,6 @@ pub struct FileInfo {
 pub struct Utils;
 
 impl Utils {
-    pub fn get_network_name() -> String {
-        if !std_env::var("VITE_NETWORK_NAME").is_ok() {
-            std_env::set_var("VITE_NETWORK_NAME", "mainnet");
-        }
-        std_env::var("VITE_NETWORK_NAME").unwrap()
-    }
-
-    pub fn get_network_url() -> String {
-        let is_testnet: bool = Self::get_network_name() == "testnet";
-
-        if !std_env::var("VITE_NETWORK_URL").is_ok() {
-            if is_testnet {
-                std_env::set_var("VITE_NETWORK_URL", "wss://rpc.testnet.argonprotocol.org");
-            } else {
-                std_env::set_var("VITE_NETWORK_URL", "wss://rpc.argon.network");
-            }
-        }
-
-        std_env::var("VITE_NETWORK_URL").unwrap()
-    }
-
     pub fn get_instance_name() -> String {
         std_env::var("INSTANCE_NAME").unwrap_or("default".to_string())
     }
@@ -105,8 +85,20 @@ impl Utils {
         Ok(format!("{:x}", hasher.finalize()))
     }
 
-    pub fn get_version(app: &AppHandle) -> Result<String> {
-        let version = app.package_info().version.to_string();
-        Ok(version)
+    #[allow(unused)]
+    pub fn get_key_from_keychain() -> Result<String> {
+        let key_entry = keyring::Entry::new("argon-commander", "db_key")?;
+        let key = match key_entry.get_password() {
+            Ok(k) => k,
+            Err(_) => {
+                let mut key = [0u8; 32]; // 256-bit key
+                rand::thread_rng().fill_bytes(&mut key);
+                let new_key = hex::encode(&key);
+
+                key_entry.set_password(&new_key)?;
+                new_key
+            }
+        };
+        Ok(key)
     }
 }

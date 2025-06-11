@@ -3,11 +3,11 @@ name = "Commander"
 version = "0.1.0"
 description = "Desktop management app for Argon"
 authors = ["Caleb Clark", "Blake Byrnes"]
-edition = "2021"
+edition = "2024"
 
 [workspace.package]
 version = "1.1.0"
-edition = "2021"
+edition = "2024"
 
 [workspace]
 members = []
@@ -32,9 +32,6 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
-[workspace.dependencies]
-rusqlite = { version = "0.35.0", features = ["bundled", "bundled-sqlcipher-vendored-openssl"] }
-
 [dependencies]
 tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"
@@ -49,12 +46,10 @@ tokio = "1.43.0"
 async-trait = "0.1.86"
 window-vibrancy = "0.6.0"
 rand = "0.8"
-dirs = "6.0.0"
-semver = "1.0.26"
+color-backtrace = "0.7.0"
 include_dir = "0.7"
 lazy_static = "1.4.0"
 anyhow = "1.0"
-reqwest = { version = "0.12", features = ["json"] }
 tauri-plugin-log = { version = "2", features = ["colored" ] }
 keyring = {version = "3", features = ["apple-native", "windows-native"] }
 hex = "0.4.3"

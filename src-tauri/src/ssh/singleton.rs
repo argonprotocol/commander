@@ -3,7 +3,6 @@ use crate::ssh::SSH;
 use anyhow::Result;
 use lazy_static::lazy_static;
 use log;
-use std::sync::Arc;
 use tokio::sync::Mutex;
 
 lazy_static! {
@@ -63,33 +62,12 @@ pub async fn try_open_ssh_connection(ssh_config: &SSHConfig) -> Result<SSH> {
         *ssh_connection = Some(new_ssh.clone());
     }
 
-    Ok(ssh_connection.as_ref().unwrap().clone())
+    ssh_connection.as_ref()
+        .ok_or_else(|| anyhow::anyhow!("Failed to create or retrieve SSH connection"))
+        .map(|ssh| ssh.clone())
 }
 
 pub async fn get_ssh_connection() -> Result<Option<SSH>> {
     let ssh_connection = SSH_CONNECTION.lock().await;
     Ok(ssh_connection.as_ref().cloned())
-}
-
-pub async fn try_adding_tunnel_to_connection(ssh: &SSH) -> Result<u16> {
-    if let Some(handle) = LOCAL_PORT.lock().await.take() {
-        return Ok(handle);
-    }
-
-    let local_port: u16 = SSH::find_available_port(3600).await?;
-    let remote_host = "127.0.0.1";
-    let remote_port = 3000;
-
-    *LOCAL_PORT.lock().await = Some(local_port);
-
-    let arc_ssh = Arc::new(ssh.clone());
-    log::info!(
-        "Creating tunnel from local port {} to {}:{}",
-        local_port, remote_host, remote_port
-    );
-    arc_ssh
-        .create_http_tunnel(local_port, remote_host, remote_port)
-        .await?;
-
-    Ok(local_port)
 }

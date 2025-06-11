@@ -1,20 +1,24 @@
-// import { fetch } from '@tauri-apps/plugin-http';
 import { IBlockNumbers } from '@argonprotocol/commander-bot/src/Dockers';
 import {
-  ISyncState,
-  IEarningsFile,
   IBidsFile,
   IBidsHistory,
+  IEarningsFile,
+  ISyncState,
   IWinningBid,
 } from '@argonprotocol/commander-bot/src/storage';
 import { convertBigIntStringToNumber } from '../Utils';
+import { SSH } from '../SSH.ts';
 
 export class StatsFetcher {
-  public static async fetchSyncState(localPort: number, retries: number = 0): Promise<ISyncState> {
-    console.log('Fetching bot status...', `http://127.0.0.1:${localPort}/sync-state`);
+  public static async fetchSyncState(retries = 0): Promise<ISyncState> {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('Fetching bot status...', `::remote::/sync-state`);
     try {
-      const response = await fetch(`http://127.0.0.1:${localPort}/sync-state`);
-      const data = await response.json();
+      const response = await SSH.runHttpGet<ISyncState>(`sync-state`);
+      if (response.status !== 200) {
+        throw new Error(`Failed to fetch bot status: ${response.status}`);
+      }
+      const data = response.data;
       console.log('SyncState fetched:', data);
       return {
         hasMiningSeats: data.hasMiningSeats,
@@ -44,25 +48,22 @@ export class StatsFetcher {
       const retryIn = Math.pow(2, retries) * 1000;
       console.log(`Error fetching bot status, retrying in ${retryIn / 1000}s...`, error);
       await new Promise(resolve => setTimeout(resolve, retryIn));
-      return this.fetchSyncState(localPort, retries);
+      return this.fetchSyncState(retries);
     }
   }
 
-  public static async fetchArgonBlockchainStatus(localPort: number): Promise<IBlockNumbers> {
-    const response = await fetch(`http://127.0.0.1:${localPort}/argon-blockchain-status`);
-    const data: IBlockNumbers = await response.json();
+  public static async fetchArgonBlockchainStatus(): Promise<IBlockNumbers> {
+    const { data } = await SSH.runHttpGet<IBlockNumbers>(`argon-blockchain-status`);
     return { localNode: data.localNode, mainNode: data.mainNode };
   }
 
-  public static async fetchBitcoinBlockchainStatus(localPort: number): Promise<IBlockNumbers> {
-    const response = await fetch(`http://127.0.0.1:${localPort}/bitcoin-blockchain-status`);
-    const data: IBlockNumbers = await response.json();
+  public static async fetchBitcoinBlockchainStatus(): Promise<IBlockNumbers> {
+    const { data } = await SSH.runHttpGet<IBlockNumbers>(`bitcoin-blockchain-status`);
     return { localNode: data.localNode, mainNode: data.mainNode };
   }
 
-  public static async fetchBotHistory(localPort: number): Promise<IBidsHistory> {
-    const response = await fetch(`http://127.0.0.1:${localPort}/bid-history`);
-    const data: IBidsHistory = await response.json();
+  public static async fetchBotHistory(): Promise<IBidsHistory> {
+    const { data } = await SSH.runHttpGet<IBidsHistory>(`bid-history`);
 
     return data.map(x => ({
       cohortId: x.cohortId,
@@ -94,13 +95,9 @@ export class StatsFetcher {
     }));
   }
 
-  public static async fetchEarningsFile(
-    localPort: number,
-    frameId: number,
-  ): Promise<IEarningsFile> {
-    console.log(`Fetching http://127.0.0.1:${localPort}/earnings/${frameId}`);
-    const response = await fetch(`http://127.0.0.1:${localPort}/earnings/${frameId}`);
-    const data: IEarningsFile = await response.json();
+  public static async fetchEarningsFile(frameId: number): Promise<IEarningsFile> {
+    console.log(`Fetching earnings/${frameId}`);
+    const { data } = await SSH.runHttpGet<IEarningsFile>(`earnings/${frameId}`);
     console.log('Earnings file fetched:', data);
     const byCohortActivatingFrameId = Object.entries(data.byCohortActivatingFrameId).map(
       ([cohortActivatingFrameId, value]) => [
@@ -130,9 +127,8 @@ export class StatsFetcher {
     };
   }
 
-  public static async fetchBidsFile(localPort: number, frameId: number): Promise<IBidsFile> {
-    const response = await fetch(`http://127.0.0.1:${localPort}/bids/${frameId}`);
-    const data = await response.json();
+  public static async fetchBidsFile(frameId: number): Promise<IBidsFile> {
+    const { data } = await SSH.runHttpGet<IBidsFile>(`bids/${frameId}`);
     console.log('Bids file fetched:', data);
     return {
       cohortBiddingFrameId: data.cohortBiddingFrameId,

@@ -3,12 +3,10 @@ import { StatsFetcher } from './Fetcher';
 import { IEarningsFileCohort } from '@argonprotocol/commander-bot/src/storage';
 
 export class StatsSyncer {
-  private localPort: number;
   private isRunning: boolean = false;
   private db: Db;
 
-  constructor(localPort: number, db: Db) {
-    this.localPort = localPort;
+  constructor(db: Db) {
     this.db = db;
   }
 
@@ -35,7 +33,7 @@ export class StatsSyncer {
       return;
     }
 
-    const earningsFile = await StatsFetcher.fetchEarningsFile(this.localPort, frameId);
+    const earningsFile = await StatsFetcher.fetchEarningsFile(frameId);
 
     await this.db.framesTable.insertOrUpdate(
       frameId,

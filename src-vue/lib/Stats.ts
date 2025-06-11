@@ -1,10 +1,9 @@
 import { ISyncState } from '@argonprotocol/commander-bot/src/storage';
 import { StatsFetcher } from './stats/Fetcher';
 import { StatsSyncer } from './stats/Syncer';
-import { IStats, IActiveBids, IDashboardStats } from '../interfaces/IStats';
+import { IActiveBids, IDashboardStats, IStats } from '../interfaces/IStats';
 import { Db } from './Db';
 import { Config } from './Config';
-import { SSH } from './SSH';
 import { Installer } from '../stores/installer';
 
 let IS_INITIALIZED = false;
@@ -26,7 +25,6 @@ export class Stats {
 
   private _loadingFns!: { resolve: () => void; reject: (error: Error) => void };
 
-  private localPort!: number;
   private syncState!: ISyncState;
   private oldestFrameIdToSync!: number;
   private currentFrameId!: number;
@@ -87,12 +85,8 @@ export class Stats {
     this.db = await this._dbPromise;
     this.lastProcessedFrameId = (await this.db.framesTable.latestId()) || 0;
 
-    console.info('Ensuring tunnel...');
-    this.localPort = await SSH.ensureTunnel(this._config.serverDetails);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
     console.info('Fetching sync state...');
-    this.syncState = await StatsFetcher.fetchSyncState(this.localPort);
+    this.syncState = await StatsFetcher.fetchSyncState();
 
     await this.updateServerDetailsFromSyncState(this.syncState);
     this.oldestFrameIdToSync = this.syncState.oldestFrameIdToSync;
@@ -124,9 +118,9 @@ export class Stats {
 
   public async run(): Promise<IStats> {
     this.cohortId ??= await this.fetchLatestCohortIdFromDb();
-    const syncer = new StatsSyncer(this.localPort, this.db);
+    const syncer = new StatsSyncer(this.db);
 
-    const bidsFile = await StatsFetcher.fetchBidsFile(this.localPort, this.currentFrameId + 1);
+    const bidsFile = await StatsFetcher.fetchBidsFile(this.currentFrameId + 1);
     console.info('CURRENT Bids file:', bidsFile);
 
     if (this.isMissingCurrentFrame) {
@@ -278,7 +272,7 @@ export class Stats {
   }
 
   private async updateArgonActivity(): Promise<void> {
-    const latestBlockNumbers = await StatsFetcher.fetchArgonBlockchainStatus(this.localPort);
+    const latestBlockNumbers = await StatsFetcher.fetchArgonBlockchainStatus();
     const lastArgonActivity = await this.db.argonActivitiesTable.latest();
 
     const localhostMatches =
@@ -294,7 +288,7 @@ export class Stats {
   }
 
   private async updateBitcoinActivity(): Promise<void> {
-    const latestBlockNumbers = await StatsFetcher.fetchBitcoinBlockchainStatus(this.localPort);
+    const latestBlockNumbers = await StatsFetcher.fetchBitcoinBlockchainStatus();
     const savedActivity = await this.db.bitcoinActivitiesTable.latest();
 
     const localhostMatches = savedActivity?.localNodeBlockNumber === latestBlockNumbers.localNode;
@@ -309,7 +303,7 @@ export class Stats {
   }
 
   private async updateBotActivity(): Promise<void> {
-    const botHistory = await StatsFetcher.fetchBotHistory(this.localPort);
+    const botHistory = await StatsFetcher.fetchBotHistory();
     // TODO: Implement bot activity update logic
   }
 }

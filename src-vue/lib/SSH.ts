@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import { Config } from './Config';
 import { IConfigServerDetails } from '../interfaces/IConfig';
 
 export class SSH {
@@ -23,12 +22,21 @@ export class SSH {
     });
   }
 
-  public static async ensureTunnel(serverDetails: IConfigServerDetails): Promise<number> {
-    return await invoke('ensure_ssh_tunnel', {
-      host: serverDetails.ipAddress,
-      username: serverDetails.sshUser,
-      privateKey: serverDetails.sshPrivateKey,
-    });
+  public static async runHttpGet<T>(
+    botPath: string,
+    ...curlArgs: string[]
+  ): Promise<{ status: number; data: T }> {
+    const result = await SSH.runCommand(
+      `~/scripts/get_bot_http.sh ${botPath} ${curlArgs.join(' ')}`,
+    );
+    if (result[1] !== 0) {
+      throw new Error(`HTTP GET command failed with status ${result[1]}`);
+    }
+    const httpResponse: { status: number; data: T } = JSON.parse(result[0]);
+    if (httpResponse.status !== 200) {
+      throw new Error(`HTTP GET request failed with status ${httpResponse.status}`);
+    }
+    return httpResponse;
   }
 
   public static async runCommand(command: string): Promise<[string, number]> {
