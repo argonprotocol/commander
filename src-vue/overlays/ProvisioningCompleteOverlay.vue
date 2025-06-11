@@ -13,7 +13,7 @@
 
           <p>
             We verified your server configurations, installed all required software, and double-checked that everything is in working order. 
-            <template v-if="configStore.serverDetails.isReadyForMining">
+            <template v-if="config.isServerReadyForMining">
               Click the Let's Go button to get started.
             </template>
             <template v-else>
@@ -35,10 +35,10 @@ import * as Vue from 'vue';
 import { TransitionChild, TransitionRoot } from '@headlessui/vue';
 import emitter from '../emitters/basic';
 import BgOverlay from '../components/BgOverlay.vue';
-import { useConfigStore } from '../stores/config';
+import { useConfig } from '../stores/config';
 
 const isOpen = Vue.ref(false);
-const configStore = useConfigStore();
+const config = useConfig();
 
 emitter.on('openProvisioningCompleteOverlay', () => {
   isOpen.value = true;

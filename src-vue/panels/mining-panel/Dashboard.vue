@@ -2,7 +2,7 @@
   <div class="flex flex-col h-full">
     <AlertBars />
 
-    <div :class="configStore.isDataSyncing ? 'opacity-30 pointer-events-none' : ''" class="flex flex-col h-full px-3.5 py-3 gap-y-2.5 justify-stretch grow">
+    <div :class="config.isDataSyncing ? 'opacity-30 pointer-events-none' : ''" class="flex flex-col h-full px-3.5 py-3 gap-y-2.5 justify-stretch grow">
       <section class="flex flex-row gap-x-3">
         <div box stat-box class="flex flex-col w-2/12 !py-4">
           <span>{{ dashboard.global.activeCohorts || 0 }}</span>
@@ -178,7 +178,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import utc from 'dayjs/plugin/utc';
 import { fmtCommas, fmtMoney, calculateAPY, fmtDecimals, fmtDecimalsMax } from '../../lib/Utils';
-import { useConfigStore } from '../../stores/config';
+import { useConfig } from '../../stores/config';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import CountupClock from '../../components/CountupClock.vue';
 import AlertBars from '../../components/AlertBars.vue';
@@ -187,9 +187,9 @@ import { invoke } from '@tauri-apps/api/core';
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
 
-const configStore = useConfigStore();
-const { argonTo, argonotToArgon } = configStore;
-const { currencySymbol, stats } = storeToRefs(configStore);
+const config = useConfig();
+const { argonTo, argonotToArgon } = config;
+const { currencySymbol, stats } = storeToRefs(config);
 
 const dashboard = Vue.computed(() => {
   return stats.value.dashboard;

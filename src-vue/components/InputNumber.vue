@@ -70,10 +70,10 @@ import * as Vue from 'vue';
 import { LightBulbIcon } from '@heroicons/vue/24/outline';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
 import { fmtCommas, fmtDecimalsMax } from '../lib/Utils';
-import NumArrow from '../assets/num-arrow.svg';
-import { useConfigStore } from '../stores/config';
+import NumArrow from '../assets/num-arrow.svg?component';
+import { useCurrencyStore } from '../stores/currency';
 
-const configStore = useConfigStore();
+const currencyStore = useCurrencyStore();
 
 const props = withDefaults(defineProps<{
   modelValue: number;
@@ -113,7 +113,7 @@ const initialDelay = 500; // Initial delay before starting continuous updates
 const updateInterval = 50; // Interval between updates once continuous mode starts
 
 const prefix = Vue.computed(() => {
-  return props.prefix + (props.format === 'argons' ? configStore.currencySymbol : '');
+  return props.prefix + (props.format === 'argons' ? currencyStore.currencySymbol : '');
 });
 
 const suffix = Vue.computed(() => {
@@ -127,11 +127,11 @@ const suffix = Vue.computed(() => {
 });
 
 function originalToConverted(valueOriginal: number) {
-  return props.format === 'argons' ? configStore.argonTo(valueOriginal) : valueOriginal;
+  return props.format === 'argons' ? currencyStore.argonTo(valueOriginal) : valueOriginal;
 }
 
 function convertedToOriginal(convertedValue: number) {
-  return props.format === 'argons' ? configStore.toArgon(convertedValue) : convertedValue;
+  return props.format === 'argons' ? currencyStore.toArgon(convertedValue) : convertedValue;
 }
 
 function updateInputValue(valueConverted: number) {

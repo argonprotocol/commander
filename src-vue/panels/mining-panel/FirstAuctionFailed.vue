@@ -24,14 +24,14 @@
 import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { useConfigStore } from '../../stores/config';
+import { useConfig } from '../../stores/config';
 import { useBlockchainStore, type IActiveBid } from '../../stores/blockchain';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
 import BiddingActivityOverlayButton from '../../overlays/BiddingActivityOverlayButton.vue';
 
 dayjs.extend(utc);
 
-const configStore = useConfigStore();
+const config = useConfig();
 const blockchainStore = useBlockchainStore();
 
 function openBiddingBudgetOverlay() {
@@ -39,7 +39,7 @@ function openBiddingBudgetOverlay() {
 }
 
 Vue.onMounted(async () => {
-  if (!configStore.biddingRules) return;
+  if (!config.biddingRules) return;
 });
 </script>
 

@@ -26,6 +26,10 @@ export class AutoBidder {
     this.miningBids = new MiningBids(accountset.client);
   }
 
+  get bidHistory(): CohortBidder['bidHistory'] {
+    return this.activeBidder?.bidHistory || [];
+  }
+
   async start(localRpcUrl: string): Promise<void> {
     await this.accountset.registerKeys(localRpcUrl);
     const { unsubscribe } = await this.miningBids.onCohortChange({

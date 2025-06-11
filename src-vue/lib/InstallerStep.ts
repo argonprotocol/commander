@@ -1,12 +1,11 @@
-
-type StepStatus = 'pending' | 'working' | 'completing' | 'completed' | 'failed' | 'hidden';
+import { InstallStepKey, InstallStepStatus } from "../interfaces/IConfig";
 
 type IStepLabel = [string, string, string];
 
 export interface IStep {
-  key: string;
+  key: InstallStepKey;
   progress: number;
-  status: StepStatus;
+  status: InstallStepStatus;
   templates?: IStepLabel;
   labels: IStepLabel;
   isSlow?: boolean;
@@ -18,24 +17,28 @@ const serverConnectTemplates: IStepLabel = [
   `Connected to {IP_ADDRESS}`,
 ];
 
-const fileCheckTemplates: IStepLabel = [
-  `{VERB} Core Server Files`,
-  `{VERB} Core Server Files`,
-  `{VERB} Core Server Files`,
-];
-
-export const defaultSteps: IStep[] = [
+export const stepMetas: IStep[] = [
   {
-    key: 'ServerConnect',
+    key: InstallStepKey.ServerConnect,
     progress: 0,
-    status: 'working',
+    status: InstallStepStatus.Working,
     templates: serverConnectTemplates,
     labels: serverConnectTemplates.map(x => x.replace('{IP_ADDRESS}', 'Server')) as IStepLabel,
   },
   {
-    key: 'UbuntuCheck',
+    key: InstallStepKey.FileCheck,
     progress: 0,
-    status: 'pending',
+    status: InstallStepStatus.Pending,
+    labels: [
+      `Upload Core Server Files`,
+      `Uploading Core Server Files`,
+      `Uploaded Core Server Files`,
+    ] as IStepLabel,
+  },
+  {
+    key: InstallStepKey.UbuntuCheck,
+    progress: 0,
+    status: InstallStepStatus.Pending,
     labels: [
       `Check Ubuntu 24.10 and Related Libraries`,
       `Checking Ubuntu 24.10 and Related Libraries`,
@@ -43,20 +46,9 @@ export const defaultSteps: IStep[] = [
     ],
   },
   {
-    key: 'FileCheck',
+    key: InstallStepKey.DockerInstall,
     progress: 0,
-    status: 'pending',
-    templates: fileCheckTemplates,
-    labels: [
-      fileCheckTemplates[0].replace('{VERB}', 'Install'),
-      fileCheckTemplates[1].replace('{VERB}', 'Installing'),
-      fileCheckTemplates[2].replace('{VERB}', 'Installed'),
-    ] as IStepLabel,
-  },
-  {
-    key: 'DockerInstall',
-    progress: 0,
-    status: 'pending',
+    status: InstallStepStatus.Pending,
     labels: [
       `Verify Docker v28.0 and Install Required Images`,
       `Verifying Docker v28.0 and Installing Required Images`,
@@ -64,9 +56,9 @@ export const defaultSteps: IStep[] = [
     ],
   },
   {
-    key: 'BitcoinInstall',
+    key: InstallStepKey.BitcoinInstall,
     progress: 0,
-    status: 'pending',
+    status: InstallStepStatus.Pending,
     labels: [
       `Install Bitcoin v28.1 and Sync Bitcoin Block Data`,
       `Installing Bitcoin v28.1 and Syncing Bitcoin Block Data`,
@@ -74,9 +66,9 @@ export const defaultSteps: IStep[] = [
     ],
   },
   {
-    key: 'ArgonInstall',
+    key: InstallStepKey.ArgonInstall,
     progress: 0,
-    status: 'pending',
+    status: InstallStepStatus.Pending,
     labels: [
       `Install Argon v1.1.0 and Sync Argon Block Data`,
       `Installing Argon v1.1.0 and Syncing Argon Block Data`,
@@ -84,9 +76,9 @@ export const defaultSteps: IStep[] = [
     ],
   },
   {
-    key: 'DockerLaunch',
+    key: InstallStepKey.MiningLaunch,
     progress: 0,
-    status: 'pending',
+    status: InstallStepStatus.Pending,
     labels: [
       `Launch Bitcoin & Argon Mining Nodes`,
       `Launching Bitcoin & Argon Mining Nodes`,

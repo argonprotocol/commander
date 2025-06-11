@@ -1,8 +1,8 @@
 <template>
-  <BlankSlate v-if="!serverDetails.isConnected" />
-  <CloudMachineIsProvisioning v-if="serverDetails.isInstalling && serverDetails.isNewServer" />
-  <Dashboard v-else-if="serverDetails.hasMiningSeats" />
-  <FirstAuction v-else-if="serverDetails.isReadyForMining" />
+  <BlankSlate v-if="!config.isServerConnected" />
+  <CloudMachineIsProvisioning v-else-if="config.isServerInstalling && config.isServerNew" />
+  <Dashboard v-else-if="config.hasMiningSeats" />
+  <FirstAuction v-else-if="config.isServerReadyForMining" />
   <FinalSetupChecklist v-else />  
 </template>
 
@@ -12,8 +12,7 @@ import FinalSetupChecklist from './mining-panel/FinalSetupChecklist.vue';
 import CloudMachineIsProvisioning from './mining-panel/CloudMachineIsProvisioning.vue';
 import FirstAuction from './mining-panel/FirstAuction.vue';
 import Dashboard from './mining-panel/Dashboard.vue';
-import { useConfigStore } from '../stores/config';
+import { useConfig } from '../stores/config';
 
-const configStore = useConfigStore();
-const serverDetails = configStore.serverDetails;
+const config = useConfig();
 </script>

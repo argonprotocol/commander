@@ -17,7 +17,7 @@
       <p class="text-center text-lg mt-6 border-t border-b border-gray-300 pt-8 pb-7 font-light leading-7.5 inline-block">
         Your bidding bot successfully connected to the Argon blockchain and is currently trying to win some mining seats. It's been given
         <span @click="openBiddingBudgetOverlay" class="text-argon-600 underline cursor-pointer underline-offset-2">a budget of 
-        {{configStore.currencySymbol}}{{ fmtMoney(configStore.argonTo(biddingBudget)) }}</span>.
+        {{currencySymbol}}{{ fmtMoney(currencyStore.argonTo(biddingBudget)) }}</span>.
         <template v-if="auctionIsClosing && startOfAuctionClosing">
           The currently active auction is in the process of closing. Bids can still be submitted for the
           next
@@ -49,22 +49,27 @@
 import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { useConfigStore } from '../../stores/config';
+import { useConfig } from '../../stores/config';
 import { fmtMoney } from '../../lib/Utils';
-import { useBlockchainStore, type IActiveBid } from '../../stores/blockchain';
 import CountdownClock from '../../components/CountdownClock.vue';
-import ConfettiIcon from '../../assets/confetti.svg';
+import ConfettiIcon from '../../assets/confetti.svg?component';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
 import BiddingActivityOverlayButton from '../../overlays/BiddingActivityOverlayButton.vue';
 import emitter from '../../emitters/basic';
-import { getMainchain } from '../../lib/mainchain';
+import { getMainchain } from '../../stores/mainchain';
+import { useCurrencyStore } from '../../stores/currency';
+import { useStats } from '../../stores/stats';
+import { storeToRefs } from 'pinia';
 
 dayjs.extend(utc);
 
 const mainchain = getMainchain();
 
-const configStore = useConfigStore();
-const blockchainStore = useBlockchainStore();
+console.log('using stats store');
+const stats = useStats();
+const config = useConfig();
+const currencyStore = useCurrencyStore();
+const { currencySymbol } = storeToRefs(currencyStore);
 
 const auctionIsClosing = Vue.ref(false);
 const startOfAuctionClosing: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
@@ -83,7 +88,7 @@ function openBiddingBudgetOverlay() {
 }
 
 Vue.onMounted(async () => {
-  if (!configStore.biddingRules) return;
+  if (!config.biddingRules) return;
 
   if (!startOfAuctionClosing.value || !startOfNextCohort.value) {
     const tickAtStartOfAuctionClosing = await mainchain.getTickAtStartOfAuctionClosing();

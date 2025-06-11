@@ -25,10 +25,10 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { ChevronLeftIcon, XMarkIcon } from '@heroicons/vue/24/outline';
-import { useConfigStore } from '../../stores/config';
+import { useConfig } from '../../stores/config';
 
-const configStore = useConfigStore();
-const mnemonics = Vue.computed(() => configStore.walletMnemonic.split(' '));
+const config = useConfig();
+const mnemonics = Vue.computed(() => config.security.walletMnemonic.split(' '));
 
 const emit = defineEmits(['close', 'goto']);
 

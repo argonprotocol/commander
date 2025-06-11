@@ -11,8 +11,8 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import TriangleNib from '../assets/triangle-nib.svg';
-import TriangleNibBasic from '../assets/triangle-nib-basic.svg';
+import TriangleNib from '../assets/triangle-nib.svg?component';
+import TriangleNibBasic from '../assets/triangle-nib-basic.svg?component';
 // import ChartOpaque from './ChartOpaque.vue';
 
 const props = defineProps<{

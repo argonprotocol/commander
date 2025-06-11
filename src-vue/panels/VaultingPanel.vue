@@ -123,20 +123,18 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { fmtMoney, fmtCommas, fmtDecimalsMax } from '../lib/Utils';
-import { useBlockchainStore } from '../stores/blockchain';
-import { useConfigStore } from '../stores/config';
+import { useCurrencyStore } from '../stores/currency';
 import { storeToRefs } from 'pinia';
-import { IVault } from '@argonprotocol/commander-calculator';
-import VaultImage from '../assets/vault.svg';
-import { getMainchain } from '../lib/mainchain';
+import { IVault } from '@argonprotocol/commander-calculator/src/Mainchain';
+import VaultImage from '../assets/vault.svg?component';
+import { getMainchain } from '../stores/mainchain';
 
 const mainchain = getMainchain();
 
-const blockchainStore = useBlockchainStore();
-const configStore = useConfigStore();
+const currencyStore = useCurrencyStore();
 
-const { argonTo, btcToArgon } = configStore;
-const { currencySymbol } = storeToRefs(configStore);
+const { argonTo, btcToArgon } = currencyStore;
+const { currencySymbol } = storeToRefs(currencyStore);
 
 const isLoaded = Vue.ref(false);
 

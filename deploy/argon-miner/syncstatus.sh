@@ -11,11 +11,11 @@ if [ $? -ne 0 ]; then
 fi
 
 # Split the output into local and main chain block numbers
-localhost_block_number=$(echo "$block_numbers" | cut -d'-' -f1)
-mainchain_block_number=$(echo "$block_numbers" | cut -d'-' -f2)
+local_node_block_number=$(echo "$block_numbers" | cut -d'-' -f1)
+main_node_block_number=$(echo "$block_numbers" | cut -d'-' -f2)
 
 # Calculate sync percentage (capped at 100%)
-sync_pct=$(awk -v local="$localhost_block_number" -v main="$mainchain_block_number" 'BEGIN { pct = (local / main) * 100; print (pct > 100 ? 100 : pct) }' | xargs printf "%.2f")
+sync_pct=$(awk -v local="$local_node_block_number" -v main="$main_node_block_number" 'BEGIN { pct = (local / main) * 100; print (pct > 100 ? 100 : pct) }' | xargs printf "%.2f")
 
 # Save output to file and display it
 echo "$sync_pct%"

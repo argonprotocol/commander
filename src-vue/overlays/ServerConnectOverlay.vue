@@ -152,7 +152,7 @@
                         <p>
                           Once your server is provisioned (this might take a few minutes), you'll need to copy and paste the server's IP address into the input box below. If you see a blue progress bar, it means your server is still provisioning. Give it some time, and it will appear.
                         </p>
-                        <div v-if="ipAddressError" class="rounded-md bg-red-200 p-2 mb-2">
+                        <div v-if="hasIpAddressError" class="rounded-md bg-red-200 p-2 mb-2">
                           <div class="flex">
                             <div class="shrink-0">
                               <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />
@@ -172,8 +172,8 @@
             </div>
           </div>
 
-          <div class="flex flex-row justify-end px-4 border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
-            <div v-if="serverDetailsError" class="grow rounded-md bg-red-200 p-2 pl-4 flex items-center">
+          <div v-if="isOpen" class="flex flex-row justify-end px-4 border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
+            <div v-if="hasServerDetailsError" class="grow rounded-md bg-red-200 p-2 pl-4 flex items-center">
               <div class="flex">
                 <div class="shrink-0">
                   <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />
@@ -202,16 +202,17 @@ import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import { TransitionRoot, Dialog, DialogPanel } from '@headlessui/vue';
 import emitter from '../emitters/basic';
-import { useConfigStore } from '../stores/config';
+import { useConfig } from '../stores/config';
 import BgOverlay from '../components/BgOverlay.vue';
-import CopyIcon from '../assets/copy.svg';
+import CopyIcon from '../assets/copy.svg?component';
 import { ExclamationTriangleIcon } from '@heroicons/vue/20/solid';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
-import { storeToRefs } from 'pinia';
 import CopyToClipboard from '../components/CopyToClipboard.vue';
+import { SSH } from '../lib/SSH';
+import { IConfigServerDetails } from '../interfaces/IConfig';
 
-const configStore = useConfigStore();
-const { serverDetails } = storeToRefs(configStore);
+const config = useConfig();
+const serverDetails = Vue.computed(() => config.serverDetails);
 
 let openedAt = dayjs();
 
@@ -220,8 +221,8 @@ const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
 
 const ipAddress = Vue.ref('');
-const ipAddressError = Vue.ref(false);
-const serverDetailsError = Vue.ref(false);
+const hasIpAddressError = Vue.ref(false);
+const hasServerDetailsError = Vue.ref(false);
 
 const dialogPanel = Vue.ref(null);
 const copyToClipboard = Vue.ref<typeof CopyToClipboard>();
@@ -245,19 +246,29 @@ const closeOverlay = () => {
 
 async function addServer() {
   isSaving.value = true;
-  ipAddressError.value = false;
-  serverDetailsError.value = false;
+  hasIpAddressError.value = false;
+  hasServerDetailsError.value = false;
 
   if (ipAddress.value === '') {
-    ipAddressError.value = true;
+    hasIpAddressError.value = true;
     isSaving.value = false;
     return;
   }
+
   try {
-    await configStore.addServer(ipAddress.value);
+    const newServerDetails: IConfigServerDetails = { ...config.serverDetails, ipAddress: ipAddress.value };
+    await SSH.ensureConnection(newServerDetails);
+    await SSH.runCommand("echo 'test'");    
+    
+    config.isServerNew = true;
+    config.isServerConnected = true;
+    config.isServerInstalling = true;
+    config.serverDetails = newServerDetails;
+    config.save();
     closeOverlay();
   } catch (error) {
-    serverDetailsError.value = true;
+    console.log('error', error);
+    hasServerDetailsError.value = true;
   }
   isSaving.value = false;
 }

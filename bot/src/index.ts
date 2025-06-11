@@ -3,6 +3,8 @@ import { keyringFromFile } from '@argonprotocol/mainchain/clis';
 import { jsonExt, onExit, requireAll, requireEnv } from './utils.ts';
 import Bot from './Bot.ts';
 import express from 'express';
+import cors from 'cors';
+import { Dockers } from './Dockers.ts';
 
 // wait for crypto wasm to be loaded
 await waitForLoad();
@@ -28,6 +30,10 @@ const bot = new Bot({
 });
 
 const app = express();
+app.use(cors({
+  origin: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+}));
 
 app.get('/start', async (_req, res) => {
   await bot.start();
@@ -40,11 +46,27 @@ app.get('/status', async (_req, res) => {
   jsonExt(status, res);
 });
 
+app.get('/argon-blockchain-status', async (_req, res) => {
+  const status = await Dockers.getArgonBlockNumbers();
+  jsonExt(status, res);
+});
+
+app.get('/bitcoin-blockchain-status', async (_req, res) => {
+  const status = await Dockers.getBitcoinBlockNumbers();
+  jsonExt(status, res);
+});
+
 app.get('/bids', async (_req, res) => {
   if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
   const currentFrameId = await bot.currentFrameId();
   const nextFrameId = currentFrameId + 1;
   const data = await bot.storage.bidsFile(nextFrameId).get();
+  jsonExt(data, res);
+});
+
+app.get('/bids-history', async (_req, res) => {
+  if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
+  const data = bot.autobidder.bidHistory;
   jsonExt(data, res);
 });
 

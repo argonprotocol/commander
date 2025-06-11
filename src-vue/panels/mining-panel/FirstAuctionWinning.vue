@@ -24,10 +24,10 @@
       </div>
       <div class="flex flex-col items-center justify-center min-h-[75px] fade-in-out">
         <div v-if="seatPositions.length" :class="[priceTextSize, 'text-center text-argon-600 font-bold']">
-          {{configStore.currencySymbol}}{{ fmtMoney(configStore.argonTo(currentBidPrice)) }}
+          {{config.currencySymbol}}{{ fmtMoney(config.argonTo(currentBidPrice)) }}
         </div>
         <div v-else class="text-center text-7xl text-argon-600 font-bold">
-          {{configStore.currencySymbol}}--.--
+          {{config.currencySymbol}}--.--
         </div>
       </div>
       <p class="text-center text-lg mt-6 border-t border-b border-gray-300 pt-8 pb-7 font-light leading-7.5">
@@ -47,7 +47,7 @@
             <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and </template>
             {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
           </CountdownClock>.<br />
-          Your account allows for an additional bid raise of {{configStore.currencySymbol}}{{ fmtMoney(configStore.argonTo(remainingBidBudget)) }} if needed.
+          Your account allows for an additional bid raise of {{config.currencySymbol}}{{ fmtMoney(config.argonTo(remainingBidBudget)) }} if needed.
         </template>
       </p>
       <Popover as="div" class="relative text-center text-lg font-bold mt-10">
@@ -69,7 +69,7 @@
               <tbody class="font-light font-mono">
                 <tr v-for="(bid, index) in allBids" :key="bid.accountId">
                   <td class="text-left">{{ index + 1 }}</td>
-                  <td class="text-left">{{configStore.currencySymbol}}{{ fmtMoney(configStore.argonTo(bid.amount)) }}</td>
+                  <td class="text-left">{{config.currencySymbol}}{{ fmtMoney(config.argonTo(bid.amount)) }}</td>
                   <td class="text-left">recently</td>
                   <td class="text-right relative">
                     {{ bid.accountId.slice(0, 10) }}...{{ bid.accountId.slice(-7) }}
@@ -95,20 +95,20 @@
 import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { useConfigStore } from '../../stores/config';
+import { useConfig } from '../../stores/config';
 import {  IBiddingRules, BiddingParamsHelper } from '@argonprotocol/commander-calculator';
 import { fmtMoney } from '../../lib/Utils';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { useBlockchainStore, type IActiveBid } from '../../stores/blockchain';
 import CountdownClock from '../../components/CountdownClock.vue';
-import ConfettiIcon from '../../assets/confetti.svg';
-import { getMainchain } from '../../lib/mainchain';
+import ConfettiIcon from '../../assets/confetti.svg?component';
+import { getMainchain } from '../../stores/mainchain';
 
 dayjs.extend(utc);
 
 const mainchain = getMainchain();
 
-const configStore = useConfigStore();
+const config = useConfig();
 const blockchainStore = useBlockchainStore();
 
 const auctionIsClosing = Vue.ref(false);
@@ -126,7 +126,7 @@ const priceTextSize = Vue.computed(() => {
 });
 
 const biddingParamsHelper = new BiddingParamsHelper(
-  configStore.biddingRules as IBiddingRules,
+  config.biddingRules as IBiddingRules,
   getMainchain(),
 );
 const startOfAuctionClosing: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
@@ -155,7 +155,7 @@ function processBids() {
 }
 
 Vue.onMounted(async () => {
-  if (!configStore.biddingRules) return;
+  if (!config.biddingRules) return;
 
   blockchainStore.subscribeToActiveBids(newActiveBids => {
     allBids.value = newActiveBids;
@@ -166,7 +166,7 @@ Vue.onMounted(async () => {
     processBids();
   });
 
-  configStore.subscribeToMyBids(myNewBids => {
+  config.subscribeToMyBids(myNewBids => {
     myBids.value = myNewBids;
     if (!allBids.value.length) {
       return;
@@ -182,7 +182,7 @@ Vue.onMounted(async () => {
   }
 
   const seatCount = await biddingParamsHelper.getMaxSeats();
-  maxBidPrice.value = configStore.biddingRules.finalAmount * seatCount;
+  maxBidPrice.value = config.biddingRules.finalAmount * seatCount;
   remainingBidBudget.value = maxBidPrice.value - currentBidPrice.value;
 });
 </script>

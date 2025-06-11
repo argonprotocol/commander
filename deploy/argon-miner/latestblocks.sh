@@ -31,16 +31,16 @@ get_block_number() {
        "$url" | jq -r '.result.number' | xargs printf "%d\n"
 }
 
-localhost_block_number=$(get_block_number "http://localhost:9944")
-mainchain_block_number=$(get_block_number "$ARGON_ARCHIVE_NODE")
+local_node_block_number=$(get_block_number "http://localhost:9944")
+main_node_block_number=$(get_block_number "$ARGON_ARCHIVE_NODE")
 
 # Check if values were retrieved successfully
-if [[ -z "$localhost_block_number" || -z "$mainchain_block_number" ]]; then
+if [[ -z "$local_node_block_number" || -z "$main_node_block_number" ]]; then
   echo "Error: Could not retrieve block numbers"
   exit 1
 fi
 
-output="$localhost_block_number-$mainchain_block_number"
+output="$local_node_block_number-$main_node_block_number"
 
 ########################################################
 # Save output to file and display it

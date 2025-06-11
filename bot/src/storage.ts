@@ -3,6 +3,10 @@ import { LRU } from 'tiny-lru';
 import * as fs from 'node:fs';
 import { JsonExt, type ArgonClient } from '@argonprotocol/mainchain';
 import { MiningFrames } from './MiningFrames.ts';
+import type { IBlockNumbers } from './Dockers.ts';
+import { CohortBidder } from '@argonprotocol/mainchain';
+
+export type IBidsHistory = CohortBidder['bidHistory'];
 
 export interface ILastModifiedAt {
   lastModifiedAt?: Date;
@@ -14,14 +18,16 @@ export interface IEarningsFile extends ILastModifiedAt {
   frameTickEnd: number;
   lastBlockNumber: number;
   byCohortFrameId: {
-    [cohortFrameId: number]: {
-      lastBlockMinedAt: string;
-      blocksMined: number;
-      argonsMined: bigint;
-      argonsMinted: bigint;
-      argonotsMined: bigint;
-    };
+    [cohortFrameId: number]: IEarningsFileCohort;
   };
+}
+
+export interface IEarningsFileCohort {
+  lastBlockMinedAt: string;
+  blocksMined: number;
+  argonsMined: bigint;
+  argonsMinted: bigint;
+  argonotsMined: bigint;
 }
 
 export interface IBidsFile extends ILastModifiedAt {
@@ -51,8 +57,8 @@ export interface ISyncState extends ILastModifiedAt {
   isWaitingToStart?: boolean;
   isStarting?: boolean;
   isStarted?: boolean;
-  argonBlockNumbers: [number, number];
-  bitcoinBlockNumbers: [number, number];
+  argonBlockNumbers: IBlockNumbers;
+  bitcoinBlockNumbers: IBlockNumbers;
   bidsLastModifiedAt: Date;
   earningsLastModifiedAt: Date;
   hasWonSeats: boolean;
@@ -62,6 +68,9 @@ export interface ISyncState extends ILastModifiedAt {
   currentFrameId: number;
   loadProgress: number;
   queueDepth: number;
+}
+
+export interface ISyncStateFile extends ISyncState {
   lastBlockNumberByFrameId: {
     [frameId: number]: number;
   };
@@ -143,14 +152,14 @@ export class CohortStorage {
   }
   private lruCache = new LRU<JsonStore<any>>(100);
 
-  public syncStateFile(): JsonStore<ISyncState> {
+  public syncStateFile(): JsonStore<ISyncStateFile> {
     const key = `sync-state.json`;
     let entry = this.lruCache.get(key);
     if (!entry) {
-      entry = new JsonStore<ISyncState>(Path.join(this.basedir, key), () => ({
+      entry = new JsonStore<ISyncStateFile>(Path.join(this.basedir, key), () => ({
         isStarted: false,
-        argonBlockNumbers: [0, 0],
-        bitcoinBlockNumbers: [0, 0],
+        argonBlockNumbers: { localNode: 0, mainNode: 0 },
+        bitcoinBlockNumbers: { localNode: 0, mainNode: 0 },
         bidsLastModifiedAt: new Date(),
         earningsLastModifiedAt: new Date(),
         hasWonSeats: false,

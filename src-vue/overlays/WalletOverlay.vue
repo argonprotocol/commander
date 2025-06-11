@@ -25,7 +25,7 @@
               </div>
             </div>
             <div class="w-full text-center py-14 text-5xl font-bold border-b border-black/20">
-              {{currencySymbol}}{{ fmtCommas(argonTo(wallet.totalValue).toFixed()).split('.')[0] }}<span class="opacity-50">.{{ wallet.totalValue.toFixed(2).split('.')[1] }}</span>
+              {{currencyStore.currencySymbol}}{{ fmtCommas(argonTo(wallet.totalValue).toFixed()).split('.')[0] }}<span class="opacity-50">.{{ wallet.totalValue.toFixed(2).split('.')[1] }}</span>
             </div>
             <div class="flex flex-row justify-between items-center w-full text-center pt-5 pb-2 px-3 space-x-4 font-bold">
               <ul class="flex flex-row space-x-4 grow">
@@ -50,21 +50,19 @@
 import * as Vue from 'vue';
 import { TransitionChild, TransitionRoot } from '@headlessui/vue';
 import emitter from '../emitters/basic';
-import { useConfigStore } from '../stores/config';
+import { useCurrencyStore } from '../stores/currency';
 import { fmtCommas, abreviateAddress } from '../lib/Utils';
-import { storeToRefs } from 'pinia';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import Tokens from './wallet-overlay/Tokens.vue';
 import Activity from './wallet-overlay/Activity.vue';
 import Receive from './wallet-overlay/Receive.vue';
 import Send from './wallet-overlay/Send.vue';
 import BgOverlay from '../components/BgOverlay.vue';
-import CopyIcon from '../assets/copy.svg';
+import CopyIcon from '../assets/copy.svg?component';
 import CopyToClipboard from '../components/CopyToClipboard.vue';
 
-const configStore = useConfigStore();
-const { argonTo } = configStore;
-const { currencySymbol } = storeToRefs(configStore);
+const currencyStore = useCurrencyStore();
+const { argonTo } = currencyStore;
 
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
@@ -81,13 +79,13 @@ const wallet = Vue.ref({
 Vue.watch(walletId, () => {
   if (walletId.value === 'mng') {
     walletName.value = 'Mining';
-    wallet.value = configStore.mngWallet;
+    wallet.value = currencyStore.mngWallet;
   } else if (walletId.value === 'llb') {
     walletName.value = 'Liquid Locking';
-    wallet.value = configStore.llbWallet;
+    wallet.value = currencyStore.llbWallet;
   } else if (walletId.value === 'vlt') {
     walletName.value = 'Vaulting';
-    wallet.value = configStore.vltWallet;
+    wallet.value = currencyStore.vltWallet;
   }
 }, { immediate: true });
 

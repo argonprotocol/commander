@@ -92,17 +92,18 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import emitter from '../../emitters/basic';
 import { useBlockchainStore } from '../../stores/blockchain';
-import { useConfigStore } from '../../stores/config';
+import { useConfig } from '../../stores/config';
+import { useCurrencyStore } from '../../stores/currency';
 import { fmtCommas, fmtMoney, calculateAPY } from '../../lib/Utils';
 import { storeToRefs } from 'pinia';
 
 dayjs.extend(utc);
 
 const blockchainStore = useBlockchainStore();
-const configStore = useConfigStore();
+const currencyStore = useCurrencyStore();
 
-const { argonTo, argonotToArgon } = configStore;
-const { currencySymbol } = storeToRefs(configStore);
+const { argonTo, argonotToArgon } = currencyStore;
+const { currencySymbol } = storeToRefs(currencyStore);
 
 const minutesSinceBlock = Vue.ref(0);
 const secondsSinceBlock = Vue.ref(0);

@@ -76,3 +76,10 @@ export function calculateAPY(costs: number, rewards: number) {
   }
   return apy;
 }
+
+export function convertBigIntStringToNumber(bigIntStr: string | undefined): bigint | undefined {
+  if (bigIntStr === undefined) return undefined;
+  if (!bigIntStr) return 0n;
+  // The string is formatted as "1234567890n"
+  return BigInt(bigIntStr.slice(0, -1));
+}

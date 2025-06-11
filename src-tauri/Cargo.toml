@@ -10,10 +10,10 @@ version = "1.1.0"
 edition = "2021"
 
 [workspace]
-members = ["macros"]
+members = []
 
 [workspace.metadata.tauri]
-bundle.identifier = "com.argon.commander.app"
+bundle.identifier = "com.argon.commander"
 bundle.name = "Argon Commander"   # This is used as CFBundleName
 bundle.short_name = "Argon Commander"     # Optional, but can affect UI display
 
@@ -51,8 +51,6 @@ window-vibrancy = "0.6.0"
 rand = "0.8"
 dirs = "6.0.0"
 semver = "1.0.26"
-rusqlite = { workspace = true }
-rusqlite_migration = { version = "2.1.0", features = ["from-directory"] }
 include_dir = "0.7"
 lazy_static = "1.4.0"
 anyhow = "1.0"
@@ -60,9 +58,10 @@ reqwest = { version = "0.12", features = ["json"] }
 tauri-plugin-log = { version = "2", features = ["colored" ] }
 keyring = {version = "3", features = ["apple-native", "windows-native"] }
 hex = "0.4.3"
-macros = { path = "macros" }
 dotenv = "0.15"
 sha2 = "0.10"
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+tauri-plugin-http = { version = "2", features = ["unsafe-headers"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"

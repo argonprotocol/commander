@@ -1,3 +1,4 @@
+use crate::utils::Utils;
 use anyhow::Result;
 use async_trait::async_trait;
 use log::{error, info};
@@ -6,19 +7,17 @@ use russh::client::{AuthResult, Msg};
 use russh::keys::ssh_key::LineEnding;
 use russh::keys::*;
 use russh::*;
+use std::collections::HashSet;
 use std::fmt::Display;
 use std::fs;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Duration;
 use tauri::AppHandle;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::runtime::Handle;
 use tokio::sync::{Mutex as TokioMutex, Mutex};
-use crate::utils::Utils;
-use std::collections::HashSet;
 
 pub mod singleton;
 
@@ -44,6 +43,10 @@ impl SSHConfig {
             username: username.to_string(),
             private_key: Arc::new(private_key),
         })
+    }
+
+    pub fn get_private_key(&self) -> Result<Arc<PrivateKey>> {
+        Ok(self.private_key.clone())
     }
 }
 
@@ -88,18 +91,18 @@ impl SSH {
         }
     }
 
-    pub async fn connect(config: SSHConfig) -> Result<Self> {
+    pub async fn connect(config: &SSHConfig) -> Result<Self> {
         let client = Self::authenticate(&config).await?;
         let ssh = SSH {
             client: Arc::new(Mutex::new(client)),
-            config,
+            config: config.clone(),
         };
         Ok(ssh)
     }
 
     async fn authenticate(ssh_config: &SSHConfig) -> Result<client::Handle<ClientHandler>> {
         let config = client::Config {
-            inactivity_timeout: Some(Duration::from_secs(5)),
+            inactivity_timeout: None,
             ..<_>::default()
         };
         let config = Arc::new(config);
@@ -187,7 +190,6 @@ impl SSH {
         Ok((output, exit_code))
     }
 
-
     pub async fn upload_directory(
         &self,
         app: &AppHandle,
@@ -195,14 +197,19 @@ impl SSH {
         remote_base_dir: &str,
     ) -> Result<()> {
         let local_relative_path = local_relative_dir.as_ref().to_path_buf();
-        info!("Uploading directory {}", local_relative_path.to_string_lossy());
+        info!(
+            "Uploading directory {}",
+            local_relative_path.to_string_lossy()
+        );
         let files_to_upload = Utils::collect_files(app, &local_relative_path)?;
         let mut remote_dirs_created = HashSet::new();
 
         // Upload each file
         for file in files_to_upload {
             let remote_file_path = PathBuf::from(remote_base_dir).join(&file.relative_path);
-            let remote_parent_dir = remote_file_path.parent().map(|p| p.to_string_lossy().to_string());
+            let remote_parent_dir = remote_file_path
+                .parent()
+                .map(|p| p.to_string_lossy().to_string());
             let remote_file_path = remote_file_path.to_string_lossy().to_string();
 
             // Create remote parent directory if needed
@@ -214,12 +221,14 @@ impl SSH {
             }
 
             let script_contents = fs::read_to_string(&file.absolute_path)?;
-            self.upload_file(&script_contents, &remote_file_path).await?;
+            self.upload_file(&script_contents, &remote_file_path)
+                .await?;
 
             // Set executable bit if needed
             if file.is_executable {
                 info!("Setting executable bit for {}", remote_file_path);
-                self.run_command(format!("chmod u+x {}", remote_file_path)).await?;
+                self.run_command(format!("chmod u+x {}", remote_file_path))
+                    .await?;
             }
         }
 
@@ -244,11 +253,11 @@ impl SSH {
     }
 
     pub async fn close(&self) -> Result<()> {
-        self.client
-            .lock()
-            .await
-            .disconnect(Disconnect::ByApplication, "", "English")
-            .await?;
+        if let Ok(client) = self.client.try_lock() {
+            client
+                .disconnect(Disconnect::ByApplication, "", "English")
+                .await?;
+        }
         Ok(())
     }
 
@@ -283,6 +292,7 @@ impl SSH {
         local_port: u16,
     ) -> Result<bool> {
         // just create this channel to make sure the connection is alive
+        info!("Testing connection to {}", remote_host);
         let channel = self.open_channel().await?;
         drop(channel);
 
@@ -413,6 +423,7 @@ impl SSH {
                     }
                 }
             }
+            println!("Dropping http tunnel listener");
             drop(listener);
             info!("Tunnel connection handler ended");
         });

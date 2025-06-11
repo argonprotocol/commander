@@ -57,12 +57,22 @@ export default class BiddingCalculator {
   }
 
   public get TDPR() {
-    const tdpr = ((this.totalRewards - this.totalCost) / this.totalCost) * 100;
+    let tdpr = ((this.totalRewards - this.totalCost) / this.totalCost) * 100;
+    if (tdpr < 1000) {
+      tdpr = Math.round(tdpr * 100) / 100;
+    } else {
+      tdpr = Math.round(tdpr);
+    }
     return Math.max(tdpr, -100);
   }
 
   public get APR() {
-    const apr = this.TDPR * 36.5;
+    let apr = this.TDPR * 36.5;
+    if (apr < 1000) {
+      apr = Math.round(apr * 100) / 100;
+    } else {
+      apr = Math.round(apr);
+    }
     return Math.max(apr, -100);
   }
 

@@ -1,7 +1,7 @@
 <template>
   <div class="h-screen w-screen flex flex-col">
     <TopBar />
-    <main v-if="configStore.isLoaded" class="flex-grow relative">
+    <main v-if="config.isLoaded" class="flex-grow relative">
       <MiningPanel v-if="basicStore.panel === 'mining'" />
       <VaultingPanel v-else-if="basicStore.panel === 'vaulting'" />
       <LiquidLockingPanel v-else-if="basicStore.panel === 'liquid-locking'" />
@@ -13,21 +13,20 @@
         </div>
       </div>
     </div>
-    <UpgradeOverlay v-if="isRequiringUpgrade" />
+    <UpgradeOverlay v-if="shouldShowUpgradeOverlay" />
     <ServerConnectOverlay />
-    <BiddingRulesOverlay />
     <WalletOverlay />
     <ServerRemoveOverlay />
     <ServerConfigureOverlay />
     <SecuritySettingsOverlay />
-    <ProvisioningCompleteOverlay />
-    <SyncingOverlay v-if="stats.isSyncing && !configStore.serverDetails.isInstalling && !configStore.serverDetails.isRequiringUpgrade" />
+    <BiddingRulesOverlay />
+    <!-- <ProvisioningCompleteOverlay /> -->
+    <!-- <SyncingOverlay v-if="config.isServerSyncing && !config.isServerInstalling && !isWaitingForUpgradeApproval" /> -->
   </div>
 </template>
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { storeToRefs } from 'pinia';
 import MiningPanel from './panels/MiningPanel.vue';
 import VaultingPanel from './panels/VaultingPanel.vue';
 import LiquidLockingPanel from './panels/LiquidLockingPanel.vue';
@@ -42,7 +41,8 @@ import UpgradeOverlay from './overlays/UpgradeOverlay.vue';
 import SyncingOverlay from './overlays/SyncingOverlay.vue';
 import TopBar from './components/TopBar.vue';
 import { useBasicStore } from './stores/basic';
-import { useConfigStore } from './stores/config';
+import { useConfig } from './stores/config';
+import { useInstaller } from './stores/installer';
 import { checkForUpdates } from './tauri-controls/utils/checkForUpdates.ts';
 import { onBeforeMount, onBeforeUnmount, onMounted } from 'vue';
 import { waitForLoad } from '@argonprotocol/mainchain';
@@ -50,31 +50,22 @@ import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
 
 const basicStore = useBasicStore();
-const configStore = useConfigStore();
-const { stats } = storeToRefs(configStore);
+const config = useConfig();
+const installer = useInstaller();
 
 let timeout: number | undefined;
 
-const isRequiringUpgrade = Vue.computed(() => {
-  return configStore.serverDetails.isRequiringUpgrade || 
-    (configStore.serverDetails.isInstalling && !configStore.serverDetails.isNewServer);
+const shouldShowUpgradeOverlay = Vue.computed(() => {
+  return config.isWaitingForUpgradeApproval || 
+    (config.isServerInstalling && !config.isServerNew);
 });
 
 onBeforeMount(async () => {
-  // need to wait for crypto to load
   await waitForLoad();
 });
 
 onMounted(async () => {
-  const currentVersion = await getVersion();
-  const storedVersion = localStorage.getItem('lastVersion');
-
-  if (storedVersion !== currentVersion) {
-    console.log(`App updated applied ${currentVersion}`);
-    localStorage.setItem('lastVersion', currentVersion);
-    void invoke('upgrade_server');
-  }
-
+  installer.runIfNeeded();
   timeout = setInterval(() => checkForUpdates(), 60e3) as unknown as number;
 });
 

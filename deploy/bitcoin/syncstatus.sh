@@ -11,13 +11,13 @@ if [ $? -ne 0 ]; then
 fi
 
 # Split the output into local and main chain block numbers
-localhost_block_number=$(echo "$block_numbers" | cut -d'-' -f1)
-mainchain_block_number=$(echo "$block_numbers" | cut -d'-' -f2)
+local_node_block_number=$(echo "$block_numbers" | cut -d'-' -f1)
+main_node_block_number=$(echo "$block_numbers" | cut -d'-' -f2)
 
 localhost_synced=true #$(bitcoin-cli --conf="$BITCOIN_CONFIG" getindexinfo | jq -r '.synced')
 
 # Calculate sync percentage (capped at 99%)
-sync_pct=$(awk -v local="$localhost_block_number" -v main="$mainchain_block_number" 'BEGIN { pct = (local / main) * 100; print (pct > 99 ? 99 : (pct < 0 ? 0 : pct)) }' | xargs printf "%.2f")
+sync_pct=$(awk -v local="$local_node_block_number" -v main="$main_node_block_number" 'BEGIN { pct = (local / main) * 100; print (pct > 99 ? 99 : (pct < 0 ? 0 : pct)) }' | xargs printf "%.2f")
 
 if [ "$localhost_synced" = "true" ] && [ "$sync_pct" = "99.00" ]; then
   sync_pct=$(awk -v n="$sync_pct" 'BEGIN { printf "%.2f", n + 1 }')

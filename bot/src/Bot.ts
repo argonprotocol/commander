@@ -125,10 +125,10 @@ export default class Bot {
   
   private async areDockersSynced() {
     const argonBlockNumbers = await Dockers.getArgonBlockNumbers();
-    if (argonBlockNumbers[0] < argonBlockNumbers[1]) return false;
+    if (argonBlockNumbers.localNode < argonBlockNumbers.mainNode) return false;
 
     const bitcoinBlockNumbers = await Dockers.getBitcoinBlockNumbers();
-    if (bitcoinBlockNumbers[0] < bitcoinBlockNumbers[1]) return false;
+    if (bitcoinBlockNumbers.localNode < bitcoinBlockNumbers.mainNode) return false;
 
     return true;
   }

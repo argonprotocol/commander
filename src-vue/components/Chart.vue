@@ -116,7 +116,6 @@ function addPoints(items: { date: string, price: number, showPointOnChart: boole
     chart?.update();
   }
 
-  console.log(chart, chartPoints)
   return { x: currentDataPoint?.x, y: currentDataPoint?.y };
 }
 

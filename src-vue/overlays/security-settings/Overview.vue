@@ -20,8 +20,8 @@
 
 <script setup lang="ts">
 import { XMarkIcon } from '@heroicons/vue/24/outline';
-import MnemonicsIcon from '../../assets/mnemonics.svg';
-import PasswordIcon from '../../assets/password.svg';
+import MnemonicsIcon from '../../assets/mnemonics.svg?component';
+import PasswordIcon from '../../assets/password.svg?component';
 
 const emit = defineEmits(['close', 'goto']);
 

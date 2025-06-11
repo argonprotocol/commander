@@ -29,14 +29,14 @@
     </div>
     
     <div class="flex flex-row mr-1 space-x-1 items-center justify-end w-1/2 pointer-events-none">
-      <div :class="walletControlPopoverIsOpen || currencyMenuIsOpen ? 'border-slate-400/50' : 'border-transparent'" class="flex flex-row items-center border hover:border-slate-400/50 rounded-md group">
+      <div v-if="currencyStore.isLoaded" :class="walletControlPopoverIsOpen || currencyMenuIsOpen ? 'border-slate-400/50' : 'border-transparent'" class="flex flex-row items-center border hover:border-slate-400/50 rounded-md group">
         <CurrencyMenu @currencyMenuIsOpen="x => currencyMenuIsOpen = x" />
 
         <div class="bg-slate-400/50 w-[1px] h-[28px]"></div>
 
-        <Popover v-if="configStore.isLoaded" class="relative pointer-events-auto">
+        <Popover class="relative pointer-events-auto">
           <PopoverButton class="relative flex flex-row text-xl font-bold text-[#B74CBA] pt-[1px] pl-[14px] pr-[10px] mr-[0px] h-[30px] items-center hover:bg-slate-400/10 cursor-pointer focus-visible:outline-none">
-            {{ fmtMoney(argonTo(configStore.totalWalletValue), 2) }}
+            {{ fmtMoney(argonTo(currencyStore.totalWalletValue), 99.99) }}
             <AlertIcon v-if="!mngWalletIsFullyFunded" class="absolute -top-0 right-[-6px] w-3 h-3 text-[#B74CBA] mr-[7px] inline-block shadow-md" />
           </PopoverButton>
           <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 translate-y-1" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-1">
@@ -55,11 +55,11 @@
                   <span class="text-4xl font-bold mt-5">{{currencySymbol}}{{ fmtMoney(argonTo(mngWallet.totalValue)).split('.')[0] }}<span class="opacity-50">.{{ argonTo(mngWallet.totalValue).toFixed(2).split('.')[1] }}</span></span>
                   
                   <span class="relative text-sm text-gray-500 flex flex-row">
-                    <CopyToClipboard @click.stop :content="configStore.mngWallet.address" class="flex flex-row relative items-center justify-center hover:bg-white rounded-full px-6 py-1 cursor-pointer">
-                      {{abreviateAddress(configStore.mngWallet.address)}} <CopyIcon class="w-3 h-3 ml-1 inline-block" />
+                    <CopyToClipboard @click.stop :content="currencyStore.mngWallet.address" class="flex flex-row relative items-center justify-center hover:bg-white rounded-full px-6 py-1 cursor-pointer">
+                      {{abreviateAddress(currencyStore.mngWallet.address)}} <CopyIcon class="w-3 h-3 ml-1 inline-block" />
                       <template #copied>
                         <div class="absolute top-0 left-0 w-full h-full pointer-events-none flex flex-row items-center justify-center">
-                          {{abreviateAddress(configStore.mngWallet.address)}} <CopyIcon class="w-3 h-3 ml-1 inline-block" />
+                          {{abreviateAddress(currencyStore.mngWallet.address)}} <CopyIcon class="w-3 h-3 ml-1 inline-block" />
                         </div>
                       </template>
                     </CopyToClipboard>
@@ -89,11 +89,11 @@
                   </div>
                   <span class="text-4xl font-bold mt-5">{{currencySymbol}}{{ fmtMoney(argonTo(llbWallet.totalValue)).split('.')[0] }}<span class="opacity-50">.{{ argonTo(llbWallet.totalValue).toFixed(2).split('.')[1] }}</span></span>
                   <span class="relative text-sm text-gray-500 flex flex-row">
-                    <CopyToClipboard @click.stop :content="configStore.llbWallet.address" class="flex flex-row relative items-center justify-center hover:bg-white rounded-full px-6 py-1 cursor-pointer">
-                      {{abreviateAddress(configStore.llbWallet.address)}} <CopyIcon class="w-3 h-3 ml-1 inline-block" />
+                    <CopyToClipboard @click.stop :content="currencyStore.llbWallet.address" class="flex flex-row relative items-center justify-center hover:bg-white rounded-full px-6 py-1 cursor-pointer">
+                      {{abreviateAddress(currencyStore.llbWallet.address)}} <CopyIcon class="w-3 h-3 ml-1 inline-block" />
                       <template #copied>
                         <div class="absolute top-0 left-0 w-full h-full pointer-events-none flex flex-row items-center justify-center">
-                          {{abreviateAddress(configStore.llbWallet.address)}} <CopyIcon class="w-3 h-3 ml-1 inline-block" />
+                          {{abreviateAddress(currencyStore.llbWallet.address)}} <CopyIcon class="w-3 h-3 ml-1 inline-block" />
                         </div>
                       </template>
                     </CopyToClipboard>
@@ -119,11 +119,11 @@
                   </div>
                   <span class="text-4xl font-bold mt-5">{{currencySymbol}}{{ fmtMoney(argonTo(vltWallet.totalValue)).split('.')[0] }}<span class="opacity-50">.{{ argonTo(vltWallet.totalValue).toFixed(2).split('.')[1] }}</span></span>
                   <span class="relative text-sm text-gray-500 flex flex-row">
-                    <CopyToClipboard @click.stop :content="configStore.vltWallet.address" class="flex flex-row relative items-center justify-center hover:bg-white rounded-full px-6 py-1 cursor-pointer">
-                      {{abreviateAddress(configStore.vltWallet.address)}} <CopyIcon class="w-3 h-3 ml-1 inline-block" />
+                    <CopyToClipboard @click.stop :content="currencyStore.vltWallet.address" class="flex flex-row relative items-center justify-center hover:bg-white rounded-full px-6 py-1 cursor-pointer">
+                      {{abreviateAddress(currencyStore.vltWallet.address)}} <CopyIcon class="w-3 h-3 ml-1 inline-block" />
                       <template #copied>
                         <div class="absolute top-0 left-0 w-full h-full pointer-events-none flex flex-row items-center justify-center">
-                          {{abreviateAddress(configStore.vltWallet.address)}} <CopyIcon class="w-3 h-3 ml-1 inline-block" />
+                          {{abreviateAddress(currencyStore.vltWallet.address)}} <CopyIcon class="w-3 h-3 ml-1 inline-block" />
                         </div>
                       </template>
                     </CopyToClipboard>
@@ -143,9 +143,9 @@
             </PopoverPanel>
           </transition>
         </Popover>
-        <div v-else class="text-gray-900">
-            Loading...
-        </div>
+      </div>
+      <div v-else class="text-gray-900 px-2">
+        Loading...
       </div>
 
       <div class="bg-slate-400/50 w-[1px] h-[28px]"></div>
@@ -162,7 +162,7 @@
             </div>
             <div class="flex flex-col shrink rounded bg-argon-menu-bg text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20">
               <ul AccountMenu>
-                <li v-if="serverDetails.isConnected" @click="openServerConfigureOverlay(close)" class="pt-3 pb-2" >
+                <li v-if="config.isServerConnected" @click="openServerConfigureOverlay(close)" class="pt-3 pb-2" >
                   <header>Configure Cloud Machine</header>
                   <p>
                     Configure and manage the cloud server<br />that runs your Argon mining operations
@@ -198,33 +198,35 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { useBasicStore } from '../stores/basic';
-import { useConfigStore } from '../stores/config';
+import { useConfig } from '../stores/config';
+import { useCurrencyStore } from '../stores/currency';
 import WindowControls from "../tauri-controls/WindowControls.vue";
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { fmtMoney, abreviateAddress } from '../lib/Utils';
 import emitter from '../emitters/basic';
 import CurrencyMenu from './CurrencyMenu.vue';
-import MiningWalletIcon from '../assets/wallets/mining.svg';
-import LiquidLockingWalletIcon from '../assets/wallets/bitcoin.svg';
-import VaultingWalletIcon from '../assets/wallets/vault.svg';
-import CopyIcon from '../assets/copy.svg';
-import ConfigIcon from '../assets/config.svg';
-import AlertIcon from '../assets/alert.svg';
+import MiningWalletIcon from '../assets/wallets/mining.svg?component';
+import LiquidLockingWalletIcon from '../assets/wallets/bitcoin.svg?component';
+import VaultingWalletIcon from '../assets/wallets/vault.svg?component';
+import CopyIcon from '../assets/copy.svg?component';
+import ConfigIcon from '../assets/config.svg?component';
+import AlertIcon from '../assets/alert.svg?component';
 import CopyToClipboard from './CopyToClipboard.vue';
 import { storeToRefs } from 'pinia';
 
 const basicStore = useBasicStore();
-const configStore = useConfigStore();
-const { serverDetails, mngWallet, llbWallet, vltWallet, currencySymbol } = storeToRefs(configStore);
-const { argonotTo, argonTo } = configStore;
+const config = useConfig();
+const currencyStore = useCurrencyStore();
+const { mngWallet, llbWallet, vltWallet, currencySymbol } = storeToRefs(currencyStore);
+const { argonotTo, argonTo } = currencyStore;
 
 const currencyMenuIsOpen = Vue.ref(false);
 const walletControlPopoverIsOpen = Vue.ref(false);
 const walletControlPopoverElem = Vue.ref<{ el: HTMLElement | null }>({ el: null });
 
 const mngWalletIsFullyFunded = Vue.computed(() => { 
-  if (!configStore.biddingRules) return false;
-  return (configStore.mngWallet.argons >= configStore.biddingRules.desiredArgons && configStore.mngWallet.argonots >= configStore.biddingRules.desiredArgonots);
+  if (!config.biddingRules) return false;
+  return (currencyStore.mngWallet.argons >= config.biddingRules.desiredArgons && currencyStore.mngWallet.argonots >= config.biddingRules.desiredArgonots);
 });
 
 const openWalletOverlay = (walletId: 'mng' | 'llb' | 'vlt', closeFn: () => void) => {

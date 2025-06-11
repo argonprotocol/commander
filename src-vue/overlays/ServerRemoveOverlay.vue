@@ -21,7 +21,9 @@
 
           <div class="flex flex-row justify-end gap-4 mt-6 border-t border-slate-300 pt-4">
             <button @click="closeOverlay" class="border border-argon-button bg-argon-button/5 inner-button-shadow text-argon-button hover:text-argon-button-hover hover:border-argon-button-hover px-6 py-2 rounded-md cursor-pointer">Cancel</button>
-            <button @click="removeServer" class="bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-6 py-2 rounded-md cursor-pointer">Confirm Remove Server</button>
+            <button @click="removeServer" class="bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-6 py-2 rounded-md cursor-pointer">
+              {{ isRemoving ? 'Removing...' : 'Confirm Remove Server' }}
+            </button>
           </div>
         </div>
       </TransitionChild>
@@ -35,9 +37,12 @@ import { TransitionChild, TransitionRoot } from '@headlessui/vue';
 import emitter from '../emitters/basic';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import BgOverlay from '../components/BgOverlay.vue';
-import { useConfigStore} from '../stores/config';
+import { useConfig} from '../stores/config';
+import { Config } from '../lib/Config';
+import { type IConfigInstallDetails } from '../interfaces/IConfig';
+import { SSH } from '../lib/SSH';
 
-const configStore = useConfigStore();
+const config = useConfig();
 
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
@@ -56,9 +61,16 @@ const closeOverlay = () => {
 
 async function removeServer() {
   if (isRemoving.value) return;
-
   isRemoving.value = true;
-  await configStore.removeServer();
+
+  config.isServerNew = true;
+  config.isServerConnected = false;
+  config.isServerInstalling = false;
+  config.serverDetails = { ...config.serverDetails, ipAddress: '' };
+  config.installDetails = Config.getDefault('installDetails') as IConfigInstallDetails;
+  await config.save();
+
+  await SSH.closeConnection();
 
   isRemoving.value = false;
   isOpen.value = false;

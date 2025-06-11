@@ -10,7 +10,7 @@
           <div class="">{{fmtCommas(mngWallet.argons)}} ARGN</div>
         </div>
         <div class="flex flex-col justify-between items-end">
-          <div class="font-bold">{{currencySymbol}}{{fmtMoney(argonTo(mngWallet.argons))}}</div>
+          <div class="font-bold">{{currencyStore.currencySymbol}}{{fmtMoney(argonTo(mngWallet.argons))}}</div>
           <div class="">0.03%</div>
         </div>
       </MenuButton>
@@ -40,7 +40,7 @@
           <div class="">{{fmtCommas(mngWallet.argonots)}} ARGNOT</div>
         </div>
         <div class="flex flex-col justify-between items-end">
-          <div class="font-bold">{{currencySymbol}}{{fmtMoney(argonotTo(mngWallet.argonots))}}</div>
+          <div class="font-bold">{{currencyStore.currencySymbol}}{{fmtMoney(argonotTo(mngWallet.argonots))}}</div>
           <div class="">0.03%</div>
         </div>
       </MenuButton>
@@ -66,15 +66,14 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
-import { useConfigStore } from '../../stores/config';
+import { useCurrencyStore } from '../../stores/currency';
 import { fmtCommas, fmtMoney } from '../../lib/Utils';
-import { storeToRefs } from 'pinia';
-import ArgnToken from '../../assets/tokens/argn.svg';
-import ArgnotToken from '../../assets/tokens/argnot.svg';
+import ArgnToken from '../../assets/tokens/argn.svg?component';
+import ArgnotToken from '../../assets/tokens/argnot.svg?component';
 
-const configStore = useConfigStore();
-const { argonTo, argonotTo } = configStore;
-const { currencySymbol, mngWallet } = storeToRefs(configStore);
+const currencyStore = useCurrencyStore();
+const { argonTo, argonotTo } = currencyStore;
+const mngWallet = Vue.computed(() => currencyStore.mngWallet);
 
 const emit = defineEmits(['navigate']);
 

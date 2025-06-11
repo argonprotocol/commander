@@ -17,6 +17,7 @@ import {
   type CohortStorage,
   type ISubaccount,
   type ISyncState,
+  type ISyncStateFile,
   JsonStore,
 } from './storage.ts';
 import { MiningFrames } from './MiningFrames.ts';
@@ -51,7 +52,7 @@ export class BlockSync {
   localClient!: ArgonClient;
   latestFinalizedHeader!: Header;
   scheduleTimer?: NodeJS.Timeout;
-  statusFile: JsonStore<ISyncState>;
+  statusFile: JsonStore<ISyncStateFile>;
 
   currentFrameTickRange: [number, number] = [0, 0];
 
@@ -88,7 +89,7 @@ export class BlockSync {
     this.miningFrames = new MiningFrames();
   }
 
-  async status(): Promise<Omit<ISyncState, 'lastBlockNumberByFrameId'>> {
+  async status(): Promise<ISyncState> {
     const statusFileData = (await this.statusFile.get())!;
   
     return {
@@ -114,13 +115,20 @@ export class BlockSync {
       this.oldestTick,
       this.latestTick,
     ]);
+    console.info('Queue progress:', queueProgress, {
+      oldestTick: this.oldestTick, latestTick: this.latestTick, ticksQueued,
+    });
     const processingProgress = this.calculateProgress(this.currentTick, [
       this.oldestTick,
       this.latestTick,
     ]);
-
+    console.info('Processing progress:', processingProgress, {
+      oldestTick: this.oldestTick, latestTick: this.latestTick, currentTick: this.currentTick,
+    });
     const progress = (queueProgress + processingProgress) / 2;
-    
+    console.info('Total progress:', progress, {
+      queueProgress, processingProgress,
+    });
     return Math.round(progress * 100) / 100;
   }
 

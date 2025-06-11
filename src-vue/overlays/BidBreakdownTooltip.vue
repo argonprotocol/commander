@@ -102,13 +102,13 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { useConfigStore } from '../stores/config';
+import { useCurrencyStore } from '../stores/currency';
 import { storeToRefs } from 'pinia';
 import { fmtCommas, fmtDecimals, fmtMoney } from '../lib/Utils';
 
-const configStore = useConfigStore();
-const { argonTo, argonotTo } = configStore;
-const { currencySymbol } = storeToRefs(configStore);
+const currencyStore = useCurrencyStore();
+const { argonTo, argonotTo } = currencyStore;
+const { currencySymbol } = storeToRefs(currencyStore);
 
 const props = defineProps({
   data: {

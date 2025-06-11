@@ -382,7 +382,8 @@ import { storeToRefs } from 'pinia';
 import { Dialog, DialogPanel, TransitionRoot } from '@headlessui/vue';
 import emitter from '../emitters/basic';
 import { fmtCommas } from '../lib/Utils';
-import { useConfigStore } from '../stores/config';
+import { useConfig } from '../stores/config';
+import { useCurrencyStore } from '../stores/currency';
 import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon, LightBulbIcon } from '@heroicons/vue/24/outline';
 import RadioButton from '../components/RadioButton.vue';
@@ -392,12 +393,14 @@ import BiddingCalculator, { BiddingCalculatorData, type IBiddingRules } from '@a
 import InfoTip from '../components/InfoTip.vue';
 import BidBreakdownTooltip from './BidBreakdownTooltip.vue';
 import BidBreakdownTooltipArrow from './BidBreakdownTooltipArrow.vue';
-import { getMainchain } from '../lib/mainchain.ts';
+import { getMainchain } from '../stores/mainchain.ts';
+import { DisableBotType } from '../interfaces/IBiddingRules.ts';
 
-const configStore = useConfigStore();
+const config = useConfig();
+const currencyStore = useCurrencyStore();
 
-const { argonTo } = configStore;
-const { currencySymbol } = storeToRefs(configStore);
+const { argonTo } = currencyStore;
+const { currencySymbol } = storeToRefs(currencyStore);
 
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
@@ -605,7 +608,7 @@ function applyRecommendedThrottles() {
 }
 
 // Disable
-const disableBot: Vue.Ref<'AfterFirstSeat' | 'AfterFirstSlot' | 'Never' | 'Now'> = Vue.ref('Never');
+const disableBot: Vue.Ref<DisableBotType> = Vue.ref(DisableBotType.Never);
 
 async function saveRules() {
   isSaving.value = true;
@@ -643,7 +646,10 @@ async function saveRules() {
     desiredArgons: desiredArgons.value,
     desiredArgonots: desiredArgonots.value,
   }
-  await configStore.updateBiddingRules(rules);
+  
+  config.biddingRules = rules;
+  await config.save();
+
   isSaving.value = false;
   closeOverlay();
 }
@@ -692,7 +698,7 @@ emitter.on('openBiddingRulesOverlay', async () => {
   openedAt = dayjs();
   isOpen.value = true;
   calculatorData.isInitialized.then(() => {
-    const biddingRules = configStore.biddingRules || {} as IBiddingRules;
+    const biddingRules = config.biddingRules || {} as IBiddingRules;
     hasExistingRules.value = !!biddingRules;
     calculatedTotalSeats.value = biddingRules.calculatedTotalSeats || calculatedTotalSeats.value;
     calculatedArgonCirculation.value = biddingRules.calculatedArgonCirculation || calculatedArgonCirculation.value

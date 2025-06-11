@@ -1,18 +1,17 @@
 <template>
   <div class="flex flex-col h-full w-full p-3">
-
     <div class="grow relative bg-[#FCF9FD] rounded border border-[#CCCEDA] shadow">
-
       <div class="relative px-[15%]">
         <div :class="[isLaunchingMiningBot ? 'opacity-30 pointer-events-none' : '']">
           <h1 class="text-5xl font-bold text-left mt-20 mb-4 whitespace-nowrap">You're Almost Ready to Start Mining!</h1>
 
           <p class="mb-4">
-            The only thing you still need is a Mining Seat! The only way to get a Mining Seat is win one at auction. Auctions are held every 24 hours, and they’re open to everyone.
+            The only thing you still need is a Mining Seat! The only way to get a Mining Seat is win one at auction. Auctions are held every 24 hours, 
+            and they're open to everyone.
           </p>
           <p>
-            Two things are required for auctions. First, you need to set up a few rules around how you want to bid. Second, you need an account that contains Argons and Argonots — these are used to assemble your bid. The
-            following steps guide you through the process.
+            Two things are required for auctions. First, you need to set up a few rules around how you want to bid. Second, you need an account that 
+            contains Argons and Argonots — these are used to assemble your bid. The following steps guide you through the process.
           </p>
 
           <section @click="openBiddingRulesOverlay" class="flex flex-row cursor-pointer mt-8 border-t border-[#CCCEDA] py-6 hover:bg-argon-menu-hover">
@@ -27,7 +26,11 @@
             <Checkbox :isChecked="walletIsFullyFunded" :isPartiallyChecked="walletIsMinimallyFunded" />
             <div>
               <h2 class="text-2xl text-[#A600D4] font-bold">{{walletIsPartiallyFunded ? 'Finish' : ''}} Fund{{walletIsPartiallyFunded ? 'ing' : ''}} Your Wallet</h2>
-              <p v-if="configStore.biddingRules">Your acccounts needs a minimum of {{configStore.biddingRules.requiredArgons}} argon{{configStore.biddingRules.requiredArgons === 1 ? '' : 's'}} and {{configStore.biddingRules.requiredArgonots}} argonot{{configStore.biddingRules.requiredArgonots === 1 ? '' : 's'}} to submit auction bids. We already created a secure wallet and attached it to your mining server. All you need is move some tokens in.</p>
+              <p v-if="config.biddingRules">
+                Your acccounts needs a minimum of {{config.biddingRules.requiredArgons}} argon{{config.biddingRules.requiredArgons === 1 ? '' : 's'}} 
+                and {{config.biddingRules.requiredArgonots}} argonot{{config.biddingRules.requiredArgonots === 1 ? '' : 's'}} to submit auction bids. 
+                We already created a secure wallet and attached it to your mining server. All you need is move some tokens in.
+              </p>
               <p v-else>Your acccounts needs enough argons and argonots to submit auction bids. We already created a secure wallet and attached it to your mining server. All you need is move some tokens in.</p>
             </div>
           </section>
@@ -46,37 +49,43 @@ import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import emitter from '../../emitters/basic';
-import { useConfigStore } from '../../stores/config';
+import { useConfig } from '../../stores/config';
+import { useCurrencyStore } from '../../stores/currency';
 import Checkbox from '../../components/Checkbox.vue';
+import { useInstaller } from '../../stores/installer';
 
 dayjs.extend(utc);
 
-const configStore = useConfigStore();
+const config = useConfig();
+const installer = useInstaller();
+const currencyStore = useCurrencyStore();
 
 const isLaunchingMiningBot = Vue.ref(false);
 
 const hasBiddingRules = Vue.computed(() => {
-  return !!configStore.biddingRules;
+  return !!config.biddingRules;
 });
 
 const walletIsPartiallyFunded = Vue.computed(() => {
-  if (!configStore.biddingRules) {
+  if (!config.biddingRules) {
     return false;
   }
   
-  return (configStore.mngWallet.argons || configStore.mngWallet.argonots) > 0;
+  return (currencyStore.mngWallet.argons || currencyStore.mngWallet.argonots) > 0;
 });
 
 const walletIsMinimallyFunded = Vue.computed(() => {
-  if (!walletIsPartiallyFunded.value || !configStore.biddingRules) {
+  if (!walletIsPartiallyFunded.value || !config.biddingRules) {
     return false;
   }
   
-  if (configStore.mngWallet.argons < configStore.biddingRules.requiredArgons) {
+  if (currencyStore.mngWallet.argons < config.biddingRules.requiredArgons) {
+    console.log('argons', currencyStore.mngWallet.argons, config.biddingRules.requiredArgons);
     return false;
   } 
   
-  if (configStore.mngWallet.argonots < configStore.biddingRules.requiredArgonots) {
+  if (currencyStore.mngWallet.argonots < config.biddingRules.requiredArgonots) {
+    console.log('argonots', currencyStore.mngWallet.argonots, config.biddingRules.requiredArgonots);
     return false;
   }
 
@@ -84,15 +93,15 @@ const walletIsMinimallyFunded = Vue.computed(() => {
 });
 
 const walletIsFullyFunded = Vue.computed(() => { 
-  if (!walletIsMinimallyFunded.value || !configStore.biddingRules) {
+  if (!walletIsMinimallyFunded.value || !config.biddingRules) {
     return false;
   }
   
-  if (configStore.mngWallet.argons < configStore.biddingRules.desiredArgons) {
+  if (currencyStore.mngWallet.argons < config.biddingRules.desiredArgons) {
     return false;
   } 
   
-  if (configStore.mngWallet.argonots < configStore.biddingRules.desiredArgonots) {
+  if (currencyStore.mngWallet.argonots < config.biddingRules.desiredArgonots) {
     return false;
   }
 
@@ -113,7 +122,7 @@ async function launchMiningBot() {
   }
   isLaunchingMiningBot.value = true;
 
-  await configStore.launchMiningBot();
+  await installer.updateBiddingBot();
   isLaunchingMiningBot.value = false;
 }
 </script>

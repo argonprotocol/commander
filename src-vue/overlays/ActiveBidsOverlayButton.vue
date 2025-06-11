@@ -20,7 +20,7 @@
           <tbody class="font-light font-mono">
             <tr v-for="(bid, index) in allBids" :key="bid.accountId">
               <td class="text-left">{{ index + 1 }}</td>
-              <td class="text-left">{{configStore.currencySymbol}}{{ fmtMoney(configStore.argonTo(bid.amount)) }}</td>
+              <td class="text-left">{{currencySymbol}}{{ fmtMoney(config.argonTo(bid.amount)) }}</td>
               <td class="text-left">recently</td>
               <td class="text-right relative">
                 {{ bid.accountId.slice(0, 10) }}...{{ bid.accountId.slice(-7) }}
@@ -42,13 +42,13 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import { useConfigStore } from '../stores/config';
+import { storeToRefs } from 'pinia';
+import { useCurrencyStore } from '../stores/currency';
 import { fmtMoney } from '../lib/Utils';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 
-const configStore = useConfigStore();
+const currencyStore = useCurrencyStore();
+const { currencySymbol } = storeToRefs(currencyStore);
 
 const allBids = Vue.ref([]);
 

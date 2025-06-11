@@ -48,7 +48,7 @@
 import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import ConfettiIcon from '../assets/confetti.svg';
+import ConfettiIcon from '../assets/confetti.svg?component';
 import VueCountdown from '@chenfengyuan/vue-countdown';
 import emitter from '../../emitters/basic';
 

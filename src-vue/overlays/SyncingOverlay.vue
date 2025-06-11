@@ -29,15 +29,15 @@ import * as Vue from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { TransitionChild, TransitionRoot } from '@headlessui/vue';
 import BgOverlay from '../components/BgOverlay.vue';
-import { useConfigStore } from '../stores/config';
+import { useConfig } from '../stores/config';
 import ProgressBar from '../components/ProgressBar.vue';
 import { storeToRefs } from 'pinia';
-import AlertIcon from '../assets/alert.svg';
+import AlertIcon from '../assets/alert.svg?component';
 
 const isOpen = Vue.ref(true);
 const isRetrying = Vue.ref(false);
-const configStore = useConfigStore();
-const { stats } = storeToRefs(configStore);
+const config = useConfig();
+const { stats } = storeToRefs(config);
 
 async function retrySync() {
   isRetrying.value = true;
