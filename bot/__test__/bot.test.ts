@@ -1,10 +1,10 @@
 import { activateNotary, runOnTeardown, sudo, teardown, TestMainchain, TestNotary } from '@argonprotocol/testing';
-import { MiningRotations, mnemonicGenerate } from '@argonprotocol/mainchain';
-import * as BiddingCalculator from '@argonprotocol/commander-calculator';
+import { FrameCalculator, mnemonicGenerate } from '@argonprotocol/mainchain';
 import { afterAll, afterEach, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import Path from 'node:path';
 import Bot from '../src/Bot.ts';
+import * as BiddingCalculator from '@argonprotocol/commander-calculator';
 
 afterEach(teardown);
 afterAll(teardown);
@@ -54,7 +54,7 @@ it('can autobid and store stats', async () => {
     const unsubscribe = await client.query.miningSlot.activeMinersCount(async x => {
       if (x.toNumber() > 0) {
         unsubscribe();
-        firstCohort = await client.query.miningSlot.nextCohortId().then(x => x.toNumber() - 1);
+        firstCohort = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
         resolve(x);
       }
     });
@@ -70,7 +70,7 @@ it('can autobid and store stats', async () => {
       lastFinalizedBlockNumber = x.number.toNumber();
       if (isVoteBlock) {
         console.log(`Block ${x.number} is vote block`);
-        const frameId = await new MiningRotations().getForHeader(client, x);
+        const frameId = await new FrameCalculator().getForHeader(client, x);
         if (frameId !== undefined) cohortActivatingFrameIdsWithEarnings.add(frameId);
         voteBlocks++;
         if (voteBlocks > 5) {
