@@ -35,7 +35,7 @@ export interface IClonableShort extends Omit<IShort, 'date'> {
 
 const VAULT_SECURITY_PCT = 0;
 
-export default class Vault {
+export default class LlbVault {
   public bitcoinCount: number;
 
   public actions: IAction[] = [];
@@ -96,7 +96,10 @@ export default class Vault {
   }
 
   public get hodlerProfit(): number {
-    return Vault.calculateProfit(this.prices[0].price * this.bitcoinCount, this.totalHodlerValue);
+    return LlbVault.calculateProfit(
+      this.prices[0].price * this.bitcoinCount,
+      this.totalHodlerValue,
+    );
   }
 
   public get startingPrice(): number {
@@ -110,7 +113,7 @@ export default class Vault {
   public get vaulterProfit(): number {
     const startingValue = this.startingPrice * this.bitcoinCount;
     const endingValue = this.totalAccruedValue;
-    return Vault.calculateProfit(startingValue, endingValue);
+    return LlbVault.calculateProfit(startingValue, endingValue);
   }
 
   public get profitFromInitialLock(): number {
@@ -166,7 +169,7 @@ export default class Vault {
 
       const lastAction = this.actions[this.actions.length - 1];
 
-      const changePct = Vault.calculateProfit(lastAction.price, currentPrice);
+      const changePct = LlbVault.calculateProfit(lastAction.price, currentPrice);
       const changeAbs = currentPrice - lastAction.price;
       const isEnoughChange =
         this.ratchetDec &&
@@ -183,7 +186,7 @@ export default class Vault {
 
       if (currentShort) {
         qtyOfArgonsToBurn =
-          Vault.calculateUnlockBurnPerBitcoinDollar(currentShort.lowestPrice) *
+          LlbVault.calculateUnlockBurnPerBitcoinDollar(currentShort.lowestPrice) *
           unlockPriceOfBtc *
           bitcoinCount;
         const newCostOfArgonsToBurn = qtyOfArgonsToBurn * currentShort.lowestPrice;
@@ -233,7 +236,7 @@ export default class Vault {
       if (this.shortsByDate.EXIT) {
         const currentShort = this.shortsByDate.EXIT;
         qtyOfArgonsToBurn =
-          Vault.calculateUnlockBurnPerBitcoinDollar(currentShort.lowestPrice) *
+          LlbVault.calculateUnlockBurnPerBitcoinDollar(currentShort.lowestPrice) *
           unlockPriceOfBtc *
           bitcoinCount;
         const newCostOfArgonsToBurn = qtyOfArgonsToBurn * currentShort.lowestPrice;
@@ -274,15 +277,14 @@ export default class Vault {
 
   public static calculateUnlockBurnPerBitcoinDollar(argonRatioPrice: number): number {
     const r = argonRatioPrice;
-    const b = 1;
-    if (argonRatioPrice >= 1.0) {
-      return b;
+    if (r >= 1.0) {
+      return 1;
     } else if (r >= 0.9) {
       return 20 * Math.pow(r, 2) - 38 * r + 19;
     } else if (r >= 0.01) {
       return (0.5618 * r + 0.3944) / r;
     } else {
-      return (b / r) * (0.576 * r + 0.4);
+      return (1 / r) * (0.576 * r + 0.4);
     }
   }
 

@@ -14,16 +14,14 @@ use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tauri::AppHandle;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::runtime::Handle;
-use tokio::sync::{Mutex as TokioMutex, Mutex};
+use tokio::sync::Mutex;
 
 pub mod singleton;
 
 #[derive(Clone)]
 pub struct SSH {
-    client: Arc<TokioMutex<client::Handle<ClientHandler>>>,
+    client: Arc<Mutex<client::Handle<ClientHandler>>>,
     pub config: SSHConfig,
 }
 
@@ -43,10 +41,6 @@ impl SSHConfig {
             username: username.to_string(),
             private_key: Arc::new(private_key),
         })
-    }
-
-    pub fn get_private_key(&self) -> Result<Arc<PrivateKey>> {
-        Ok(self.private_key.clone())
     }
 }
 
@@ -74,23 +68,6 @@ impl Drop for SSH {
 }
 
 impl SSH {
-    pub async fn find_available_port(start_port: u16) -> Result<u16> {
-        let mut port = start_port;
-        loop {
-            match tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port)).await {
-                Ok(_) => {
-                    return Ok(port);
-                }
-                Err(_) => {
-                    if port == u16::MAX {
-                        anyhow::bail!("No available ports found");
-                    }
-                    port += 1;
-                }
-            }
-        }
-    }
-
     pub async fn connect(config: &SSHConfig) -> Result<Self> {
         let client = Self::authenticate(&config).await?;
         let ssh = SSH {
@@ -279,156 +256,6 @@ impl SSH {
             .to_string();
 
         Ok((private_key_openssh, public_key_openssh))
-    }
-
-    /// Creates a new SSH channel for a TCP connection.
-    /// Returns true if the channel needs to reconnect
-    pub async fn create_channel(
-        &self,
-        local_read: &mut OwnedReadHalf,
-        local_write: &mut OwnedWriteHalf,
-        remote_host: String,
-        remote_port: u16,
-        local_port: u16,
-    ) -> Result<bool> {
-        // just create this channel to make sure the connection is alive
-        info!("Testing connection to {}", remote_host);
-        let channel = self.open_channel().await?;
-        drop(channel);
-
-        // Create a new SSH channel for this connection
-        let mut channel = self
-            .client
-            .lock()
-            .await
-            .channel_open_direct_tcpip(
-                &remote_host,
-                remote_port as u32,
-                "127.0.0.1",
-                local_port as u32,
-            )
-            .await
-            .inspect_err(|e| {
-                error!("Error opening SSH channel: {}", e);
-            })?;
-
-        // Split the local stream
-        let mut buf = vec![0u8; 4096];
-
-        loop {
-            tokio::select! {
-                // Handle local to remote
-                result = local_read.read(&mut buf) => {
-                    match result {
-                        Ok(0) => {
-                            return Ok(false); // EOF
-                        }
-                        Ok(n) => {
-                            if let Err(e) = channel.data(&buf[..n]).await {
-                                error!("Error writing to remote: {}", e);
-                                return Ok(true);
-                            }
-                        }
-                        Err(e) => {
-                            error!("Error reading from local: {}", e);
-                            return Ok(true);
-                        }
-                    }
-                }
-                // Handle remote to local
-                msg = channel.wait() => {
-                    match msg {
-                        Some(russh::ChannelMsg::Data { data }) => {
-                            if let Err(e) = local_write.write_all(&data).await {
-                                error!("Error writing to local: {}", e);
-                                return Ok(true);
-                            }
-                        }
-                        Some(russh::ChannelMsg::Eof) => {
-                            return Ok(false);
-                        }
-                        Some(russh::ChannelMsg::Close) => {
-                            return Ok(true);
-                        }
-                        None => {
-                            return Ok(false); // Channel closed
-                        }
-                        _ => {}
-                    }
-                }
-            }
-        }
-    }
-
-    pub async fn create_http_tunnel(
-        self: Arc<Self>,
-        local_port: u16,
-        remote_host: &str,
-        remote_port: u16,
-    ) -> Result<()> {
-        info!(
-            "Opening tunnel from local port {} to {}:{}",
-            local_port, remote_host, remote_port
-        );
-
-        // Create a TCP listener on the local port
-        let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", local_port)).await?;
-
-        // Clone the client handle and remote host for use in the spawned task
-        let remote_host = remote_host.to_string();
-        let client = Arc::clone(&self);
-
-        // Accept connections and forward them through the SSH tunnel
-        tokio::spawn(async move {
-            // Spawn a new task for each connection
-            let remote_host = remote_host.clone();
-            let client = Arc::clone(&client);
-
-            loop {
-                match listener.accept().await {
-                    Ok((local_stream, _)) => {
-                        let remote_host = remote_host.clone();
-                        let client = Arc::clone(&client);
-                        tokio::spawn(async move {
-                            let (mut local_read, mut local_write) = local_stream.into_split();
-                            loop {
-                                match Self::create_channel(
-                                    &client,
-                                    &mut local_read,
-                                    &mut local_write,
-                                    remote_host.clone(),
-                                    remote_port,
-                                    local_port,
-                                )
-                                .await
-                                {
-                                    Ok(should_reconnect) => {
-                                        if should_reconnect {
-                                            info!("Reconnecting to SSH tunnel...");
-                                            continue;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        error!("Error creating channel for tunnel: {}", e);
-                                    }
-                                }
-                                // default is to break
-                                break;
-                            }
-                        });
-                    }
-                    Err(e) => {
-                        error!("Error accepting connection: {}", e);
-                        break;
-                    }
-                }
-            }
-            println!("Dropping http tunnel listener");
-            drop(listener);
-            info!("Tunnel connection handler ended");
-        });
-
-        Ok(())
     }
 }
 

@@ -1,7 +1,7 @@
 import { IBitcoinPriceRecord } from '../interfaces/IBitcoinPriceRecord';
-import Vault, { IAction } from './Vault';
+import LlbVault, { IAction } from './LlbVault';
 
-export default class VaultSnapshot {
+export default class LlbVaultSnapshot {
   public isLoaded = false;
 
   public actions: IAction[] = [];
@@ -22,7 +22,7 @@ export default class VaultSnapshot {
   public ratchetCount: number = 0;
   public shortCount: number = 0;
 
-  public update(vault: Vault) {
+  public update(vault: LlbVault) {
     this.isLoaded = false;
 
     this.actions = vault.actions;

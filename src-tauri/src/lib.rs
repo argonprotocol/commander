@@ -75,26 +75,6 @@ async fn close_ssh_connection() -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn ensure_ssh_tunnel(
-    host: &str,
-    username: String,
-    private_key: String,
-) -> Result<u16, String> {
-    log::info!("ensure_ssh_tunnel");
-    let port = 22;
-    let ssh_config: ssh::SSHConfig =
-        ssh::SSHConfig::new(host, port, username, private_key).unwrap();
-    let ssh: ssh::SSH = singleton::try_open_ssh_connection(&ssh_config)
-        .await
-        .map_err(|e| e.to_string())?;
-    let local_port = singleton::try_adding_tunnel_to_connection(&ssh)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    Ok(local_port)
-}
-
-#[tauri::command]
 async fn ssh_run_command(command: String) -> Result<(String, u32), String> {
     log::info!("ssh_run_command: {}", command);
     let ssh: ssh::SSH = singleton::get_ssh_connection()
@@ -215,7 +195,7 @@ fn init_config_instance_dir(app: &AppHandle) -> Result<(), tauri::Error> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     dotenv::dotenv().ok();
-    std::env::set_var("RUST_BACKTRACE", "1");
+    color_backtrace::install();
 
     let instance_name = Utils::get_instance_name();
     let logger = init_logger(&instance_name);
@@ -251,7 +231,6 @@ pub fn run() {
             try_ssh_connection,
             ensure_ssh_connection,
             close_ssh_connection,
-            ensure_ssh_tunnel,
             ssh_run_command,
             ssh_upload_directory,
             ssh_upload_file,
