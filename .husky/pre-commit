@@ -3,4 +3,4 @@
 yarn run lint
 
 cd $(dirname "$0")/..
-./scripts/update_shasums.sh
+./scripts/update_shasums.sh && git add SHASUMS256

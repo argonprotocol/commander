@@ -50,7 +50,7 @@ export class StatsSyncer {
 
     while (syncState.loadProgress < 100.0) {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      syncState = await StatsFetcher.fetchSyncState(this.localPort);
+      syncState = await StatsFetcher.fetchSyncState();
       this.updateSyncDetailsProgress(syncState);
     }
 

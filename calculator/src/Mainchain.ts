@@ -82,16 +82,18 @@ export class Mainchain {
 
   public async getAggregateBidCosts(): Promise<number> {
     const client = await this.client;
-    const activeMiners = await client.query.miningSlot.activeMinersByIndex.entries();
+    const miningCohorts = await client.query.miningSlot.minersByCohort.entries();
 
     let aggregateBidCosts = 0;
 
-    for (const miner of activeMiners) {
-      const data = miner[1].unwrap();
-      const argons = data.bid.toNumber() / MICROGONS_PER_ARGON;
-      const argonot = data.argonots.toNumber() / MICROGONS_PER_ARGON;
-      const bidCost = argons + argonot;
-      aggregateBidCosts += bidCost;
+    for (const [_frameId, cohort] of miningCohorts) {
+      for (const miner of cohort) {
+        const data = miner;
+        const argons = data.bid.toNumber() / MICROGONS_PER_ARGON;
+        const argonot = data.argonots.toNumber() / MICROGONS_PER_ARGON;
+        const bidCost = argons + argonot;
+        aggregateBidCosts += bidCost;
+      }
     }
 
     return aggregateBidCosts;

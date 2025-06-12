@@ -20,6 +20,6 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src-vue/**/*.ts", "src-vue/**/*.d.ts", "src-vue/**/*.tsx", "src-vue/**/*.vue", "calculator"],
+  "include": ["src-vue/**/*.ts", "src-vue/**/*.d.ts", "src-vue/**/*.tsx", "src-vue/**/*.vue", "calculator", "bot"],
   "references": [{ "path": "./tsconfig.node.json"} ]
 }

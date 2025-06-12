@@ -78,6 +78,7 @@ export class Config {
         startDate: null,
         errorType: null,
         errorMessage: null,
+        startPosition: 0,
       },
       isServerNew: true,
       isServerInstalling: false,

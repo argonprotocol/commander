@@ -1,13 +1,10 @@
 import { IBidsFile, ISyncState } from '@argonprotocol/commander-bot/src/storage';
 import { StatsFetcher } from './stats/Fetcher';
 import { StatsSyncer } from './stats/Syncer';
-import { IStats, IActiveBids, IDashboardStats } from '../interfaces/IStats';
+import { IDashboardStats } from '../interfaces/IStats';
 import { Db } from './Db';
 import { Config } from './Config';
-import { SSH } from './SSH';
 import { Installer } from '../stores/installer';
-import { getMainchainClient } from '../stores/mainchain';
-import { MiningFrames } from '@argonprotocol/commander-bot/src/MiningFrames';
 
 let IS_INITIALIZED = false;
 
@@ -218,7 +215,7 @@ export class Stats {
   }
 
   private async updateSyncState(): Promise<void> {
-    this.syncState = await StatsFetcher.fetchSyncState(this.localPort);
+    this.syncState = await StatsFetcher.fetchSyncState();
     this.maxSeatsReductionReason = this.syncState.maxSeatsReductionReason;
     this.maxSeatsPossible = this.syncState.maxSeatsPossible;
 
@@ -257,7 +254,7 @@ export class Stats {
   }
 
   private async updateBotActivity(): Promise<void> {
-    const botHistory = await StatsFetcher.fetchBotHistory(this.localPort);
+    const botHistory = await StatsFetcher.fetchBotHistory();
     // TODO: Implement bot activity update logic
   }
 }
