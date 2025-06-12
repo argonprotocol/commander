@@ -21,7 +21,7 @@
     <SecuritySettingsOverlay />
     <BiddingRulesOverlay />
     <!-- <ProvisioningCompleteOverlay /> -->
-    <!-- <SyncingOverlay v-if="config.isServerSyncing && !config.isServerInstalling && !isWaitingForUpgradeApproval" /> -->
+    <SyncingOverlay v-if="config.isServerSyncing && !config.isServerInstalling && !isWaitingForUpgradeApproval" />
   </div>
 </template>
 
@@ -65,7 +65,7 @@ onBeforeMount(async () => {
 });
 
 onMounted(async () => {
-  installer.runIfNeeded();
+  installer.tryToRun();
   timeout = setInterval(() => checkForUpdates(), 60e3) as unknown as number;
 });
 

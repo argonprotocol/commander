@@ -14,7 +14,7 @@
       </p>
       <div class="flex flex-row justify-center items-center space-x-6">
         <ActiveBidsOverlayButton />
-        <BiddingActivityOverlayButton />
+        <ActiveBidsActivityOverlayButton />
       </div>
     </div>
   </div>
@@ -27,7 +27,7 @@ import utc from 'dayjs/plugin/utc';
 import { useConfig } from '../../stores/config';
 import { useBlockchainStore, type IActiveBid } from '../../stores/blockchain';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
-import BiddingActivityOverlayButton from '../../overlays/BiddingActivityOverlayButton.vue';
+import ActiveBidsActivityOverlayButton from '../../overlays/ActiveBidsActivityOverlayButton.vue';
 
 dayjs.extend(utc);
 

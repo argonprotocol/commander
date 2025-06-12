@@ -1,14 +1,20 @@
 import * as Vue from 'vue';
 import { defineStore } from 'pinia';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import { type MainchainClient } from '@argonprotocol/commander-calculator';
 import { type UnsubscribePromise } from '@polkadot/api-base/types/base';
 import { getMainchain, getMainchainClient } from '../stores/mainchain.ts';
+
+dayjs.extend(utc);
+dayjs.extend(relativeTime)
 
 export type IActiveBid = {
   cohortId: number;
   accountId: string;
   amount: number;
-  submittedAt: number | null;
+  submittedAt: dayjs.Dayjs;
   isMine?: boolean;
 };
 
@@ -99,8 +105,8 @@ export const useBlockchainStore = defineStore('blockchain', () => {
         newBids.push({
           cohortId: bid.cohortId.toNumber(),
           accountId: bid.accountId.toString(),
-          amount: bid.bid.toNumber(),
-          submittedAt: null,
+          amount: bid.bid.toNumber() / 1_000_000,
+          submittedAt: dayjs.utc(bid.bidAtTick.toNumber() * 60_000),
         });
       }
       callbackFn(newBids);

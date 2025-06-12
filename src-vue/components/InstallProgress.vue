@@ -7,7 +7,6 @@
 </template>
 
 <script setup lang="ts">
-import { useInstaller } from '../stores/installer';
 import type { IStep } from '../lib/InstallerStep';
 import { stepMetas } from '../lib/InstallerStep';
 import InstallProgressStep from './InstallProgressStep.vue';
@@ -16,11 +15,7 @@ const props = defineProps<{
   isCompact?: boolean;
 }>();
 
-const installer = useInstaller();
-
 const steps: IStep[] = [ ...stepMetas ];
-
-installer.runIfNeeded();
 
 </script>
 

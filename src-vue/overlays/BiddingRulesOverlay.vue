@@ -350,8 +350,8 @@
 
             <div class="flex flex-row justify-end px-14 border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
               <div class="grow font-bold text-lg text-slate-900/70">
-                Tokens Needed: 
-                <template v-if="requiredArgons !== desiredArgons">{{ fmtCommas(requiredArgons.toString()) }} - </template>{{ fmtCommas(desiredArgons.toString()) }} Argon{{ desiredArgons === 1 ? '' : 's' }} 
+                Tokens Needed:
+                <template v-if="requiredArgons !== desiredArgons">Between {{ fmtCommas(requiredArgons.toString()) }} & </template>{{ fmtCommas(desiredArgons.toString()) }} Argon{{ desiredArgons === 1 ? '' : 's' }} 
                 + 
                 <template v-if="requiredArgonots !== desiredArgonots">{{ fmtCommas(requiredArgonots.toString()) }} - </template>{{ fmtCommas(desiredArgonots.toString()) }} Argonot{{ desiredArgonots === 1 ? '' : 's' }}
               </div>

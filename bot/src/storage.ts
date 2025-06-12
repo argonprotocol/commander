@@ -17,8 +17,8 @@ export interface IEarningsFile extends ILastModifiedAt {
   frameTickStart: number;
   frameTickEnd: number;
   lastBlockNumber: number;
-  byCohortFrameId: {
-    [cohortFrameId: number]: IEarningsFileCohort;
+  byCohortActivatingFrameId: {
+    [cohortActivatingFrameId: number]: IEarningsFileCohort;
   };
 }
 
@@ -32,7 +32,7 @@ export interface IEarningsFileCohort {
 
 export interface IBidsFile extends ILastModifiedAt {
   cohortBiddingFrameId: number;
-  cohortFrameId: number;
+  cohortActivatingFrameId: number;
   frameBiddingProgress: number;
   lastBlockNumber: number;
   argonsBidTotal: bigint;
@@ -41,27 +41,27 @@ export interface IBidsFile extends ILastModifiedAt {
   argonotsUsdPrice: number;
   argonsToBeMinedPerBlock: bigint;
   seatsWon: number;
-  subaccounts: Array<ISubaccount>;
+  winningBids: Array<IWinningBid>;
 }
 
-export interface ISubaccount {
-  index: number;
+export interface IWinningBid {
   address: string;
+  subAccountIndex: number;
+  lastBidAtTick?: number;
   bidPosition?: number;
   argonsBid?: bigint;
-  isRebid?: boolean;
-  lastBidAtTick?: number;
 }
 
 export interface ISyncState extends ILastModifiedAt {
   isWaitingToStart?: boolean;
   isStarting?: boolean;
   isStarted?: boolean;
+  hasMiningBids: boolean;
+  hasMiningSeats: boolean;
   argonBlockNumbers: IBlockNumbers;
   bitcoinBlockNumbers: IBlockNumbers;
   bidsLastModifiedAt: Date;
   earningsLastModifiedAt: Date;
-  hasWonSeats: boolean;
   lastBlockNumber: number;
   lastFinalizedBlockNumber: number;
   oldestFrameIdToSync: number;
@@ -158,11 +158,12 @@ export class CohortStorage {
     if (!entry) {
       entry = new JsonStore<ISyncStateFile>(Path.join(this.basedir, key), () => ({
         isStarted: false,
+        hasMiningBids: false,
+        hasMiningSeats: false,
         argonBlockNumbers: { localNode: 0, mainNode: 0 },
         bitcoinBlockNumbers: { localNode: 0, mainNode: 0 },
         bidsLastModifiedAt: new Date(),
         earningsLastModifiedAt: new Date(),
-        hasWonSeats: false,
         lastBlockNumber: 0,
         lastFinalizedBlockNumber: 0,
         oldestFrameIdToSync: 0,
@@ -194,9 +195,9 @@ export class CohortStorage {
           return {
             frameProgress: 0,
             lastBlockNumber: 0,
-            byCohortFrameId: {},
             frameTickStart: tickRange[0],
             frameTickEnd: tickRange[1],
+            byCohortActivatingFrameId: {},
           };
         },
       );
@@ -205,14 +206,14 @@ export class CohortStorage {
     return entry;
   }
 
-  public bidsFile(cohortActivatedFrameId: number): JsonStore<IBidsFile> {
-    const cohortBiddingFrameId = cohortActivatedFrameId - 1;
-    const key = `bids/frame-${cohortBiddingFrameId}-${cohortActivatedFrameId}.json`;
+  public bidsFile(cohortActivatingFrameId: number): JsonStore<IBidsFile> {
+    const cohortBiddingFrameId = cohortActivatingFrameId - 1;
+    const key = `bids/frame-${cohortBiddingFrameId}-${cohortActivatingFrameId}.json`;
     let entry = this.lruCache.get(key);
     if (!entry) {
       entry = new JsonStore<IBidsFile>(Path.join(this.basedir, key), () => ({
         cohortBiddingFrameId,
-        cohortFrameId: cohortActivatedFrameId,
+        cohortActivatingFrameId: cohortActivatingFrameId,
         frameBiddingProgress: 0,
         lastBlockNumber: 0,
         seatsWon: 0,
@@ -221,7 +222,7 @@ export class CohortStorage {
         argonotsStakedPerSeat: 0n,
         argonotsUsdPrice: 0,
         argonsToBeMinedPerBlock: 0n,
-        subaccounts: [],
+        winningBids: [],
       }));
       this.lruCache.set(key, entry);
     }

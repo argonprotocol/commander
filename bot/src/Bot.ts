@@ -111,7 +111,7 @@ export default class Bot {
     this.isStarting = false;
     this.isStarted = true;
     
-    const status = await this.blockSync.status();
+    const status = await this.blockSync.state();
     console.log('Block sync updated', status);
     
     return status;

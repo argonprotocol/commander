@@ -33,8 +33,13 @@ export class SSH {
   }
 
   public static async runCommand(command: string): Promise<[string, number]> {
-    const response = await invoke('ssh_run_command', { command });
-    return response as [string, number];
+    try {
+      const response = await invoke('ssh_run_command', { command });
+      return response as [string, number];
+    } catch (e) {
+      console.error(`Failed to run command (${command}): ${e}`);
+      throw e;
+    }
   }
 
   public static async uploadFile(contents: string, remotePath: string): Promise<void> {

@@ -1,17 +1,18 @@
 // import { fetch } from '@tauri-apps/plugin-http';
 import { IBlockNumbers } from '@argonprotocol/commander-bot/src/Dockers';
-import { ISyncState, IEarningsFile, IBidsFile, IBidsHistory, ISubaccount } from '@argonprotocol/commander-bot/src/storage';
+import { ISyncState, IEarningsFile, IBidsFile, IBidsHistory, IWinningBid } from '@argonprotocol/commander-bot/src/storage';
 import { convertBigIntStringToNumber } from '../Utils';
 
 export class StatsFetcher {
-  public static async fetchBotStatus(localPort: number): Promise<ISyncState> {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('Fetching bot status...', `http://127.0.0.1:${localPort}/status`);
+  public static async fetchSyncState(localPort: number, retries: number = 0): Promise<ISyncState> {
+    console.log('Fetching bot status...', `http://127.0.0.1:${localPort}/sync-state`);
     try {
-      const response = await fetch(`http://127.0.0.1:${localPort}/status`);
+      const response = await fetch(`http://127.0.0.1:${localPort}/sync-state`);
       const data = await response.json();
-      console.log('Bot status fetched:', data);
+      console.log('SyncState fetched:', data);
       return {
+        hasMiningSeats: data.hasMiningSeats,
+        hasMiningBids: data.hasMiningBids,
         argonBlockNumbers: { 
           localNode: data.argonBlockNumbers.localNode, 
           mainNode: data.argonBlockNumbers.mainNode 
@@ -22,7 +23,6 @@ export class StatsFetcher {
         },
         bidsLastModifiedAt: data.bidsLastModifiedAt,
         earningsLastModifiedAt: data.earningsLastModifiedAt,
-        hasWonSeats: data.hasWonSeats,
         lastBlockNumber: data.lastBlockNumber,
         lastFinalizedBlockNumber: data.lastFinalizedBlockNumber,
         oldestFrameIdToSync: data.oldestFrameIdToSync,
@@ -31,8 +31,14 @@ export class StatsFetcher {
         queueDepth: data.queueDepth,
       };
     } catch (error) {
-      console.log('Error fetching bot status:', error);
-      throw error;
+      if (retries > 3) {
+        throw error;
+      }
+      retries += 1;
+      const retryIn = Math.pow(2, retries) * 1000;
+      console.log(`Error fetching bot status, retrying in ${retryIn/1000}s...`, error);
+      await new Promise(resolve => setTimeout(resolve, retryIn));
+      return this.fetchSyncState(localPort, retries);
     }
   }
 
@@ -77,34 +83,37 @@ export class StatsFetcher {
   }
 
   public static async fetchEarningsFile(localPort: number, frameId: number): Promise<IEarningsFile> {
+    console.log(`Fetching http://127.0.0.1:${localPort}/earnings/${frameId}`);
     const response = await fetch(`http://127.0.0.1:${localPort}/earnings/${frameId}`);
     const data: IEarningsFile = await response.json();
+    console.log('Earnings file fetched:', data);
+    const byCohortActivatingFrameId = Object.entries(data.byCohortActivatingFrameId).map(([cohortActivatingFrameId, value]) => [
+      cohortActivatingFrameId,
+      {
+        lastBlockMinedAt: value.lastBlockMinedAt,
+        blocksMined: value.blocksMined,
+        argonsMined: convertBigIntStringToNumber(value.argonsMined as unknown as string) as bigint,
+        argonsMinted: convertBigIntStringToNumber(value.argonsMinted as unknown as string) as bigint,
+        argonotsMined: convertBigIntStringToNumber(value.argonotsMined as unknown as string) as bigint,
+      }
+    ]);
+    console.log('By cohort activating frame id:', byCohortActivatingFrameId);
     return {
       frameProgress: data.frameProgress,
       frameTickStart: data.frameTickStart,
       frameTickEnd: data.frameTickEnd,
       lastBlockNumber: data.lastBlockNumber,
-      byCohortFrameId: Object.fromEntries(
-        Object.entries(data.byCohortFrameId).map(([cohortFrameId, value]) => [
-          cohortFrameId,
-          {
-              lastBlockMinedAt: value.lastBlockMinedAt,
-            blocksMined: value.blocksMined,
-            argonsMined: convertBigIntStringToNumber(value.argonsMined as unknown as string) as bigint,
-            argonsMinted: convertBigIntStringToNumber(value.argonsMinted as unknown as string) as bigint,
-            argonotsMined: convertBigIntStringToNumber(value.argonotsMined as unknown as string) as bigint,
-          }
-        ])
-      ),
+      byCohortActivatingFrameId: Object.fromEntries(byCohortActivatingFrameId),
     }
   }
 
   public static async fetchBidsFile(localPort: number, frameId: number): Promise<IBidsFile> {
     const response = await fetch(`http://127.0.0.1:${localPort}/bids/${frameId}`);
     const data = await response.json();
+    console.log('Bids file fetched:', data);
     return {
       cohortBiddingFrameId: data.cohortBiddingFrameId,
-      cohortFrameId: data.cohortFrameId,
+      cohortActivatingFrameId: data.cohortActivatingFrameId,
       frameBiddingProgress: data.frameBiddingProgress,
       lastBlockNumber: data.lastBlockNumber,
       argonsBidTotal: convertBigIntStringToNumber(data.argonsBidTotal as unknown as string) as bigint,
@@ -113,13 +122,12 @@ export class StatsFetcher {
       argonotsUsdPrice: data.argonotsUsdPrice,
       argonsToBeMinedPerBlock: convertBigIntStringToNumber(data.argonsToBeMinedPerBlock as unknown as string) as bigint,
       seatsWon: data.seatsWon,
-      subaccounts: data.subaccounts.map((x: ISubaccount) => ({
-        index: x.index,
+      winningBids: data.winningBids.map((x: IWinningBid) => ({
         address: x.address,
+        subAccountIndex: x.subAccountIndex,
+        lastBidAtTick: x.lastBidAtTick,
         bidPosition: x.bidPosition,
         argonsBid: convertBigIntStringToNumber(x.argonsBid as unknown as string),
-        isRebid: x.isRebid,
-        lastBidAtTick: x.lastBidAtTick,
       })),
     };
   }

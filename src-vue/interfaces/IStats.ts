@@ -1,8 +1,4 @@
 export interface IStats {
-  isSyncing: boolean;
-  syncProgress: number;
-  syncError: string | null;
-  hasWonSeats: boolean;
   activeBids: IActiveBids;
   dashboard: IDashboardStats;
   argonActivity: any[]; // TODO: Define proper type

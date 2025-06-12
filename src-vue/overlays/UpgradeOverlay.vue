@@ -19,12 +19,13 @@
           </div>
           <div v-else>
             <p>
-              You have been upgraded to Commander version {{ config.version }}. This new version requires an upgrade to your cloud machine. Don't worry, we'll take care of all the details. Just click the "Upgrade" button below to begin.
+              You have been upgraded to Commander version {{ config.version }}. This new version requires an upgrade to your cloud machine. Don't worry,
+              we'll take care of all the details. Just click the "Upgrade" button to begin.
             </p>
 
             <div class="flex flex-row justify-end gap-4 mt-6 border-t border-slate-300 pt-4">
-              <button @click="startUpgrade" class="bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-12 py-2 rounded-md cursor-pointer">
-                Upgrade My Cloud Machine
+              <button @click="startUpgrade" :class="isStartingUpgrade ? 'opacity-50 pointer-events-none' : ''" class="bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-12 py-2 rounded-md cursor-pointer">
+                {{ isStartingUpgrade ? 'Starting Upgrading...' : 'Upgrade My Cloud Machine' }}
               </button>
             </div>
           </div>
@@ -42,15 +43,19 @@ import { useConfig } from '../stores/config';
 import { useInstaller } from '../stores/installer';
 import InstallProgress from '../components/InstallProgress.vue';
 
-const isOpen = Vue.ref(true);
 const config = useConfig();
 const installer = useInstaller();
 
+const isOpen = Vue.ref(true);
+const isStartingUpgrade = Vue.ref(false);
+
 const isUpgrading = Vue.computed(() => {
-  return config.isServerInstalling;
+  return config.isServerInstalling && !config.isWaitingForUpgradeApproval;
 });
 
 async function startUpgrade() {
+  isStartingUpgrade.value = true;
   await installer.startUpgrade();
+  isStartingUpgrade.value = false;
 }
 </script>

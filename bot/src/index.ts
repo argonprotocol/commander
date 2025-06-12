@@ -40,10 +40,10 @@ app.get('/start', async (_req, res) => {
   jsonExt({ isStarted: bot.isStarted }, res);
 });
 
-app.get('/status', async (_req, res) => {
+app.get('/sync-state', async (_req, res) => {
   if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
-  const status = await bot.blockSync.status();
-  jsonExt(status, res);
+  const syncState = await bot.blockSync.state();
+  jsonExt(syncState, res);
 });
 
 app.get('/argon-blockchain-status', async (_req, res) => {
@@ -70,10 +70,10 @@ app.get('/bids-history', async (_req, res) => {
   jsonExt(data, res);
 });
 
-app.get('/bids/:cohortActivatedFrameId', async (req, res) => {
+app.get('/bids/:cohortActivatingFrameId', async (req, res) => {
   if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
-  const cohortActivatedFrameId = Number(req.params.cohortActivatedFrameId);
-  const data = await bot.storage.bidsFile(cohortActivatedFrameId).get();
+  const cohortActivatingFrameId = Number(req.params.cohortActivatingFrameId);
+  const data = await bot.storage.bidsFile(cohortActivatingFrameId).get();
   jsonExt(data, res);
 });
 

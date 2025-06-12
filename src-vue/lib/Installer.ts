@@ -48,6 +48,72 @@ export default class Installer {
     this._loadingFns.resolve();
   }
 
+
+  public async tryToRun(): Promise<void> {
+    console.info("Trying to run installer");
+    await this.isLoadedPromise;
+    if (this.reasonToSkipInstall) {
+      console.info("Skipping Installer:", this.reasonToSkipInstall, this.reasonToSkipInstallData);
+      return;
+    }
+
+    await SSH.ensureConnection(this.config.serverDetails);
+
+    this.config.isWaitingForUpgradeApproval = false;
+    this.config.isServerInstalling = true;
+    await this.config.save();
+
+    console.info("Starting install process");
+    await this.startInstall();
+  }
+
+  public async retryFailedStep(
+    stepKey: string
+  ): Promise<void> {
+    if (await this.isInstallRunning()) return;
+
+    await this.clearStepFiles([stepKey]);
+
+    this.installerCheck.clearCachedFilenames();
+    this.installerCheck.bypassCachedFilenames = false;
+
+    this.clearReasonsToSkipInstall();
+    this.tryToRun();
+  }
+
+  public async startUpgrade(): Promise<void> {
+    if (await this.isInstallRunning()) return;
+
+    this.hasApprovedUpgrade = true;
+
+    console.info("Clearing step files");
+    const stepsToClear = [
+      InstallStepErrorType.FileCheck,
+      InstallStepErrorType.BitcoinInstall,
+      InstallStepErrorType.ArgonInstall,
+      InstallStepErrorType.MiningLaunch,
+    ];
+    await this.clearStepFiles(stepsToClear);
+    
+    this.installerCheck.clearCachedFilenames();
+    this.installerCheck.bypassCachedFilenames = false;
+    
+    this.clearReasonsToSkipInstall();
+    this.config.resetField('installDetails');
+    this.config.isWaitingForUpgradeApproval = false;
+    await this.config.save();
+
+    this.tryToRun();
+  }
+
+  public async updateBiddingBot(): Promise<void> {
+    await this.uploadBotConfigFiles();
+    await this.restartBotDocker();
+    
+    this.config.isServerReadyForMining = true;
+    await this.config.save();
+  }
+
   private async checkWhetherToSkipInstall(): Promise<void> {
     if (!this.config.isServerConnected) {
       this.reasonToSkipInstall = 'Server is not connected';
@@ -115,8 +181,7 @@ export default class Installer {
     if (isFreshInstall) {
       // If the server is fresh, we need to reset the install details, and we can't skip the install process
       // even if next two conditions are met.
-      this.reasonToSkipInstall = '';
-      this.reasonToSkipInstallData = {};
+      this.clearReasonsToSkipInstall();
       this.config.resetField('installDetails');
       this.config.isWaitingForUpgradeApproval = false;
       await this.config.save();
@@ -140,58 +205,12 @@ export default class Installer {
     }
   }
 
-  public async runIfNeeded(shouldBypassUpgradeCheck: boolean = false): Promise<void> {
-    await this.isLoadedPromise;
-    if (this.reasonToSkipInstall) {
-      console.info("Skipping Installer:", this.reasonToSkipInstall, this.reasonToSkipInstallData);
-      return;
-    }
-
-    await SSH.ensureConnection(this.config.serverDetails);
-
-    this.config.isWaitingForUpgradeApproval = false;
-    this.config.isServerInstalling = true;
-    await this.config.save();
-
-    console.info("Starting install process");
-    await this.startInstall();
+  private clearReasonsToSkipInstall(): void {
+    this.reasonToSkipInstall = '';
+    this.reasonToSkipInstallData = {};
   }
 
-  public async retryFailedStep(
-    stepKey: string
-  ): Promise<void> {
-    if (await this.isInstallRunning()) return;
-
-    await this.clearStepFiles([stepKey]);
-    this.installerCheck.clearCachedFilenames();
-    this.installerCheck.bypassCachedFilenames = false;
-    this.runIfNeeded(true);
-  }
-
-  public async startUpgrade(): Promise<void> {
-    if (await this.isInstallRunning()) return;
-
-    this.hasApprovedUpgrade = true;
-
-    const stepsToClear = [
-      InstallStepErrorType.FileCheck,
-      InstallStepErrorType.BitcoinInstall,
-      InstallStepErrorType.ArgonInstall,
-      InstallStepErrorType.MiningLaunch,
-    ];
-    console.info("Clearing step files");
-    await this.clearStepFiles(stepsToClear);
-  }
-
-  public async updateBiddingBot(): Promise<void> {
-    await this.uploadBotConfigFiles();
-    await this.restartBotDocker();
-    
-    this.config.isServerReadyForMining = true;
-    await this.config.save();
-  }
-
-  public async isInstallRunning(): Promise<boolean> {
+  private async isInstallRunning(): Promise<boolean> {
     if (this.isRunningLocally) {
       console.info("Install process IS running locally");
       return true;
@@ -211,31 +230,22 @@ export default class Installer {
   }
 
   private async checkInstall(): Promise<TmpInstallChecks> {
-    const isInstallingFresh = !(await this.serverHasSha256File());
+    const isFreshInstall = !(await this.serverHasSha256File());
 
-    if (isInstallingFresh) {
+    if (isFreshInstall) {
       return {
-        isFreshInstall: isInstallingFresh,
+        isFreshInstall,
         isServerInstallComplete: false,
         remoteFilesNeedUpdating: true,
       };
     }
 
-    const remoteFilesNeedUpdating = !(await this.remoteFilesMatchLocalShasums());
-
-    if (remoteFilesNeedUpdating) {
-      return {
-        isFreshInstall: isInstallingFresh,
-        isServerInstallComplete: false,
-        remoteFilesNeedUpdating,
-      };
-    }
-
     await this.installerCheck.updateInstallStatus();
     const isServerInstallComplete = this.installerCheck.isServerInstallComplete;
+    const remoteFilesNeedUpdating = !(await this.remoteFilesMatchLocalShasums());
 
     return {
-      isFreshInstall: isInstallingFresh,
+      isFreshInstall,
       isServerInstallComplete,
       remoteFilesNeedUpdating,
     };
@@ -245,7 +255,7 @@ export default class Installer {
     const [remoteShasums] = await SSH.runCommand("cat ~/SHASUMS256.copied 2>/dev/null || true");
     const localShasums = await this.getLocalShasums();
     const remoteFilesMatchLocalShasums = localShasums === remoteShasums;
-    console.info(`Remote files match local shasums = ${remoteFilesMatchLocalShasums}`);
+    console.info(`Remote files ${remoteFilesMatchLocalShasums ? 'DO' : 'do NOT'} match local shasums`);
     
     if (!remoteFilesMatchLocalShasums) {
       console.info(`Remote shasums: ${remoteShasums}`);

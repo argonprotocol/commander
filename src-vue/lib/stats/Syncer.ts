@@ -51,19 +51,17 @@ export class StatsSyncer {
     const processedCohorts: Set<number> = new Set();
     let totalBlocksMined = 0;
 
-    const cohortsById = Object.entries(earningsFile.byCohortFrameId) as [string, IEarningsFileCohort][];
-    for (const [cohortFrameIdStr, cohortData] of cohortsById) {
-      const cohortFrameId = parseInt(cohortFrameIdStr, 10);
-      if (!processedCohorts.has(cohortFrameId)) {
-        await this.syncDbCohort(cohortFrameId, frameId, earningsFile.frameProgress);
-        processedCohorts.add(cohortFrameId);
+    const cohortsById = Object.entries(earningsFile.byCohortActivatingFrameId) as [string, IEarningsFileCohort][];
+    for (const [cohortActivatingFrameIdStr, cohortData] of cohortsById) {
+      const cohortActivatingFrameId = parseInt(cohortActivatingFrameIdStr, 10);
+      if (!processedCohorts.has(cohortActivatingFrameId)) {
+        await this.syncDbCohort(cohortActivatingFrameId, frameId, earningsFile.frameProgress);
+        processedCohorts.add(cohortActivatingFrameId);
       }
 
       totalBlocksMined += cohortData.blocksMined;
-      await this.syncDbCohortFrame(cohortFrameId, frameId, cohortData);
+      await this.syncDbCohortFrame(cohortActivatingFrameId, frameId, cohortData);
     }
-
-    console.info(`TOTAL BLOCKS MINED: ${totalBlocksMined}`);
 
     const isProcessed = earningsFile.frameProgress === 100.0;
     await this.db.framesTable.update(
@@ -75,10 +73,10 @@ export class StatsSyncer {
     );
   }
 
-  async syncDbCohortFrame(cohortFrameId: number, frameId: number, cohortData: IEarningsFileCohort): Promise<void> {
+  async syncDbCohortFrame(cohortActivatingFrameId: number, frameId: number, cohortData: IEarningsFileCohort): Promise<void> {
     await this.db.cohortFramesTable.insertOrUpdate(
       frameId,
-      cohortFrameId,
+      cohortActivatingFrameId,
       cohortData.blocksMined,
       Number(cohortData.argonotsMined),
       Number(cohortData.argonsMined),
@@ -86,19 +84,19 @@ export class StatsSyncer {
     );
   }
 
-  async syncDbCohort(cohortStartingFrameId: number, currentFrameId: number, currentFrameProgress: number): Promise<void> {
-    const data = await StatsFetcher.fetchBidsFile(this.localPort, cohortStartingFrameId);
+  async syncDbCohort(cohortActivatingFrameId: number, currentFrameId: number, currentFrameProgress: number): Promise<void> {
+    const data = await StatsFetcher.fetchBidsFile(this.localPort, cohortActivatingFrameId);
 
     if (data.frameBiddingProgress < 100.0) {
       return;
     }
 
-    const framesCompleted = currentFrameId - cohortStartingFrameId;
+    const framesCompleted = currentFrameId - cohortActivatingFrameId;
     const progress = ((framesCompleted * 100.0) + currentFrameProgress) / 10.0;
     const argonotsStaked = Number(data.argonotsStakedPerSeat) * data.seatsWon;
 
     await this.db.cohortsTable.insertOrUpdate(
-      cohortStartingFrameId,
+      cohortActivatingFrameId,
       progress,
       Number(data.transactionFees),
       argonotsStaked,
@@ -106,12 +104,12 @@ export class StatsSyncer {
       data.seatsWon
     );
 
-    await this.db.cohortAccountsTable.deleteForCohort(cohortStartingFrameId);
+    await this.db.cohortAccountsTable.deleteForCohort(cohortActivatingFrameId);
 
-    for (const subaccount of data.subaccounts) {
+    for (const subaccount of data.winningBids) {
       await this.db.cohortAccountsTable.insert(
-        subaccount.index,
-        cohortStartingFrameId,
+        subaccount.subAccountIndex,
+        cohortActivatingFrameId,
         subaccount.address,
         Number(subaccount.argonsBid ?? 0n),
         Number(subaccount.bidPosition ?? 0n)

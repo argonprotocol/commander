@@ -24,10 +24,10 @@
       </div>
       <div class="flex flex-col items-center justify-center min-h-[75px] fade-in-out">
         <div v-if="seatPositions.length" :class="[priceTextSize, 'text-center text-argon-600 font-bold']">
-          {{config.currencySymbol}}{{ fmtMoney(config.argonTo(currentBidPrice)) }}
+          {{currencySymbol}}{{ fmtMoney(currencyStore.argonTo(currentBidPrice)) }}
         </div>
         <div v-else class="text-center text-7xl text-argon-600 font-bold">
-          {{config.currencySymbol}}--.--
+          {{currencySymbol}}--.--
         </div>
       </div>
       <p class="text-center text-lg mt-6 border-t border-b border-gray-300 pt-8 pb-7 font-light leading-7.5">
@@ -47,7 +47,7 @@
             <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and </template>
             {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
           </CountdownClock>.<br />
-          Your account allows for an additional bid raise of {{config.currencySymbol}}{{ fmtMoney(config.argonTo(remainingBidBudget)) }} if needed.
+          Your account allows for an additional bid raise of {{currencySymbol}}{{ fmtMoney(currencyStore.argonTo(remainingBidBudget)) }} if needed.
         </template>
       </p>
       <Popover as="div" class="relative text-center text-lg font-bold mt-10">
@@ -96,6 +96,8 @@ import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { useConfig } from '../../stores/config';
+import { useCurrencyStore } from '../../stores/currency';
+import { storeToRefs } from 'pinia';
 import {  IBiddingRules, BiddingParamsHelper } from '@argonprotocol/commander-calculator';
 import { fmtMoney } from '../../lib/Utils';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
@@ -110,6 +112,8 @@ const mainchain = getMainchain();
 
 const config = useConfig();
 const blockchainStore = useBlockchainStore();
+const currencyStore = useCurrencyStore();
+const { currencySymbol } = storeToRefs(currencyStore);
 
 const auctionIsClosing = Vue.ref(false);
 

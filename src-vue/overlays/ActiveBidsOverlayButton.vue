@@ -12,23 +12,23 @@
           <thead class="font-bold">
             <tr>
               <th class="text-left"></th>
-              <th class="text-left">Bid Amount</th>
-              <th class="text-left">Submitted</th>
-              <th class="text-right">Account</th>
+              <th class="text-left">Amount</th>
+              <th class="text-left">Bid Submitted</th>
+              <th class="text-right">Bidding Account</th>
             </tr>
           </thead>
           <tbody class="font-light font-mono">
-            <tr v-for="(bid, index) in allBids" :key="bid.accountId">
-              <td class="text-left">{{ index + 1 }}</td>
-              <td class="text-left">{{currencySymbol}}{{ fmtMoney(config.argonTo(bid.amount)) }}</td>
-              <td class="text-left">recently</td>
+            <tr v-for="(bid, index) in networkBids" :key="bid.accountId">
+              <td class="text-left opacity-50">{{ index + 1 }})</td>
+              <td class="text-left">{{currencySymbol}}{{ fmtMoney(currencyStore.argonTo(bid.amount)) }}</td>
+              <td class="text-left">{{ bid.submittedAt.fromNow() }}</td>
               <td class="text-right relative">
                 {{ bid.accountId.slice(0, 10) }}...{{ bid.accountId.slice(-7) }}
                 <span v-if="bid.isMine" class="absolute right-0 top-1/2 -translate-y-1/2 bg-argon-600 text-white px-1.5 pb-0.25 rounded text-sm">YOU<span class="absolute top-0 -left-3 inline-block h-full bg-gradient-to-r from-transparent to-white w-3"></span></span>
               </td>
             </tr>
-            <tr v-for="i in 10 - allBids.length" :key="i">
-              <td class="text-left">{{ allBids.length + i }}</td>
+            <tr v-for="i in 10 - networkBids.length" :key="i">
+              <td class="text-left">{{ networkBids.length + i }}</td>
               <td class="text-left text-gray-400">---</td>
               <td class="text-left text-gray-400">---</td>
               <td class="text-right text-gray-400">-------------</td>
@@ -46,10 +46,20 @@ import { storeToRefs } from 'pinia';
 import { useCurrencyStore } from '../stores/currency';
 import { fmtMoney } from '../lib/Utils';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
+import { useBlockchainStore, type IActiveBid } from '../stores/blockchain';
 
 const currencyStore = useCurrencyStore();
+const blockchainStore = useBlockchainStore();
+
 const { currencySymbol } = storeToRefs(currencyStore);
 
-const allBids = Vue.ref([]);
+const networkBids = Vue.ref<IActiveBid[]>([]);
+
+Vue.onMounted(async () => {
+  blockchainStore.subscribeToActiveBids(newNetworkBids => {
+    networkBids.value = newNetworkBids;
+    console.log('networkBids', networkBids.value);
+  });
+});
 
 </script>

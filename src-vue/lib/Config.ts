@@ -96,7 +96,7 @@ export class Config {
         const defaultValue = await value();
         configData[key] = defaultValue;
         fieldsToSave.add(key);
-        fieldsSerialized[key as keyof typeof fieldsSerialized] = JSON.stringify(defaultValue);
+        fieldsSerialized[key as keyof typeof fieldsSerialized] = JSON.stringify(defaultValue, null, 2);
         continue;
       }
       
@@ -187,6 +187,12 @@ export class Config {
     return this._unserialized.syncDetails;
   }
 
+  set syncDetails(value: IConfig['syncDetails']) {
+    this._throwErrorIfNotLoaded();
+    this._tryFieldsToSave(dbFields.syncDetails, value);
+    this._unserialized.syncDetails = value;
+  }
+
   get isServerNew(): boolean {
     if (!this.isLoaded) return false;
     return this._unserialized.isServerNew;
@@ -275,7 +281,12 @@ export class Config {
     this._fieldsToSave = new Set();
     if (Object.keys(dataToSave).length === 0) return;
 
-    console.log("SAVING:", this._fieldsToSave, dataToSave);
+    const dataToLog = Object.keys(dataToSave).reduce<Partial<IConfig>>((acc, key) => {
+      const typedKey = key as keyof IConfig;
+      (acc as any)[typedKey] = this._unserialized[typedKey];
+      return acc;
+    }, {});
+    console.log("SAVING:", this._fieldsToSave, dataToLog);
     await this._db.configTable.insertOrReplace(dataToSave);
   }
 
@@ -290,7 +301,7 @@ export class Config {
   }
 
   private _tryFieldsToSave(field: keyof typeof dbFields, value: any) {
-    const stringifiedValue = JSON.stringify(value);
+    const stringifiedValue = JSON.stringify(value, null, 2);
     if (this._stringified[field] === stringifiedValue) return;
     
     this._stringified[field] = stringifiedValue
@@ -348,7 +359,7 @@ const defaults: IConfigDefaults = {
     const sessionMnemonic = mnemonicGenerate();
     const seedAccount = new Keyring({ type: 'sr25519' }).createFromUri(walletMnemonic);
     const mngAccount = seedAccount.derive(`//mng`);
-    const walletJson = JSON.stringify(mngAccount.toJson(''));
+    const walletJson = JSON.stringify(mngAccount.toJson(''), null, 2);
     return {
       walletMnemonic,
       sessionMnemonic,

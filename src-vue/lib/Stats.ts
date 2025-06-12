@@ -17,11 +17,9 @@ interface CohortAccount {
 }
 
 export class Stats {
-  public hasError: boolean = false;
-  public isSyncing: boolean = false;
-  public syncProgress: number = 0.0;
-  public syncError: string | null = null;
-  public hasWonSeats: boolean = false;
+  public hasMiningSeats: boolean;
+  public cohortId: number | null;
+  public data: IStats;
 
   public isLoaded: boolean;
   public isLoadedPromise: Promise<void>;
@@ -29,7 +27,7 @@ export class Stats {
   private _loadingFns!: { resolve: () => void, reject: (error: Error) => void };
 
   private localPort!: number;
-  private botStatus!: ISyncState;
+  private syncState!: ISyncState;
   private oldestFrameIdToSync!: number;
   private currentFrameId!: number;
   private lastProcessedFrameId!: number;
@@ -39,33 +37,6 @@ export class Stats {
   private _config!: Config;
   private _installer!: Installer;
   private _dbPromise: Promise<Db>;
-
-  private _data: IStats = {
-    isSyncing: false,
-    syncProgress: 0.0,
-    syncError: null,
-    hasWonSeats: false,
-    activeBids: {
-      subaccounts: []
-    },
-    dashboard: {
-      cohortId: null,
-      cohort: null,
-      global: {
-        activeCohorts: 0,
-        activeSeats: 0,
-        totalBlocksMined: 0,
-        totalArgonsBid: 0,
-        totalTransactionFees: 0,
-        totalArgonotsMined: 0,
-        totalArgonsMined: 0,
-        totalArgonsMinted: 0
-      },
-    },
-    argonActivity: [],
-    bitcoinActivity: [],
-    botActivity: []
-  };
 
   constructor(dbPromise: Promise<Db>, config: Config, installer: Installer) {
     if (IS_INITIALIZED) throw new Error("Stats already initialized");
@@ -79,44 +50,84 @@ export class Stats {
       this._loadingFns = { resolve, reject };
     });
     this.isLoaded = false;
-  }
-
-  public get isRunnable(): boolean {
-      return this._config.isServerInstalling || this._config.isWaitingForUpgradeApproval;
+    this.hasMiningSeats = false;
+    this.cohortId = null;
+    this.data = {
+      activeBids: {
+        subaccounts: []
+      },
+      dashboard: {
+        cohortId: null,
+        cohort: null,
+        global: {
+          activeCohorts: 0,
+          activeSeats: 0,
+          totalBlocksMined: 0,
+          totalArgonsBid: 0,
+          totalTransactionFees: 0,
+          totalArgonotsMined: 0,
+          totalArgonsMined: 0,
+          totalArgonsMinted: 0
+        },
+      },
+      argonActivity: [],
+      bitcoinActivity: [],
+      botActivity: []
+    };
   }
 
   public async load() {
     await this._installer.isLoadedPromise;
     
-    console.info('Loading stats...');
+    while (!this.isRunnable) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    console.info('Loading stats...', { isServerInstalling: this._config.isServerInstalling });
     this.db = await this._dbPromise;
     this.lastProcessedFrameId = (await this.db.framesTable.latestId()) || 0;
 
     console.info('Ensuring tunnel...');
     this.localPort = await SSH.ensureTunnel(this._config.serverDetails);
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    console.info('Fetching bot status...');
-    this.botStatus = await StatsFetcher.fetchBotStatus(this.localPort);
+    console.info('Fetching sync state...');
+    this.syncState = await StatsFetcher.fetchSyncState(this.localPort);
 
-    await this.updateServerDetailsFromBotStatus(this.botStatus);
-    this.oldestFrameIdToSync = this.botStatus.oldestFrameIdToSync;
-    this.currentFrameId = this.botStatus.currentFrameId;
-    this.syncProgress = await this.calculateSyncProgress();
-    console.info('Sync progress:', this.syncProgress);
-    // if (syncProgress < 100.0) {
-    //     this.isSyncing = true;
-    //     await new StatsSyncer(this.localPort, this.db).run(
-    //         this.oldestFrameIdToSync,
-    //         this.currentFrameId
-    //     );
-    // }
+    await this.updateServerDetailsFromSyncState(this.syncState);
+    this.oldestFrameIdToSync = this.syncState.oldestFrameIdToSync;
+    this.currentFrameId = this.syncState.currentFrameId;
+    
+    const syncProgress = await this.calculateSyncProgress();
+
+    this._config.syncDetails = {
+      startDate: new Date().toISOString(),
+      progress: syncProgress,
+      errorType: null,
+      errorMessage: null
+    };
+    await this._config.save();
+
+    if (syncProgress < 100.0) {
+      console.info('TODO: SYNC DATABASE...');
+        // await new StatsSyncer(this.localPort, this.db).run(
+        //     this.oldestFrameIdToSync,
+        //     this.currentFrameId
+        // );
+    } else {
+      this.run();
+    }
 
     this.isLoaded = true;
     this._loadingFns.resolve();
   }
 
-  public async fetch(cohortId: number | null): Promise<IStats> {
+  public async run(): Promise<IStats> {
+    this.cohortId ??= await this.fetchLatestCohortIdFromDb();
     const syncer = new StatsSyncer(this.localPort, this.db);
+
+    const bidsFile = await StatsFetcher.fetchBidsFile(this.localPort, this.currentFrameId+1);
+    console.info('CURRENT Bids file:', bidsFile);
 
     if (this.isMissingCurrentFrame) {
       const yesterdayFrame = await this.db.framesTable.fetchById(this.currentFrameId - 1);
@@ -124,18 +135,20 @@ export class Stats {
         await syncer.syncDbFrame(yesterdayFrame.id);
       }
     }
-
-    await syncer.syncDbFrame(this.currentFrameId);
-    await this.updateArgonActivity();
     try {
-      await this.updateBitcoinActivity();
+      await syncer.syncDbFrame(this.currentFrameId);
     } catch (e) {
-      console.info('Failed to update bitcoin activity:', e);
+      console.info('Failed to sync db frame:', e);
     }
+    // await this.updateArgonActivity();
+    // try {
+    //   await this.updateBitcoinActivity();
+    // } catch (e) {
+    //   console.info('Failed to update bitcoin activity:', e);
+    // }
 
-    const activeBids = await this.fetchActiveBids();
-    const finalCohortId = cohortId || await this.fetchLatestCohortId();
-    const dashboard = await this.fetchDashboard(finalCohortId);
+    const activeBids = await this.fetchActiveBidsFromDb();
+    const dashboard = await this.fetchDashboardFromDb();
 
     return {
       activeBids,
@@ -146,16 +159,18 @@ export class Stats {
     };
   }
 
+  private get isRunnable(): boolean {
+    return !this._config.isServerInstalling && !this._config.isWaitingForUpgradeApproval;
+  }
+
   private async calculateSyncProgress(): Promise<number> {
-    const botLoadProgress = this.botStatus.loadProgress * 0.9;
-    console.info('Bot load progress:', botLoadProgress);
+    const botLoadProgress = this.syncState.loadProgress * 0.9;
 
     if (botLoadProgress < 90.0) {
       return botLoadProgress;
     }
 
     const dbSyncProgress = await this.calculateDbSyncProgress() * 0.1;
-    console.info('DB sync progress:', dbSyncProgress);
     
     return botLoadProgress + dbSyncProgress;
   }
@@ -182,7 +197,7 @@ export class Stats {
     return (dbRowsFound / dbRowsExpected) * 100.0;
   }
 
-  private async fetchActiveBids(): Promise<IActiveBids> {
+  private async fetchActiveBidsFromDb(): Promise<IActiveBids> {
     const cohortAccounts = await this.db.cohortAccountsTable.fetchForCohortId(this.currentFrameId);
     return {
       subaccounts: cohortAccounts.map((account: CohortAccount) => ({
@@ -196,15 +211,15 @@ export class Stats {
     };
   }
 
-  public async fetchDashboard(cohortId: number | null): Promise<IDashboardStats> {
+  public async fetchDashboardFromDb(): Promise<IDashboardStats> {
     return {
-      global: await this.fetchDashboardGlobalStats(),
-      cohortId,
-      cohort: cohortId ? await this.fetchDashboardCohortStats(cohortId) : null
+      global: await this.fetchDashboardGlobalStatsFromDb(),
+      cohortId: this.cohortId,
+      cohort: this.cohortId ? await this.fetchDashboardCohortStatsFromDb(this.cohortId) : null
     };
   }
 
-  private async fetchLatestCohortId(): Promise<number | null> {
+  private async fetchLatestCohortIdFromDb(): Promise<number | null> {
     try {
       const id = await this.db.cohortsTable.fetchLatestActiveId();
       return id || null;
@@ -213,7 +228,7 @@ export class Stats {
     }
   }
 
-  private async fetchDashboardGlobalStats() {
+  private async fetchDashboardGlobalStatsFromDb(): Promise<IDashboardStats['global']> {
     const currentFrameId = await this.db.framesTable.latestId();
     const globalStats1 = await this.db.cohortsTable.fetchGlobalStats(currentFrameId);
     const globalStats2 = await this.db.cohortFramesTable.fetchGlobalStats();
@@ -230,7 +245,7 @@ export class Stats {
     };
   }
 
-  private async fetchDashboardCohortStats(cohortId: number) {
+  private async fetchDashboardCohortStatsFromDb(cohortId: number): Promise<IDashboardStats['cohort']> {
     const cohort = await this.db.cohortsTable.fetchById(cohortId);
     if (!cohort) return null;
 
@@ -251,12 +266,12 @@ export class Stats {
     };
   }
 
-  private async updateServerDetailsFromBotStatus(botStatus: ISyncState): Promise<void> {
-    if (botStatus.oldestFrameIdToSync > 0) {
-      this._config.serverDetails.oldestFrameIdToSync = botStatus.oldestFrameIdToSync;
+  private async updateServerDetailsFromSyncState(syncState: ISyncState): Promise<void> {
+    if (syncState.oldestFrameIdToSync > 0) {
+      this._config.serverDetails.oldestFrameIdToSync = syncState.oldestFrameIdToSync;
     }
 
-    this._config.hasMiningSeats = botStatus.hasWonSeats;
+    this._config.hasMiningSeats = syncState.hasMiningSeats;
     await this._config.save();
   }
 

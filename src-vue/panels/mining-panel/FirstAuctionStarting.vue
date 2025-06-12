@@ -15,8 +15,8 @@
         </div>
       </div>
       <p class="text-center text-lg mt-6 border-t border-b border-gray-300 pt-8 pb-7 font-light leading-7.5 inline-block">
-        Your bidding bot successfully connected to the Argon blockchain and is currently trying to win some mining seats. It's been given
-        <span @click="openBiddingBudgetOverlay" class="text-argon-600 underline cursor-pointer underline-offset-2">a budget of 
+        Your bidding bot has successfully connected to the Argon blockchain. It's now trying to win some mining seats with a
+        <span @click="openBiddingBudgetOverlay" class="text-argon-600 underline cursor-pointer underline-offset-2">budget of 
         {{currencySymbol}}{{ fmtMoney(currencyStore.argonTo(biddingBudget)) }}</span>.
         <template v-if="auctionIsClosing && startOfAuctionClosing">
           The currently active auction is in the process of closing. Bids can still be submitted for the
@@ -39,7 +39,7 @@
       </p>
       <div class="flex flex-row justify-center items-center space-x-6">
         <ActiveBidsOverlayButton />
-        <BiddingActivityOverlayButton />
+        <ActiveBidsActivityOverlayButton />
       </div>
     </div>
   </div>
@@ -54,7 +54,8 @@ import { fmtMoney } from '../../lib/Utils';
 import CountdownClock from '../../components/CountdownClock.vue';
 import ConfettiIcon from '../../assets/confetti.svg?component';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
-import BiddingActivityOverlayButton from '../../overlays/BiddingActivityOverlayButton.vue';
+import ActiveBidsActivityOverlayButton from '../../overlays/ActiveBidsActivityOverlayButton.vue';
+import {  IBiddingRules, BiddingParamsHelper } from '@argonprotocol/commander-calculator';
 import emitter from '../../emitters/basic';
 import { getMainchain } from '../../stores/mainchain';
 import { useCurrencyStore } from '../../stores/currency';
@@ -64,8 +65,6 @@ import { storeToRefs } from 'pinia';
 dayjs.extend(utc);
 
 const mainchain = getMainchain();
-
-console.log('using stats store');
 const stats = useStats();
 const config = useConfig();
 const currencyStore = useCurrencyStore();
@@ -74,8 +73,17 @@ const { currencySymbol } = storeToRefs(currencyStore);
 const auctionIsClosing = Vue.ref(false);
 const startOfAuctionClosing: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
 const startOfNextCohort: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
+const maxSeatCount = Vue.ref(0);
 
-const biddingBudget = Vue.ref(0);
+const biddingParamsHelper = new BiddingParamsHelper(
+  config.biddingRules as IBiddingRules,
+  mainchain,
+);
+
+const biddingBudget = Vue.computed(() => {
+  const amountPerSeat = config.biddingRules?.finalAmount || 0;
+  return amountPerSeat * maxSeatCount.value;
+});
 
 function handleAuctionClosingTick(totalSecondsRemaining: number) {
   if (totalSecondsRemaining <= 0) {
@@ -89,6 +97,8 @@ function openBiddingBudgetOverlay() {
 
 Vue.onMounted(async () => {
   if (!config.biddingRules) return;
+
+  maxSeatCount.value = await biddingParamsHelper.getMaxSeats();
 
   if (!startOfAuctionClosing.value || !startOfNextCohort.value) {
     const tickAtStartOfAuctionClosing = await mainchain.getTickAtStartOfAuctionClosing();

@@ -83,7 +83,7 @@ pub async fn try_adding_tunnel_to_connection(ssh: &SSH) -> Result<u16> {
     *LOCAL_PORT.lock().await = Some(local_port);
 
     let arc_ssh = Arc::new(ssh.clone());
-    println!(
+    log::info!(
         "Creating tunnel from local port {} to {}:{}",
         local_port, remote_host, remote_port
     );

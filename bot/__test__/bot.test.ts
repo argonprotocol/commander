@@ -54,7 +54,7 @@ it('can autobid and store stats', async () => {
   );
 
   await expect(bot.start()).resolves.toBeTruthy();
-  const status = await bot.blockSync.status();
+  const status = await bot.blockSync.state();
   expect(status.lastBlockNumber).toBeGreaterThanOrEqual(
     status.lastFinalizedBlockNumber,
   );
@@ -76,7 +76,7 @@ it('can autobid and store stats', async () => {
   });
   let voteBlocks = 0;
   let lastFinalizedBlockNumber = 0;
-  const cohortFrameIdsWithEarnings = new Set<number>();
+  const cohortActivatingFrameIdsWithEarnings = new Set<number>();
   // wait for first finalized vote block
   await new Promise(async resolve => {
     const unsubscribe = await client.rpc.chain.subscribeFinalizedHeads(
@@ -89,7 +89,7 @@ it('can autobid and store stats', async () => {
         if (isVoteBlock) {
           console.log(`Block ${x.number} is vote block`);
           const frameId = await new MiningRotations().getForHeader(client, x);
-          if (frameId !== undefined) cohortFrameIdsWithEarnings.add(frameId);
+          if (frameId !== undefined) cohortActivatingFrameIdsWithEarnings.add(frameId);
           voteBlocks++;
           if (voteBlocks > 5) {
             unsubscribe();
@@ -101,9 +101,9 @@ it('can autobid and store stats', async () => {
   });
 
   console.log(
-    `Rotations with earnings: ${[...cohortFrameIdsWithEarnings]}. First cohort ${firstCohort}`,
+    `Rotations with earnings: ${[...cohortActivatingFrameIdsWithEarnings]}. First cohort ${firstCohort}`,
   );
-  expect(cohortFrameIdsWithEarnings.size).toBeGreaterThan(0);
+  expect(cohortActivatingFrameIdsWithEarnings.size).toBeGreaterThan(0);
 
   const cohort1Bids = await bot.storage.bidsFile(firstCohort).get();
   expect(cohort1Bids).toBeTruthy();
@@ -115,23 +115,23 @@ it('can autobid and store stats', async () => {
   // wait for sync state to equal latest finalized
   while (true) {
     await new Promise(resolve => setTimeout(resolve, 100));
-    const status = await bot.blockSync.status();
+    const status = await bot.blockSync.state();
     if (status.lastBlockNumber >= lastFinalizedBlockNumber) break;
   }
 
-  const cohortFrameIds = new Set<number>();
+  const cohortActivatingFrameIds = new Set<number>();
   let argonsMined = 0n;
-  for (const frameId of cohortFrameIdsWithEarnings) {
+  for (const frameId of cohortActivatingFrameIdsWithEarnings) {
     const earningsData = await bot.storage.earningsFile(frameId!).get();
     expect(earningsData).toBeDefined();
     expect(
-      Object.keys(earningsData!.byCohortFrameId).length,
+      Object.keys(earningsData!.byCohortActivatingFrameId).length,
     ).toBeGreaterThanOrEqual(1);
-    for (const [cohortFrameId, cohortData] of Object.entries(
-      earningsData!.byCohortFrameId,
+    for (const [cohortActivatingFrameId, cohortData] of Object.entries(
+      earningsData!.byCohortActivatingFrameId,
     )) {
-      cohortFrameIds.add(Number(cohortFrameId!));
-      expect(Number(cohortFrameId)).toBeGreaterThan(0);
+      cohortActivatingFrameIds.add(Number(cohortActivatingFrameId!));
+      expect(Number(cohortActivatingFrameId)).toBeGreaterThan(0);
       expect(cohortData.argonsMined).toBeGreaterThan(0);
       argonsMined += cohortData.argonsMined;
     }
@@ -148,8 +148,8 @@ it('can autobid and store stats', async () => {
     };
   });
   console.log('Stopping bot 1', {
-    cohortFrameIdsWithEarnings: [...cohortFrameIdsWithEarnings],
-    cohortFrameIds: [...cohortFrameIds],
+    cohortActivatingFrameIdsWithEarnings: [...cohortActivatingFrameIdsWithEarnings],
+    cohortActivatingFrameIds: [...cohortActivatingFrameIds],
   });
   await bot.stop();
 
@@ -164,7 +164,7 @@ it('can autobid and store stats', async () => {
     biddingRulesPath: Path.resolve(path, 'rules.json'),
     datadir: path2,
     keysMnemonic: mnemonicGenerate(),
-    oldestFrameIdToSync: Math.min(...cohortFrameIds) - 1,
+    oldestFrameIdToSync: Math.min(...cohortActivatingFrameIds) - 1,
   });
   console.log('Starting bot 2');
   await expect(botRestart.start()).resolves.toBeTruthy();
@@ -172,21 +172,21 @@ it('can autobid and store stats', async () => {
   await botRestart.stop();
 
   // compare directories
-  for (const cohortFrameId of cohortFrameIdsWithEarnings) {
-    const earningsFile1 = await bot.storage.earningsFile(cohortFrameId).get();
+  for (const cohortActivatingFrameId of cohortActivatingFrameIdsWithEarnings) {
+    const earningsFile1 = await bot.storage.earningsFile(cohortActivatingFrameId).get();
     const earningsFile2 = await botRestart.storage
-      .earningsFile(cohortFrameId)
+      .earningsFile(cohortActivatingFrameId)
       .get();
-    console.info('Checking earnings for rotation', cohortFrameId);
+    console.info('Checking earnings for rotation', cohortActivatingFrameId);
     expect(earningsFile1).toBeTruthy();
     expect(earningsFile2).toBeTruthy();
     expect(earningsFile1!).toEqual(earningsFile2!);
   }
 
-  for (const cohortFrameId of cohortFrameIds) {
-    const bidsFile1 = await bot.storage.bidsFile(cohortFrameId).get();
-    const bidsFile2 = await botRestart.storage.bidsFile(cohortFrameId).get();
-    console.info('Checking bidding for cohort', cohortFrameId);
+  for (const cohortActivatingFrameId of cohortActivatingFrameIds) {
+    const bidsFile1 = await bot.storage.bidsFile(cohortActivatingFrameId).get();
+    const bidsFile2 = await botRestart.storage.bidsFile(cohortActivatingFrameId).get();
+    console.info('Checking bidding for cohort', cohortActivatingFrameId);
     expect(bidsFile1).toBeTruthy();
     expect(bidsFile2).toBeTruthy();
     expect(bidsFile1!).toEqual(bidsFile2!);
