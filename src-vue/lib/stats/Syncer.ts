@@ -91,7 +91,7 @@ export class StatsSyncer {
     currentFrameId: number,
     currentFrameProgress: number,
   ): Promise<void> {
-    const data = await StatsFetcher.fetchBidsFile(this.localPort, cohortActivatingFrameId);
+    const data = await StatsFetcher.fetchBidsFile(cohortActivatingFrameId);
 
     if (data.frameBiddingProgress < 100.0) {
       return;
