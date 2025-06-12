@@ -40,64 +40,52 @@ it('can autobid and store stats', async () => {
     keysMnemonic: mnemonicGenerate(),
   });
 
-  vi.spyOn(BiddingCalculator, 'createBidderParams').mockImplementation(
-    async () => {
-      return {
-        maxSeats: 10,
-        bidDelay: 0,
-        maxBudget: 100_000_000n,
-        maxBid: 1_000_000n,
-        minBid: 10_000n,
-        bidIncrement: 10_000n,
-      };
-    },
-  );
+  vi.spyOn(BiddingCalculator, 'createBidderParams').mockImplementation(async () => {
+    return {
+      maxSeats: 10,
+      bidDelay: 0,
+      maxBudget: 100_000_000n,
+      maxBid: 1_000_000n,
+      minBid: 10_000n,
+      bidIncrement: 10_000n,
+    };
+  });
 
   await expect(bot.start()).resolves.toBeTruthy();
   const status = await bot.blockSync.state();
-  expect(status.lastBlockNumber).toBeGreaterThanOrEqual(
-    status.lastFinalizedBlockNumber,
-  );
+  expect(status.lastBlockNumber).toBeGreaterThanOrEqual(status.lastFinalizedBlockNumber);
   console.log(status);
   let firstCohort = 1;
   // wait for the first rotation
   await new Promise(async resolve => {
-    const unsubscribe = await client.query.miningSlot.activeMinersCount(
-      async x => {
-        if (x.toNumber() > 0) {
-          unsubscribe();
-          firstCohort = await client.query.miningSlot
-            .nextCohortId()
-            .then(x => x.toNumber() - 1);
-          resolve(x);
-        }
-      },
-    );
+    const unsubscribe = await client.query.miningSlot.activeMinersCount(async x => {
+      if (x.toNumber() > 0) {
+        unsubscribe();
+        firstCohort = await client.query.miningSlot.nextCohortId().then(x => x.toNumber() - 1);
+        resolve(x);
+      }
+    });
   });
   let voteBlocks = 0;
   let lastFinalizedBlockNumber = 0;
   const cohortActivatingFrameIdsWithEarnings = new Set<number>();
   // wait for first finalized vote block
   await new Promise(async resolve => {
-    const unsubscribe = await client.rpc.chain.subscribeFinalizedHeads(
-      async x => {
-        const api = await client.at(x.hash);
-        const isVoteBlock = await api.query.blockSeal
-          .isBlockFromVoteSeal()
-          .then(x => x.isTrue);
-        lastFinalizedBlockNumber = x.number.toNumber();
-        if (isVoteBlock) {
-          console.log(`Block ${x.number} is vote block`);
-          const frameId = await new MiningRotations().getForHeader(client, x);
-          if (frameId !== undefined) cohortActivatingFrameIdsWithEarnings.add(frameId);
-          voteBlocks++;
-          if (voteBlocks > 5) {
-            unsubscribe();
-            resolve(x);
-          }
+    const unsubscribe = await client.rpc.chain.subscribeFinalizedHeads(async x => {
+      const api = await client.at(x.hash);
+      const isVoteBlock = await api.query.blockSeal.isBlockFromVoteSeal().then(x => x.isTrue);
+      lastFinalizedBlockNumber = x.number.toNumber();
+      if (isVoteBlock) {
+        console.log(`Block ${x.number} is vote block`);
+        const frameId = await new MiningRotations().getForHeader(client, x);
+        if (frameId !== undefined) cohortActivatingFrameIdsWithEarnings.add(frameId);
+        voteBlocks++;
+        if (voteBlocks > 5) {
+          unsubscribe();
+          resolve(x);
         }
-      },
-    );
+      }
+    });
   });
 
   console.log(
@@ -124,9 +112,7 @@ it('can autobid and store stats', async () => {
   for (const frameId of cohortActivatingFrameIdsWithEarnings) {
     const earningsData = await bot.storage.earningsFile(frameId!).get();
     expect(earningsData).toBeDefined();
-    expect(
-      Object.keys(earningsData!.byCohortActivatingFrameId).length,
-    ).toBeGreaterThanOrEqual(1);
+    expect(Object.keys(earningsData!.byCohortActivatingFrameId).length).toBeGreaterThanOrEqual(1);
     for (const [cohortActivatingFrameId, cohortData] of Object.entries(
       earningsData!.byCohortActivatingFrameId,
     )) {
@@ -174,9 +160,7 @@ it('can autobid and store stats', async () => {
   // compare directories
   for (const cohortActivatingFrameId of cohortActivatingFrameIdsWithEarnings) {
     const earningsFile1 = await bot.storage.earningsFile(cohortActivatingFrameId).get();
-    const earningsFile2 = await botRestart.storage
-      .earningsFile(cohortActivatingFrameId)
-      .get();
+    const earningsFile2 = await botRestart.storage.earningsFile(cohortActivatingFrameId).get();
     console.info('Checking earnings for rotation', cohortActivatingFrameId);
     expect(earningsFile1).toBeTruthy();
     expect(earningsFile2).toBeTruthy();

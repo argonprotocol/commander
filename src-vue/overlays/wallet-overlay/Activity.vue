@@ -13,7 +13,9 @@ const accountAddress = '5EbtpegDiogFpFS9PTRvcXn166c7PbwgADm6bwc92bcDCh3U';
 const transactions: Vue.Ref<any[]> = Vue.ref([]);
 
 async function fetchTransactions() {
-  const response = await fetch(`https://argon-api.statescan.io/accounts/${accountAddress}/transfers?page=0&page_size=25`);
+  const response = await fetch(
+    `https://argon-api.statescan.io/accounts/${accountAddress}/transfers?page=0&page_size=25`,
+  );
   const data = await response.json();
 
   for (const item of data.items) {
@@ -23,7 +25,7 @@ async function fetchTransactions() {
       from: item.from,
       to: item.to,
       type: item.from === accountAddress ? 'sent' : 'received',
-    }
+    };
     transactions.value.push(transaction);
   }
 }

@@ -1,7 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
-import { Config } from "./Config";
-import { IConfigServerDetails } from "../interfaces/IConfig";
-
+import { invoke } from '@tauri-apps/api/core';
+import { Config } from './Config';
+import { IConfigServerDetails } from '../interfaces/IConfig';
 
 export class SSH {
   public static async tryConnection(serverDetails: IConfigServerDetails): Promise<number> {
@@ -46,7 +45,11 @@ export class SSH {
     await invoke('ssh_upload_file', { contents, remotePath });
   }
 
-  public static async uploadDirectory(app: any, localRelativeDir: string, remoteDir: string): Promise<void> {
+  public static async uploadDirectory(
+    app: any,
+    localRelativeDir: string,
+    remoteDir: string,
+  ): Promise<void> {
     await invoke('ssh_upload_directory', { app, localRelativeDir, remoteDir });
   }
 
@@ -69,4 +72,4 @@ export interface SSHConfig {
   username: string;
   password?: string;
   privateKey?: string;
-} 
+}

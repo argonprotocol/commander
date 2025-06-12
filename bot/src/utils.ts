@@ -12,11 +12,8 @@ export function onExit(fn: () => void | Promise<void>) {
   process.once('exit', () => fn());
 }
 
-export function requireEnv<K extends keyof (typeof process)['env']>(
-  envVar: K,
-): string {
-  if (!process.env[envVar])
-    throw new Error(`process.env.${envVar} is required`);
+export function requireEnv<K extends keyof (typeof process)['env']>(envVar: K): string {
+  if (!process.env[envVar]) throw new Error(`process.env.${envVar} is required`);
   return process.env[envVar] as any;
 }
 

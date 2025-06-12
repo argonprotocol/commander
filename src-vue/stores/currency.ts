@@ -29,12 +29,7 @@ export interface IWallet {
   totalValue: number;
 }
 
-export type ICurrency =
-  | Currency.ARGN
-  | Currency.USD
-  | Currency.EURO
-  | Currency.GBP
-  | Currency.INR;
+export type ICurrency = Currency.ARGN | Currency.USD | Currency.EURO | Currency.GBP | Currency.INR;
 
 export const useCurrencyStore = defineStore('currency', () => {
   const isLoaded = Vue.ref(false);
@@ -84,10 +79,8 @@ export const useCurrencyStore = defineStore('currency', () => {
     [Currency.GBP]: { id: Currency.GBP, symbol: '£', name: 'Pound' },
     [Currency.INR]: { id: Currency.INR, symbol: '₹', name: 'Rupee' },
   };
-  
-  const displayCurrency = Vue.ref<ICurrencyRecord>(
-    displayCurrencies[Currency.USD],
-  );
+
+  const displayCurrency = Vue.ref<ICurrencyRecord>(displayCurrencies[Currency.USD]);
 
   const currencySymbol = Vue.ref(displayCurrency.value.symbol);
 
@@ -210,16 +203,16 @@ export const useCurrencyStore = defineStore('currency', () => {
   function btcTo(qty: number) {
     return argonTo(btcToArgon(qty));
   }
-  
+
   function btcToArgon(qty: number) {
     return qty * exchangeRates.BTC;
   }
 
   //////////////////////////////////////////////////////////////////////////////
 
-  async function load() {     
+  async function load() {
     try {
-      await loadExchangeRates()
+      await loadExchangeRates();
     } catch (error) {
       await ask('Exchange rates failed to load correctly. Click Ok to try again.', {
         title: 'Argon Commander',

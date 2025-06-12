@@ -10,27 +10,27 @@ export interface WindowControlsProps {
    * If the `platform` property is not specified, the library will automatically detect
    * the operating system the app is running on and display the appropriate elements.
    */
-  platform?: "windows" | "macos" | "gnome"
+  platform?: 'windows' | 'macos' | 'gnome';
 
   /**
    * Indicates whether the window controls should be shown or hidden.
    * @default false
    */
-  hide?: boolean
+  hide?: boolean;
 
   /**
    * - "display": "display: none;" making them completely invisible and not taking up any space.
    * - "visibility": "visibility: hidden;" making them invisible but still occupying the same space.
    * @default "display"
    */
-  hideMethod?: "display" | "visibility"
+  hideMethod?: 'display' | 'visibility';
 
   /**
    * Justify/Snap WindowControls
    *
    * @default false, (if not defined in WindowTitlebar automatically assigned)
    */
-  justify?: boolean
+  justify?: boolean;
 
   /**
    * Specifies the Linux desktop environment for which the window controls are intended.
@@ -52,5 +52,5 @@ export interface WindowControlsProps {
   /**
    * to add custom class to window controls
    */
-  className?: string
+  className?: string;
 }

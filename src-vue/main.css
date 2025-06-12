@@ -1,6 +1,6 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-@theme {  
+@theme {
   --color-argon-50: oklch(0.95 0.05 320);
   --color-argon-100: oklch(0.88 0.09 320);
   --color-argon-200: oklch(0.81 0.14 320);
@@ -8,21 +8,21 @@
   --color-argon-400: oklch(0.65 0.24 320);
   --color-argon-500: oklch(0.55 0.28 320);
   --color-argon-600: oklch(0.48 0.24 320);
-  --color-argon-700: oklch(0.41 0.20 320);
+  --color-argon-700: oklch(0.41 0.2 320);
   --color-argon-800: oklch(0.34 0.16 320);
   --color-argon-900: oklch(0.27 0.12 320);
-  --color-argon-950: oklch(0.20 0.08 320);
+  --color-argon-950: oklch(0.2 0.08 320);
 
-  --color-argon-menu-bg: #FEF8FF;
-  --color-argon-menu-hover: #F7EDF8;
-  --color-argon-button: #A600D4;
-  --color-argon-button-hover: #8000A8;
+  --color-argon-menu-bg: #fef8ff;
+  --color-argon-menu-hover: #f7edf8;
+  --color-argon-button: #a600d4;
+  --color-argon-button-hover: #8000a8;
 
-  --color-argon-error: #DC3545;
-  --color-argon-error-darker: #C62030;
+  --color-argon-error: #dc3545;
+  --color-argon-error-darker: #c62030;
   --color-argon-error-darkest: #800000;
 
-  --text-md: 15px; 
+  --text-md: 15px;
 }
 
 @utility inner-button-shadow {
@@ -40,7 +40,7 @@
 html {
   height: 100%;
   border-radius: 10px;
-  background: #F9F2FA;
+  background: #f9f2fa;
 }
 
 body {
@@ -48,7 +48,7 @@ body {
   height: 100%;
   border-radius: 10px;
   overflow: hidden;
-  background-color: #F9F2FA;
+  background-color: #f9f2fa;
 }
 
 :root {
@@ -87,14 +87,18 @@ a:hover {
 
 body.isDraggingIncrease {
   cursor: n-resize !important;
-  div, svg, span {
+  div,
+  svg,
+  span {
     cursor: n-resize !important;
   }
 }
 
 body.isDraggingDecrease {
   cursor: s-resize !important;
-  div, svg, span {
+  div,
+  svg,
+  span {
     cursor: s-resize !important;
   }
 }

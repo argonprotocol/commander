@@ -1,8 +1,4 @@
-import {
-  type Accountset,
-  CohortBidder,
-  MiningBids,
-} from '@argonprotocol/mainchain';
+import { type Accountset, CohortBidder, MiningBids } from '@argonprotocol/mainchain';
 import type { CohortStorage } from './storage.ts';
 import { createBidderParams } from '@argonprotocol/commander-calculator';
 import { readJsonFileOrNull } from './utils.ts';
@@ -75,17 +71,14 @@ export class AutoBidder {
       seatGoal: params.maxSeats,
     });
 
-    const subaccounts: { index: number; isRebid: boolean; address: string }[] =
-      [];
+    const subaccounts: { index: number; isRebid: boolean; address: string }[] = [];
     if (bidsFileData && bidsFileData.winningBids.length) {
       const miningAccounts = await this.accountset.loadRegisteredMiners(
         await this.accountset.client,
       );
       for (const winningBid of bidsFileData.winningBids) {
         if (!winningBid.subAccountIndex) continue;
-        const account = miningAccounts.find(
-          x => x.address === winningBid.address,
-        );
+        const account = miningAccounts.find(x => x.address === winningBid.address);
         if (account) {
           subaccounts.push({
             index: winningBid.subAccountIndex,
@@ -98,8 +91,7 @@ export class AutoBidder {
     // check if we need to add more seats
     if (subaccounts.length < params.maxSeats) {
       const neededSeats = params.maxSeats - subaccounts.length;
-      const added =
-        await this.accountset.getAvailableMinerAccounts(neededSeats);
+      const added = await this.accountset.getAvailableMinerAccounts(neededSeats);
       subaccounts.push(...added);
     }
 

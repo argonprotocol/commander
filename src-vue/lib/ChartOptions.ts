@@ -1,8 +1,8 @@
-import dayjs from "dayjs";
+import dayjs from 'dayjs';
 import { Interaction, TooltipModel } from 'chart.js';
 import { getRelativePosition } from 'chart.js/helpers';
 
-(Interaction.modes as any).myCustomMode = function(chart: any, e: any) {
+(Interaction.modes as any).myCustomMode = function (chart: any, e: any) {
   const position = getRelativePosition(e, chart);
 
   const items: any[] = [];
@@ -10,7 +10,7 @@ import { getRelativePosition } from 'chart.js/helpers';
     const xDistanceFromPoint = Math.abs(position.x - element.x);
     const yDistanceFromPoint = Math.abs(position.y - element.y);
     if (yDistanceFromPoint < 30 && xDistanceFromPoint < 30) {
-      items.push({element, datasetIndex, index});
+      items.push({ element, datasetIndex, index });
     }
   });
   return items;
@@ -31,9 +31,9 @@ export function createChartOptions(chartPoints: any[], pointRadius: number[], on
           pointHoverRadius: 5,
           pointHoverBackgroundColor: '#A600D4',
           pointRadius: pointRadius,
-          lineTension: 1
+          lineTension: 1,
         },
-      ]
+      ],
     },
     options: {
       plugins: {
@@ -47,7 +47,7 @@ export function createChartOptions(chartPoints: any[], pointRadius: number[], on
           caretSize: 10,
           enabled: false,
           external: (context: any) => onTooltipFn(context.tooltip as TooltipModel<any>),
-        }
+        },
       },
       interaction: {
         mode: 'myCustomMode',
@@ -62,14 +62,14 @@ export function createChartOptions(chartPoints: any[], pointRadius: number[], on
           right: 25,
           top: 0,
           bottom: 0,
-        }
+        },
       },
       scales: {
         x: {
           display: false,
           type: 'time',
           time: {
-            unit: 'day'
+            unit: 'day',
           },
           min: dayjs('2025-01-01').valueOf(),
           max: dayjs('2025-12-31').valueOf(),
@@ -78,7 +78,7 @@ export function createChartOptions(chartPoints: any[], pointRadius: number[], on
           display: false,
           min: 0,
           max: 150_000,
-        }
+        },
       },
       clip: false,
     },

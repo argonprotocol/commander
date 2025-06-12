@@ -53,4 +53,3 @@ export const BiddingRulesSchema = z.object({
 });
 
 export type IBiddingRules = z.infer<typeof BiddingRulesSchema>;
-

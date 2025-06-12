@@ -30,10 +30,12 @@ const bot = new Bot({
 });
 
 const app = express();
-app.use(cors({
-  origin: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-}));
+app.use(
+  cors({
+    origin: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  }),
+);
 
 app.get('/start', async (_req, res) => {
   await bot.start();

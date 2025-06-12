@@ -1,4 +1,9 @@
-import { ArgonotPriceChangeType, DisableBotType, FinalAmountFormulaType, StartingAmountFormulaType } from "../../src-vue/interfaces/IBiddingRules";
+import {
+  ArgonotPriceChangeType,
+  DisableBotType,
+  FinalAmountFormulaType,
+  StartingAmountFormulaType,
+} from '../../src-vue/interfaces/IBiddingRules';
 
 export default interface IBiddingRules {
   calculatedTotalSeats: number;

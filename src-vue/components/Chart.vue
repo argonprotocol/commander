@@ -9,7 +9,12 @@
       <canvas id="MyChart" ref="chartRef"></canvas>
     </div>
 
-    <div v-if="markerPos.show" StartMarker class="MARKER cursor-pointer" :style="`left: ${markerPos.left}px; top: ${markerPos.top}px`"></div>
+    <div
+      v-if="markerPos.show"
+      StartMarker
+      class="MARKER cursor-pointer"
+      :style="`left: ${markerPos.left}px; top: ${markerPos.top}px`"
+    ></div>
     <XAxis class="relative mb-4 z-10" />
   </div>
 </template>
@@ -18,18 +23,36 @@
 import * as Vue from 'vue';
 import dayjs, { Dayjs } from 'dayjs';
 import dayjsUtc from 'dayjs/plugin/utc';
-import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, TimeScale, Tooltip, TooltipModel } from 'chart.js';
+import {
+  Chart,
+  LineController,
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  TimeScale,
+  Tooltip,
+  TooltipModel,
+} from 'chart.js';
 import 'chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm';
 // import Charttip from '../overlays/Charttip.vue';
 import { createChartOptions } from '../lib/ChartOptions';
 import XAxis from './XAxis.vue';
 
 dayjs.extend(dayjsUtc);
-Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, TimeScale, Tooltip);
+Chart.register(
+  LineController,
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  TimeScale,
+  Tooltip,
+);
 
-const props = defineProps<{ 
-  isRunning?: boolean,
-  disableTooltip?: boolean,
+const props = defineProps<{
+  isRunning?: boolean;
+  disableTooltip?: boolean;
 }>();
 
 const totalDays = dayjs('2025-12-31').diff(dayjs('2020-10-01'), 'day');
@@ -75,12 +98,12 @@ function setDateRange(min: string, max: string) {
   chart.update();
 }
 
-function addPoints(items: { date: string, price: number, showPointOnChart: boolean }[]) {
+function addPoints(items: { date: string; price: number; showPointOnChart: boolean }[]) {
   const lastIndex = chartPoints.length - 1;
   if (lastIndex > 0) {
     pointRadius[lastIndex] = chartPoints[lastIndex].showPointOnChart ? 4 : 0;
   }
-  
+
   for (const item of items) {
     const date = dayjs.utc(item.date);
     const price = item.price;
@@ -90,7 +113,7 @@ function addPoints(items: { date: string, price: number, showPointOnChart: boole
     pointItems.push(item);
     pointItemsByDate[item.date] = item;
   }
-  
+
   pointRadius[pointRadius.length - 1] = 4;
 
   pointRadius[0] = 4;
@@ -112,7 +135,10 @@ function addPoints(items: { date: string, price: number, showPointOnChart: boole
 
   // Trigger tooltip on the latest point
   if (props.isRunning && currentDataPoint && pointItems.length > 10) {
-    chart?.tooltip?.setActiveElements([{ datasetIndex: 0, index: currentIndex }], { x: currentDataPoint.x, y: currentDataPoint.y });
+    chart?.tooltip?.setActiveElements([{ datasetIndex: 0, index: currentIndex }], {
+      x: currentDataPoint.x,
+      y: currentDataPoint.y,
+    });
     chart?.update();
   }
 
@@ -159,7 +185,7 @@ function getItemIndexFromDate(date: string | Dayjs) {
   return pointItemsByDate[date] ? pointItems.indexOf(pointItemsByDate[date]) : -1;
 }
 
-function getItemIndexFromEvent(event: MouseEvent, override: { x?: number, y?: number } = {}) {
+function getItemIndexFromEvent(event: MouseEvent, override: { x?: number; y?: number } = {}) {
   if (!chartRef.value) return;
 
   const rect = chartRef.value.getBoundingClientRect();
@@ -167,7 +193,7 @@ function getItemIndexFromEvent(event: MouseEvent, override: { x?: number, y?: nu
   const eventX = override.x || event.x;
   const eventY = override.y || event.y;
 
-  const wrappedEvent = { 
+  const wrappedEvent = {
     chart: chart,
     native: event,
     offsetX: undefined,
@@ -176,14 +202,17 @@ function getItemIndexFromEvent(event: MouseEvent, override: { x?: number, y?: nu
     x: eventX,
     y: Math.min(eventY, maxY),
   };
-  const interactionItems = chart?.getElementsAtEventForMode(wrappedEvent as any, 'index', { intersect: false }, true) || [];
+  const interactionItems =
+    chart?.getElementsAtEventForMode(wrappedEvent as any, 'index', { intersect: false }, true) ||
+    [];
   return interactionItems[0]?.index;
 }
 
 function getPrevMonthIndex(index: number) {
   const currentDate = dayjs.utc(pointItems[index].date);
   const dayOfMonth = currentDate.date();
-  const previousDate = dayOfMonth === 1 ? currentDate.subtract(1, 'month') : currentDate.startOf('month');
+  const previousDate =
+    dayOfMonth === 1 ? currentDate.subtract(1, 'month') : currentDate.startOf('month');
   const daysToSubtract = currentDate.diff(previousDate, 'day');
   return index - daysToSubtract;
 }
@@ -247,15 +276,23 @@ Vue.onBeforeUnmount(() => {
   }
 });
 
-defineExpose({ 
+defineExpose({
   getPrevMonthIndex,
   getNextMonthIndex,
   getItems,
   getItem,
-  getItemIndexFromEvent, 
+  getItemIndexFromEvent,
   getItemCount,
   getItemIndexFromDate,
-  addPoints, reloadData, startPulsing, stopPulsing, clearPoints, toggleDatasetVisibility, setDateRange, getPointPosition });
+  addPoints,
+  reloadData,
+  startPulsing,
+  stopPulsing,
+  clearPoints,
+  toggleDatasetVisibility,
+  setDateRange,
+  getPointPosition,
+});
 </script>
 
 <style lang="scss" scoped>
@@ -268,17 +305,20 @@ defineExpose({
 }
 
 [ShadowSelection] {
-  box-shadow: 1px 1px 1px 0 rgb(0 0 0), inset 1px 1px 1px 0 rgb(0 0 0);
+  box-shadow:
+    1px 1px 1px 0 rgb(0 0 0),
+    inset 1px 1px 1px 0 rgb(0 0 0);
 }
 
 .MARKER {
   pointer-events: none;
 
-  &:before, &:after {
-    content: "";
+  &:before,
+  &:after {
+    content: '';
     display: block;
     position: absolute;
-    border: 2px solid #63298E;
+    border: 2px solid #63298e;
     left: -20px;
     right: -20px;
     top: -20px;

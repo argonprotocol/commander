@@ -1,27 +1,62 @@
 <template>
-  <TransitionRoot class='absolute inset-0 z-10' :show="isOpen">
-    <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
+  <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
+    <TransitionChild
+      as="template"
+      enter="ease-out duration-300"
+      enter-from="opacity-0"
+      enter-to="opacity-100"
+      leave="ease-in duration-200"
+      leave-from="opacity-100"
+      leave-to="opacity-0"
+    >
       <BgOverlay />
     </TransitionChild>
 
-    <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">
-      <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" enter-to="opacity-100 translate-y-0 sm:scale-100" leave="ease-in duration-200" leave-from="opacity-100 translate-y-0 sm:scale-100" leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
-        <div class="bg-white border border-black/40 px-7 pt-6 pb-4 rounded-lg pointer-events-auto shadow-xl relative w-160 min-h-60 overflow-scroll">
+    <div
+      class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none"
+    >
+      <TransitionChild
+        as="template"
+        enter="ease-out duration-300"
+        enter-from="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+        enter-to="opacity-100 translate-y-0 sm:scale-100"
+        leave="ease-in duration-200"
+        leave-from="opacity-100 translate-y-0 sm:scale-100"
+        leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+      >
+        <div
+          class="bg-white border border-black/40 px-7 pt-6 pb-4 rounded-lg pointer-events-auto shadow-xl relative w-160 min-h-60 overflow-scroll"
+        >
           <h2 class="text-2xl font-bold text-slate-800/70 border-b border-slate-300 pb-3 mb-6">
             You Are About to Remove This Server
-            <XMarkIcon class="w-6 h-6 text-slate-800/70 cursor-pointer absolute top-6 right-6" @click="closeOverlay" />
+            <XMarkIcon
+              class="w-6 h-6 text-slate-800/70 cursor-pointer absolute top-6 right-6"
+              @click="closeOverlay"
+            />
           </h2>
 
           <p>
-            You are about to remove your cloud machine from Argon Commander. This action will not stop any active processes that are running on the server nor will it delete the server from 
-            your cloud provider.
+            You are about to remove your cloud machine from Argon Commander. This action will not
+            stop any active processes that are running on the server nor will it delete the server
+            from your cloud provider.
           </p>
 
-          <p class="mt-2">After clicking Confirm, you should probably log into your provider and delete this server. Otherwise you will continue to be charged for the resource.</p>
+          <p class="mt-2">
+            After clicking Confirm, you should probably log into your provider and delete this
+            server. Otherwise you will continue to be charged for the resource.
+          </p>
 
           <div class="flex flex-row justify-end gap-4 mt-6 border-t border-slate-300 pt-4">
-            <button @click="closeOverlay" class="border border-argon-button bg-argon-button/5 inner-button-shadow text-argon-button hover:text-argon-button-hover hover:border-argon-button-hover px-6 py-2 rounded-md cursor-pointer">Cancel</button>
-            <button @click="removeServer" class="bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-6 py-2 rounded-md cursor-pointer">
+            <button
+              @click="closeOverlay"
+              class="border border-argon-button bg-argon-button/5 inner-button-shadow text-argon-button hover:text-argon-button-hover hover:border-argon-button-hover px-6 py-2 rounded-md cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              @click="removeServer"
+              class="bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-6 py-2 rounded-md cursor-pointer"
+            >
               {{ isRemoving ? 'Removing...' : 'Confirm Remove Server' }}
             </button>
           </div>
@@ -37,7 +72,7 @@ import { TransitionChild, TransitionRoot } from '@headlessui/vue';
 import emitter from '../emitters/basic';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import BgOverlay from '../components/BgOverlay.vue';
-import { useConfig} from '../stores/config';
+import { useConfig } from '../stores/config';
 import { Config } from '../lib/Config';
 import { type IConfigInstallDetails } from '../interfaces/IConfig';
 import { SSH } from '../lib/SSH';
@@ -75,5 +110,5 @@ async function removeServer() {
   isRemoving.value = false;
   isOpen.value = false;
   isLoaded.value = false;
-};
+}
 </script>

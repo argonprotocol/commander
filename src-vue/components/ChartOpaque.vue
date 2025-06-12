@@ -12,7 +12,7 @@
     left: 0;
     width: 100%;
     height: 50%;
-    background: #F9FAFD;
+    background: #f9fafd;
   }
   &:after {
     content: '';

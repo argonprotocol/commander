@@ -8,15 +8,15 @@ export class CohortFramesTable extends BaseTable {
     blocksMined: number,
     argonotsMined: number,
     argonsMined: number,
-    argonsMinted: number
+    argonsMinted: number,
   ): Promise<ICohortFrameRecord> {
     const [result] = await this.db.sql.select<[ICohortFrameRecord]>(
-      "INSERT OR REPLACE INTO cohort_frames (frame_id, cohort_id, blocks_mined, argonots_mined, argons_mined, argons_minted) VALUES (?, ?, ?, ?, ?, ?) RETURNING *",
-      [frameId, cohortId, blocksMined, argonotsMined, argonsMined, argonsMinted]
+      'INSERT OR REPLACE INTO cohort_frames (frame_id, cohort_id, blocks_mined, argonots_mined, argons_mined, argons_minted) VALUES (?, ?, ?, ?, ?, ?) RETURNING *',
+      [frameId, cohortId, blocksMined, argonotsMined, argonsMined, argonsMinted],
     );
     return result;
   }
-  
+
   public async fetchGlobalStats(): Promise<ICohortFrameStats> {
     const [stats] = await this.db.sql.select<ICohortFrameStats[]>(
       `SELECT 
@@ -24,7 +24,7 @@ export class CohortFramesTable extends BaseTable {
         COALESCE(sum(argonots_mined), 0) as total_argonots_mined,
         COALESCE(sum(argons_mined), 0) as total_argons_mined,
         COALESCE(sum(argons_minted), 0) as total_argons_minted
-      FROM cohort_frames`
+      FROM cohort_frames`,
     );
 
     return stats;
@@ -38,7 +38,7 @@ export class CohortFramesTable extends BaseTable {
         COALESCE(sum(argons_mined), 0) as total_argons_mined,
         COALESCE(sum(argons_minted), 0) as total_argons_minted
       FROM cohort_frames WHERE cohort_id = ?`,
-      [cohortId]
+      [cohortId],
     );
 
     return stats;

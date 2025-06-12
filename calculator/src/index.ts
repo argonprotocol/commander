@@ -1,7 +1,5 @@
 import BiddingCalculator from './BiddingCalculator.js';
-import createBidderParams, {
-  Helper as BiddingParamsHelper,
-} from './createBidderParams.js';
+import createBidderParams, { Helper as BiddingParamsHelper } from './createBidderParams.js';
 import type IBiddingRules from './IBiddingRules.js';
 import { type IBidderParams } from './IBidderParams.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';

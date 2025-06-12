@@ -1,7 +1,11 @@
 <template>
   <div ref="$el" class="relative" @click="copyContent">
     <slot></slot>
-    <div v-if="isCopied" class="absolute top-0 left-0 w-full h-full transition-all duration-1000" :class="isFading ? 'opacity-0 -translate-y-20': 'opacity-100'">
+    <div
+      v-if="isCopied"
+      class="absolute top-0 left-0 w-full h-full transition-all duration-1000"
+      :class="isFading ? 'opacity-0 -translate-y-20' : 'opacity-100'"
+    >
       <slot name="copied"></slot>
     </div>
   </div>
@@ -19,7 +23,7 @@ const isFading = Vue.ref(false);
 const $el = Vue.ref<typeof HTMLElement>();
 
 defineExpose({
-  $el
+  $el,
 });
 
 let highlightAndCopyTimeout1: any = null;
@@ -28,7 +32,7 @@ let highlightAndCopyTimeout3: any = null;
 
 function copyContent() {
   navigator.clipboard.writeText(props.content);
-  
+
   clearTimeout(highlightAndCopyTimeout1);
   clearTimeout(highlightAndCopyTimeout2);
   clearTimeout(highlightAndCopyTimeout3);
@@ -37,7 +41,7 @@ function copyContent() {
   setTimeout(() => {
     isCopied.value = true;
     isFading.value = false;
-    
+
     clearTimeout(highlightAndCopyTimeout1);
     clearTimeout(highlightAndCopyTimeout2);
 

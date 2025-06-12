@@ -3,7 +3,7 @@
   <CloudMachineIsProvisioning v-else-if="config.isServerInstalling && config.isServerNew" />
   <Dashboard v-else-if="config.hasMiningSeats" />
   <FirstAuction v-else-if="config.isServerReadyForMining" />
-  <FinalSetupChecklist v-else />  
+  <FinalSetupChecklist v-else />
 </template>
 
 <script setup lang="ts">

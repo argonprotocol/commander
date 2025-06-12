@@ -9,7 +9,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "lint": "prettier -w bot calculator",
+    "lint": "prettier -w bot calculator src-vue",
     "typecheck": "vue-tsc --noEmit && yarn workspaces foreach --all run tsc --noEmit",
     "update-data": "yarn ts-node --project data-generators/tsconfig.json data-generators/all.ts",
     "prepare": "husky"

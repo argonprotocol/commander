@@ -54,14 +54,14 @@ const progressLabel = Vue.computed(() => {
       background: linear-gradient(to right, white 10%, transparent 100%);
     }
   }
-  &[hasError="true"] {
+  &[hasError='true'] {
     div {
       @apply bg-[#FAD1D8];
       opacity: 0.7;
       width: calc(100% + 1px) !important;
       box-shadow: inset 1px 1px 0 white !important;
       &:after {
-        background: linear-gradient(to right, #FAD1D8 10%, transparent 100%);
+        background: linear-gradient(to right, #fad1d8 10%, transparent 100%);
         left: 1px;
       }
     }

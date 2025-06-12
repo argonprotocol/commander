@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import { twMerge } from "tailwind-merge"
-import Button from "../components/Button.vue"
-import Icons from "../components/Icons.vue"
-import {
-  closeWindow,
-  isWindowMaximized,
-  maximizeWindow,
-  minimizeWindow,
-} from "../utils/window"
+import { twMerge } from 'tailwind-merge';
+import Button from '../components/Button.vue';
+import Icons from '../components/Icons.vue';
+import { closeWindow, isWindowMaximized, maximizeWindow, minimizeWindow } from '../utils/window';
 </script>
 
 <template>
@@ -23,7 +18,7 @@ import {
       :class="
         twMerge(
           'max-h-8 w-[46px] cursor-default rounded-none bg-transparent',
-          'text-black/90 hover:bg-black/[.05] active:bg-black/[.03] dark:text-white dark:hover:bg-white/[.06] dark:active:bg-white/[.04]'
+          'text-black/90 hover:bg-black/[.05] active:bg-black/[.03] dark:text-white dark:hover:bg-white/[.06] dark:active:bg-white/[.04]',
         )
       "
     >

@@ -1,4 +1,4 @@
-import { Db } from "../../lib/Db";
+import { Db } from '../../lib/Db';
 
 let dbPromise: Promise<Db>;
 

@@ -1,4 +1,4 @@
-import { InstallStepKey, InstallStepStatus } from "../interfaces/IConfig";
+import { InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
 
 type IStepLabel = [string, string, string];
 

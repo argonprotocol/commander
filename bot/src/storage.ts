@@ -88,9 +88,7 @@ export class JsonStore<T extends Record<string, any> & ILastModifiedAt> {
 
   constructor(
     private path: string,
-    private defaultsFn: () =>
-      | Omit<T, 'lastModified'>
-      | Promise<Omit<T, 'lastModified'>>,
+    private defaultsFn: () => Omit<T, 'lastModified'> | Promise<Omit<T, 'lastModified'>>,
   ) {}
 
   public async mutate(
@@ -129,9 +127,7 @@ export class JsonStore<T extends Record<string, any> & ILastModifiedAt> {
     this.defaults = await this.defaultsFn();
     if (this.data === undefined) {
       try {
-        const data = await fs.promises
-          .readFile(this.path, 'utf-8')
-          .then(JsonExt.parse);
+        const data = await fs.promises.readFile(this.path, 'utf-8').then(JsonExt.parse);
         if (data.lastModifiedAt) {
           data.lastModifiedAt = new Date(data.lastModifiedAt);
         }
@@ -184,23 +180,17 @@ export class CohortStorage {
     const key = `earnings/frame-${frameId}.json`;
     let entry = this.lruCache.get(key);
     if (!entry) {
-      entry = new JsonStore<IEarningsFile>(
-        Path.join(this.basedir, key),
-        async () => {
-          const client = await this.clientPromise;
-          const tickRange = await new MiningFrames().getTickRangeForFrame(
-            client,
-            frameId,
-          );
-          return {
-            frameProgress: 0,
-            lastBlockNumber: 0,
-            frameTickStart: tickRange[0],
-            frameTickEnd: tickRange[1],
-            byCohortActivatingFrameId: {},
-          };
-        },
-      );
+      entry = new JsonStore<IEarningsFile>(Path.join(this.basedir, key), async () => {
+        const client = await this.clientPromise;
+        const tickRange = await new MiningFrames().getTickRangeForFrame(client, frameId);
+        return {
+          frameProgress: 0,
+          lastBlockNumber: 0,
+          frameTickStart: tickRange[0],
+          frameTickEnd: tickRange[1],
+          byCohortActivatingFrameId: {},
+        };
+      });
       this.lruCache.set(key, entry);
     }
     return entry;

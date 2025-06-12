@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { twMerge } from "tailwind-merge"
-import { ref } from "vue"
-import Button from "../components/Button.vue"
-import Icons from "../components/Icons.vue"
+import { twMerge } from 'tailwind-merge';
+import { ref } from 'vue';
+import Button from '../components/Button.vue';
+import Icons from '../components/Icons.vue';
 import {
   closeWindow,
   fullscreenWindow,
   maximizeWindow,
   minimizeWindow,
-  isWindowFullscreen
-} from "../utils/window"
+  isWindowFullscreen,
+} from '../utils/window';
 
-const winBtns = ref(null)
+const winBtns = ref(null);
 const isMouseOver = ref(false);
 const isAltKeyPressed = ref(false); // Option Key
 
@@ -86,4 +86,3 @@ function handleKeyUp(event: KeyboardEvent) {
     </Button>
   </div>
 </template>
-

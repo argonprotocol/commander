@@ -14,7 +14,16 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:tick', time: { totalSecondsElapsed: number, hours: number, minutes: number, seconds: number, isNull: boolean }): void;
+  (
+    e: 'update:tick',
+    time: {
+      totalSecondsElapsed: number;
+      hours: number;
+      minutes: number;
+      seconds: number;
+      isNull: boolean;
+    },
+  ): void;
 }>();
 
 const hours = Vue.ref(0);
@@ -38,7 +47,13 @@ function updateTime() {
     seconds.value = 0;
     isNull.value = true;
   }
-  emit('update:tick', { totalSecondsElapsed, hours: hours.value, minutes: minutes.value, seconds: seconds.value, isNull: isNull.value });
+  emit('update:tick', {
+    totalSecondsElapsed,
+    hours: hours.value,
+    minutes: minutes.value,
+    seconds: seconds.value,
+    isNull: isNull.value,
+  });
   setTimeout(updateTime, 1000);
 }
 

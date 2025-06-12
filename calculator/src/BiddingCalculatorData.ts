@@ -28,8 +28,7 @@ export default class BiddingCalculatorData {
       await mainchain.argonBlockRewardsForFullYear(currentBlockRewards);
     this.argonRewardsForThisSeat = (currentBlockRewards * 1_440) / 10;
     this.argonotsRequiredForBid = await mainchain.getOwnershipAmountMinimum();
-    this.argonotRewardsForThisSeat =
-      (await mainchain.argonotBlockRewardsForThisSlot()) / 10;
+    this.argonotRewardsForThisSeat = (await mainchain.argonotBlockRewardsForThisSlot()) / 10;
     this.exchangeRates = await mainchain.fetchExchangeRates();
     this.miningSeatCount = await mainchain.getMiningSeatCount();
   }

@@ -1,5 +1,5 @@
 import * as Vue from 'vue';
-import { Config } from "../lib/Config";
+import { Config } from '../lib/Config';
 import { getDbPromise } from './helpers/dbPromise';
 import handleUnknownFatalError from './helpers/handleUnknownFatalError';
 
@@ -15,4 +15,4 @@ export function useConfig(): Vue.Reactive<Config> {
   }
 
   return config;
-};
+}

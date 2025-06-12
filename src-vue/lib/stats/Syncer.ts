@@ -12,10 +12,7 @@ export class StatsSyncer {
     this.db = db;
   }
 
-  public async run(
-    oldestFrameIdToSync: number,
-    currentFrameId: number
-  ): Promise<void> {
+  public async run(oldestFrameIdToSync: number, currentFrameId: number): Promise<void> {
     if (this.isRunning) return;
     this.isRunning = true;
 
@@ -45,13 +42,16 @@ export class StatsSyncer {
       earningsFile.frameTickStart,
       earningsFile.frameTickEnd,
       earningsFile.frameProgress,
-      false
+      false,
     );
 
     const processedCohorts: Set<number> = new Set();
     let totalBlocksMined = 0;
 
-    const cohortsById = Object.entries(earningsFile.byCohortActivatingFrameId) as [string, IEarningsFileCohort][];
+    const cohortsById = Object.entries(earningsFile.byCohortActivatingFrameId) as [
+      string,
+      IEarningsFileCohort,
+    ][];
     for (const [cohortActivatingFrameIdStr, cohortData] of cohortsById) {
       const cohortActivatingFrameId = parseInt(cohortActivatingFrameIdStr, 10);
       if (!processedCohorts.has(cohortActivatingFrameId)) {
@@ -69,22 +69,30 @@ export class StatsSyncer {
       earningsFile.frameTickStart,
       earningsFile.frameTickEnd,
       earningsFile.frameProgress,
-      isProcessed
+      isProcessed,
     );
   }
 
-  async syncDbCohortFrame(cohortActivatingFrameId: number, frameId: number, cohortData: IEarningsFileCohort): Promise<void> {
+  async syncDbCohortFrame(
+    cohortActivatingFrameId: number,
+    frameId: number,
+    cohortData: IEarningsFileCohort,
+  ): Promise<void> {
     await this.db.cohortFramesTable.insertOrUpdate(
       frameId,
       cohortActivatingFrameId,
       cohortData.blocksMined,
       Number(cohortData.argonotsMined),
       Number(cohortData.argonsMined),
-      Number(cohortData.argonsMinted)
+      Number(cohortData.argonsMinted),
     );
   }
 
-  async syncDbCohort(cohortActivatingFrameId: number, currentFrameId: number, currentFrameProgress: number): Promise<void> {
+  async syncDbCohort(
+    cohortActivatingFrameId: number,
+    currentFrameId: number,
+    currentFrameProgress: number,
+  ): Promise<void> {
     const data = await StatsFetcher.fetchBidsFile(this.localPort, cohortActivatingFrameId);
 
     if (data.frameBiddingProgress < 100.0) {
@@ -92,7 +100,7 @@ export class StatsSyncer {
     }
 
     const framesCompleted = currentFrameId - cohortActivatingFrameId;
-    const progress = ((framesCompleted * 100.0) + currentFrameProgress) / 10.0;
+    const progress = (framesCompleted * 100.0 + currentFrameProgress) / 10.0;
     const argonotsStaked = Number(data.argonotsStakedPerSeat) * data.seatsWon;
 
     await this.db.cohortsTable.insertOrUpdate(
@@ -101,7 +109,7 @@ export class StatsSyncer {
       Number(data.transactionFees),
       argonotsStaked,
       Number(data.argonsBidTotal),
-      data.seatsWon
+      data.seatsWon,
     );
 
     await this.db.cohortAccountsTable.deleteForCohort(cohortActivatingFrameId);
@@ -112,8 +120,8 @@ export class StatsSyncer {
         cohortActivatingFrameId,
         subaccount.address,
         Number(subaccount.argonsBid ?? 0n),
-        Number(subaccount.bidPosition ?? 0n)
+        Number(subaccount.bidPosition ?? 0n),
       );
     }
   }
-} 
+}

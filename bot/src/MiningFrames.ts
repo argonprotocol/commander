@@ -10,25 +10,18 @@ export class MiningFrames {
     | undefined;
   private genesisTick: number | undefined;
 
-  async getTickRangeForFrame(
-    client: ArgonClient,
-    frameId: number,
-  ): Promise<[number, number]> {
-    this.miningConfig ??= await client.query.miningSlot
-      .miningConfig()
-      .then(x => ({
-        ticksBetweenSlots: x.ticksBetweenSlots.toNumber(),
-        slotBiddingStartAfterTicks: x.slotBiddingStartAfterTicks.toNumber(),
-      }));
+  async getTickRangeForFrame(client: ArgonClient, frameId: number): Promise<[number, number]> {
+    this.miningConfig ??= await client.query.miningSlot.miningConfig().then(x => ({
+      ticksBetweenSlots: x.ticksBetweenSlots.toNumber(),
+      slotBiddingStartAfterTicks: x.slotBiddingStartAfterTicks.toNumber(),
+    }));
     this.genesisTick ??= await client.query.ticks
       .genesisTick()
       .then((x: { toNumber: () => number }) => x.toNumber());
 
     const ticksBetweenFrames = this.miningConfig!.ticksBetweenSlots;
-    const frameZeroStart =
-      this.genesisTick! + this.miningConfig!.slotBiddingStartAfterTicks;
-    const startingTick =
-      frameZeroStart + Math.floor(frameId * ticksBetweenFrames);
+    const frameZeroStart = this.genesisTick! + this.miningConfig!.slotBiddingStartAfterTicks;
+    const startingTick = frameZeroStart + Math.floor(frameId * ticksBetweenFrames);
     const endingTick = startingTick + ticksBetweenFrames - 1;
 
     return [startingTick, endingTick];

@@ -1,5 +1,5 @@
 import * as Vue from 'vue';
-import { Stats } from "../lib/Stats";
+import { Stats } from '../lib/Stats';
 import { getDbPromise } from './helpers/dbPromise';
 import { useConfig, Config } from './config';
 import { Installer, useInstaller } from './installer';
@@ -18,4 +18,4 @@ export function useStats(): Vue.Reactive<Stats> {
   }
 
   return stats;
-};
+}

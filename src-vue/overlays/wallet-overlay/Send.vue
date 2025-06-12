@@ -27,8 +27,8 @@ const emit = defineEmits(['navigate']);
 const props = defineProps({
   walletId: {
     type: String as Vue.PropType<'mng' | 'llb' | 'vlt'>,
-    required: true
-  }
+    required: true,
+  },
 });
 
 const walletName = Vue.computed(() => {

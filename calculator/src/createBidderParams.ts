@@ -21,9 +21,7 @@ export default async function createBidderParams(
   const maxSeats = await helper.getMaxSeats();
   const maxBudget = helper.getMaxBalance(maxBid * BigInt(maxSeats));
   const bidDelay = biddingRules.rebiddingDelay || 0;
-  const bidIncrement = convertArgonToMicrogons(
-    biddingRules.incrementAmount || 1,
-  );
+  const bidIncrement = convertArgonToMicrogons(biddingRules.incrementAmount || 1);
   const bidderParams: IBidderParams = {
     minBid,
     maxBid,
@@ -47,22 +45,10 @@ export class Helper {
   constructor(biddingRules: IBiddingRules, mainchain: Mainchain) {
     this.biddingRules = biddingRules;
     this.calculatorData = new BiddingCalculatorData(mainchain);
-    this.startingMinimumCalculator = new BiddingCalculator(
-      'Minimum',
-      this.calculatorData,
-    );
-    this.startingOptimisticCalculator = new BiddingCalculator(
-      'Optimistic',
-      this.calculatorData,
-    );
-    this.finalMinimumCalculator = new BiddingCalculator(
-      'Minimum',
-      this.calculatorData,
-    );
-    this.finalOptimisticCalculator = new BiddingCalculator(
-      'Optimistic',
-      this.calculatorData,
-    );
+    this.startingMinimumCalculator = new BiddingCalculator('Minimum', this.calculatorData);
+    this.startingOptimisticCalculator = new BiddingCalculator('Optimistic', this.calculatorData);
+    this.finalMinimumCalculator = new BiddingCalculator('Minimum', this.calculatorData);
+    this.finalOptimisticCalculator = new BiddingCalculator('Optimistic', this.calculatorData);
   }
 
   public async getMaxSeats() {
@@ -73,9 +59,7 @@ export class Helper {
       maxSeats = this.biddingRules.throttleSeatCount || 0;
     }
 
-    return maxSeats > 0 && this.biddingRules.disableBot === 'AfterFirstSeat'
-      ? 1
-      : maxSeats;
+    return maxSeats > 0 && this.biddingRules.disableBot === 'AfterFirstSeat' ? 1 : maxSeats;
   }
 
   public getMaxBalance(defaultMaxBalance: bigint): bigint {
@@ -94,19 +78,13 @@ export class Helper {
 
     if (this.biddingRules.startingAmountFormulaType === 'PreviousLowestBid') {
       formulaAmount = this.calculatorData.previousLowestBid;
-    } else if (
-      this.biddingRules.startingAmountFormulaType === 'MinimumBreakeven'
-    ) {
+    } else if (this.biddingRules.startingAmountFormulaType === 'MinimumBreakeven') {
       formulaAmount = this.startingMinimumCalculator.breakevenBid;
-    } else if (
-      this.biddingRules.startingAmountFormulaType === 'OptimisticBreakeven'
-    ) {
+    } else if (this.biddingRules.startingAmountFormulaType === 'OptimisticBreakeven') {
       formulaAmount = this.startingOptimisticCalculator.breakevenBid;
     }
 
-    const minBid =
-      formulaAmount *
-      (1 + this.biddingRules.startingAmountFormulaIncrease / 100);
+    const minBid = formulaAmount * (1 + this.biddingRules.startingAmountFormulaIncrease / 100);
 
     return convertArgonToMicrogons(minBid);
   }
@@ -121,18 +99,13 @@ export class Helper {
 
     if (this.biddingRules.finalAmountFormulaType === 'PreviousHighestBid') {
       formulaAmount = this.calculatorData.previousHighestBid;
-    } else if (
-      this.biddingRules.finalAmountFormulaType === 'MinimumBreakeven'
-    ) {
+    } else if (this.biddingRules.finalAmountFormulaType === 'MinimumBreakeven') {
       formulaAmount = this.finalMinimumCalculator.breakevenBid;
-    } else if (
-      this.biddingRules.finalAmountFormulaType === 'OptimisticBreakeven'
-    ) {
+    } else if (this.biddingRules.finalAmountFormulaType === 'OptimisticBreakeven') {
       formulaAmount = this.finalOptimisticCalculator.breakevenBid;
     }
 
-    const maxBid =
-      formulaAmount * (1 + this.biddingRules.finalAmountFormulaIncrease / 100);
+    const maxBid = formulaAmount * (1 + this.biddingRules.finalAmountFormulaIncrease / 100);
 
     return convertArgonToMicrogons(maxBid);
   }

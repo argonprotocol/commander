@@ -1,59 +1,151 @@
 <template>
   <ul>
-    <Menu as="div" class="relative" v-slot="{ open: isOpen }" :open="argonPopoverOpen" @update:open="argonPopoverOpen = $event">
-      <MenuButton as="li" ref="argonMenuButton" @click="setMenuPositioning($event, isOpen, argonMenuButton as any)" class="flex flex-row justify-between items-center w-full border-t border-black/10 first:border-black/30 pb-5 cursor-pointer hover:bg-slate-200/30 py-4 px-2">
+    <Menu
+      as="div"
+      class="relative"
+      v-slot="{ open: isOpen }"
+      :open="argonPopoverOpen"
+      @update:open="argonPopoverOpen = $event"
+    >
+      <MenuButton
+        as="li"
+        ref="argonMenuButton"
+        @click="setMenuPositioning($event, isOpen, argonMenuButton as any)"
+        class="flex flex-row justify-between items-center w-full border-t border-black/10 first:border-black/30 pb-5 cursor-pointer hover:bg-slate-200/30 py-4 px-2"
+      >
         <div class="flex flex-row justify-between items-center pr-6">
           <ArgnToken class="w-16" />
         </div>
         <div class="flex flex-col justify-between items-start grow">
           <div class="text-xl font-bold">Argon</div>
-          <div class="">{{fmtCommas(mngWallet.argons)}} ARGN</div>
+          <div class="">{{ fmtCommas(mngWallet.argons) }} ARGN</div>
         </div>
         <div class="flex flex-col justify-between items-end">
-          <div class="font-bold">{{currencyStore.currencySymbol}}{{fmtMoney(argonTo(mngWallet.argons))}}</div>
+          <div class="font-bold">
+            {{ currencyStore.currencySymbol }}{{ fmtMoney(argonTo(mngWallet.argons)) }}
+          </div>
           <div class="">0.03%</div>
         </div>
       </MenuButton>
-      <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 translate-y-1" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-1">
-        <MenuItems as="div" v-slot="{ close }" :style="menuPositioning" class="absolute z-100 flex max-w-min focus:outline-none">
-          <div class="flex flex-col p-1 shrink rounded bg-slate-50 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20 whitespace-nowrap">
-            <MenuItem as="a" @click="navigate('receive'); close()" class="flex flex-row justify-between py-1 px-2 !text-gray-900 hover:!text-indigo-600 hover:bg-slate-200/60 cursor-pointer">
+      <transition
+        enter-active-class="transition ease-out duration-200"
+        enter-from-class="opacity-0 translate-y-1"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition ease-in duration-150"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 translate-y-1"
+      >
+        <MenuItems
+          as="div"
+          v-slot="{ close }"
+          :style="menuPositioning"
+          class="absolute z-100 flex max-w-min focus:outline-none"
+        >
+          <div
+            class="flex flex-col p-1 shrink rounded bg-slate-50 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20 whitespace-nowrap"
+          >
+            <MenuItem
+              as="a"
+              @click="
+                navigate('receive');
+                close();
+              "
+              class="flex flex-row justify-between py-1 px-2 !text-gray-900 hover:!text-indigo-600 hover:bg-slate-200/60 cursor-pointer"
+            >
               Receive
             </MenuItem>
-            <MenuItem as="a" @click="navigate('send'); close()" class="flex flex-row justify-between py-1 px-2 !text-gray-900 hover:!text-indigo-600 hover:bg-slate-200/60 cursor-pointer">
+            <MenuItem
+              as="a"
+              @click="
+                navigate('send');
+                close();
+              "
+              class="flex flex-row justify-between py-1 px-2 !text-gray-900 hover:!text-indigo-600 hover:bg-slate-200/60 cursor-pointer"
+            >
               Send
             </MenuItem>
-            <MenuItem as="a" href="https://app.uniswap.org/explore/tokens/ethereum/0x6a9143639d8b70d50b031ffad55d4cc65ea55155" target="_blank" class="flex flex-row justify-between py-1 px-2 !text-gray-900 hover:!text-indigo-600 hover:bg-slate-200/60 cursor-pointer">
+            <MenuItem
+              as="a"
+              href="https://app.uniswap.org/explore/tokens/ethereum/0x6a9143639d8b70d50b031ffad55d4cc65ea55155"
+              target="_blank"
+              class="flex flex-row justify-between py-1 px-2 !text-gray-900 hover:!text-indigo-600 hover:bg-slate-200/60 cursor-pointer"
+            >
               Open Uniswap Market
             </MenuItem>
           </div>
         </MenuItems>
       </transition>
     </Menu>
-    <Menu as="div" class="relative" v-slot="{ open: isOpen }" :open="argonotPopoverOpen" @update:open="argonotPopoverOpen = $event">
-      <MenuButton as="li" ref="argonotMenuButton" @click="setMenuPositioning($event, isOpen, argonotMenuButton as any)" class="flex flex-row justify-between items-center w-full border-t border-black/10 pb-5 cursor-pointer hover:bg-slate-200/30 py-4 px-2">
+    <Menu
+      as="div"
+      class="relative"
+      v-slot="{ open: isOpen }"
+      :open="argonotPopoverOpen"
+      @update:open="argonotPopoverOpen = $event"
+    >
+      <MenuButton
+        as="li"
+        ref="argonotMenuButton"
+        @click="setMenuPositioning($event, isOpen, argonotMenuButton as any)"
+        class="flex flex-row justify-between items-center w-full border-t border-black/10 pb-5 cursor-pointer hover:bg-slate-200/30 py-4 px-2"
+      >
         <div class="flex flex-row justify-between items-center pr-6">
           <ArgnotToken class="w-16" />
         </div>
         <div class="flex flex-col justify-between items-start grow">
           <div class="text-xl font-bold">Argonot</div>
-          <div class="">{{fmtCommas(mngWallet.argonots)}} ARGNOT</div>
+          <div class="">{{ fmtCommas(mngWallet.argonots) }} ARGNOT</div>
         </div>
         <div class="flex flex-col justify-between items-end">
-          <div class="font-bold">{{currencyStore.currencySymbol}}{{fmtMoney(argonotTo(mngWallet.argonots))}}</div>
+          <div class="font-bold">
+            {{ currencyStore.currencySymbol }}{{ fmtMoney(argonotTo(mngWallet.argonots)) }}
+          </div>
           <div class="">0.03%</div>
         </div>
       </MenuButton>
-      <transition enter-active-class="transition ease-out duration-200" enter-from-class="opacity-0 translate-y-1" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-150" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-1">
-        <MenuItems as="div" v-slot="{ close }" :style="menuPositioning" class="absolute z-100 flex max-w-min focus:outline-none">
-          <div class="flex flex-col p-1 shrink rounded bg-slate-50 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20 whitespace-nowrap">
-            <MenuItem as="a" @click="navigate('receive'); close()" class="flex flex-row justify-between py-1 px-2 !text-gray-900 hover:!text-indigo-600 hover:bg-slate-200/60 cursor-pointer">
+      <transition
+        enter-active-class="transition ease-out duration-200"
+        enter-from-class="opacity-0 translate-y-1"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition ease-in duration-150"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 translate-y-1"
+      >
+        <MenuItems
+          as="div"
+          v-slot="{ close }"
+          :style="menuPositioning"
+          class="absolute z-100 flex max-w-min focus:outline-none"
+        >
+          <div
+            class="flex flex-col p-1 shrink rounded bg-slate-50 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20 whitespace-nowrap"
+          >
+            <MenuItem
+              as="a"
+              @click="
+                navigate('receive');
+                close();
+              "
+              class="flex flex-row justify-between py-1 px-2 !text-gray-900 hover:!text-indigo-600 hover:bg-slate-200/60 cursor-pointer"
+            >
               Receive
             </MenuItem>
-            <MenuItem as="a" @click="navigate('send'); close()" class="flex flex-row justify-between py-1 px-2 !text-gray-900 hover:!text-indigo-600 hover:bg-slate-200/60 cursor-pointer">
+            <MenuItem
+              as="a"
+              @click="
+                navigate('send');
+                close();
+              "
+              class="flex flex-row justify-between py-1 px-2 !text-gray-900 hover:!text-indigo-600 hover:bg-slate-200/60 cursor-pointer"
+            >
               Send
             </MenuItem>
-            <MenuItem as="a" href="https://app.uniswap.org/explore/tokens/ethereum/0x6a9143639d8b70d50b031ffad55d4cc65ea55155" target="_blank" class="flex flex-row justify-between py-1 px-2 !text-gray-900 hover:!text-indigo-600 hover:bg-slate-200/60 cursor-pointer">
+            <MenuItem
+              as="a"
+              href="https://app.uniswap.org/explore/tokens/ethereum/0x6a9143639d8b70d50b031ffad55d4cc65ea55155"
+              target="_blank"
+              class="flex flex-row justify-between py-1 px-2 !text-gray-900 hover:!text-indigo-600 hover:bg-slate-200/60 cursor-pointer"
+            >
               Open Uniswap Market
             </MenuItem>
           </div>

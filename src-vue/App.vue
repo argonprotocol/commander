@@ -8,9 +8,7 @@
     </main>
     <div v-else class="flex-grow relative">
       <div class="flex flex-col items-center justify-center h-full">
-        <div class="text-2xl font-bold text-slate-600/40 uppercase">
-          Loading...
-        </div>
+        <div class="text-2xl font-bold text-slate-600/40 uppercase">Loading...</div>
       </div>
     </div>
     <UpgradeOverlay v-if="shouldShowUpgradeOverlay" />
@@ -21,7 +19,9 @@
     <SecuritySettingsOverlay />
     <BiddingRulesOverlay />
     <!-- <ProvisioningCompleteOverlay /> -->
-    <SyncingOverlay v-if="config.isServerSyncing && !config.isServerInstalling && !isWaitingForUpgradeApproval" />
+    <SyncingOverlay
+      v-if="config.isServerSyncing && !config.isServerInstalling && !isWaitingForUpgradeApproval"
+    />
   </div>
 </template>
 
@@ -56,8 +56,7 @@ const installer = useInstaller();
 let timeout: number | undefined;
 
 const shouldShowUpgradeOverlay = Vue.computed(() => {
-  return config.isWaitingForUpgradeApproval || 
-    (config.isServerInstalling && !config.isServerNew);
+  return config.isWaitingForUpgradeApproval || (config.isServerInstalling && !config.isServerNew);
 });
 
 onBeforeMount(async () => {

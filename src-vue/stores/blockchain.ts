@@ -8,7 +8,7 @@ import { type UnsubscribePromise } from '@polkadot/api-base/types/base';
 import { getMainchain, getMainchainClient } from '../stores/mainchain.ts';
 
 dayjs.extend(utc);
-dayjs.extend(relativeTime)
+dayjs.extend(relativeTime);
 
 export type IActiveBid = {
   cohortId: number;
@@ -34,9 +34,9 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     const argonots = (
       blockRewardEvent?.event?.data.rewards[0].ownership.toNumber() / 1_000_000
     ).toFixed(2);
-    const argons = (
-      blockRewardEvent?.event?.data.rewards[0].argons.toNumber() / 1_000_000
-    ).toFixed(2);
+    const argons = (blockRewardEvent?.event?.data.rewards[0].argons.toNumber() / 1_000_000).toFixed(
+      2,
+    );
     return { argons, argonots };
   }
 
@@ -75,11 +75,7 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     const lastBlockNumber = lastBlock.block.header.number.toNumber();
     const sinceBlockNumber = lastBlockNumber - 6;
 
-    for (
-      let blockNumber = sinceBlockNumber;
-      blockNumber <= lastBlockNumber;
-      blockNumber++
-    ) {
+    for (let blockNumber = sinceBlockNumber; blockNumber <= lastBlockNumber; blockNumber++) {
       const blockHash = await client.rpc.chain.getBlockHash(blockNumber);
       await addRecentBlock(client, blockHash);
     }

@@ -8,7 +8,7 @@ export enum InstallStepKey {
   DockerInstall = 'DockerInstall',
   BitcoinInstall = 'BitcoinInstall',
   ArgonInstall = 'ArgonInstall',
-  MiningLaunch = 'MiningLaunch'
+  MiningLaunch = 'MiningLaunch',
 }
 
 export enum InstallStepErrorType {
@@ -18,7 +18,7 @@ export enum InstallStepErrorType {
   DockerInstall = InstallStepKey.DockerInstall,
   BitcoinInstall = InstallStepKey.BitcoinInstall,
   ArgonInstall = InstallStepKey.ArgonInstall,
-  MiningLaunch = InstallStepKey.MiningLaunch
+  MiningLaunch = InstallStepKey.MiningLaunch,
 }
 
 export enum InstallStepStatus {
@@ -80,13 +80,13 @@ export const ConfigSchema = z.object({
   installDetails: ConfigInstallDetailsSchema,
   syncDetails: ConfigSyncDetailsSchema,
 
-  isServerNew: z.boolean(),  // isNewServer
-  isServerInstalling: z.boolean(),  // isInstalling
-  isServerConnected: z.boolean(),  // isConnected
-  isServerReadyForMining: z.boolean(),  // isReadyForMining
-  isWaitingForUpgradeApproval: z.boolean(),  // isRequiringUpgrade
+  isServerNew: z.boolean(), // isNewServer
+  isServerInstalling: z.boolean(), // isInstalling
+  isServerConnected: z.boolean(), // isConnected
+  isServerReadyForMining: z.boolean(), // isReadyForMining
+  isWaitingForUpgradeApproval: z.boolean(), // isRequiringUpgrade
 
-  hasMiningSeats: z.boolean(),  // hasMiningSeats
+  hasMiningSeats: z.boolean(), // hasMiningSeats
   biddingRules: BiddingRulesSchema.nullable(),
 });
 
@@ -101,4 +101,4 @@ export type IConfig = z.infer<typeof ConfigSchema>;
 
 export type IConfigStringified = {
   [K in keyof IConfig]: string;
-}
+};

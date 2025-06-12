@@ -1,47 +1,115 @@
 <template>
-  <div ref="$el" :class="[hasFocus ? 'z-90' : '']" class="relative focus-within:relative" tabindex="0" @focus="handleFocus" @blur="handleBlur">
-    <div v-if="!props.disabled" >
+  <div
+    ref="$el"
+    :class="[hasFocus ? 'z-90' : '']"
+    class="relative focus-within:relative"
+    tabindex="0"
+    @focus="handleFocus"
+    @blur="handleBlur"
+  >
+    <div v-if="!props.disabled">
       <div
         @pointerdown="handlePointerDown"
         @pointerup="handlePointerUp"
         @pointermove="emitDrag"
         @pointercancel="handlePointerUp"
-        class="absolute top-[-2px] left-0 h-[5px] w-full cursor-n-resize" />
+        class="absolute top-[-2px] left-0 h-[5px] w-full cursor-n-resize"
+      />
       <div
         @pointerdown="handlePointerDown"
         @pointerup="handlePointerUp"
         @pointermove="emitDrag"
         @pointercancel="handlePointerUp"
-        class="absolute bottom-[-2px] left-0 h-[5px] w-full cursor-s-resize" />
+        class="absolute bottom-[-2px] left-0 h-[5px] w-full cursor-s-resize"
+      />
     </div>
-    <div :class="[props.disabled ? 'border-dashed cursor-default' : '', hasFocus ? 'bg-slate-500/5 inner-input-shadow outline-2 -outline-offset-2 outline-argon-button' : '', [!hasFocus && !props.disabled ? 'hover:bg-white' : '']]" class="min-w-20 font-mono text-md flex flex-row w-full text-left py-[3px] border border-slate-700/50 rounded-md text-gray-800">
+    <div
+      :class="[
+        props.disabled ? 'border-dashed cursor-default' : '',
+        hasFocus
+          ? 'bg-slate-500/5 inner-input-shadow outline-2 -outline-offset-2 outline-argon-button'
+          : '',
+        [!hasFocus && !props.disabled ? 'hover:bg-white' : ''],
+      ]"
+      class="min-w-20 font-mono text-md flex flex-row w-full text-left py-[3px] border border-slate-700/50 rounded-md text-gray-800"
+    >
       <span class="select-none pl-[10px] py-[1px]">{{ prefix }}</span>
-      <div :contenteditable="!props.disabled" ref="inputElem" @focus="handleFocus" @blur="handleBlur" @input="handleInput" @beforeinput="handleBeforeInput($event as InputEvent)" @paste="handlePaste($event as ClipboardEvent)" @keydown="handleKeyDown($event)" :class="[props.disabled ? 'opacity-70' : '']" class="inline-block w-auto focus:outline-none py-[1px]"></div>
-      <span :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']" class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-default py-[1px]">
+      <div
+        :contenteditable="!props.disabled"
+        ref="inputElem"
+        @focus="handleFocus"
+        @blur="handleBlur"
+        @input="handleInput"
+        @beforeinput="handleBeforeInput($event as InputEvent)"
+        @paste="handlePaste($event as ClipboardEvent)"
+        @keydown="handleKeyDown($event)"
+        :class="[props.disabled ? 'opacity-70' : '']"
+        class="inline-block w-auto focus:outline-none py-[1px]"
+      ></div>
+      <span
+        :class="[
+          props.disabled ? 'pointer-events-none' : '',
+          suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]',
+        ]"
+        class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-default py-[1px]"
+      >
         {{ suffix }}
-        <span @click="moveCursorToEnd" @dblclick="selectAllText" class="absolute top-0 left-0 w-full h-full cursor-text" />
+        <span
+          @click="moveCursorToEnd"
+          @dblclick="selectAllText"
+          class="absolute top-0 left-0 w-full h-full cursor-text"
+        />
       </span>
 
       <Menu v-if="props.options.length > 0">
-        <MenuButton as="button"
+        <MenuButton
+          as="button"
           @click="toggleMenu"
           :class="[showMenu ? 'text-gray-900' : 'text-gray-400']"
-          class="mr-2 text-md font-semibold focus:outline-none cursor-pointer hover:text-gray-900">
+          class="mr-2 text-md font-semibold focus:outline-none cursor-pointer hover:text-gray-900"
+        >
           <LightBulbIcon class="size-[18px] text-inherit" />
         </MenuButton>
-        <transition leave-active-class="transition ease-in duration-100" leave-from-class="opacity-100" leave-to-class="opacity-0">
-          <MenuItems v-if="showMenu" class="absolute top-full -translate-y-1 z-20 right-0 h-auto max-h-80 w-auto max-w-100 bg-argon-menu-bg border border-gray-500/40 rounded-md px-0.5 py-0.5 shadow-md focus:outline-none">
-            <div class="absolute -top-[9px] right-[29.5px] w-[20px] h-[9px] overflow-hidden pointer-events-none">
-              <div class="relative top-[5px] left-[5px] w-[15px] h-[15px] rotate-45 bg-slate-50 ring-1 ring-gray-900/20"></div>
+        <transition
+          leave-active-class="transition ease-in duration-100"
+          leave-from-class="opacity-100"
+          leave-to-class="opacity-0"
+        >
+          <MenuItems
+            v-if="showMenu"
+            class="absolute top-full -translate-y-1 z-20 right-0 h-auto max-h-80 w-auto max-w-100 bg-argon-menu-bg border border-gray-500/40 rounded-md px-0.5 py-0.5 shadow-md focus:outline-none"
+          >
+            <div
+              class="absolute -top-[9px] right-[29.5px] w-[20px] h-[9px] overflow-hidden pointer-events-none"
+            >
+              <div
+                class="relative top-[5px] left-[5px] w-[15px] h-[15px] rotate-45 bg-slate-50 ring-1 ring-gray-900/20"
+              ></div>
             </div>
             <div class="flex flex-col w-full h-full overflow-y-auto">
-              <MenuItem v-for="option of props.options" v-slot="{ active: isActive }" :value="option.value" @click.stop="selectItem(option)" :class="option.description ? 'border-b border-gray-500/20 last:border-b-0' : ''" class="text-md font-mono text-left font-bold text-gray-800 py-1 first:rounded-t last:rounded-b">
-                <div :class="[ isActive ? 'bg-argon-button text-white' : '']" class="flex flex-col pr-3 pl-2 py-0 cursor-pointer">
+              <MenuItem
+                v-for="option of props.options"
+                v-slot="{ active: isActive }"
+                :value="option.value"
+                @click.stop="selectItem(option)"
+                :class="option.description ? 'border-b border-gray-500/20 last:border-b-0' : ''"
+                class="text-md font-mono text-left font-bold text-gray-800 py-1 first:rounded-t last:rounded-b"
+              >
+                <div
+                  :class="[isActive ? 'bg-argon-button text-white' : '']"
+                  class="flex flex-col pr-3 pl-2 py-0 cursor-pointer"
+                >
                   <div class="flex flex-row justify-between items-center">
-                    <div class="whitespace-nowrap grow pr-3">{{ option.title || fmtCommas(option.value) }}</div>
-                    <div v-if="option.value !== undefined" class="opacity-70 font-light relative">{{ formatFn(option.value) }}</div>
+                    <div class="whitespace-nowrap grow pr-3">
+                      {{ option.title || fmtCommas(option.value) }}
+                    </div>
+                    <div v-if="option.value !== undefined" class="opacity-70 font-light relative">
+                      {{ formatFn(option.value) }}
+                    </div>
                   </div>
-                  <div v-if="option.description" class="font-sans opacity-50 font-light">{{ option.description }}</div>
+                  <div v-if="option.description" class="font-sans opacity-50 font-light">
+                    {{ option.description }}
+                  </div>
                 </div>
               </MenuItem>
             </div>
@@ -54,12 +122,14 @@
           @mousedown="startContinuousIncrement"
           @mouseup="stopContinuousUpdates"
           @mouseleave="stopContinuousUpdates"
-          class="relative top-[1px] size-[12px] text-gray-300 cursor-pointer hover:text-gray-600" />
+          class="relative top-[1px] size-[12px] text-gray-300 cursor-pointer hover:text-gray-600"
+        />
         <NumArrow
           @mousedown="startContinuousDecrement"
           @mouseup="stopContinuousUpdates"
           @mouseleave="stopContinuousUpdates"
-          class="relative top-[-1px] size-[12px] text-gray-300 rotate-180 cursor-pointer hover:text-gray-600" />
+          class="relative top-[-1px] size-[12px] text-gray-300 rotate-180 cursor-pointer hover:text-gray-600"
+        />
       </div>
     </div>
   </div>
@@ -75,24 +145,27 @@ import { useCurrencyStore } from '../stores/currency';
 
 const currencyStore = useCurrencyStore();
 
-const props = withDefaults(defineProps<{
-  modelValue: number;
-  max?: number;
-  min?: number;
-  options?: any[];
-  dragBy?: number;
-  dragByMin?: number;
-  disabled?: boolean;
-  prefix?: string;
-  format?: 'argons' | 'percent' | 'integer' | 'minutes';
-}>(), {
-  options: () => [],
-  dragBy: 1,
-  dragByMin: 0.01,
-  prefix: '',
-  disabled: false,
-  format: 'integer',
-});
+const props = withDefaults(
+  defineProps<{
+    modelValue: number;
+    max?: number;
+    min?: number;
+    options?: any[];
+    dragBy?: number;
+    dragByMin?: number;
+    disabled?: boolean;
+    prefix?: string;
+    format?: 'argons' | 'percent' | 'integer' | 'minutes';
+  }>(),
+  {
+    options: () => [],
+    dragBy: 1,
+    dragByMin: 0.01,
+    prefix: '',
+    disabled: false,
+    format: 'integer',
+  },
+);
 
 let loginValueOriginal = props.modelValue;
 let loginValueConverted = originalToConverted(props.modelValue);
@@ -360,13 +433,12 @@ function handlePaste(event: ClipboardEvent) {
 
   // Insert the sanitized text at cursor position
   const currentText = target.textContent || '';
-  const newText = currentText.slice(0, cursorOffset) + sanitizedText + currentText.slice(cursorOffset);
+  const newText =
+    currentText.slice(0, cursorOffset) + sanitizedText + currentText.slice(cursorOffset);
 
   // Ensure only one decimal point
   const parts = newText.split('.');
-  const finalValue = parts.length > 2
-    ? parts[0] + '.' + parts.slice(1).join('')
-    : newText;
+  const finalValue = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : newText;
 
   target.textContent = finalValue;
 
@@ -476,16 +548,16 @@ function startContinuousDecrement() {
     // Clear any existing timers
     stopContinuousUpdates();
 
-  // Initial decrement
-  decrementValue();
+    // Initial decrement
+    decrementValue();
 
-  // Start continuous updates after initial delay
-  decrementTimer.value = window.setTimeout(() => {
-    const intervalId = window.setInterval(() => {
-      decrementValue();
-    }, updateInterval);
+    // Start continuous updates after initial delay
+    decrementTimer.value = window.setTimeout(() => {
+      const intervalId = window.setInterval(() => {
+        decrementValue();
+      }, updateInterval);
 
-    // Store the interval ID in the timer ref
+      // Store the interval ID in the timer ref
       decrementTimer.value = intervalId;
     }, initialDelay);
   } catch (error) {
@@ -533,18 +605,25 @@ function selectAllText() {
   }
 }
 
-Vue.watch(() => props.modelValue, (newModelValue) => {
-  const valueConverted = originalToConverted(newModelValue);
-  if (valueConverted !== loginValueConverted) {
-    updateInputValue(valueConverted);
-  }
-});
+Vue.watch(
+  () => props.modelValue,
+  newModelValue => {
+    const valueConverted = originalToConverted(newModelValue);
+    if (valueConverted !== loginValueConverted) {
+      updateInputValue(valueConverted);
+    }
+  },
+);
 
-Vue.watch(() => props.min, (newMin) => {
-  if (newMin !== undefined && loginValueConverted < newMin) {
-    updateInputValue(newMin);
-  }
-}, { immediate: true });
+Vue.watch(
+  () => props.min,
+  newMin => {
+    if (newMin !== undefined && loginValueConverted < newMin) {
+      updateInputValue(newMin);
+    }
+  },
+  { immediate: true },
+);
 
 Vue.onMounted(() => {
   insertIntoInputElem(loginValueConverted);

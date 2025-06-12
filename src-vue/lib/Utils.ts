@@ -1,5 +1,5 @@
 function isScientific(num: number): boolean {
-  return (Math.abs(num) < 1e-6 && num !== 0 || Math.abs(num) >= 1e21) ? true : false;
+  return (Math.abs(num) < 1e-6 && num !== 0) || Math.abs(num) >= 1e21 ? true : false;
 }
 
 export function fmtMoney(numStr: number, removeDecimalsOver?: number) {
@@ -10,7 +10,7 @@ export function fmtMoney(numStr: number, removeDecimalsOver?: number) {
   let num: string;
   if (removeDecimalsOver === undefined) {
     num = fmtDecimals(numStr, 2);
-  } else if(numStr > removeDecimalsOver) {
+  } else if (numStr > removeDecimalsOver) {
     num = fmtDecimals(numStr, 0);
   } else {
     num = fmtDecimals(numStr, 2);
@@ -51,8 +51,10 @@ export function fmtDecimalsMax(num: number, decimals = 2, ifDecimalsThenAtLeast?
   let [intStr, decStr] = num.toFixed(decimals).split('.');
   decStr = (decStr ?? '').slice(0, decimals);
   decStr = decStr.replace(/0+$/, '');
-  
-  return num.toFixed(decStr.length && ifDecimalsThenAtLeast ? ifDecimalsThenAtLeast : decStr.length);
+
+  return num.toFixed(
+    decStr.length && ifDecimalsThenAtLeast ? ifDecimalsThenAtLeast : decStr.length,
+  );
 }
 
 export function isInt(n: any) {
@@ -67,7 +69,7 @@ export function abreviateAddress(address: string) {
 export function calculateAPY(costs: number, rewards: number) {
   if (costs === 0 && rewards > 0) return 9_999;
   if (costs === 0) return 0;
-  
+
   const tenDayRate = (rewards - costs) / costs;
   // Compound APR over 36.5 cycles (10-day periods in a year)
   const apy = (Math.pow(1 + tenDayRate, 36.5) - 1) * 100;

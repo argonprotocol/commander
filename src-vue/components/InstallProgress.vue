@@ -15,8 +15,7 @@ const props = defineProps<{
   isCompact?: boolean;
 }>();
 
-const steps: IStep[] = [ ...stepMetas ];
-
+const steps: IStep[] = [...stepMetas];
 </script>
 
 <style>

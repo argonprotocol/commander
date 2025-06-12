@@ -1,9 +1,5 @@
 import { CohortStorage } from './storage.ts';
-import {
-  Accountset,
-  getClient,
-  type KeyringPair,
-} from '@argonprotocol/mainchain';
+import { Accountset, getClient, type KeyringPair } from '@argonprotocol/mainchain';
 import { AutoBidder } from './AutoBidder.ts';
 import { BlockSync } from './BlockSync.ts';
 import { Dockers } from './Dockers.ts';
@@ -23,7 +19,7 @@ export default class Bot {
   public accountset!: Accountset;
   public blockSync!: BlockSync;
   public storage!: CohortStorage;
-  
+
   public isInitialized: boolean = false;
   public isWaitingToStart: boolean = false;
   public isStarting: boolean = false;
@@ -31,9 +27,7 @@ export default class Bot {
 
   private options: IBotOptions;
 
-  constructor(
-    options: IBotOptions,
-  ) {
+  constructor(options: IBotOptions) {
     this.options = options;
   }
 
@@ -49,11 +43,7 @@ export default class Bot {
       sessionKeyMnemonic: this.options.keysMnemonic,
       subaccountRange: new Array(99).fill(0).map((_, i) => i),
     });
-    this.autobidder = new AutoBidder(
-      this.accountset,
-      this.storage,
-      this.options.biddingRulesPath,
-    );
+    this.autobidder = new AutoBidder(this.accountset, this.storage, this.options.biddingRulesPath);
     this.blockSync = new BlockSync(
       this,
       this.accountset,
@@ -84,7 +74,7 @@ export default class Bot {
     const argonBlockNumbers = await Dockers.getArgonBlockNumbers();
     const bitcoinBlockNumbers = await Dockers.getBitcoinBlockNumbers();
     console.log('Dockers are synced, starting bot', { argonBlockNumbers, bitcoinBlockNumbers });
-    
+
     this.isWaitingToStart = false;
     await this.start();
   }
@@ -107,13 +97,13 @@ export default class Bot {
       console.error('Error starting autobidder', error);
       throw error;
     }
-    
+
     this.isStarting = false;
     this.isStarted = true;
-    
+
     const status = await this.blockSync.state();
     console.log('Block sync updated', status);
-    
+
     return status;
   }
 
@@ -122,7 +112,7 @@ export default class Bot {
     await this.autobidder.stop();
     await this.accountset.client.then(x => x.disconnect());
   }
-  
+
   private async areDockersSynced() {
     const argonBlockNumbers = await Dockers.getArgonBlockNumbers();
     if (argonBlockNumbers.localNode < argonBlockNumbers.mainNode) return false;

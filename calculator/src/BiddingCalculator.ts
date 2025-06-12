@@ -29,16 +29,11 @@ export default class BiddingCalculator {
 
   public get costOfArgonotLoss() {
     const lossMultiplier = this.argonotPriceChange / 100;
-    return Math.max(
-      0,
-      -this.argonotToArgon(this.data.argonotsRequiredForBid * lossMultiplier),
-    );
+    return Math.max(0, -this.argonotToArgon(this.data.argonotsRequiredForBid * lossMultiplier));
   }
 
   public get totalCost() {
-    return (
-      this.argonBidPremium + this.data.transactionFee + this.costOfArgonotLoss
-    );
+    return this.argonBidPremium + this.data.transactionFee + this.costOfArgonotLoss;
   }
 
   public get argonotRewardsAsArgonValue() {
@@ -82,9 +77,7 @@ export default class BiddingCalculator {
   }
 
   public get breakevenBid() {
-    return (
-      this.totalRewards - (this.data.transactionFee + this.costOfArgonotLoss)
-    );
+    return this.totalRewards - (this.data.transactionFee + this.costOfArgonotLoss);
   }
 
   private argonotToArgon(qty: number) {

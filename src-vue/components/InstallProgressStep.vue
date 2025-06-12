@@ -1,29 +1,72 @@
 <template>
-  <li v-if="!['Hidden', 'Failed'].includes(stepStatus)" :status="stepStatus" :style="{ height: `${stepHeightPct}%`, opacity: hasError ? '0.5' : '1' }" class="Component InstallProgressStep relative flex flex-row items-center border-t border-slate-300 text-black/30 whitespace-nowrap w-full pl-1">
+  <li
+    v-if="!['Hidden', 'Failed'].includes(stepStatus)"
+    :status="stepStatus"
+    :style="{ height: `${stepHeightPct}%`, opacity: hasError ? '0.5' : '1' }"
+    class="Component InstallProgressStep relative flex flex-row items-center border-t border-slate-300 text-black/30 whitespace-nowrap w-full pl-1"
+  >
     <div v-if="stepStatus === 'Working'" spinner />
-    <Checkbox v-if="['Completed', 'Completing'].includes(stepStatus)" :isChecked="true" class="absolute top-1/2 -translate-y-1/2 left-0 w-4 h-4 max-w-4 max-h-4" />
+    <Checkbox
+      v-if="['Completed', 'Completing'].includes(stepStatus)"
+      :isChecked="true"
+      class="absolute top-1/2 -translate-y-1/2 left-0 w-4 h-4 max-w-4 max-h-4"
+    />
     <label>{{ getLabel(step) }}</label>
-    <ProgressBar v-if="['Working', 'Completing', 'Completed', 'Failed'].includes(stepStatus)" :hasError="stepStatus === 'Failed'" :progress="stepProgress" :is-slow="step.isSlow" />
+    <ProgressBar
+      v-if="['Working', 'Completing', 'Completed', 'Failed'].includes(stepStatus)"
+      :hasError="stepStatus === 'Failed'"
+      :progress="stepProgress"
+      :is-slow="step.isSlow"
+    />
   </li>
-  <li v-if="stepStatus === 'Failed'" :class="{ 'opacity-50 pointer-events-none': isRetrying }" class="Component InstallProgressStep relative flex flex-col border-t border-slate-300 text-black/70 w-full px-2 py-4 grow h-full">
-    <div class="absolute top-2 left-0 bottom-0 w-full z-0" style="background-image: linear-gradient(to bottom, #FAD1D8 90%, transparent 100%);"></div>
+  <li
+    v-if="stepStatus === 'Failed'"
+    :class="{ 'opacity-50 pointer-events-none': isRetrying }"
+    class="Component InstallProgressStep relative flex flex-col border-t border-slate-300 text-black/70 w-full px-2 py-4 grow h-full"
+  >
+    <div
+      class="absolute top-2 left-0 bottom-0 w-full z-0"
+      style="background-image: linear-gradient(to bottom, #fad1d8 90%, transparent 100%)"
+    ></div>
     <div class="flex flex-row items-center whitespace-nowrap px-2 relative z-10 pt-4">
       <AlertIcon class="w-7 h-7 mr-2.5 text-argon-button" />
       <label class="font-bold text-lg truncate grow">FAILED to {{ getLabel(step, -1) }}</label>
-      <button v-if="!isRetrying && step.key === InstallStepKey.ServerConnect" class="text-argon-button font-bold px-4 py-0.5 border border-argon-button rounded cursor-pointer hover:border-argon-button-hover hover:text-argon-button-hover mr-2">Configure Cloud Machine</button>
-      <button v-else-if="!isRetrying" @click="openServerRemoveOverlay" class="text-argon-button font-bold px-4 py-0.5 border border-argon-button rounded cursor-pointer hover:border-argon-button-hover hover:text-argon-button-hover mr-2">Remove Server</button>
-      <button @click="retryFailedStep(step)" class="text-white font-bold bg-argon-button px-4 py-0.5 border border-fuchsia-800 rounded cursor-pointer hover:bg-argon-button-hover">
+      <button
+        v-if="!isRetrying && step.key === InstallStepKey.ServerConnect"
+        class="text-argon-button font-bold px-4 py-0.5 border border-argon-button rounded cursor-pointer hover:border-argon-button-hover hover:text-argon-button-hover mr-2"
+      >
+        Configure Cloud Machine
+      </button>
+      <button
+        v-else-if="!isRetrying"
+        @click="openServerRemoveOverlay"
+        class="text-argon-button font-bold px-4 py-0.5 border border-argon-button rounded cursor-pointer hover:border-argon-button-hover hover:text-argon-button-hover mr-2"
+      >
+        Remove Server
+      </button>
+      <button
+        @click="retryFailedStep(step)"
+        class="text-white font-bold bg-argon-button px-4 py-0.5 border border-fuchsia-800 rounded cursor-pointer hover:bg-argon-button-hover"
+      >
         <span v-if="isRetrying">Retrying...</span>
         <span v-else>Retry</span>
       </button>
     </div>
-    <p v-if="step.key === InstallStepKey.ServerConnect" class="text-black/70 border-t border-slate-400/50 pt-3 mt-3 px-2.5 relative z-10">
-      Commander could not connect to your server. Click the Configure Cloud Machine button if your IP address has changed. You can also retry the connection. If this issue persists, you 
-      might need to remove the current server and start afresh with a new one.
+    <p
+      v-if="step.key === InstallStepKey.ServerConnect"
+      class="text-black/70 border-t border-slate-400/50 pt-3 mt-3 px-2.5 relative z-10"
+    >
+      Commander could not connect to your server. Click the Configure Cloud Machine button if your
+      IP address has changed. You can also retry the connection. If this issue persists, you might
+      need to remove the current server and start afresh with a new one.
     </p>
-    <p v-else class="text-black/70 border-t border-slate-400/50 pt-3 pb-5 mt-3 px-2.5 relative z-10">
-      Commander has encountered an unrecoverable error while trying to provision your server. You can rerun this step by clicking Retry. If the issue persists, you 
-      might need to remove the current server and start afresh with a new one.
+    <p
+      v-else
+      class="text-black/70 border-t border-slate-400/50 pt-3 pb-5 mt-3 px-2.5 relative z-10"
+    >
+      Commander has encountered an unrecoverable error while trying to provision your server. You
+      can rerun this step by clicking Retry. If the issue persists, you might need to remove the
+      current server and start afresh with a new one.
     </p>
   </li>
 </template>
@@ -129,14 +172,16 @@ function openServerRemoveOverlay() {
 @reference "../main.css";
 
 li.Component.InstallProgressStep {
-  &[isCompact="true"] {
+  &[isCompact='true'] {
     label {
       @apply mr-3;
     }
     [spinner] {
       @apply -left-0 -translate-x-0 min-w-6 min-h-6 w-6 h-6;
     }
-    &[status="Working"], &[status="Completing"], &[status="Completed"] {
+    &[status='Working'],
+    &[status='Completing'],
+    &[status='Completed'] {
       label {
         @apply pl-7;
       }
@@ -145,27 +190,29 @@ li.Component.InstallProgressStep {
 
   @apply py-2 flex-1;
 
-  &[status="Working"], &[status="Completing"] {
+  &[status='Working'],
+  &[status='Completing'] {
     label {
       @apply text-gray-700 font-bold relative;
     }
-  
+
     [spinner] {
       border-radius: 50%;
       display: block;
       border: 10px solid;
-      border-color: rgba(166, 0, 212, 0.15) rgba(166, 0, 212, 0.25) rgba(166, 0, 212, 0.35) rgba(166, 0, 212, 0.5);
+      border-color: rgba(166, 0, 212, 0.15) rgba(166, 0, 212, 0.25) rgba(166, 0, 212, 0.35)
+        rgba(166, 0, 212, 0.5);
       animation: rotation 1s linear infinite;
     }
   }
 
-  &[status="Failed"] {
+  &[status='Failed'] {
     label {
       @apply text-red-900/70;
     }
   }
 
-  &[status="Completed"] {
+  &[status='Completed'] {
     .ProgressBar {
       @apply opacity-70;
     }
@@ -187,5 +234,5 @@ li.Component.InstallProgressStep {
   100% {
     transform: rotate(360deg);
   }
-} 
+}
 </style>

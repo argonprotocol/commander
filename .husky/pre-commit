@@ -1,3 +1,6 @@
 #!/bin/bash
+
+yarn run lint
+
 cd $(dirname "$0")/..
 ./scripts/update_shasums.sh

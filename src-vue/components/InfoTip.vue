@@ -5,4 +5,3 @@
 <script setup lang="ts">
 import InfoIcon from '../assets/info.svg?component';
 </script>
-

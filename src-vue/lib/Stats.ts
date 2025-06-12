@@ -24,7 +24,7 @@ export class Stats {
   public isLoaded: boolean;
   public isLoadedPromise: Promise<void>;
 
-  private _loadingFns!: { resolve: () => void, reject: (error: Error) => void };
+  private _loadingFns!: { resolve: () => void; reject: (error: Error) => void };
 
   private localPort!: number;
   private syncState!: ISyncState;
@@ -39,7 +39,7 @@ export class Stats {
   private _dbPromise: Promise<Db>;
 
   constructor(dbPromise: Promise<Db>, config: Config, installer: Installer) {
-    if (IS_INITIALIZED) throw new Error("Stats already initialized");
+    if (IS_INITIALIZED) throw new Error('Stats already initialized');
     IS_INITIALIZED = true;
 
     this._dbPromise = dbPromise;
@@ -54,7 +54,7 @@ export class Stats {
     this.cohortId = null;
     this.data = {
       activeBids: {
-        subaccounts: []
+        subaccounts: [],
       },
       dashboard: {
         cohortId: null,
@@ -67,22 +67,22 @@ export class Stats {
           totalTransactionFees: 0,
           totalArgonotsMined: 0,
           totalArgonsMined: 0,
-          totalArgonsMinted: 0
+          totalArgonsMinted: 0,
         },
       },
       argonActivity: [],
       bitcoinActivity: [],
-      botActivity: []
+      botActivity: [],
     };
   }
 
   public async load() {
     await this._installer.isLoadedPromise;
-    
+
     while (!this.isRunnable) {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    
+
     console.info('Loading stats...', { isServerInstalling: this._config.isServerInstalling });
     this.db = await this._dbPromise;
     this.lastProcessedFrameId = (await this.db.framesTable.latestId()) || 0;
@@ -97,23 +97,23 @@ export class Stats {
     await this.updateServerDetailsFromSyncState(this.syncState);
     this.oldestFrameIdToSync = this.syncState.oldestFrameIdToSync;
     this.currentFrameId = this.syncState.currentFrameId;
-    
+
     const syncProgress = await this.calculateSyncProgress();
 
     this._config.syncDetails = {
       startDate: new Date().toISOString(),
       progress: syncProgress,
       errorType: null,
-      errorMessage: null
+      errorMessage: null,
     };
     await this._config.save();
 
     if (syncProgress < 100.0) {
       console.info('TODO: SYNC DATABASE...');
-        // await new StatsSyncer(this.localPort, this.db).run(
-        //     this.oldestFrameIdToSync,
-        //     this.currentFrameId
-        // );
+      // await new StatsSyncer(this.localPort, this.db).run(
+      //     this.oldestFrameIdToSync,
+      //     this.currentFrameId
+      // );
     } else {
       this.run();
     }
@@ -126,7 +126,7 @@ export class Stats {
     this.cohortId ??= await this.fetchLatestCohortIdFromDb();
     const syncer = new StatsSyncer(this.localPort, this.db);
 
-    const bidsFile = await StatsFetcher.fetchBidsFile(this.localPort, this.currentFrameId+1);
+    const bidsFile = await StatsFetcher.fetchBidsFile(this.localPort, this.currentFrameId + 1);
     console.info('CURRENT Bids file:', bidsFile);
 
     if (this.isMissingCurrentFrame) {
@@ -155,7 +155,7 @@ export class Stats {
       dashboard,
       argonActivity: await this.db.argonActivitiesTable.fetchLastFiveRecords(),
       bitcoinActivity: await this.db.bitcoinActivitiesTable.fetchLastFiveRecords(),
-      botActivity: await this.db.botActivitiesTable.fetchLastFiveRecords()
+      botActivity: await this.db.botActivitiesTable.fetchLastFiveRecords(),
     };
   }
 
@@ -170,8 +170,8 @@ export class Stats {
       return botLoadProgress;
     }
 
-    const dbSyncProgress = await this.calculateDbSyncProgress() * 0.1;
-    
+    const dbSyncProgress = (await this.calculateDbSyncProgress()) * 0.1;
+
     return botLoadProgress + dbSyncProgress;
   }
 
@@ -185,7 +185,7 @@ export class Stats {
       return 100.0;
     }
 
-    if (dbRowsFound === (dbRowsExpected - 1)) {
+    if (dbRowsFound === dbRowsExpected - 1) {
       try {
         await this.db.framesTable.fetchById(this.currentFrameId);
       } catch {
@@ -206,8 +206,8 @@ export class Stats {
         bidPosition: account.bidPosition,
         argonsBid: account.argonsBid,
         isRebid: null,
-        lastBidAtTick: null
-      }))
+        lastBidAtTick: null,
+      })),
     };
   }
 
@@ -215,7 +215,7 @@ export class Stats {
     return {
       global: await this.fetchDashboardGlobalStatsFromDb(),
       cohortId: this.cohortId,
-      cohort: this.cohortId ? await this.fetchDashboardCohortStatsFromDb(this.cohortId) : null
+      cohort: this.cohortId ? await this.fetchDashboardCohortStatsFromDb(this.cohortId) : null,
     };
   }
 
@@ -241,11 +241,13 @@ export class Stats {
       totalTransactionFees: globalStats1.totalTransactionFees,
       totalArgonotsMined: globalStats2.totalArgonotsMined,
       totalArgonsMined: globalStats2.totalArgonsMined,
-      totalArgonsMinted: globalStats2.totalArgonsMinted
+      totalArgonsMinted: globalStats2.totalArgonsMinted,
     };
   }
 
-  private async fetchDashboardCohortStatsFromDb(cohortId: number): Promise<IDashboardStats['cohort']> {
+  private async fetchDashboardCohortStatsFromDb(
+    cohortId: number,
+  ): Promise<IDashboardStats['cohort']> {
     const cohort = await this.db.cohortsTable.fetchById(cohortId);
     if (!cohort) return null;
 
@@ -262,7 +264,7 @@ export class Stats {
       blocksMined: cohortStats.totalBlocksMined,
       argonotsMined: cohortStats.totalArgonotsMined,
       argonsMined: cohortStats.totalArgonsMined,
-      argonsMinted: cohortStats.totalArgonsMinted
+      argonsMinted: cohortStats.totalArgonsMinted,
     };
   }
 
@@ -278,24 +280,31 @@ export class Stats {
   private async updateArgonActivity(): Promise<void> {
     const latestBlockNumbers = await StatsFetcher.fetchArgonBlockchainStatus(this.localPort);
     const lastArgonActivity = await this.db.argonActivitiesTable.latest();
-    
-    const localhostMatches = lastArgonActivity?.localNodeBlockNumber === latestBlockNumbers.localNode;
+
+    const localhostMatches =
+      lastArgonActivity?.localNodeBlockNumber === latestBlockNumbers.localNode;
     const mainchainMatches = lastArgonActivity?.mainNodeBlockNumber === latestBlockNumbers.mainNode;
-    
+
     if (!localhostMatches || !mainchainMatches) {
-      await this.db.argonActivitiesTable.insert(latestBlockNumbers.localNode, latestBlockNumbers.mainNode);
+      await this.db.argonActivitiesTable.insert(
+        latestBlockNumbers.localNode,
+        latestBlockNumbers.mainNode,
+      );
     }
   }
 
   private async updateBitcoinActivity(): Promise<void> {
     const latestBlockNumbers = await StatsFetcher.fetchBitcoinBlockchainStatus(this.localPort);
     const savedActivity = await this.db.bitcoinActivitiesTable.latest();
-    
+
     const localhostMatches = savedActivity?.localNodeBlockNumber === latestBlockNumbers.localNode;
     const mainchainMatches = savedActivity?.mainNodeBlockNumber === latestBlockNumbers.mainNode;
-    
+
     if (!localhostMatches || !mainchainMatches) {
-      await this.db.bitcoinActivitiesTable.insert(latestBlockNumbers.localNode, latestBlockNumbers.mainNode);
+      await this.db.bitcoinActivitiesTable.insert(
+        latestBlockNumbers.localNode,
+        latestBlockNumbers.mainNode,
+      );
     }
   }
 
@@ -303,4 +312,4 @@ export class Stats {
     const botHistory = await StatsFetcher.fetchBotHistory(this.localPort);
     // TODO: Implement bot activity update logic
   }
-} 
+}

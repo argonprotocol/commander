@@ -1,6 +1,12 @@
 import packageJson from '../../package.json';
 import { Db } from './Db';
-import { IConfig, IConfigStringified, IConfigInstallStep, InstallStepStatus, InstallStepKey } from '../interfaces/IConfig';
+import {
+  IConfig,
+  IConfigStringified,
+  IConfigInstallStep,
+  InstallStepStatus,
+  InstallStepKey,
+} from '../interfaces/IConfig';
 import { SSH } from './SSH';
 import { Keyring, type KeyringPair, mnemonicGenerate } from '@argonprotocol/mainchain';
 
@@ -8,15 +14,15 @@ export const env = (import.meta as any).env;
 export const NETWORK_NAME = env.VITE_NETWORK_NAME || 'mainnet';
 export const NETWORK_URL = env.VITE_NETWORK_URL || 'wss://rpc.argon.network';
 export const INSTANCE_NAME = env.VITE_INSTANCE_NAME || 'default';
-export const DEPLOY_ENV_FILE = NETWORK_NAME === "testnet" ? ".env.testnet" : ".env"
+export const DEPLOY_ENV_FILE = NETWORK_NAME === 'testnet' ? '.env.testnet' : '.env';
 
 export class Config {
   public readonly version: string = packageJson.version;
-  
+
   public isLoaded: boolean;
   public isLoadedPromise: Promise<void>;
 
-  private _loadingFns!: { resolve: () => void, reject: (error: Error) => void };
+  private _loadingFns!: { resolve: () => void; reject: (error: Error) => void };
 
   private _db!: Db;
   private _fieldsToSave: Set<string> = new Set();
@@ -38,7 +44,7 @@ export class Config {
       this._loadingFns = { resolve, reject };
     });
     this.isLoaded = false;
-    
+
     this._dbPromise = dbPromise;
     this._unserialized = {
       version: packageJson.version,
@@ -96,44 +102,48 @@ export class Config {
         const defaultValue = await value();
         configData[key] = defaultValue;
         fieldsToSave.add(key);
-        fieldsSerialized[key as keyof typeof fieldsSerialized] = JSON.stringify(defaultValue, null, 2);
+        fieldsSerialized[key as keyof typeof fieldsSerialized] = JSON.stringify(
+          defaultValue,
+          null,
+          2,
+        );
         continue;
       }
-      
+
       configData[key] = JSON.parse(rawValue as string);
       fieldsSerialized[key as keyof typeof fieldsSerialized] = rawValue as string;
     }
 
     const dataToSave = Config.extractDataToSave(fieldsToSave, fieldsSerialized);
     await db.configTable.insertOrReplace(dataToSave);
-    
+
     this.isLoaded = true;
     this._stringified = fieldsSerialized;
     this._db = db;
     this._unserialized = configData as IConfig;
     this._loadingFns.resolve();
   }
-  
+
   get seedAccount(): KeyringPair {
     if (!this.isLoaded) return {} as KeyringPair;
-    return this._seedAccount ||= new Keyring({ type: 'sr25519' }).createFromUri(
+    return (this._seedAccount ||= new Keyring({ type: 'sr25519' }).createFromUri(
       this.security.walletMnemonic,
-    );
+    ));
   }
 
   get mngAccount(): KeyringPair {
     if (!this.isLoaded) return {} as KeyringPair;
-    return this._mngAccount ||= this.seedAccount.derive(`//mng`);
+    return (this._mngAccount ||= this.seedAccount.derive(`//mng`));
   }
 
   get llbAccount(): KeyringPair {
     if (!this.isLoaded) return {} as KeyringPair;
-    return this._llbAccount ||= this.seedAccount.derive(`//llb`);
+    return (this._llbAccount ||= this.seedAccount.derive(`//llb`));
   }
 
   get vltAccount(): KeyringPair {
     if (!this.isLoaded) return {} as KeyringPair;
-    return this._vltAccount ||= this.seedAccount.derive(`//vlt`);
+    return (this._vltAccount ||= this.seedAccount.derive(`//vlt`));
   }
 
   //////////////////////////////
@@ -239,7 +249,10 @@ export class Config {
 
   get isServerSyncing(): boolean {
     if (!this.isLoaded) return false;
-    return this._unserialized.syncDetails.startDate !== null && this._unserialized.syncDetails.progress < 100;
+    return (
+      this._unserialized.syncDetails.startDate !== null &&
+      this._unserialized.syncDetails.progress < 100
+    );
   }
 
   get isWaitingForUpgradeApproval(): boolean {
@@ -270,7 +283,7 @@ export class Config {
   }
 
   set biddingRules(value: IConfig['biddingRules']) {
-    this._throwErrorIfNotLoaded();  
+    this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.biddingRules, value);
     this._unserialized.biddingRules = value;
   }
@@ -286,7 +299,7 @@ export class Config {
       (acc as any)[typedKey] = this._unserialized[typedKey];
       return acc;
     }, {});
-    console.log("SAVING:", this._fieldsToSave, dataToLog);
+    console.log('SAVING:', this._fieldsToSave, dataToLog);
     await this._db.configTable.insertOrReplace(dataToSave);
   }
 
@@ -297,18 +310,22 @@ export class Config {
   }
 
   private _throwErrorIfNotLoaded() {
-    if (!this.isLoaded) throw new Error('Config is not yet loaded. You must wait for isLoaded to be true.');
+    if (!this.isLoaded)
+      throw new Error('Config is not yet loaded. You must wait for isLoaded to be true.');
   }
 
   private _tryFieldsToSave(field: keyof typeof dbFields, value: any) {
     const stringifiedValue = JSON.stringify(value, null, 2);
     if (this._stringified[field] === stringifiedValue) return;
-    
-    this._stringified[field] = stringifiedValue
+
+    this._stringified[field] = stringifiedValue;
     this._fieldsToSave.add(field);
   }
 
-  private static extractDataToSave(fieldsToSave: Set<string>, stringifiedData: IConfigStringified): Partial<IConfigStringified> {
+  private static extractDataToSave(
+    fieldsToSave: Set<string>,
+    stringifiedData: IConfigStringified,
+  ): Partial<IConfigStringified> {
     const toSave = {} as IConfigStringified;
     for (const field of fieldsToSave) {
       toSave[field as keyof IConfigStringified] = stringifiedData[field as keyof IConfig];
@@ -364,15 +381,15 @@ const defaults: IConfigDefaults = {
       walletMnemonic,
       sessionMnemonic,
       walletJson,
-    }
+    };
   },
   serverDetails: async () => {
     const keys = await SSH.getKeys();
     return {
-      ipAddress: "",
+      ipAddress: '',
       sshPublicKey: keys.publicKey,
       sshPrivateKey: keys.privateKey,
-      sshUser: "root",
+      sshUser: 'root',
       oldestFrameIdToSync: null,
     };
   },

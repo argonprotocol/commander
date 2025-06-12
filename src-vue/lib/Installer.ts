@@ -1,5 +1,10 @@
 import { SSH } from './SSH';
-import { InstallStepErrorType, InstallStepStatus, InstallStepKey, type IConfigInstallStep } from '../interfaces/IConfig';
+import {
+  InstallStepErrorType,
+  InstallStepStatus,
+  InstallStepKey,
+  type IConfigInstallStep,
+} from '../interfaces/IConfig';
 import { Config, DEPLOY_ENV_FILE, NETWORK_NAME } from './Config';
 import { app } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
@@ -13,7 +18,7 @@ export default class Installer {
   private isRunningLocally = false;
   private hasApprovedUpgrade = false;
 
-  private reasonToSkipInstall: string = "";
+  private reasonToSkipInstall: string = '';
   private reasonToSkipInstallData: any = null;
 
   public isFreshInstall: boolean;
@@ -22,19 +27,19 @@ export default class Installer {
   public isLoaded: boolean;
   public isLoadedPromise: Promise<void>;
 
-  private _loadingFns!: { resolve: () => void, reject: (error: Error) => void };
+  private _loadingFns!: { resolve: () => void; reject: (error: Error) => void };
 
   constructor(config: Config) {
-    if (IS_INITIALIZED) throw new Error("Installer already initialized");
+    if (IS_INITIALIZED) throw new Error('Installer already initialized');
     IS_INITIALIZED = true;
 
     this.config = config;
     this.installerCheck = new InstallerCheck(config);
-    
+
     this.isLoadedPromise = new Promise((resolve, reject) => {
       this._loadingFns = { resolve, reject };
     });
-    
+
     this.isLoaded = false;
     this.isFreshInstall = false;
     this.remoteFilesNeedUpdating = false;
@@ -48,12 +53,11 @@ export default class Installer {
     this._loadingFns.resolve();
   }
 
-
   public async tryToRun(): Promise<void> {
-    console.info("Trying to run installer");
+    console.info('Trying to run installer');
     await this.isLoadedPromise;
     if (this.reasonToSkipInstall) {
-      console.info("Skipping Installer:", this.reasonToSkipInstall, this.reasonToSkipInstallData);
+      console.info('Skipping Installer:', this.reasonToSkipInstall, this.reasonToSkipInstallData);
       return;
     }
 
@@ -63,13 +67,11 @@ export default class Installer {
     this.config.isServerInstalling = true;
     await this.config.save();
 
-    console.info("Starting install process");
+    console.info('Starting install process');
     await this.startInstall();
   }
 
-  public async retryFailedStep(
-    stepKey: string
-  ): Promise<void> {
+  public async retryFailedStep(stepKey: string): Promise<void> {
     if (await this.isInstallRunning()) return;
 
     await this.clearStepFiles([stepKey]);
@@ -86,7 +88,7 @@ export default class Installer {
 
     this.hasApprovedUpgrade = true;
 
-    console.info("Clearing step files");
+    console.info('Clearing step files');
     const stepsToClear = [
       InstallStepErrorType.FileCheck,
       InstallStepErrorType.BitcoinInstall,
@@ -94,10 +96,10 @@ export default class Installer {
       InstallStepErrorType.MiningLaunch,
     ];
     await this.clearStepFiles(stepsToClear);
-    
+
     this.installerCheck.clearCachedFilenames();
     this.installerCheck.bypassCachedFilenames = false;
-    
+
     this.clearReasonsToSkipInstall();
     this.config.resetField('installDetails');
     this.config.isWaitingForUpgradeApproval = false;
@@ -109,7 +111,7 @@ export default class Installer {
   public async updateBiddingBot(): Promise<void> {
     await this.uploadBotConfigFiles();
     await this.restartBotDocker();
-    
+
     this.config.isServerReadyForMining = true;
     await this.config.save();
   }
@@ -156,7 +158,7 @@ export default class Installer {
 
     this.isFreshInstall = isFreshInstall;
     this.remoteFilesNeedUpdating = remoteFilesNeedUpdating;
-    
+
     if (isServerInstallComplete && !remoteFilesNeedUpdating) {
       this.reasonToSkipInstall = 'Server is up-to-date';
       this.reasonToSkipInstallData = { isServerInstallComplete, remoteFilesNeedUpdating };
@@ -166,13 +168,21 @@ export default class Installer {
       return;
     }
 
-    const requiresExplicitUpgradeApproval = isServerInstallComplete && !isFreshInstall && !this.config.isServerInstalling;
+    const requiresExplicitUpgradeApproval =
+      isServerInstallComplete && !isFreshInstall && !this.config.isServerInstalling;
     console.info('requiresExplicitUpgradeApproval =', requiresExplicitUpgradeApproval, {
-      isServerInstallComplete, isFreshInstall, isServerInstalling: this.config.isServerInstalling, hasApprovedUpgrade: this.hasApprovedUpgrade,
+      isServerInstallComplete,
+      isFreshInstall,
+      isServerInstalling: this.config.isServerInstalling,
+      hasApprovedUpgrade: this.hasApprovedUpgrade,
     });
     if (requiresExplicitUpgradeApproval && !this.hasApprovedUpgrade) {
       this.reasonToSkipInstall = 'Server is not new so upgrade requires user approval';
-      this.reasonToSkipInstallData = { isServerInstallComplete, isFreshInstall, isServerInstalling: this.config.isServerInstalling };
+      this.reasonToSkipInstallData = {
+        isServerInstallComplete,
+        isFreshInstall,
+        isServerInstalling: this.config.isServerInstalling,
+      };
       this.config.isWaitingForUpgradeApproval = true;
       await this.config.save();
       return;
@@ -212,19 +222,19 @@ export default class Installer {
 
   private async isInstallRunning(): Promise<boolean> {
     if (this.isRunningLocally) {
-      console.info("Install process IS running locally");
+      console.info('Install process IS running locally');
       return true;
     }
-    console.info("Install process is NOT running locally");
+    console.info('Install process is NOT running locally');
 
     try {
-      console.info("Checking if install process is running remotely");
-      const [pid] = await SSH.runCommand("pgrep -f ~/scripts/install_server.sh");
-      const isRunningRemotely = pid.trim() !== "";
-      console.info(`Install process ${isRunningRemotely ? "IS" : "is NOT"} running remotely`);
+      console.info('Checking if install process is running remotely');
+      const [pid] = await SSH.runCommand('pgrep -f ~/scripts/install_server.sh');
+      const isRunningRemotely = pid.trim() !== '';
+      console.info(`Install process ${isRunningRemotely ? 'IS' : 'is NOT'} running remotely`);
       return isRunningRemotely;
     } catch {
-      console.info("Install process is NOT running remotely");
+      console.info('Install process is NOT running remotely');
       return false;
     }
   }
@@ -252,11 +262,13 @@ export default class Installer {
   }
 
   private async remoteFilesMatchLocalShasums(): Promise<boolean> {
-    const [remoteShasums] = await SSH.runCommand("cat ~/SHASUMS256.copied 2>/dev/null || true");
+    const [remoteShasums] = await SSH.runCommand('cat ~/SHASUMS256.copied 2>/dev/null || true');
     const localShasums = await this.getLocalShasums();
     const remoteFilesMatchLocalShasums = localShasums === remoteShasums;
-    console.info(`Remote files ${remoteFilesMatchLocalShasums ? 'DO' : 'do NOT'} match local shasums`);
-    
+    console.info(
+      `Remote files ${remoteFilesMatchLocalShasums ? 'DO' : 'do NOT'} match local shasums`,
+    );
+
     if (!remoteFilesMatchLocalShasums) {
       console.info(`Remote shasums: ${remoteShasums}`);
       console.info(`Local shasums: ${localShasums}`);
@@ -268,22 +280,22 @@ export default class Installer {
   private async localFilesMatchLocalShasums(): Promise<boolean> {
     const localShasums = await this.getLocalShasums();
     console.info(`Local shasums: ${localShasums}`);
-    let dynamicShasums = "";
+    let dynamicShasums = '';
 
     for (const dirName of CORE_DIRS) {
       const shasum = await invoke('create_shasum', { dirName });
 
-      if (dynamicShasums !== "") {
-        dynamicShasums += "\n";
+      if (dynamicShasums !== '') {
+        dynamicShasums += '\n';
       }
       dynamicShasums += `${dirName} ${shasum}`;
     }
 
     const localTrimmed = localShasums.trim();
     const dynamicTrimmed = dynamicShasums.trim();
-    const localLines = localTrimmed.split("\n");
-    const dynamicLines = dynamicTrimmed.split("\n");
-    
+    const localLines = localTrimmed.split('\n');
+    const dynamicLines = dynamicTrimmed.split('\n');
+
     for (let i = 0; i < localLines.length; i++) {
       if (localLines[i] !== dynamicLines[i]) {
         console.info(`Mismatch at line ${i + 1}:`);
@@ -291,7 +303,7 @@ export default class Installer {
         console.info(`  Dynamic: ${dynamicLines[i]}`);
       }
     }
-    
+
     const shasumsMatch = localTrimmed === dynamicTrimmed;
     console.info(`Local files match local shasums = ${shasumsMatch}`);
 
@@ -299,11 +311,11 @@ export default class Installer {
   }
 
   private async startInstall(): Promise<void> {
-    console.info("Installer starting");
+    console.info('Installer starting');
     this.isRunningLocally = true;
     this.installerCheck.start();
 
-    let errorMessage = "";
+    let errorMessage = '';
 
     try {
       if (this.remoteFilesNeedUpdating) {
@@ -313,22 +325,22 @@ export default class Installer {
           InstallStepErrorType.ArgonInstall,
           InstallStepErrorType.MiningLaunch,
         ];
-        console.info("Clearing step files");
-        await this.clearStepFiles(stepsToClear);    
+        console.info('Clearing step files');
+        await this.clearStepFiles(stepsToClear);
 
-        console.info("Uploading sha256");
+        console.info('Uploading sha256');
         await this.uploadSha256();
 
-        console.info("Uploading core files");
+        console.info('Uploading core files');
         await this.uploadCoreFiles();
       }
 
-      console.info("Uploading bot config files");
+      console.info('Uploading bot config files');
       await this.uploadBotConfigFiles();
-      
-      console.info("Starting remote script");
+
+      console.info('Starting remote script');
       await this.startRemoteScript();
-      
+
       this.installerCheck.bypassCachedFilenames = true;
 
       await this.installerCheck.waitForInstallToComplete();
@@ -351,20 +363,20 @@ export default class Installer {
       return;
     }
 
-    console.info("Installer finished");
+    console.info('Installer finished');
     this.config.isServerInstalling = false;
     await this.config.save();
   }
 
   private async serverHasSha256File(): Promise<boolean> {
-    const [, code] = await SSH.runCommand("test -f ~/SHASUMS256");
+    const [, code] = await SSH.runCommand('test -f ~/SHASUMS256');
     return code === 0;
   }
 
   private async uploadSha256(): Promise<void> {
     const localShasums = await this.getLocalShasums();
-    await SSH.uploadFile(localShasums, "~/SHASUMS256");
-    await SSH.runCommand("rm ~/SHASUMS256.copied");
+    await SSH.uploadFile(localShasums, '~/SHASUMS256');
+    await SSH.runCommand('rm ~/SHASUMS256.copied');
   }
 
   private async uploadCoreFiles(): Promise<void> {
@@ -375,26 +387,27 @@ export default class Installer {
       await SSH.uploadDirectory(app, localDir, remoteDir);
     }
 
-    await SSH.runCommand("~/scripts/update_shasums.sh SHASUMS256.copied");
+    await SSH.runCommand('~/scripts/update_shasums.sh SHASUMS256.copied');
   }
 
   private async uploadBotConfigFiles(): Promise<void> {
     const biddingRulesStr = JSON.stringify(this.config.biddingRules);
     if (!biddingRulesStr) return;
-    
-    const envSecurity = `SESSION_KEYS_MNEMONIC="${this.config.security.sessionMnemonic}"\n` + 
-                        `KEYPAIR_PASSPHRASE=`;
-    const envState = `OLDEST_FRAME_ID_TO_SYNC=${this.config.serverDetails.oldestFrameIdToSync || ""}\n` +
-                     `IS_READY_FOR_BIDDING=${this.config.isServerReadyForMining}\n`;
+
+    const envSecurity =
+      `SESSION_KEYS_MNEMONIC="${this.config.security.sessionMnemonic}"\n` + `KEYPAIR_PASSPHRASE=`;
+    const envState =
+      `OLDEST_FRAME_ID_TO_SYNC=${this.config.serverDetails.oldestFrameIdToSync || ''}\n` +
+      `IS_READY_FOR_BIDDING=${this.config.isServerReadyForMining}\n`;
 
     const files = [
-      [this.config.security.walletJson, "~/config/wallet.json"],
-      [biddingRulesStr, "~/config/biddingRules.json"],
-      [envSecurity, "~/config/.env.security"],
-      [envState, "~/config/.env.state"],
+      [this.config.security.walletJson, '~/config/wallet.json'],
+      [biddingRulesStr, '~/config/biddingRules.json'],
+      [envSecurity, '~/config/.env.security'],
+      [envState, '~/config/.env.state'],
     ];
 
-    await SSH.runCommand("mkdir -p config");
+    await SSH.runCommand('mkdir -p config');
 
     for (const [content, path] of files) {
       await SSH.uploadFile(content, path);
@@ -407,7 +420,7 @@ export default class Installer {
   }
 
   private async stopMiningDockers(): Promise<void> {
-    await SSH.runCommand("cd deploy && docker compose --profile miners down");
+    await SSH.runCommand('cd deploy && docker compose --profile miners down');
   }
 
   private async restartBotDocker(): Promise<void> {
@@ -416,7 +429,7 @@ export default class Installer {
   }
 
   private async stopBotDocker(): Promise<void> {
-    await SSH.runCommand("cd deploy && docker compose down bot");
+    await SSH.runCommand('cd deploy && docker compose down bot');
   }
 
   private async startBotDocker(): Promise<void> {
@@ -424,10 +437,10 @@ export default class Installer {
   }
 
   private async clearStepFiles(stepKeys: string[]): Promise<void> {
-    if (stepKeys.includes("all")) {
+    if (stepKeys.includes('all')) {
       await this.config.resetField('installDetails');
       await this.config.save();
-      await SSH.runCommand("rm -rf ~/install-logs/*");
+      await SSH.runCommand('rm -rf ~/install-logs/*');
       return;
     }
 
@@ -448,8 +461,8 @@ export default class Installer {
   }
 
   private async startRemoteScript(): Promise<void> {
-    const remoteScriptPath = "~/scripts/install_server.sh";
-    const remoteScriptLogPath = "~/install_server.log";
+    const remoteScriptPath = '~/scripts/install_server.sh';
+    const remoteScriptLogPath = '~/install_server.log';
     const shellCommand = `ARGON_CHAIN=${NETWORK_NAME} nohup ${remoteScriptPath} > ${remoteScriptLogPath} 2>&1 &`;
 
     // await SSH.runCommand(`rm -f ${remoteScriptLogPath}`);
@@ -467,4 +480,4 @@ interface TmpInstallChecks {
   remoteFilesNeedUpdating: boolean;
 }
 
-const CORE_DIRS = ["deploy", "bot", "calculator", "scripts"];
+const CORE_DIRS = ['deploy', 'bot', 'calculator', 'scripts'];

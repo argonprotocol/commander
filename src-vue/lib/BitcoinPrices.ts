@@ -1,4 +1,4 @@
-import dayjs, { type Dayjs } from "dayjs";
+import dayjs, { type Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import { type IBitcoinPriceRecord } from '../interfaces/IBitcoinPriceRecord.ts';
 import bitcoinPrices from '../data/bitcoinPrices.json';
@@ -36,6 +36,8 @@ export default class BitcoinPrices {
     if (date instanceof dayjs) {
       date = date.format('YYYY-MM-DD');
     }
-    return this.prices.find((row: IBitcoinPriceRecord) => row.date === date) ?? { date: '', price: 0 };
+    return (
+      this.prices.find((row: IBitcoinPriceRecord) => row.date === date) ?? { date: '', price: 0 }
+    );
   }
 }

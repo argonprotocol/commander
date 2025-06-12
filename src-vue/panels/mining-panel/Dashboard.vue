@@ -2,7 +2,10 @@
   <div class="flex flex-col h-full">
     <AlertBars />
 
-    <div :class="config.isDataSyncing ? 'opacity-30 pointer-events-none' : ''" class="flex flex-col h-full px-3.5 py-3 gap-y-2.5 justify-stretch grow">
+    <div
+      :class="config.isDataSyncing ? 'opacity-30 pointer-events-none' : ''"
+      class="flex flex-col h-full px-3.5 py-3 gap-y-2.5 justify-stretch grow"
+    >
       <section class="flex flex-row gap-x-3">
         <div box stat-box class="flex flex-col w-2/12 !py-4">
           <span>{{ dashboard.global.activeCohorts || 0 }}</span>
@@ -17,11 +20,17 @@
           <label>Total Blocks Mined</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ currencySymbol }}{{ formatLargeNumber(argonTo(globalArgonsInvested/1_000_000)) }}</span>
+          <span
+            >{{ currencySymbol
+            }}{{ formatLargeNumber(argonTo(globalArgonsInvested / 1_000_000)) }}</span
+          >
           <label>Total Invested</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ currencySymbol }}{{ formatLargeNumber(argonTo(globalArgonsEarned/1_000_000)) }}</span>
+          <span
+            >{{ currencySymbol
+            }}{{ formatLargeNumber(argonTo(globalArgonsEarned / 1_000_000)) }}</span
+          >
           <label>Total Earned</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
@@ -31,11 +40,17 @@
       </section>
 
       <section box class="flex flex-col text-center px-2">
-        <header class="text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30">YOUR CLOUD MACHINE IS LIVE</header>
+        <header class="text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30">
+          YOUR CLOUD MACHINE IS LIVE
+        </header>
         <div class="flex flex-row py-2">
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
             <span class="opacity-50">Last Bitcoin Block</span>
-            <CountupClock as="span" :time="lastBitcoinActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
+            <CountupClock
+              as="span"
+              :time="lastBitcoinActivityAt"
+              v-slot="{ hours, minutes, seconds, isNull }"
+            >
               <template v-if="hours">{{ hours }}h, </template>
               <template v-if="minutes">{{ minutes }}m and </template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
@@ -45,7 +60,11 @@
           <div class="h-full w-[1px] bg-slate-400/30"></div>
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
             <span class="opacity-50">Last Argon Block</span>
-            <CountupClock as="span" :time="lastArgonActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
+            <CountupClock
+              as="span"
+              :time="lastArgonActivityAt"
+              v-slot="{ hours, minutes, seconds, isNull }"
+            >
               <template v-if="hours">{{ hours }}h, </template>
               <template v-if="minutes">{{ minutes }}m and </template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
@@ -55,7 +74,11 @@
           <div class="h-full w-[1px] bg-slate-400/30"></div>
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
             <span class="opacity-50">Last Bidding Activity</span>
-            <CountupClock as="span" :time="lastBotActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
+            <CountupClock
+              as="span"
+              :time="lastBotActivityAt"
+              v-slot="{ hours, minutes, seconds, isNull }"
+            >
               <template v-if="hours">{{ hours }}h, </template>
               <template v-if="minutes">{{ minutes }}m and </template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
@@ -66,16 +89,24 @@
       </section>
 
       <section box class="flex flex-col grow text-center px-2">
-        <header class="flex flex-row justify-between text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30">
-          <div @click="goToPreviousCohort" class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer group hover:opacity-80">
+        <header
+          class="flex flex-row justify-between text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30"
+        >
+          <div
+            @click="goToPreviousCohort"
+            class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer group hover:opacity-80"
+          >
             <ChevronLeftIcon class="w-6 h-6 opacity-50 mx-1 group-hover:opacity-80" />
             PREV SLOT
           </div>
           <span class="flex flex-row items-center">
-            COHORT #{{ dashboard.cohort?.cohortId }} ({{cohortStartDate}} - {{cohortEndDate}})
+            COHORT #{{ dashboard.cohort?.cohortId }} ({{ cohortStartDate }} - {{ cohortEndDate }})
             <span class="inline-block rounded-full bg-green-500/80 w-2.5 h-2.5 ml-2"></span>
           </span>
-          <div @click="goToNextCohort" class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer group hover:opacity-80">
+          <div
+            @click="goToNextCohort"
+            class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer group hover:opacity-80"
+          >
             NEXT SLOT
             <ChevronRightIcon class="w-6 h-6 opacity-50 mx-1 group-hover:opacity-80" />
           </div>
@@ -89,12 +120,21 @@
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
-                <span>{{ fmtCommas(fmtDecimalsMax((dashboard.cohort.argonsMined + dashboard.cohort.argonsMinted) / 1_000_000, 2)) }}</span>
+                <span>{{
+                  fmtCommas(
+                    fmtDecimalsMax(
+                      (dashboard.cohort.argonsMined + dashboard.cohort.argonsMinted) / 1_000_000,
+                      2,
+                    ),
+                  )
+                }}</span>
                 <label>Argons Earned</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
-                <span>{{ fmtCommas(fmtDecimalsMax(dashboard.cohort.argonotsMined / 1_000_000, 2)) }}</span>
+                <span>{{
+                  fmtCommas(fmtDecimalsMax(dashboard.cohort.argonotsMined / 1_000_000, 2))
+                }}</span>
                 <label>Argonots Earned</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
@@ -131,7 +171,7 @@
             </table>
             <div class="flex flex-col justify-center items-center grow">
               <span>
-                <img src="/mining.gif" class="w-16 opacity-20 inline-block relative -left-1">
+                <img src="/mining.gif" class="w-16 opacity-20 inline-block relative -left-1" />
               </span>
               <div class="flex flex-col items-center opacity-30 mt-5">
                 <div class="text-lg font-bold">No Blocks Have Been Mined</div>
@@ -143,16 +183,31 @@
       </section>
 
       <section box class="relative flex flex-col h-[20%] min-h-32 !pb-0.5 px-2">
-        <div nib-handle class="absolute -top-1 -bottom-1 left-[29.5890411%] w-2 bg-white rounded-full border border-slate-400/50 shadow-md z-10">
-          <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full border border-slate-400/50 shadow-md"></div>
+        <div
+          nib-handle
+          class="absolute -top-1 -bottom-1 left-[29.5890411%] w-2 bg-white rounded-full border border-slate-400/50 shadow-md z-10"
+        >
+          <div
+            class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full border border-slate-400/50 shadow-md"
+          ></div>
         </div>
-        <div class="absolute top-[1px] bottom-[33px] left-[29.5890411%] w-[2.739726027%] bg-gradient-to-b from-transparent to-argon-button/10"></div>
+        <div
+          class="absolute top-[1px] bottom-[33px] left-[29.5890411%] w-[2.739726027%] bg-gradient-to-b from-transparent to-argon-button/10"
+        ></div>
         <div class="grow relative">
-          <div class="absolute bottom-[-1px] left-0 w-[4.109589041%] h-[0px] border-[4px] border-argon-button/10 border-dotted"></div>
-          <div class="absolute bottom-[-1px] left-[4.109589041%] w-[10.684931509%] h-0 border-[4px] border-argon-button/10"></div>
-          <div class="absolute bottom-[-1px] left-[14.79452055%] w-[14.79452055%] h-0 border-[4px] border-argon-button"></div>
+          <div
+            class="absolute bottom-[-1px] left-0 w-[4.109589041%] h-[0px] border-[4px] border-argon-button/10 border-dotted"
+          ></div>
+          <div
+            class="absolute bottom-[-1px] left-[4.109589041%] w-[10.684931509%] h-0 border-[4px] border-argon-button/10"
+          ></div>
+          <div
+            class="absolute bottom-[-1px] left-[14.79452055%] w-[14.79452055%] h-0 border-[4px] border-argon-button"
+          ></div>
         </div>
-        <ul class="flex flex-row text-md opacity-50 divide-x divide-slate-400/70 text-center w-full border-t border-slate-400/60 pt-2">
+        <ul
+          class="flex flex-row text-md opacity-50 divide-x divide-slate-400/70 text-center w-full border-t border-slate-400/60 pt-2"
+        >
           <li class="flex-1">Jan</li>
           <li class="flex-1">Feb</li>
           <li class="flex-1">Mar</li>
@@ -197,9 +252,9 @@ const dashboard = Vue.computed(() => {
 
 const globalArgonsEarned = Vue.computed(() => {
   const global = dashboard.value.global;
-  return global.totalArgonsMined +
-    global.totalArgonsMinted +
-    argonotToArgon(global.totalArgonotsMined);
+  return (
+    global.totalArgonsMined + global.totalArgonsMinted + argonotToArgon(global.totalArgonotsMined)
+  );
 });
 
 const globalArgonsInvested = Vue.computed(() => {
@@ -280,9 +335,11 @@ async function goToNextCohort() {
 }
 
 function formatLargeNumber(number: number, maxLength = 5) {
-  if (number < (10 ** (maxLength - 2))) { // 1_000
+  if (number < 10 ** (maxLength - 2)) {
+    // 1_000
     return fmtDecimalsMax(number, 2, 2);
-  } else if (number < (99 ** (maxLength - 2))) { // 99_000
+  } else if (number < 99 ** (maxLength - 2)) {
+    // 99_000
     return fmtCommas(fmtDecimals(number, 0));
   }
   return number;

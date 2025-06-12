@@ -82,7 +82,7 @@ export class BlockSync {
 
   async state(): Promise<ISyncState> {
     const syncStateData = (await this.syncStateFile.get())!;
-  
+
     return {
       isStarting: this.bot.isStarting || undefined,
       isStarted: this.bot.isStarted || undefined,
@@ -142,8 +142,7 @@ export class BlockSync {
 
     const finalizedHash = await this.localClient.rpc.chain.getFinalizedHead();
 
-    this.latestFinalizedHeader =
-      await this.localClient.rpc.chain.getHeader(finalizedHash);
+    this.latestFinalizedHeader = await this.localClient.rpc.chain.getHeader(finalizedHash);
     this.latestTick = getTickFromHeader(this.localClient, this.latestFinalizedHeader) ?? 0;
     this.earliestQueuedTick = this.latestTick;
     await this.setOldestFrameIdIfNeeded();
@@ -154,7 +153,7 @@ export class BlockSync {
       syncStateData.oldestFrameIdToSync,
     );
     this.oldestTick = oldestTickRange[0];
-    
+
     // plug any gaps in the sync state
     let header = this.latestFinalizedHeader;
     let headerBlockNumber = header.number.toNumber();
@@ -166,7 +165,8 @@ export class BlockSync {
     ) {
       console.log(`Queuing frame ${headerFrameId} block ${headerBlockNumber}`);
       this.queue.unshift(header);
-      this.earliestQueuedTick = getTickFromHeader(this.localClient, header) ?? this.earliestQueuedTick;
+      this.earliestQueuedTick =
+        getTickFromHeader(this.localClient, header) ?? this.earliestQueuedTick;
       header = await this.getParentHeader(header);
       headerBlockNumber = header.number.toNumber();
       headerFrameId = await this.getFrameIdFromHeader(header);
@@ -192,16 +192,14 @@ export class BlockSync {
       await this.processHeader(header);
     }
 
-    this.unsubscribe = await this.localClient.rpc.chain.subscribeFinalizedHeads(
-      header => {
-        if (this.latestFinalizedHeader.hash === header.hash) {
-          return;
-        }
-        this.latestFinalizedHeader = header;
-        this.queue.push(header);
-        this.queue.sort((a, b) => a.number.toNumber() - b.number.toNumber());
-      },
-    );
+    this.unsubscribe = await this.localClient.rpc.chain.subscribeFinalizedHeads(header => {
+      if (this.latestFinalizedHeader.hash === header.hash) {
+        return;
+      }
+      this.latestFinalizedHeader = header;
+      this.queue.push(header);
+      this.queue.sort((a, b) => a.number.toNumber() - b.number.toNumber());
+    });
 
     await this.scheduleNext();
   }
@@ -223,10 +221,7 @@ export class BlockSync {
       try {
         await this.processHeader(header);
       } catch (e) {
-        console.error(
-          `Error processing block ${header.number.toNumber()} header`,
-          e,
-        );
+        console.error(`Error processing block ${header.number.toNumber()} header`, e);
         if (this.isStopping) return;
         throw e;
       }
@@ -241,22 +236,18 @@ export class BlockSync {
     const currentFrameId = await this.getFrameIdFromHeader(header);
 
     if (!tick || !author) {
-      console.warn(
-        'No tick or author found for header',
-        header.number.toNumber(),
-      );
+      console.warn('No tick or author found for header', header.number.toNumber());
       return;
     }
 
     const client = this.getRpcClient(header);
     const api = await client.at(header.hash);
     const events = await api.query.system.events();
-    const { rotation: _r, ...cohortEarningsAtFrameId } =
-      await this.accountMiners.onBlock(
-        header,
-        { tick, author },
-        events.map(x => x.event),
-      );
+    const { rotation: _r, ...cohortEarningsAtFrameId } = await this.accountMiners.onBlock(
+      header,
+      { tick, author },
+      events.map(x => x.event),
+    );
     const tickDate = new Date(tick * 60000);
 
     if (this.lastProcessed?.frameId !== currentFrameId) {
@@ -275,10 +266,7 @@ export class BlockSync {
         });
         return false;
       }
-      x.frameProgress = this.calculateProgress(
-        tick,
-        this.currentFrameTickRange,
-      );
+      x.frameProgress = this.calculateProgress(tick, this.currentFrameTickRange);
       x.lastBlockNumber = header.number.toNumber();
       for (const [cohortActivatingFrameIdStr, earnings] of Object.entries(
         cohortEarningsAtFrameId,
@@ -320,10 +308,7 @@ export class BlockSync {
       x.earningsLastModifiedAt = new Date();
       x.lastBlockNumber = header.number.toNumber();
       x.currentFrameId = currentFrameId;
-      x.loadProgress = this.calculateProgress(this.currentTick, [
-        this.oldestTick,
-        this.latestTick,
-      ]);
+      x.loadProgress = this.calculateProgress(this.currentTick, [this.oldestTick, this.latestTick]);
       x.queueDepth = this.queue.length;
       x.lastBlockNumberByFrameId[currentFrameId] = header.number.toNumber();
     });
@@ -337,15 +322,10 @@ export class BlockSync {
    */
   private getRpcClient(headerOrNumber: Header | number): ArgonClient {
     let headerNumber =
-      typeof headerOrNumber === 'number'
-        ? headerOrNumber
-        : headerOrNumber.number.toNumber();
+      typeof headerOrNumber === 'number' ? headerOrNumber : headerOrNumber.number.toNumber();
     // TODO: this is currently broken when using fast sync, so setting to 0
     const SYNCHED_STATE_DEPTH = 0;
-    if (
-      headerNumber <
-      this.latestFinalizedHeader.number.toNumber() - SYNCHED_STATE_DEPTH
-    ) {
+    if (headerNumber < this.latestFinalizedHeader.number.toNumber() - SYNCHED_STATE_DEPTH) {
       return this.archiveClient;
     }
     return this.localClient;
@@ -355,14 +335,10 @@ export class BlockSync {
     const syncStateData = await this.syncStateFile.get();
     if (syncStateData && syncStateData.oldestFrameIdToSync > 0) return;
     const oldestFrameIdToSync =
-      this.oldestFrameIdToSync ??
-      (await this.getFrameIdFromHeader(this.latestFinalizedHeader));
+      this.oldestFrameIdToSync ?? (await this.getFrameIdFromHeader(this.latestFinalizedHeader));
     await this.syncStateFile.mutate(x => {
       x.oldestFrameIdToSync = oldestFrameIdToSync;
-      x.loadProgress = this.calculateProgress(this.currentTick, [
-        this.oldestTick,
-        this.latestTick,
-      ]);
+      x.loadProgress = this.calculateProgress(this.currentTick, [this.oldestTick, this.latestTick]);
     });
   }
 
@@ -371,22 +347,14 @@ export class BlockSync {
   }
 
   private async getFrameIdFromHeader(header: Header): Promise<number> {
-    const currentFrameId = await new MiningRotations().getForHeader(
-      this.localClient,
-      header,
-    );
+    const currentFrameId = await new MiningRotations().getForHeader(this.localClient, header);
     if (currentFrameId === undefined) {
-      throw new Error(
-        `Error getting frame id for header ${header.number.toNumber()}`,
-      );
+      throw new Error(`Error getting frame id for header ${header.number.toNumber()}`);
     }
     return currentFrameId;
   }
 
-  private async syncBidding(
-    header: Header,
-    events: Vec<FrameSystemEventRecord>,
-  ): Promise<boolean> {
+  private async syncBidding(header: Header, events: Vec<FrameSystemEventRecord>): Promise<boolean> {
     const client = this.getRpcClient(header);
     const api = await client.at(header.hash);
     const headerTick = getTickFromHeader(client, header);
@@ -416,26 +384,23 @@ export class BlockSync {
           x.argonotsUsdPrice = data.argonotUsdPrice;
           x.argonsToBeMinedPerBlock = data.cohortArgonsPerBlock;
         }
-        x.frameBiddingProgress = this.calculateProgress(
-          headerTick,
-          this.currentFrameTickRange,
-        );
+        x.frameBiddingProgress = this.calculateProgress(headerTick, this.currentFrameTickRange);
         x.lastBlockNumber = blockNumber;
         x.winningBids = nextCohort.map((c, i): IWinningBid => {
-            const address = c.accountId.toHuman();
-            const argonsBid = c.bid.toBigInt();
-            const ourSubAccount = this.accountset.subAccountsByAddress[address];
-            if (ourSubAccount) {
-              hasMiningBids = true;
-            }
-            return {
-              address,
-              subAccountIndex: ourSubAccount?.index,
-              lastBidAtTick: c.bidAtTick?.toNumber(),
-              bidPosition: i,
-              argonsBid,
-            };
-          });
+          const address = c.accountId.toHuman();
+          const argonsBid = c.bid.toBigInt();
+          const ourSubAccount = this.accountset.subAccountsByAddress[address];
+          if (ourSubAccount) {
+            hasMiningBids = true;
+          }
+          return {
+            address,
+            subAccountIndex: ourSubAccount?.index,
+            lastBidAtTick: c.bidAtTick?.toNumber(),
+            bidPosition: i,
+            argonsBid,
+          };
+        });
       });
       if (hasMiningBids) {
         await this.syncStateFile.mutate(x => {
@@ -449,15 +414,9 @@ export class BlockSync {
       if (phase.isApplyExtrinsic) {
         const extrinsicIndex = phase.asApplyExtrinsic.toNumber();
         const extrinsicEvents = events.filter(
-          x =>
-            x.phase.isApplyExtrinsic &&
-            x.phase.asApplyExtrinsic.toNumber() === extrinsicIndex,
+          x => x.phase.isApplyExtrinsic && x.phase.asApplyExtrinsic.toNumber() === extrinsicIndex,
         );
-        const transactionFee = await this.extractTransactionFee(
-          client,
-          event,
-          extrinsicEvents,
-        );
+        const transactionFee = await this.extractTransactionFee(client, event, extrinsicEvents);
         if (transactionFee > 0n) {
           const blockNumber = header.number.toNumber();
           didChangeBiddings ||= await bidsFile.mutate(x => {
@@ -473,10 +432,7 @@ export class BlockSync {
         }
       }
 
-      if (
-        phase.isFinalization &&
-        client.events.miningSlot.NewMiners.is(event)
-      ) {
+      if (phase.isFinalization && client.events.miningSlot.NewMiners.is(event)) {
         console.log('New miners event', event.data.toJSON());
         let hasMiningSeats = false;
         const [_startIndex, newMiners, _released, cohortActivatingFrameId] = event.data;
@@ -566,9 +522,7 @@ export class BlockSync {
     tickRange: [number, number] | undefined,
   ): number {
     if (!tick || !tickRange) return 0;
-    const progress = tick
-      ? (tick - tickRange[0]) / (tickRange[1] - tickRange[0])
-      : 0;
+    const progress = tick ? (tick - tickRange[0]) / (tickRange[1] - tickRange[0]) : 0;
     return Math.round(progress * 10000) / 100;
   }
 }

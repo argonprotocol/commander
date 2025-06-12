@@ -13,7 +13,9 @@ export default class BitcoinFees {
   private earliestDateToUse = '2025-01-01';
 
   constructor() {
-    this.feeByDate = Object.fromEntries(bitcoinFees.map((record: IBitcoinFeeRecord) => [record.date, Number(record.feeInBitcoins)]));
+    this.feeByDate = Object.fromEntries(
+      bitcoinFees.map((record: IBitcoinFeeRecord) => [record.date, Number(record.feeInBitcoins)]),
+    );
   }
 
   private getByDateAsBtc(date: string): number {
@@ -34,4 +36,3 @@ export default class BitcoinFees {
     return fee;
   }
 }
-
