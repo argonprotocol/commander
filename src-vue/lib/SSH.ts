@@ -24,11 +24,14 @@ export class SSH {
   }
 
   public static async runHttpGet<T>(botPath: string, ...curlArgs: string[]): Promise<{ status: number; data: T }> {
+    console.log(`Running: ~/scripts/get_bot_http.sh ${botPath} ${curlArgs.join(' ')}`);
     const result = await SSH.runCommand(`~/scripts/get_bot_http.sh ${botPath} ${curlArgs.join(' ')}`);
     if (result[1] !== 0) {
       throw new Error(`HTTP GET command failed with status ${result[1]}`);
     }
+    console.log('HTTP GET result:', result);
     const httpResponse: { status: number; data: T } = JSON.parse(result[0]);
+
     if (httpResponse.status !== 200) {
       throw new Error(`HTTP GET request failed with status ${httpResponse.status}`);
     }

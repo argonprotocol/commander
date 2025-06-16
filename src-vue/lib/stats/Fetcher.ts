@@ -14,7 +14,7 @@ export class StatsFetcher {
     await new Promise(resolve => setTimeout(resolve, 1000));
     console.log('Fetching bot status...', `::remote::/sync-state`);
     try {
-      const response = await SSH.runHttpGet<ISyncState>(`sync-state`);
+      const response = await SSH.runHttpGet<ISyncState>(`/sync-state`);
       if (response.status !== 200) {
         throw new Error(`Failed to fetch bot status: ${response.status}`);
       }
@@ -55,17 +55,17 @@ export class StatsFetcher {
   }
 
   public static async fetchArgonBlockchainStatus(): Promise<IBlockNumbers> {
-    const { data } = await SSH.runHttpGet<IBlockNumbers>(`argon-blockchain-status`);
+    const { data } = await SSH.runHttpGet<IBlockNumbers>(`/argon-blockchain-status`);
     return { localNode: data.localNode, mainNode: data.mainNode };
   }
 
   public static async fetchBitcoinBlockchainStatus(): Promise<IBlockNumbers> {
-    const { data } = await SSH.runHttpGet<IBlockNumbers>(`bitcoin-blockchain-status`);
+    const { data } = await SSH.runHttpGet<IBlockNumbers>(`/bitcoin-blockchain-status`);
     return { localNode: data.localNode, mainNode: data.mainNode };
   }
 
   public static async fetchBotHistory(): Promise<IBidsHistory> {
-    const { data } = await SSH.runHttpGet<IBidsHistory>(`bid-history`);
+    const { data } = await SSH.runHttpGet<IBidsHistory>(`/bid-history`);
 
     return data.map(x => ({
       cohortId: x.cohortId,
@@ -95,7 +95,7 @@ export class StatsFetcher {
 
   public static async fetchEarningsFile(frameId: number): Promise<IEarningsFile> {
     console.log(`Fetching earnings/${frameId}`);
-    const { data } = await SSH.runHttpGet<IEarningsFile>(`earnings/${frameId}`);
+    const { data } = await SSH.runHttpGet<IEarningsFile>(`/earnings/${frameId}`);
     console.log('Earnings file fetched:', data);
     const byCohortActivatingFrameIdRaw = Object.entries(data.byCohortActivatingFrameId);
     const byCohortActivatingFrameId = byCohortActivatingFrameIdRaw.map(([frameId, value]) => [

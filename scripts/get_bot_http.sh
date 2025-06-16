@@ -9,18 +9,18 @@
 
 set -e
 set -o pipefail
-CURL_ARGS="$@"
+CURL_ARGS="${@#/}"
 if [ -z "$CURL_ARGS" ]; then
     echo "Usage: $0 <curl args>"
     exit 1
 fi
 
-RESPONSE=$(curl -s -w "\n%{http_code}" "https://httpbin.org/$CURL_ARGS" || echo -e "\n000")
-STATUS_CODE=$(echo "$RESPONSE" | tail -n 1)
+RESPONSE=$(curl -s -w "\n%{http_code}" "http://127.0.0.1:3000/$CURL_ARGS" || echo -e "\n000")
+STATUS=$(echo "$RESPONSE" | tail -n 1)
 BODY=$(echo "$RESPONSE" | sed '$d')
 
 # Check if the server is unavailable
-if [ "$STATUS_CODE" == "000" ]; then
+if [ "$STATUS" == "000" ]; then
     echo "{\"error\":\"Server is unavailable\", \"status_code\": 000}"
     exit 1
 fi
@@ -32,4 +32,4 @@ else
     DATA=$(echo "$BODY" | jq -R .)
 fi
 
-echo "{\"status_code\": $STATUS_CODE, \"data\": $DATA}"
+echo "{\"status\": $STATUS, \"data\": $DATA}"
