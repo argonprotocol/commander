@@ -85,6 +85,11 @@ export class Stats {
   }
 
   public async load() {
+    if (!this._config.isServerConnected) {
+      console.log('Skipping Stats.load because server is not connected');
+      return;
+    }
+
     await this._installer.isLoadedPromise;
 
     while (!this.isRunnable) {
@@ -94,15 +99,11 @@ export class Stats {
     console.info('Loading stats...', { isServerInstalling: this._config.isServerInstalling });
     this.db = await this._dbPromise;
 
-    console.info('Ensuring tunnel...');
-    this.localPort = await SSH.ensureTunnel(this._config.serverDetails);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
     console.info('Fetching sync state...');
     await this.updateSyncState();
 
     console.info('Trying to sync state...');
-    const syncer = await new StatsSyncer(this.localPort, this._config, this.db);
+    const syncer = await new StatsSyncer(this._config, this.db);
     await syncer.sync(this.syncState);
 
     this.run(syncer);
@@ -124,7 +125,7 @@ export class Stats {
 
     await this.updateSyncState();
     const currentFrameId = this.syncState.currentFrameId;
-    const activeBidsFile = await StatsFetcher.fetchBidsFile(this.localPort);
+    const activeBidsFile = await StatsFetcher.fetchBidsFile();
     this.winningBids = activeBidsFile.winningBids;
 
     try {
@@ -193,9 +194,7 @@ export class Stats {
     };
   }
 
-  private async fetchDashboardCohortStatsFromDb(
-    cohortId: number,
-  ): Promise<IDashboardStats['cohort']> {
+  private async fetchDashboardCohortStatsFromDb(cohortId: number): Promise<IDashboardStats['cohort']> {
     const cohort = await this.db.cohortsTable.fetchById(cohortId);
     if (!cohort) return null;
 
@@ -237,15 +236,11 @@ export class Stats {
     const latestBlockNumbers = this.syncState.argonBlockNumbers;
     const lastArgonActivity = await this.db.argonActivitiesTable.latest();
 
-    const localhostMatches =
-      lastArgonActivity?.localNodeBlockNumber === latestBlockNumbers.localNode;
+    const localhostMatches = lastArgonActivity?.localNodeBlockNumber === latestBlockNumbers.localNode;
     const mainchainMatches = lastArgonActivity?.mainNodeBlockNumber === latestBlockNumbers.mainNode;
 
     if (!localhostMatches || !mainchainMatches) {
-      await this.db.argonActivitiesTable.insert(
-        latestBlockNumbers.localNode,
-        latestBlockNumbers.mainNode,
-      );
+      await this.db.argonActivitiesTable.insert(latestBlockNumbers.localNode, latestBlockNumbers.mainNode);
     }
   }
 
@@ -257,10 +252,7 @@ export class Stats {
     const mainchainMatches = savedActivity?.mainNodeBlockNumber === latestBlockNumbers.mainNode;
 
     if (!localhostMatches || !mainchainMatches) {
-      await this.db.bitcoinActivitiesTable.insert(
-        latestBlockNumbers.localNode,
-        latestBlockNumbers.mainNode,
-      );
+      await this.db.bitcoinActivitiesTable.insert(latestBlockNumbers.localNode, latestBlockNumbers.mainNode);
     }
   }
 
@@ -269,4 +261,3 @@ export class Stats {
     // TODO: Implement bot activity update logic
   }
 }
-			

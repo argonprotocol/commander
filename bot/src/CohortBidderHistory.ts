@@ -89,11 +89,7 @@ export class CohortBidderHistory {
     }
   }
 
-  public maybeReducingSeats(
-    maxSeats: number,
-    reason: SeatReductionReason,
-    historyEntry: IBidHistoryEntry,
-  ): void {
+  public maybeReducingSeats(maxSeats: number, reason: SeatReductionReason, historyEntry: IBidHistoryEntry): void {
     if (this.maxSeatsInPlay > maxSeats) {
       historyEntry.maxSeatsReductionReason = reason;
     }
@@ -182,8 +178,7 @@ export class CohortBidderHistory {
       bidError?: ExtrinsicError;
     },
   ) {
-    const { txFeePlusTip, bidPerSeat, bidsAttempted, successfulBids, blockNumber, bidError } =
-      param;
+    const { txFeePlusTip, bidPerSeat, bidsAttempted, successfulBids, blockNumber, bidError } = param;
     this.stats.fees += txFeePlusTip;
     this.stats.bidsAttempted += bidsAttempted;
     if (bidPerSeat > this.stats.maxBidPerSeat) {
@@ -199,26 +194,15 @@ export class CohortBidderHistory {
 
   public static async getStartingData(
     api: ApiDecoration<'promise'>,
-  ): Promise<
-    Pick<
-      CohortBidderHistory['stats'],
-      'argonotUsdPrice' | 'argonotsPerSeat' | 'cohortArgonsPerBlock'
-    >
-  > {
+  ): Promise<Pick<CohortBidderHistory['stats'], 'argonotUsdPrice' | 'argonotsPerSeat' | 'cohortArgonsPerBlock'>> {
     const argonotPrice = await api.query.priceIndex.current();
     let argonotUsdPrice = 0;
     if (argonotPrice.isSome) {
-      argonotUsdPrice = convertFixedU128ToBigNumber(
-        argonotPrice.unwrap().argonotUsdPrice.toBigInt(),
-      ).toNumber();
+      argonotUsdPrice = convertFixedU128ToBigNumber(argonotPrice.unwrap().argonotUsdPrice.toBigInt()).toNumber();
     }
 
-    const argonotsPerSeat = await api.query.miningSlot
-      .argonotsPerMiningSeat()
-      .then(x => x.toBigInt());
-    const cohortArgonsPerBlock = await api.query.blockRewards
-      .argonsPerBlock()
-      .then(x => x.toBigInt());
+    const argonotsPerSeat = await api.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
+    const cohortArgonsPerBlock = await api.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
     return { argonotsPerSeat, argonotUsdPrice, cohortArgonsPerBlock };
   }
 }

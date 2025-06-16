@@ -36,8 +36,6 @@ export default class BitcoinPrices {
     if (date instanceof dayjs) {
       date = date.format('YYYY-MM-DD');
     }
-    return (
-      this.prices.find((row: IBitcoinPriceRecord) => row.date === date) ?? { date: '', price: 0 }
-    );
+    return this.prices.find((row: IBitcoinPriceRecord) => row.date === date) ?? { date: '', price: 0 };
   }
 }

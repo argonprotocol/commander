@@ -2,9 +2,7 @@
   <h2
     class="flex flex-row justify-between items-center text-2xl font-bold text-slate-800/70 border-b border-slate-300 pb-3 pl-2 pr-3 mb-6"
   >
-    <div
-      class="flex flex-row items-center hover:bg-[#f1f3f7] rounded-md p-1 pl-0 mr-2 cursor-pointer"
-    >
+    <div class="flex flex-row items-center hover:bg-[#f1f3f7] rounded-md p-1 pl-0 mr-2 cursor-pointer">
       <ChevronLeftIcon @click="goBack" class="w-6 h-6 cursor-pointer relative -top-0.25" />
     </div>
     <div class="grow">Encryption Passphrase</div>

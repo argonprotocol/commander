@@ -1,9 +1,7 @@
 <template>
   <div class="flex flex-col h-full text-[#3E444E]">
     <div class="grow m-4 relative">
-      <ConfettiIcon
-        class="absolute -top-10 -left-10 w-[calc(100%+80px)] h-[calc(100%+80px)] pointer-events-none"
-      />
+      <ConfettiIcon class="absolute -top-10 -left-10 w-[calc(100%+80px)] h-[calc(100%+80px)] pointer-events-none" />
       <div
         class="absolute -bottom-2 -left-2 w-[calc(100%+16px)] h-full bg-gradient-to-b from-transparent to-[#F9F2FA] pointer-events-none"
       ></div>
@@ -12,25 +10,12 @@
         <h1 class="text-5xl font-bold text-center mt-48">Your Cloud Machine Is Ready!</h1>
 
         <div class="text-center text-2xl mt-10">
-          <template v-if="isClosing"
-            >Bidding for The Next Mining Slot Is In the Process of</template
-          >
+          <template v-if="isClosing">Bidding for The Next Mining Slot Is In the Process of</template>
           <template v-else>Bidding for The Next Mining Slot Closes In</template>
         </div>
 
-        <div
-          v-if="isClosing"
-          isClosing
-          class="text-center text-9xl mt-10 font-bold text-slate-700/70"
-        >
-          CLOSING
-        </div>
-        <VueCountdown
-          v-else
-          CountdownClock
-          :time="millisecondsUntilEnd"
-          v-slot="{ hours, minutes, seconds }"
-        >
+        <div v-if="isClosing" isClosing class="text-center text-9xl mt-10 font-bold text-slate-700/70">CLOSING</div>
+        <VueCountdown v-else CountdownClock :time="millisecondsUntilEnd" v-slot="{ hours, minutes, seconds }">
           <div class="flex flex-row justify-center py-4 md:py-10 px-2 md:px-8">
             <ul class="flex flex-col items-center">
               <li>{{ hours }}</li>
@@ -75,12 +60,7 @@ const isClosing = Vue.ref(false);
 
 let endTime = dayjs.utc().set('hour', 17).set('minute', 0).set('second', 0).set('millisecond', 0);
 if (dayjs.utc().hour() < 17) {
-  const startsClosingTime = dayjs
-    .utc()
-    .set('hour', 16)
-    .set('minute', 40)
-    .set('second', 0)
-    .set('millisecond', 0);
+  const startsClosingTime = dayjs.utc().set('hour', 16).set('minute', 40).set('second', 0).set('millisecond', 0);
   isClosing.value = dayjs.utc().isAfter(startsClosingTime);
 } else {
   endTime = endTime.add(1, 'day');

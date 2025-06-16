@@ -4,8 +4,6 @@ import {
   IEarningsFile,
   IBidsFile,
   IBidsHistory,
-  IEarningsFile,
-  ISyncState,
   IWinningBid,
 } from '@argonprotocol/commander-bot/src/storage';
 import { convertBigIntStringToNumber } from '../Utils';
@@ -83,12 +81,8 @@ export class StatsFetcher {
       myBidsPlaced: x.myBidsPlaced
         ? {
             bids: x.myBidsPlaced.bids,
-            bidPerSeat: convertBigIntStringToNumber(
-              x.myBidsPlaced.bidPerSeat as unknown as string,
-            ) as bigint,
-            txFeePlusTip: convertBigIntStringToNumber(
-              x.myBidsPlaced.txFeePlusTip as unknown as string,
-            ) as bigint,
+            bidPerSeat: convertBigIntStringToNumber(x.myBidsPlaced.bidPerSeat as unknown as string) as bigint,
+            txFeePlusTip: convertBigIntStringToNumber(x.myBidsPlaced.txFeePlusTip as unknown as string) as bigint,
             successfulBids: x.myBidsPlaced.successfulBids,
             failureReason: x.myBidsPlaced.failureReason,
           }
@@ -100,29 +94,21 @@ export class StatsFetcher {
   }
 
   public static async fetchEarningsFile(frameId: number): Promise<IEarningsFile> {
-    frameId: number,
-  ): Promise<IEarningsFile> {
     console.log(`Fetching earnings/${frameId}`);
     const { data } = await SSH.runHttpGet<IEarningsFile>(`earnings/${frameId}`);
     console.log('Earnings file fetched:', data);
-    const byCohortActivatingFrameId = Object.entries(data.byCohortActivatingFrameId).map(
-      ([cohortActivatingFrameId, value]) => [
-        cohortActivatingFrameId,
-        {
-          lastBlockMinedAt: value.lastBlockMinedAt,
-          blocksMined: value.blocksMined,
-          argonsMined: convertBigIntStringToNumber(
-            value.argonsMined as unknown as string,
-          ) as bigint,
-          argonsMinted: convertBigIntStringToNumber(
-            value.argonsMinted as unknown as string,
-          ) as bigint,
-          argonotsMined: convertBigIntStringToNumber(
-            value.argonotsMined as unknown as string,
-          ) as bigint,
-        },
-      ],
-    );
+    const byCohortActivatingFrameIdRaw = Object.entries(data.byCohortActivatingFrameId);
+    const byCohortActivatingFrameId = byCohortActivatingFrameIdRaw.map(([frameId, value]) => [
+      frameId,
+      {
+        lastBlockMinedAt: value.lastBlockMinedAt,
+        blocksMined: value.blocksMined,
+        argonsMined: convertBigIntStringToNumber(value.argonsMined as unknown as string) as bigint,
+        argonsMinted: convertBigIntStringToNumber(value.argonsMinted as unknown as string) as bigint,
+        argonotsMined: convertBigIntStringToNumber(value.argonotsMined as unknown as string) as bigint,
+      },
+    ]);
+
     console.log('By cohort activating frame id:', byCohortActivatingFrameId);
     return {
       frameId: data.frameId,
@@ -135,29 +121,23 @@ export class StatsFetcher {
     };
   }
 
-  public static async fetchBidsFile(frameId: number): Promise<IBidsFile> {
-    let url = `http://127.0.0.1:${localPort}/bids`;
+  public static async fetchBidsFile(frameId?: number): Promise<IBidsFile> {
+    let url = `/bids`;
     if (frameId) {
-    const { data } = await SSH.runHttpGet<IBidsFile>(`bids/${frameId}`);
+      url += `/${frameId}`;
+    }
+    const { data } = await SSH.runHttpGet<IBidsFile>(url);
     console.log('Bids file fetched:', data);
     return {
       cohortBiddingFrameId: data.cohortBiddingFrameId,
       cohortActivatingFrameId: data.cohortActivatingFrameId,
       frameBiddingProgress: data.frameBiddingProgress,
       lastBlockNumber: data.lastBlockNumber,
-      argonsBidTotal: convertBigIntStringToNumber(
-        data.argonsBidTotal as unknown as string,
-      ) as bigint,
-      transactionFees: convertBigIntStringToNumber(
-        data.transactionFees as unknown as string,
-      ) as bigint,
-      argonotsStakedPerSeat: convertBigIntStringToNumber(
-        data.argonotsStakedPerSeat as unknown as string,
-      ) as bigint,
+      argonsBidTotal: convertBigIntStringToNumber(data.argonsBidTotal as unknown as string) as bigint,
+      transactionFees: convertBigIntStringToNumber(data.transactionFees as unknown as string) as bigint,
+      argonotsStakedPerSeat: convertBigIntStringToNumber(data.argonotsStakedPerSeat as unknown as string) as bigint,
       argonotsUsdPrice: data.argonotsUsdPrice,
-      argonsToBeMinedPerBlock: convertBigIntStringToNumber(
-        data.argonsToBeMinedPerBlock as unknown as string,
-      ) as bigint,
+      argonsToBeMinedPerBlock: convertBigIntStringToNumber(data.argonsToBeMinedPerBlock as unknown as string) as bigint,
       seatsWon: data.seatsWon,
       winningBids: data.winningBids.map((x: IWinningBid) => ({
         address: x.address,

@@ -23,13 +23,8 @@ export class SSH {
     });
   }
 
-  public static async runHttpGet<T>(
-    botPath: string,
-    ...curlArgs: string[]
-  ): Promise<{ status: number; data: T }> {
-    const result = await SSH.runCommand(
-      `~/scripts/get_bot_http.sh ${botPath} ${curlArgs.join(' ')}`,
-    );
+  public static async runHttpGet<T>(botPath: string, ...curlArgs: string[]): Promise<{ status: number; data: T }> {
+    const result = await SSH.runCommand(`~/scripts/get_bot_http.sh ${botPath} ${curlArgs.join(' ')}`);
     if (result[1] !== 0) {
       throw new Error(`HTTP GET command failed with status ${result[1]}`);
     }
@@ -54,11 +49,7 @@ export class SSH {
     await invoke('ssh_upload_file', { contents, remotePath });
   }
 
-  public static async uploadDirectory(
-    app: any,
-    localRelativeDir: string,
-    remoteDir: string,
-  ): Promise<void> {
+  public static async uploadDirectory(app: any, localRelativeDir: string, remoteDir: string): Promise<void> {
     await invoke('ssh_upload_directory', { app, localRelativeDir, remoteDir });
   }
 

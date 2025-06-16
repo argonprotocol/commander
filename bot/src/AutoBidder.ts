@@ -59,11 +59,7 @@ export class AutoBidder {
   private async onBiddingStart(cohortActivatingFrameId: number) {
     if (this.activeBidder?.cohortId === cohortActivatingFrameId) return;
     const biddingRules = readJsonFileOrNull(this.biddingRulesPath) || {};
-    const params = await createBidderParams(
-      cohortActivatingFrameId,
-      await this.accountset.client,
-      biddingRules,
-    );
+    const params = await createBidderParams(cohortActivatingFrameId, await this.accountset.client, biddingRules);
     if (params.maxSeats === 0) return;
 
     const bidsFileData = await this.storage.bidsFile(cohortActivatingFrameId).get();
@@ -74,9 +70,7 @@ export class AutoBidder {
 
     const subaccounts: { index: number; isRebid: boolean; address: string }[] = [];
     if (bidsFileData && bidsFileData.winningBids.length) {
-      const miningAccounts = await this.accountset.loadRegisteredMiners(
-        await this.accountset.client,
-      );
+      const miningAccounts = await this.accountset.loadRegisteredMiners(await this.accountset.client);
       for (const winningBid of bidsFileData.winningBids) {
         if (winningBid.subAccountIndex === undefined) continue;
         const account = miningAccounts.find(x => x.address === winningBid.address);
@@ -96,12 +90,7 @@ export class AutoBidder {
       subaccounts.push(...added);
     }
 
-    const activeBidder = new CohortBidder(
-      this.accountset,
-      cohortActivatingFrameId,
-      subaccounts,
-      params,
-    );
+    const activeBidder = new CohortBidder(this.accountset, cohortActivatingFrameId, subaccounts, params);
     this.activeBidder = activeBidder;
     await activeBidder.start();
   }

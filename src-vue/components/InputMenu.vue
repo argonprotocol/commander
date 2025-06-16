@@ -86,10 +86,7 @@ const options = (Array.isArray(props.options) ? props.options : [props.options])
 const selectedOption: Vue.Ref<IOption> = Vue.ref(
   options.find(option => option.value === props.modelValue) || options[0],
 );
-const longestName = options.reduce(
-  (x, option) => (x.length >= option.name.length ? x : option.name),
-  '',
-);
+const longestName = options.reduce((x, option) => (x.length >= option.name.length ? x : option.name), '');
 
 const value = Vue.computed({
   get: () => props.modelValue,

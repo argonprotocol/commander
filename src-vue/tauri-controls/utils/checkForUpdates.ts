@@ -11,15 +11,12 @@ export async function checkForUpdates(onProgress?: (percent: number) => void) {
   try {
     const update = await check();
     if (update) {
-      const yes = await ask(
-        `Update to ${update.version} is available!\n\nRelease notes: ${update.body}`,
-        {
-          title: 'Update Available',
-          kind: 'info',
-          okLabel: 'Update Now',
-          cancelLabel: 'Cancel',
-        },
-      );
+      const yes = await ask(`Update to ${update.version} is available!\n\nRelease notes: ${update.body}`, {
+        title: 'Update Available',
+        kind: 'info',
+        okLabel: 'Update Now',
+        cancelLabel: 'Cancel',
+      });
       if (!yes) {
         return;
       }

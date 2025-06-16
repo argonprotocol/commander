@@ -6,7 +6,10 @@
   >
     <div class="flex flex-row items-center w-1/2 pointer-events-none">
       <WindowControls />
-      <div class="text-xl font-bold">Argon Commander <span class="font-light">(beta)</span></div>
+      <div class="text-xl font-bold">
+        Argon Commander
+        <span class="font-light">(beta)</span>
+      </div>
     </div>
 
     <div class="flex-grow flex justify-center pointer-events-none">
@@ -20,12 +23,7 @@
         >
           <span class="relative px-2 text-center">
             <div :class="{ invisible: basicStore.panel === 'mining' }">Mining</div>
-            <div
-              v-if="basicStore.panel === 'mining'"
-              class="absolute top-0 left-0 w-full h-full font-bold"
-            >
-              Mining
-            </div>
+            <div v-if="basicStore.panel === 'mining'" class="absolute top-0 left-0 w-full h-full font-bold">Mining</div>
           </span>
         </li>
         <li
@@ -35,24 +33,15 @@
         >
           <span class="relative px-1 text-center">
             <div :class="{ invisible: basicStore.panel === 'liquid-locking' }">Liquid Locking</div>
-            <div
-              v-if="basicStore.panel === 'liquid-locking'"
-              class="absolute top-0 left-0 w-full h-full font-bold"
-            >
+            <div v-if="basicStore.panel === 'liquid-locking'" class="absolute top-0 left-0 w-full h-full font-bold">
               Liquid Locking
             </div>
           </span>
         </li>
-        <li
-          @click="basicStore.setPanel('vaulting')"
-          :class="{ selected: basicStore.panel === 'vaulting' }"
-        >
+        <li @click="basicStore.setPanel('vaulting')" :class="{ selected: basicStore.panel === 'vaulting' }">
           <span class="relative px-1 text-center">
             <div :class="{ invisible: basicStore.panel === 'vaulting' }">Vaulting</div>
-            <div
-              v-if="basicStore.panel === 'vaulting'"
-              class="absolute top-0 left-0 w-full h-full font-bold"
-            >
+            <div v-if="basicStore.panel === 'vaulting'" class="absolute top-0 left-0 w-full h-full font-bold">
               Vaulting
             </div>
           </span>
@@ -63,11 +52,7 @@
     <div class="flex flex-row mr-1 space-x-1 items-center justify-end w-1/2 pointer-events-none">
       <div
         v-if="currencyStore.isLoaded"
-        :class="
-          walletControlPopoverIsOpen || currencyMenuIsOpen
-            ? 'border-slate-400/50'
-            : 'border-transparent'
-        "
+        :class="walletControlPopoverIsOpen || currencyMenuIsOpen ? 'border-slate-400/50' : 'border-transparent'"
         class="flex flex-row items-center border hover:border-slate-400/50 rounded-md group"
       >
         <CurrencyMenu @currencyMenuIsOpen="x => (currencyMenuIsOpen = x)" />
@@ -117,12 +102,10 @@
                       class="text-argon-button absolute top-7 -left-1 w-4 h-4"
                     />
                   </div>
-                  <span class="text-4xl font-bold mt-5"
-                    >{{ currencySymbol }}{{ fmtMoney(argonTo(mngWallet.totalValue)).split('.')[0]
-                    }}<span class="opacity-50"
-                      >.{{ argonTo(mngWallet.totalValue).toFixed(2).split('.')[1] }}</span
-                    ></span
-                  >
+                  <span class="text-4xl font-bold mt-5">
+                    {{ currencySymbol }}{{ fmtMoney(argonTo(mngWallet.totalValue)).split('.')[0] }}
+                    <span class="opacity-50">.{{ argonTo(mngWallet.totalValue).toFixed(2).split('.')[1] }}</span>
+                  </span>
 
                   <div class="relative text-sm text-gray-500 flex flex-row w-full justify-center">
                     <CopyToClipboard
@@ -150,18 +133,12 @@
                       <span class="relative top-[0.4px]">Funds Are Low</span>
                     </div>
                   </div>
-                  <ul
-                    class="relative flex flex-col items-center whitespace-nowrap w-full mt-4 mb-4"
-                  >
-                    <li
-                      class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2"
-                    >
+                  <ul class="relative flex flex-col items-center whitespace-nowrap w-full mt-4 mb-4">
+                    <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
                       <div>{{ fmtMoney(mngWallet.argons) }} ARGN</div>
                       <div>{{ currencySymbol }}{{ fmtMoney(argonTo(mngWallet.argons)) }}</div>
                     </li>
-                    <li
-                      class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2"
-                    >
+                    <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
                       <div>{{ fmtMoney(mngWallet.argonots) }} ARGNOT</div>
                       <div>{{ currencySymbol }}{{ fmtMoney(argonotTo(mngWallet.argonots)) }}</div>
                     </li>
@@ -178,12 +155,10 @@
                   <div class="relative">
                     <LiquidLockingWalletIcon class="w-12 h-12 mt-5" />
                   </div>
-                  <span class="text-4xl font-bold mt-5"
-                    >{{ currencySymbol }}{{ fmtMoney(argonTo(llbWallet.totalValue)).split('.')[0]
-                    }}<span class="opacity-50"
-                      >.{{ argonTo(llbWallet.totalValue).toFixed(2).split('.')[1] }}</span
-                    ></span
-                  >
+                  <span class="text-4xl font-bold mt-5">
+                    {{ currencySymbol }}{{ fmtMoney(argonTo(llbWallet.totalValue)).split('.')[0] }}
+                    <span class="opacity-50">.{{ argonTo(llbWallet.totalValue).toFixed(2).split('.')[1] }}</span>
+                  </span>
                   <div class="relative text-sm text-gray-500 flex flex-row w-full justify-center">
                     <CopyToClipboard
                       @click.stop
@@ -203,15 +178,11 @@
                     </CopyToClipboard>
                   </div>
                   <ul class="flex flex-col items-center whitespace-nowrap w-full mt-4 mb-4">
-                    <li
-                      class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2"
-                    >
+                    <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
                       <div>{{ fmtMoney(llbWallet.argons) }} ARGN</div>
                       <div>{{ currencySymbol }}{{ fmtMoney(argonTo(llbWallet.argons)) }}</div>
                     </li>
-                    <li
-                      class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2"
-                    >
+                    <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
                       <div>{{ fmtMoney(llbWallet.argonots) }} ARGNOT</div>
                       <div>{{ currencySymbol }}{{ fmtMoney(argonotTo(llbWallet.argonots)) }}</div>
                     </li>
@@ -228,12 +199,10 @@
                   <div class="relative">
                     <VaultingWalletIcon class="w-12 h-12 mt-5" />
                   </div>
-                  <span class="text-4xl font-bold mt-5"
-                    >{{ currencySymbol }}{{ fmtMoney(argonTo(vltWallet.totalValue)).split('.')[0]
-                    }}<span class="opacity-50"
-                      >.{{ argonTo(vltWallet.totalValue).toFixed(2).split('.')[1] }}</span
-                    ></span
-                  >
+                  <span class="text-4xl font-bold mt-5">
+                    {{ currencySymbol }}{{ fmtMoney(argonTo(vltWallet.totalValue)).split('.')[0] }}
+                    <span class="opacity-50">.{{ argonTo(vltWallet.totalValue).toFixed(2).split('.')[1] }}</span>
+                  </span>
                   <div class="relative text-sm text-gray-500 flex flex-row w-full justify-center">
                     <CopyToClipboard
                       @click.stop
@@ -253,15 +222,11 @@
                     </CopyToClipboard>
                   </div>
                   <ul class="flex flex-col items-center whitespace-nowrap w-full mt-4 mb-4">
-                    <li
-                      class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2"
-                    >
+                    <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
                       <div>{{ fmtMoney(vltWallet.argons) }} ARGN</div>
                       <div>{{ currencySymbol }}{{ fmtMoney(argonTo(vltWallet.argons)) }}</div>
                     </li>
-                    <li
-                      class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2"
-                    >
+                    <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
                       <div>{{ fmtMoney(vltWallet.argonots) }} ARGNOT</div>
                       <div>{{ currencySymbol }}{{ fmtMoney(argonotTo(vltWallet.argonots)) }}</div>
                     </li>
@@ -292,10 +257,7 @@
           leave-from-class="opacity-100 translate-y-0"
           leave-to-class="opacity-0 translate-y-1"
         >
-          <PopoverPanel
-            v-slot="{ close }"
-            class="absolute -right-3 z-[1000] mt-2 flex w-screen max-w-min"
-          >
+          <PopoverPanel v-slot="{ close }" class="absolute -right-3 z-[1000] mt-2 flex w-screen max-w-min">
             <div class="absolute -top-[15px] right-3 w-[30px] h-[15px] overflow-hidden">
               <div
                 class="relative top-[5px] left-[5px] w-[20px] h-[20px] rotate-45 bg-slate-50 ring-1 ring-gray-900/20"
@@ -305,25 +267,28 @@
               class="flex flex-col shrink rounded bg-argon-menu-bg text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
             >
               <ul AccountMenu>
-                <li
-                  v-if="config.isServerConnected"
-                  @click="() => openServerConfigureOverlay(close)"
-                  class="pt-3 pb-2"
-                >
+                <li v-if="config.isServerConnected" @click="() => openServerConfigureOverlay(close)" class="pt-3 pb-2">
                   <header>Configure Cloud Machine</header>
                   <p>
-                    Configure and manage the cloud server<br />that runs your Argon mining
-                    operations
+                    Configure and manage the cloud server
+                    <br />
+                    that runs your Argon mining operations
                   </p>
                 </li>
                 <li v-else class="pt-3 pb-2" @click="() => openServerConnectOverlay(close)">
                   <header>Connect Cloud Machine</header>
-                  <p>Connect a new cloud server to<br />run your Argon mining operations</p>
+                  <p>
+                    Connect a new cloud server to
+                    <br />
+                    run your Argon mining operations
+                  </p>
                 </li>
                 <li @click="() => openBiddingRulesOverlay(close)" class="pt-2 pb-3">
                   <header>Configure Bidding Rules</header>
                   <p>
-                    Set bid pricing and other required<br />parameters for upcoming mining auctions
+                    Set bid pricing and other required
+                    <br />
+                    parameters for upcoming mining auctions
                   </p>
                 </li>
                 <li class="bg-slate-400/30 h-[1px] w-full my-1"></li>

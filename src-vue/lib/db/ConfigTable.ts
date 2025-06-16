@@ -22,9 +22,6 @@ export class ConfigTable extends BaseTable {
     const placeholders = entries.map(() => '(?, ?)').join(', ');
     const values = entries.flatMap(([key, value]) => [key, value]);
 
-    await db.sql.execute(
-      `INSERT OR REPLACE INTO config (key, value) VALUES ${placeholders}`,
-      values,
-    );
+    await db.sql.execute(`INSERT OR REPLACE INTO config (key, value) VALUES ${placeholders}`, values);
   }
 }

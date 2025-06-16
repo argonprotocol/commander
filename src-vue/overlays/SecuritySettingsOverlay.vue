@@ -12,9 +12,7 @@
       <BgOverlay @close="closeOverlay" />
     </TransitionChild>
 
-    <div
-      class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none"
-    >
+    <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">
       <TransitionChild
         as="template"
         enter="ease-out duration-300"
@@ -27,21 +25,9 @@
         <div
           class="bg-white border border-black/40 px-3 pt-6 pb-4 rounded-lg pointer-events-auto shadow-xl relative w-160 min-h-60 overflow-scroll"
         >
-          <SecuritySettingsOverview
-            v-if="currentScreen === 'overview'"
-            @close="closeOverlay"
-            @goto="goto"
-          />
-          <SecuritySettingsEncrypt
-            v-if="currentScreen === 'encrypt'"
-            @close="closeOverlay"
-            @goto="goto"
-          />
-          <SecuritySettingsMnemonics
-            v-if="currentScreen === 'mnemonics'"
-            @close="closeOverlay"
-            @goto="goto"
-          />
+          <SecuritySettingsOverview v-if="currentScreen === 'overview'" @close="closeOverlay" @goto="goto" />
+          <SecuritySettingsEncrypt v-if="currentScreen === 'encrypt'" @close="closeOverlay" @goto="goto" />
+          <SecuritySettingsMnemonics v-if="currentScreen === 'mnemonics'" @close="closeOverlay" @goto="goto" />
         </div>
       </TransitionChild>
     </div>

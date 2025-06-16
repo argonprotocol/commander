@@ -39,14 +39,11 @@
               <div
                 class="absolute h-[20px] left-0 right-0 bottom-0 z-10 bg-gradient-to-b from-transparent to-argon-menu-bg pointer-events-none"
               ></div>
-              <div
-                class="absolute top-0 left-0 right-0 bottom-0 px-[6%] overflow-y-scroll pt-8 pb-[50px]"
-              >
+              <div class="absolute top-0 left-0 right-0 bottom-0 px-[6%] overflow-y-scroll pt-8 pb-[50px]">
                 <p class="text-gray-500 border-b border-slate-300 pb-4 mb-8">
-                  Argon Commander will automatically setup and configure your mining server. All you
-                  need to do is activate it. The following steps show you how to activate a new
-                  server at Digital Ocean. Please follow each step exactly as shown -- the details
-                  are important!
+                  Argon Commander will automatically setup and configure your mining server. All you need to do is
+                  activate it. The following steps show you how to activate a new server at Digital Ocean. Please follow
+                  each step exactly as shown -- the details are important!
                 </p>
 
                 <ul Steps class="flex flex-col gap-4 w-full">
@@ -55,14 +52,14 @@
                     <div wrapper>
                       <div>
                         <p>
-                          Go to digitalocean.com ("DO")and sign up for a new account. Skip to step 3
-                          if you already have an account.
+                          Go to digitalocean.com ("DO")and sign up for a new account. Skip to step 3 if you already have
+                          an account.
                         </p>
                         <p>
-                          Be aware that DO routinely gives out $100-$200 in free server credits, but
-                          clicking the Sign Up link in the top right corner will NOT give you those
-                          credits. At the time of this writing, scrolling to the bottom of the page
-                          and clicking the "Get Started" button will give you the free credits.
+                          Be aware that DO routinely gives out $100-$200 in free server credits, but clicking the Sign
+                          Up link in the top right corner will NOT give you those credits. At the time of this writing,
+                          scrolling to the bottom of the page and clicking the "Get Started" button will give you the
+                          free credits.
                         </p>
                       </div>
                       <img src="/create-do/step1.png" />
@@ -74,12 +71,11 @@
                     <div wrapper>
                       <div>
                         <p>
-                          Fill out the short form, confirm your email address, and input your credit
-                          card (even if you have free credits, you'll still need a card on file).
+                          Fill out the short form, confirm your email address, and input your credit card (even if you
+                          have free credits, you'll still need a card on file).
                         </p>
                         <p>
-                          Don't skip past the welcome screen. We'll use this as the jumping off
-                          point for the next step.
+                          Don't skip past the welcome screen. We'll use this as the jumping off point for the next step.
                         </p>
                       </div>
                       <img src="/create-do/step2.png" />
@@ -91,12 +87,11 @@
                     <div wrapper>
                       <div>
                         <p>
-                          Once your account is setup, you will be given several options. Click the
-                          "Deploy a Virtual Machine" button. If you have an existing account, use
-                          the "Create a Droplet". Don't create a "GPU Droplet", just a standard
-                          Droplet. BTW, Droplets are DO's lingo for what everyone else calls
-                          servers. Regardless, you'll be given a few options for how you want to
-                          create your server...
+                          Once your account is setup, you will be given several options. Click the "Deploy a Virtual
+                          Machine" button. If you have an existing account, use the "Create a Droplet". Don't create a
+                          "GPU Droplet", just a standard Droplet. BTW, Droplets are DO's lingo for what everyone else
+                          calls servers. Regardless, you'll be given a few options for how you want to create your
+                          server...
                         </p>
                       </div>
                       <img src="/create-do/step3.png" />
@@ -108,9 +103,8 @@
                     <div wrapper>
                       <div>
                         <p>
-                          You should use all the default options when creating your new droplet,
-                          including Digital Ocean's default image. It should be set to Ubuntu
-                          version 24.10 x64.
+                          You should use all the default options when creating your new droplet, including Digital
+                          Ocean's default image. It should be set to Ubuntu version 24.10 x64.
                         </p>
                         <p>Keep on scrolling.</p>
                       </div>
@@ -124,9 +118,8 @@
                       <div>
                         <p>Under the Choose Size section, select "Basic" for Droplet Type.</p>
                         <p>
-                          For the "CPU Options" select "Premium Intel" and then the $32/mo. This is
-                          plenty of power for Argon mining. Hopefully you have $200 in credits which
-                          makes this free.
+                          For the "CPU Options" select "Premium Intel" and then the $32/mo. This is plenty of power for
+                          Argon mining. Hopefully you have $200 in credits which makes this free.
                         </p>
                       </div>
                       <img src="/create-do/step5.png" />
@@ -138,8 +131,8 @@
                     <div wrapper>
                       <div>
                         <p>
-                          Skip down to the "Choose Authentication Method" and select "SSH Key" then
-                          "Add SSH Key". This will pop up an overlay with a text box.
+                          Skip down to the "Choose Authentication Method" and select "SSH Key" then "Add SSH Key". This
+                          will pop up an overlay with a text box.
                         </p>
                         <p>Copy and paste the following public key:</p>
                         <CopyToClipboard
@@ -164,9 +157,9 @@
                             <div
                               class="bg-white py-4 pl-4 pr-8 border border-slate-300 rounded-md w-full pointer-events-none overflow-hidden"
                             >
-                              <span class="bg-blue-200 whitespace-nowrap w-full inline-block">{{
-                                serverDetails.sshPublicKey
-                              }}</span>
+                              <span class="bg-blue-200 whitespace-nowrap w-full inline-block">
+                                {{ serverDetails.sshPublicKey }}
+                              </span>
                             </div>
                             <div
                               class="flex flex-row items-center absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none bg-white pl-2"
@@ -179,10 +172,7 @@
                             </div>
                           </template>
                         </CopyToClipboard>
-                        <p>
-                          You'll need to give this key a name. We recommend "Argon Commander". Click
-                          "Add SSH Key".
-                        </p>
+                        <p>You'll need to give this key a name. We recommend "Argon Commander". Click "Add SSH Key".</p>
                       </div>
                       <img src="/create-do/step6.png" />
                     </div>
@@ -193,15 +183,11 @@
                     <div wrapper>
                       <div>
                         <p>
-                          Under "Finalze Details", you can optionally customize the hostname of your
-                          server. This is used in Digital Ocean's control panel to identify your
-                          server (by default they use a long convoluted name). Use whatever name you
-                          want. It is for your eyes only.
+                          Under "Finalze Details", you can optionally customize the hostname of your server. This is
+                          used in Digital Ocean's control panel to identify your server (by default they use a long
+                          convoluted name). Use whatever name you want. It is for your eyes only.
                         </p>
-                        <p>
-                          Click the "Create Droplet" button, and wait for your new server to boot
-                          up.
-                        </p>
+                        <p>Click the "Create Droplet" button, and wait for your new server to boot up.</p>
                       </div>
                       <img src="/create-do/step7.png" />
                     </div>
@@ -212,23 +198,17 @@
                     <div wrapper>
                       <div>
                         <p>
-                          Once your server is provisioned (this might take a few minutes), you'll
-                          need to copy and paste the server's IP address into the input box below.
-                          If you see a blue progress bar, it means your server is still
-                          provisioning. Give it some time, and it will appear.
+                          Once your server is provisioned (this might take a few minutes), you'll need to copy and paste
+                          the server's IP address into the input box below. If you see a blue progress bar, it means
+                          your server is still provisioning. Give it some time, and it will appear.
                         </p>
                         <div v-if="hasIpAddressError" class="rounded-md bg-red-200 p-2 mb-2">
                           <div class="flex">
                             <div class="shrink-0">
-                              <ExclamationTriangleIcon
-                                class="size-5 text-red-400"
-                                aria-hidden="true"
-                              />
+                              <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />
                             </div>
                             <div class="ml-3">
-                              <h3 class="text-sm font-medium text-red-800">
-                                IP Address cannot be left blank
-                              </h3>
+                              <h3 class="text-sm font-medium text-red-800">IP Address cannot be left blank</h3>
                             </div>
                           </div>
                         </div>
@@ -251,10 +231,7 @@
             v-if="isOpen"
             class="flex flex-row justify-end px-4 border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg"
           >
-            <div
-              v-if="hasServerDetailsError"
-              class="grow rounded-md bg-red-200 p-2 pl-4 flex items-center"
-            >
+            <div v-if="hasServerDetailsError" class="grow rounded-md bg-red-200 p-2 pl-4 flex items-center">
               <div class="flex">
                 <div class="shrink-0">
                   <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />

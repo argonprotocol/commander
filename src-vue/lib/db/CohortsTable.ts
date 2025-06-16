@@ -14,9 +14,7 @@ export class CohortsTable extends BaseTable {
 
   public async fetchById(
     id: number,
-  ): Promise<
-    (ICohortRecord & { firstTick: number; lastTick: number; lastBlockNumber: number }) | null
-  > {
+  ): Promise<(ICohortRecord & { firstTick: number; lastTick: number; lastBlockNumber: number }) | null> {
     const rawRecords = await this.db.sql.select<any[]>(
       `SELECT cohorts.*, frames.first_tick as first_tick, frames.last_block_number as last_block_number FROM cohorts
       LEFT JOIN frames ON cohorts.id = frames.id

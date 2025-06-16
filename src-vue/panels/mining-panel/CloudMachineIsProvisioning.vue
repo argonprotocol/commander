@@ -9,9 +9,9 @@
       There was an error setting up your server on Digital Ocean. See below for details.
     </p>
     <p v-else class="pt-3 pb-2 font-light">
-      We are verifying and setting up your {{ serverDetails.ipAddress }} server on Digital Ocean.
-      This may take several hours. You can close this Commander app once the core files have
-      finished uploading without disrupting the process.
+      We are verifying and setting up your {{ serverDetails.ipAddress }} server on Digital Ocean. This may take several
+      hours. You can close this Commander app once the core files have finished uploading without disrupting the
+      process.
     </p>
     <InstallProgress />
   </div>

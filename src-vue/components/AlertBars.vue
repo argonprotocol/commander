@@ -7,9 +7,7 @@
     style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
   >
     <AlertIcon class="w-4 h-4 text-white relative left-1 inline-block" />
-    <div class="font-bold grow">
-      BIDDING DISABLED. Your wallet no longer has enough funds to continue bidding.
-    </div>
+    <div class="font-bold grow">BIDDING DISABLED. Your wallet no longer has enough funds to continue bidding.</div>
     <span
       class="cursor-pointer font-bold inline-block rounded-full bg-argon-error-darkest/60 group-hover:bg-argon-error-darkest hover:bg-black/80 px-3"
     >
@@ -41,9 +39,7 @@
     style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
   >
     <AlertIcon class="w-4 h-4 text-white relative left-1 inline-block" />
-    <div class="font-bold grow">
-      BIDDING DISABLED. The auction's lowest price has climbed above your Maximum Price.
-    </div>
+    <div class="font-bold grow">BIDDING DISABLED. The auction's lowest price has climbed above your Maximum Price.</div>
     <span
       class="cursor-pointer font-bold inline-block rounded-full bg-argon-error-darkest/60 group-hover:bg-argon-error-darkest hover:bg-black/80 px-3"
     >
@@ -58,12 +54,8 @@
     style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
   >
     <AlertIcon class="w-4 h-4 text-white relative left-1 inline-block" />
-    <div class="font-bold grow">
-      WARNING. Your mining wallet is low on funds which may inhibit bidding.
-    </div>
-    <span
-      class="cursor-pointer font-bold inline-block rounded-full bg-argon-700 hover:bg-black/90 px-3"
-    >
+    <div class="font-bold grow">WARNING. Your mining wallet is low on funds which may inhibit bidding.</div>
+    <span class="cursor-pointer font-bold inline-block rounded-full bg-argon-700 hover:bg-black/90 px-3">
       Add Funds
     </span>
   </div>

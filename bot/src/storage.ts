@@ -95,9 +95,7 @@ export class JsonStore<T extends Record<string, any> & ILastModifiedAt> {
     private defaultsFn: () => Omit<T, 'lastModified'> | Promise<Omit<T, 'lastModified'>>,
   ) {}
 
-  public async mutate(
-    mutateFn: (data: T) => boolean | void | Promise<boolean | void>,
-  ): Promise<boolean> {
+  public async mutate(mutateFn: (data: T) => boolean | void | Promise<boolean | void>): Promise<boolean> {
     await this.load();
     if (!this.data) {
       this.data = structuredClone(this.defaults) as T;
@@ -106,9 +104,7 @@ export class JsonStore<T extends Record<string, any> & ILastModifiedAt> {
     if (result === false) return false;
     this.data!.lastModifiedAt = new Date();
     // filter non properties
-    this.data = Object.fromEntries(
-      Object.entries(this.data!).filter(([key]) => key in this.defaults),
-    ) as T;
+    this.data = Object.fromEntries(Object.entries(this.data!).filter(([key]) => key in this.defaults)) as T;
     await atomicWrite(this.path, JsonExt.stringify(this.data, 2));
     return true;
   }

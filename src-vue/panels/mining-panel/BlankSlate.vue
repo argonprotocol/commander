@@ -6,10 +6,9 @@
         <div>By Running Your Own Mining Node</div>
       </div>
       <p class="text-base text-justify w-[780px] !mx-auto mt-10 text-[#4B2B4E]">
-        Argon uses a special auction process to determine who can mine. The winners of each auction
-        hold the right to mine for ten days, then it goes back up for bidding. Argon's mining
-        software is runnable on cheap virtual cloud machines, which makes getting involved easy and
-        cost-effective. Click the button below to get started.
+        Argon uses a special auction process to determine who can mine. The winners of each auction hold the right to
+        mine for ten days, then it goes back up for bidding. Argon's mining software is runnable on cheap virtual cloud
+        machines, which makes getting involved easy and cost-effective. Click the button below to get started.
       </p>
     </div>
     <button
@@ -25,9 +24,7 @@
         >
           <li class="w-1/4">
             <div class="text-4xl font-bold">
-              {{
-                blockchainStore.miningSeatCount ? fmtCommas(blockchainStore.miningSeatCount) : '---'
-              }}
+              {{ blockchainStore.miningSeatCount ? fmtCommas(blockchainStore.miningSeatCount) : '---' }}
             </div>
             <div>Mining Seats</div>
           </li>
@@ -35,12 +32,12 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">{{
-                  currencySymbol
-                }}</span
-                >{{ fmtMoney(argonTo(blockchainStore.aggregatedBidCosts), 1_000) }}
+                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">
+                  {{ currencySymbol }}
+                </span>
+                {{ fmtMoney(argonTo(blockchainStore.aggregatedBidCosts), 1_000) }}
               </template>
-              <template v-else> --- </template>
+              <template v-else>---</template>
             </div>
             <div>Aggregate Bid Costs</div>
           </li>
@@ -48,12 +45,12 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">{{
-                  currencySymbol
-                }}</span
-                >{{ fmtMoney(argonTo(aggregatedBlockRewards), 1_000) }}
+                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">
+                  {{ currencySymbol }}
+                </span>
+                {{ fmtMoney(argonTo(aggregatedBlockRewards), 1_000) }}
               </template>
-              <template v-else> --- </template>
+              <template v-else>---</template>
             </div>
             <div>Mimimum Aggregate Rewards</div>
           </li>
@@ -61,42 +58,39 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                {{ fmtMoney(Math.min(currentAPY, 999_999), 100) }}%{{
-                  currentAPY >= 9_999 ? '+' : ' '
-                }}
+                {{ fmtMoney(Math.min(currentAPY, 999_999), 100) }}%{{ currentAPY >= 9_999 ? '+' : ' ' }}
               </template>
-              <template v-else> --- </template>
+              <template v-else>---</template>
             </div>
             <div>Annual Percentage Yield</div>
           </li>
         </ul>
-        <ul
-          Blocks
-          class="w-full flex flex-row justify-end h-[137px]"
-          :style="{ opacity: blocksAreLoaded ? 1 : 0.1 }"
-        >
+        <ul Blocks class="w-full flex flex-row justify-end h-[137px]" :style="{ opacity: blocksAreLoaded ? 1 : 0.5 }">
           <template v-for="(block, index) in blocks" :key="`${block.hash}-${index}`">
             <li Block class="leading-6">
-              <div class="border-b border-slate-300 pb-1 mb-2">
-                #<span class="font-bold opacity-50">{{ block.number }}</span>
+              <div v-if="block.hash" class="border-b border-slate-300 pb-1 mb-2">
+                #
+                <span class="font-bold opacity-50">{{ block.number }}</span>
               </div>
-              <div>{{ block.extrinsics }} txns</div>
-              <div>{{ block.argons }} argons</div>
-              <div>{{ block.argonots }} argonots</div>
+              <div v-if="block.hash">{{ block.extrinsics }} txns</div>
+              <div v-if="block.hash">{{ block.argons }} argons</div>
+              <div v-if="block.hash">{{ block.argonots }} argonots</div>
             </li>
             <li Connection></li>
           </template>
           <li Block class="flex flex-col text-center justify-center items-center">
-            <img src="/mining.gif" class="w-8 inline-block relative -left-1" />
-            <div class="flex flex-row justify-center pt-5">
-              <div class="flex flex-col items-center leading-none">
-                <div>{{ minutesSinceBlock }}</div>
-                <div>min{{ minutesSinceBlock === 1 ? '' : 's' }}</div>
-              </div>
-              <div class="h-full w-[1px] bg-slate-300 mx-3"></div>
-              <div class="flex flex-col items-center leading-none">
-                <div>{{ secondsSinceBlock }}</div>
-                <div>sec{{ secondsSinceBlock === 1 ? '' : 's' }}</div>
+            <div v-if="blocks[blocks.length - 1].hash" class="flex flex-col text-center justify-center items-center">
+              <img src="/mining.gif" class="w-8 inline-block relative -left-1" />
+              <div class="flex flex-row justify-center pt-5">
+                <div class="flex flex-col items-center leading-none">
+                  <div>{{ minutesSinceBlock }}</div>
+                  <div>min{{ minutesSinceBlock === 1 ? '' : 's' }}</div>
+                </div>
+                <div class="h-full w-[1px] bg-slate-300 mx-3"></div>
+                <div class="flex flex-col items-center leading-none">
+                  <div>{{ secondsSinceBlock }}</div>
+                  <div>sec{{ secondsSinceBlock === 1 ? '' : 's' }}</div>
+                </div>
               </div>
             </div>
           </li>
@@ -130,8 +124,7 @@ const isLoaded = Vue.ref(false);
 
 const aggregatedBlockRewards = Vue.computed(() => {
   return (
-    blockchainStore.aggregatedBlockRewards.argons +
-    argonotToArgon(blockchainStore.aggregatedBlockRewards.argonots)
+    blockchainStore.aggregatedBlockRewards.argons + argonotToArgon(blockchainStore.aggregatedBlockRewards.argonots)
   );
 });
 
@@ -139,7 +132,18 @@ const currentAPY = Vue.computed(() => {
   return calculateAPY(blockchainStore.aggregatedBidCosts, aggregatedBlockRewards.value);
 });
 
-const blocks = Vue.ref<IBlock[]>([]);
+const blockLoading = { hash: null } as unknown as IBlock;
+
+const blocks = Vue.ref<IBlock[]>([
+  blockLoading,
+  blockLoading,
+  blockLoading,
+  blockLoading,
+  blockLoading,
+  blockLoading,
+  blockLoading,
+  blockLoading,
+]);
 const blocksAreLoaded = Vue.ref(false);
 let blocksSubscription: any = null;
 let lastBlockTimestamp: Dayjs;
@@ -163,8 +167,7 @@ function updateTimeSinceBlock() {
   if (lastBlockTimestamp) {
     const now = dayjs.utc();
     const totalSecondsSinceBlock = now.diff(lastBlockTimestamp, 'seconds');
-    minutesSinceBlock.value =
-      totalSecondsSinceBlock < 60 ? 0 : Math.floor(totalSecondsSinceBlock / 60);
+    minutesSinceBlock.value = totalSecondsSinceBlock < 60 ? 0 : Math.floor(totalSecondsSinceBlock / 60);
     secondsSinceBlock.value = totalSecondsSinceBlock % 60;
   }
 

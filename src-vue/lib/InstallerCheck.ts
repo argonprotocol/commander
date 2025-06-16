@@ -80,10 +80,7 @@ export class InstallerCheck {
 
     let prevStep: IConfigInstallStep | null = null;
 
-    for (const [stepKey, estimatedMinutes] of Object.entries(stepsToProcess) as [
-      InstallStepKey,
-      number,
-    ][]) {
+    for (const [stepKey, estimatedMinutes] of Object.entries(stepsToProcess) as [InstallStepKey, number][]) {
       const stepNewData = installDetailsPending[stepKey] as IConfigInstallStep;
       const stepOldData = this.config.installDetails[stepKey] as IConfigInstallStep;
       const prevStepHasCompleted = !prevStep || prevStep.status === InstallStepStatus.Completed;
@@ -109,11 +106,7 @@ export class InstallerCheck {
         stepNewData.status = InstallStepStatus.Working;
         stepNewData.startDate = stepOldData.startDate || dayjs.utc().toISOString();
         stepNewData.progress = stepOldData.progress;
-        stepNewData.progress = await this.calculateWorkingStepProgress(
-          stepKey,
-          stepNewData,
-          estimatedMinutes,
-        );
+        stepNewData.progress = await this.calculateWorkingStepProgress(stepKey, stepNewData, estimatedMinutes);
       } else {
         stepNewData.status = InstallStepStatus.Pending;
         stepNewData.progress = 0;
@@ -141,9 +134,7 @@ export class InstallerCheck {
   ): 'Pending' | 'Started' | 'Finished' | 'Failed' {
     if ([InstallStepKey.ServerConnect, InstallStepKey.FileCheck].includes(stepName)) {
       const nextStepName =
-        stepName === InstallStepKey.ServerConnect
-          ? InstallStepKey.FileCheck
-          : InstallStepKey.UbuntuCheck;
+        stepName === InstallStepKey.ServerConnect ? InstallStepKey.FileCheck : InstallStepKey.UbuntuCheck;
       const nextStepHasStarted = filenames.includes(`${nextStepName}.started`);
       if (stepOldData.progress >= 100 || nextStepHasStarted) {
         return 'Finished';

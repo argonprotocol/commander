@@ -1,16 +1,12 @@
 <template>
-  <div
-    class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center m-3 overflow-hidden"
-  >
+  <div class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center m-3 overflow-hidden">
     <ConfettiIcon class="absolute top-[10px] left-[10px]" style="width: calc(100% - 20px)" />
     <div class="relative mx-auto inline-block">
       <h1 class="text-5xl font-bold text-center mt-24 mb-10 whitespace-nowrap relative z-0">
         <span FadeBgToWhite class="relative text-argon-600 z-20">Your First Auction Is Live!</span>
       </h1>
 
-      <div
       <div class="text-center mb-5 uppercase text-base flex flex-row justify-center items-center">
-      >
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
         <div class="whitespace-nowrap px-5 text-gray-500">
           YOU ARE IN BID POSITION{{ seatPositions.length > 1 ? 'S' : '' }}
@@ -18,10 +14,7 @@
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
       </div>
       <div class="flex flex-col items-center justify-center min-h-[75px] fade-in-out">
-        <div
-          v-if="seatPositions.length"
-          :class="[priceTextSize, 'text-center text-argon-600 font-bold']"
-        >
+        <div v-if="seatPositions.length" :class="[priceTextSize, 'text-center text-argon-600 font-bold']">
           {{
             seatPositions.slice(0, -1).join(', ') +
             (seatPositions.length > 1 ? ' & ' : '') +
@@ -30,9 +23,7 @@
         </div>
         <div v-else class="text-center text-7xl text-argon-600 font-bold">--- --- --- ---</div>
       </div>
-      <div
-        class="text-center mt-6 mb-5 uppercase text-base flex flex-row justify-center items-center"
-      >
+      <div class="text-center mt-6 mb-5 uppercase text-base flex flex-row justify-center items-center">
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
         <div class="whitespace-nowrap px-5 text-gray-500">
           AT A {{ seatPositions.length ? 'COMBINED' : 'TOTAL' }} PRICE OF
@@ -40,43 +31,35 @@
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
       </div>
       <div class="flex flex-col items-center justify-center min-h-[75px] fade-in-out">
-        <div
-          v-if="seatPositions.length"
-          :class="[priceTextSize, 'text-center text-argon-600 font-bold']"
-        >
+        <div v-if="seatPositions.length" :class="[priceTextSize, 'text-center text-argon-600 font-bold']">
           {{ currencySymbol }}{{ fmtMoney(currencyStore.argonTo(currentBidPrice)) }}
         </div>
-        <div v-else class="text-center text-7xl text-argon-600 font-bold">
-          {{ currencySymbol }}--.--
-        </div>
+        <div v-else class="text-center text-7xl text-argon-600 font-bold">{{ currencySymbol }}--.--</div>
       </div>
-      <p
-        class="text-center text-lg mt-6 border-t border-b border-gray-300 pt-8 pb-7 font-light leading-7.5"
-      >
+      <p class="text-center text-lg mt-6 border-t border-b border-gray-300 pt-8 pb-7 font-light leading-7.5">
         <template v-if="auctionIsClosing && startOfAuctionClosing != null">
-          This auction is in the process of closing. Bids can still be submitted for the<br />
+          This auction is in the process of closing. Bids can still be submitted for the
+          <br />
           next
           <CountdownClock
             :time="startOfAuctionClosing"
             @tick="handleAuctionClosingTick"
             v-slot="{ hours, minutes, seconds }"
           >
-            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }}, </template>
-            <template v-if="minutes"
-              >{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and
-            </template>
+            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},</template>
+            <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and</template>
             {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
           </CountdownClock>
         </template>
         <template v-else-if="startOfNextCohort != null">
           This auction will begin closing in
           <CountdownClock :time="startOfNextCohort" v-slot="{ hours, minutes, seconds }">
-            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }}, </template>
-            <template v-if="minutes"
-              >{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and
-            </template>
-            {{ seconds }} second{{ seconds > 1 ? 's' : '' }} </CountdownClock
-          >.<br />
+            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},</template>
+            <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and</template>
+            {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
+          </CountdownClock>
+          .
+          <br />
           Your account allows for a total bidding budget of of {{ currencySymbol
           }}{{ fmtMoney(currencyStore.argonTo(totalBiddingBudget)) }} if needed.
         </template>
@@ -135,10 +118,7 @@ const priceTextSize = Vue.computed(() => {
   return seatPositions.value.length > 8 ? 'text-6xl' : 'text-7xl';
 });
 
-const biddingParamsHelper = new BiddingParamsHelper(
-  config.biddingRules as IBiddingRules,
-  getMainchain(),
-);
+const biddingParamsHelper = new BiddingParamsHelper(config.biddingRules as IBiddingRules, getMainchain());
 const startOfAuctionClosing: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
 const startOfNextCohort: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
 

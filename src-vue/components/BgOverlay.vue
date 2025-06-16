@@ -38,10 +38,7 @@ function handlePointerDown(e: PointerEvent) {
 }
 
 function handlePointerMove(e: PointerEvent) {
-  if (
-    Math.abs(e.screenX - dragStartX) > DRAG_THRESHOLD ||
-    Math.abs(e.screenY - dragStartY) > DRAG_THRESHOLD
-  ) {
+  if (Math.abs(e.screenX - dragStartX) > DRAG_THRESHOLD || Math.abs(e.screenY - dragStartY) > DRAG_THRESHOLD) {
     wasDragged = true;
   }
 }

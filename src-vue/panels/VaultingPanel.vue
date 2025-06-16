@@ -6,11 +6,10 @@
         <div>And Funding Liquidity Pools</div>
       </div>
       <p class="text-base text-justify w-[780px] !mx-auto mt-10 text-[#4B2B4E]">
-        Argon's Stabilization Vaults are the backbone of its enginuity. Bitcoins are locked into
-        vaults, which generates unencumbered shorts on the argon stablecoin, which creates a
-        currency that is impossible to death-spiral. Vaulters earn rewards by operating these vaults
-        and managing liquidity pools. Anyone can participate in these liqudity pools and earn
-        continuous yield on their argons.
+        Argon's Stabilization Vaults are the backbone of its enginuity. Bitcoins are locked into vaults, which generates
+        unencumbered shorts on the argon stablecoin, which creates a currency that is impossible to death-spiral.
+        Vaulters earn rewards by operating these vaults and managing liquidity pools. Anyone can participate in these
+        liqudity pools and earn continuous yield on their argons.
       </p>
     </div>
     <div class="flex flex-row items-center text-2xl mt-10 w-full justify-center">
@@ -37,7 +36,7 @@
               <template v-if="isLoaded">
                 {{ vaultCount }}
               </template>
-              <template v-else> --- </template>
+              <template v-else>---</template>
             </div>
             <div>Active Vaults</div>
           </li>
@@ -45,12 +44,12 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">{{
-                  currencySymbol
-                }}</span
-                >{{ fmtMoney(argonTo(valueInVaults), 1_000) }}
+                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">
+                  {{ currencySymbol }}
+                </span>
+                {{ fmtMoney(argonTo(valueInVaults), 1_000) }}
               </template>
-              <template v-else> --- </template>
+              <template v-else>---</template>
             </div>
             <div>Total Value In Vaults</div>
           </li>
@@ -58,11 +57,9 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                {{ fmtMoney(Math.min(annualVaultAPY, 999_999), 100) }}%{{
-                  annualVaultAPY >= 9_999 ? '+' : ' '
-                }}
+                {{ fmtMoney(Math.min(annualVaultAPY, 999_999), 100) }}%{{ annualVaultAPY >= 9_999 ? '+' : ' ' }}
               </template>
-              <template v-else> --- </template>
+              <template v-else>---</template>
             </div>
             <div>Average Vault APY</div>
           </li>
@@ -74,7 +71,7 @@
                   annualPoolAPY >= 9_999 ? '+' : ' '
                 }}
               </template>
-              <template v-else> --- </template>
+              <template v-else>---</template>
             </div>
             <div>Annual Pool APY</div>
           </li>
@@ -85,9 +82,7 @@
               <template v-for="vault in vaults" :key="vault.idx">
                 <li class="flex flex-row rounded-lg bg-white/30 mr-4 h-full">
                   <VaultImage class="relative h-full opacity-60 z-10" />
-                  <div
-                    class="flex flex-col border-l-0 border border-slate-400/50 px-2 rounded-r-lg w-80"
-                  >
+                  <div class="flex flex-col border-l-0 border border-slate-400/50 px-2 rounded-r-lg w-80">
                     <table class="w-full h-full">
                       <tbody>
                         <tr>
@@ -96,15 +91,11 @@
                           </td>
                         </tr>
                         <tr>
-                          <td
-                            class="border-t border-slate-600/20 pl-1 font-bold text-sm text-slate-600/50"
-                          >
+                          <td class="border-t border-slate-600/20 pl-1 font-bold text-sm text-slate-600/50">
                             Bitcoins
                           </td>
                           <td class="border-t border-slate-600/20 w-full pr-1">
-                            <div
-                              class="relative w-full bg-slate-500/10 border border-slate-400 rounded h-5"
-                            >
+                            <div class="relative w-full bg-slate-500/10 border border-slate-400 rounded h-5">
                               <div
                                 class="absolute left-[-1px] top-[-1px] h-[calc(100%+2px)] bg-white/90 border border-slate-500 rounded"
                                 style="width: 10%"
@@ -113,15 +104,11 @@
                           </td>
                         </tr>
                         <tr>
-                          <td
-                            class="border-t border-slate-600/20 pl-1 font-bold text-sm text-slate-600/50"
-                          >
+                          <td class="border-t border-slate-600/20 pl-1 font-bold text-sm text-slate-600/50">
                             Liquidity
                           </td>
                           <td class="border-t border-slate-600/20 w-full pr-1">
-                            <div
-                              class="relative w-full bg-slate-500/10 border border-slate-400 rounded h-5"
-                            >
+                            <div class="relative w-full bg-slate-500/10 border border-slate-400 rounded h-5">
                               <div
                                 class="absolute left-[-1px] top-[-1px] h-[calc(100%+2px)] bg-white/90 border border-slate-500 rounded"
                                 style="width: 50%"
@@ -175,9 +162,7 @@ const annualPoolAPY = Vue.ref(72);
 Vue.onMounted(async () => {
   vaults.value = await mainchain.fetchVaults();
   vaultCount.value = vaults.value.length;
-  valueInVaults.value = btcToArgon(
-    vaults.value.reduce((acc, vault) => acc + vault.bitcoinLocked, 0),
-  );
+  valueInVaults.value = btcToArgon(vaults.value.reduce((acc, vault) => acc + vault.bitcoinLocked, 0));
   isLoaded.value = true;
 });
 </script>

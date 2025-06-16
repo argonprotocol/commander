@@ -91,10 +91,7 @@ export class StatsSyncer {
     const processedCohorts: Set<number> = new Set();
     let totalBlocksMined = 0;
 
-    const cohortsById = Object.entries(earningsFile.byCohortActivatingFrameId) as [
-      string,
-      IEarningsFileCohort,
-    ][];
+    const cohortsById = Object.entries(earningsFile.byCohortActivatingFrameId) as [string, IEarningsFileCohort][];
 
     for (const [cohortActivatingFrameIdStr, cohortData] of cohortsById) {
       const cohortActivatingFrameId = parseInt(cohortActivatingFrameIdStr, 10);

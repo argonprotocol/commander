@@ -69,10 +69,7 @@ export default class BitcoinDataFetcher {
       return data;
     } catch (error: unknown) {
       const apiError = error as IApiError;
-      console.error(
-        'Error fetching data:',
-        apiError.response ? apiError.response.data : apiError.message,
-      );
+      console.error('Error fetching data:', apiError.response ? apiError.response.data : apiError.message);
       throw error; // Re-throw to ensure the process fails if there's an error
     }
   }

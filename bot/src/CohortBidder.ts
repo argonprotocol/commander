@@ -6,11 +6,7 @@ import {
 } from '@argonprotocol/mainchain';
 import { formatArgons } from '@argonprotocol/mainchain';
 import { Bool, u64, Vec } from '@polkadot/types-codec';
-import {
-  CohortBidderHistory,
-  type IBidHistoryEntry,
-  SeatReductionReason,
-} from './CohortBidderHistory.ts';
+import { CohortBidderHistory, type IBidHistoryEntry, SeatReductionReason } from './CohortBidderHistory.ts';
 
 export class CohortBidder {
   public get client(): Promise<ArgonClient> {
@@ -123,13 +119,9 @@ export class CohortBidder {
 
     const client = await this.client;
     await this.history.init(client);
-    this.millisPerTick ??= await client.query.ticks
-      .genesisTicker()
-      .then(x => x.tickDurationMillis.toNumber());
+    this.millisPerTick ??= await client.query.ticks.genesisTicker().then(x => x.tickDurationMillis.toNumber());
 
-    this.unsubscribe = await client.queryMulti<
-      [Vec<ArgonPrimitivesBlockSealMiningRegistration>, u64]
-    >(
+    this.unsubscribe = await client.queryMulti<[Vec<ArgonPrimitivesBlockSealMiningRegistration>, u64]>(
       [client.query.miningSlot.nextSlotCohort as any, client.query.miningSlot.nextCohortId as any],
       async ([next, nextCohortId]) => {
         if (nextCohortId.toNumber() === this.cohortId) {
@@ -141,9 +133,7 @@ export class CohortBidder {
 
   private ceilToCentagons(microgons: bigint): bigint {
     const MICROGONS_PER_CENTAGON = 10_000n;
-    return (
-      ((microgons + MICROGONS_PER_CENTAGON - 1n) / MICROGONS_PER_CENTAGON) * MICROGONS_PER_CENTAGON
-    );
+    return ((microgons + MICROGONS_PER_CENTAGON - 1n) / MICROGONS_PER_CENTAGON) * MICROGONS_PER_CENTAGON;
   }
 
   private async checkSeats(next: ArgonPrimitivesBlockSealMiningRegistration[]) {
@@ -223,9 +213,7 @@ export class CohortBidder {
       budgetForSeats = availableBalanceForBids - feePlusTip;
     }
     if (nextBid < lowestBid) {
-      console.log(
-        `Can't bid ${formatArgons(nextBid)}. Current lowest bid is ${formatArgons(lowestBid)}.`,
-      );
+      console.log(`Can't bid ${formatArgons(nextBid)}. Current lowest bid is ${formatArgons(lowestBid)}.`);
       this.history.maybeReducingSeats(winningBids, SeatReductionReason.MaxBidTooLow, historyEntry);
       return;
     }
@@ -240,20 +228,12 @@ export class CohortBidder {
       return;
     }
 
-    const seatsInBudget =
-      nextBid === 0n ? this.subaccounts.length : Number(budgetForSeats / nextBid);
+    const seatsInBudget = nextBid === 0n ? this.subaccounts.length : Number(budgetForSeats / nextBid);
 
     let accountsToUse = [...this.subaccounts];
     // 3. if we have more seats than we can afford, we need to remove some
 
-    console.log(
-      'seatsInBudget',
-      seatsInBudget,
-      'budgetForSeats',
-      budgetForSeats,
-      'nextBid',
-      nextBid,
-    );
+    console.log('seatsInBudget', seatsInBudget, 'budgetForSeats', budgetForSeats, 'nextBid', nextBid);
     console.log('accountsToUse', accountsToUse);
     console.log(
       'availableBalanceForBids',
@@ -298,11 +278,7 @@ export class CohortBidder {
     this.needsRebid = false;
   }
 
-  private async bid(
-    bidPerSeat: bigint,
-    subaccounts: { address: string }[],
-    historyEntry: IBidHistoryEntry,
-  ) {
+  private async bid(bidPerSeat: bigint, subaccounts: { address: string }[], historyEntry: IBidHistoryEntry) {
     const prevLastBidTime = this.lastBidTime;
     try {
       this.lastBidTime = Date.now();
@@ -317,9 +293,7 @@ export class CohortBidder {
         useLatestNonce: true,
       });
 
-      const bidError = await txResult.inBlockPromise
-        .then(() => undefined)
-        .catch((x: ExtrinsicError) => x);
+      const bidError = await txResult.inBlockPromise.then(() => undefined).catch((x: ExtrinsicError) => x);
       let blockNumber: number | undefined;
       if (txResult.includedInBlock) {
         const client = await this.client;

@@ -1,8 +1,4 @@
-import {
-  type ArgonClient,
-  convertFixedU128ToBigNumber,
-  MICROGONS_PER_ARGON,
-} from '@argonprotocol/mainchain';
+import { type ArgonClient, convertFixedU128ToBigNumber, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
 import { formatArgonots } from './utils.js';
 
 export type MainchainClient = ArgonClient;
@@ -156,8 +152,7 @@ export class Mainchain {
     const client = await this.client;
     const priceIndex = (await client.query.priceIndex.current()).value;
     const USD = convertFixedU128ToBigNumber(priceIndex.argonUsdPrice.toBigInt()).toNumber();
-    const ARGNOT =
-      convertFixedU128ToBigNumber(priceIndex.argonotUsdPrice.toBigInt()).toNumber() / USD;
+    const ARGNOT = convertFixedU128ToBigNumber(priceIndex.argonotUsdPrice.toBigInt()).toNumber() / USD;
     const BTC = convertFixedU128ToBigNumber(priceIndex.btcUsdPrice.toBigInt()).toNumber() / USD;
     const ARGN = 1;
 

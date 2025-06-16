@@ -26,9 +26,7 @@
     <div
       :class="[
         props.disabled ? 'border-dashed cursor-default' : '',
-        hasFocus
-          ? 'bg-slate-500/5 inner-input-shadow outline-2 -outline-offset-2 outline-argon-button'
-          : '',
+        hasFocus ? 'bg-slate-500/5 inner-input-shadow outline-2 -outline-offset-2 outline-argon-button' : '',
         [!hasFocus && !props.disabled ? 'hover:bg-white' : ''],
       ]"
       class="min-w-20 font-mono text-md flex flex-row w-full text-left py-[3px] border border-slate-700/50 rounded-md text-gray-800"
@@ -47,10 +45,7 @@
         class="inline-block w-auto focus:outline-none py-[1px]"
       ></div>
       <span
-        :class="[
-          props.disabled ? 'pointer-events-none' : '',
-          suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]',
-        ]"
+        :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']"
         class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-default py-[1px]"
       >
         {{ suffix }}
@@ -79,9 +74,7 @@
             v-if="showMenu"
             class="absolute top-full -translate-y-1 z-20 right-0 h-auto max-h-80 w-auto max-w-100 bg-argon-menu-bg border border-gray-500/40 rounded-md px-0.5 py-0.5 shadow-md focus:outline-none"
           >
-            <div
-              class="absolute -top-[9px] right-[29.5px] w-[20px] h-[9px] overflow-hidden pointer-events-none"
-            >
+            <div class="absolute -top-[9px] right-[29.5px] w-[20px] h-[9px] overflow-hidden pointer-events-none">
               <div
                 class="relative top-[5px] left-[5px] w-[15px] h-[15px] rotate-45 bg-slate-50 ring-1 ring-gray-900/20"
               ></div>
@@ -433,8 +426,7 @@ function handlePaste(event: ClipboardEvent) {
 
   // Insert the sanitized text at cursor position
   const currentText = target.textContent || '';
-  const newText =
-    currentText.slice(0, cursorOffset) + sanitizedText + currentText.slice(cursorOffset);
+  const newText = currentText.slice(0, cursorOffset) + sanitizedText + currentText.slice(cursorOffset);
 
   // Ensure only one decimal point
   const parts = newText.split('.');

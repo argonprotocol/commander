@@ -58,11 +58,6 @@ export default class Installer {
   }
 
   public async tryToRun(): Promise<void> {
-    if (await this.isInstallRunning()) {
-      console.log('CANNOT tryToRun because install is running');
-      return;
-    }
-
     await this.isLoadedPromise;
     if (this.reasonToSkipInstall) {
       console.info('Skipping Installer:', this.reasonToSkipInstall, this.reasonToSkipInstallData);
@@ -71,6 +66,11 @@ export default class Installer {
     console.info('Trying to run installer');
 
     await SSH.ensureConnection(this.config.serverDetails);
+
+    if (await this.isInstallRunning()) {
+      console.log('CANNOT tryToRun because install is running');
+      return;
+    }
 
     this.config.isWaitingForUpgradeApproval = false;
     this.config.isServerInstalling = true;
@@ -291,9 +291,7 @@ export default class Installer {
     const [remoteShasums] = await SSH.runCommand('cat ~/SHASUMS256.copied 2>/dev/null || true');
     const localShasums = await this.getLocalShasums();
     const remoteFilesMatchLocalShasums = localShasums === remoteShasums;
-    console.info(
-      `Remote files ${remoteFilesMatchLocalShasums ? 'DO' : 'do NOT'} match local shasums`,
-    );
+    console.info(`Remote files ${remoteFilesMatchLocalShasums ? 'DO' : 'do NOT'} match local shasums`);
 
     if (!remoteFilesMatchLocalShasums) {
       console.info(`Remote shasums: ${remoteShasums}`);
@@ -423,8 +421,7 @@ export default class Installer {
     const biddingRulesStr = JSON.stringify(this.config.biddingRules);
     if (!biddingRulesStr) return;
 
-    const envSecurity =
-      `SESSION_KEYS_MNEMONIC="${this.config.security.sessionMnemonic}"\n` + `KEYPAIR_PASSPHRASE=`;
+    const envSecurity = `SESSION_KEYS_MNEMONIC="${this.config.security.sessionMnemonic}"\n` + `KEYPAIR_PASSPHRASE=`;
     const envState =
       `OLDEST_FRAME_ID_TO_SYNC=${this.config.serverDetails.oldestFrameIdToSync || ''}\n` +
       `IS_READY_FOR_BIDDING=${this.config.isServerReadyForMining}\n`;
@@ -465,10 +462,7 @@ export default class Installer {
     await SSH.runCommand(`cd deploy && docker compose --env-file=${DEPLOY_ENV_FILE} up bot -d`);
   }
 
-  private async clearStepFiles(
-    stepKeys: string[],
-    options: { setFirstStepToWorking?: boolean } = {},
-  ): Promise<void> {
+  private async clearStepFiles(stepKeys: string[], options: { setFirstStepToWorking?: boolean } = {}): Promise<void> {
     if (stepKeys.includes('all')) {
       await this.config.resetField('installDetails');
       await this.config.save();

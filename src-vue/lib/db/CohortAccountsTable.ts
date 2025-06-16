@@ -22,10 +22,7 @@ export class CohortAccountsTable extends BaseTable {
   }
 
   async fetchForCohortId(cohortId: number): Promise<ICohortAccountRecord[]> {
-    const rawRecords = await this.db.sql.select<any[]>(
-      'SELECT * FROM cohort_accounts WHERE cohort_id = ?',
-      [cohortId],
-    );
+    const rawRecords = await this.db.sql.select<any[]>('SELECT * FROM cohort_accounts WHERE cohort_id = ?', [cohortId]);
     return camelcaseKeys(rawRecords) as ICohortAccountRecord[];
   }
 }

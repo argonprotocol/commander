@@ -17,15 +17,7 @@ export class FramesTable extends BaseTable {
   ): Promise<void> {
     await this.db.sql.execute(
       'INSERT OR REPLACE INTO frames (id, first_tick, last_tick, first_block_number, last_block_number, progress, is_processed) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [
-        id,
-        firstTick,
-        lastTick,
-        firstBlockNumber,
-        lastBlockNumber,
-        progress,
-        toSqliteBoolean(isProcessed),
-      ],
+      [id, firstTick, lastTick, firstBlockNumber, lastBlockNumber, progress, toSqliteBoolean(isProcessed)],
     );
   }
 
@@ -40,15 +32,7 @@ export class FramesTable extends BaseTable {
   ): Promise<void> {
     await this.db.sql.execute(
       'UPDATE frames SET first_tick = ?, last_tick = ?, first_block_number = ?, last_block_number = ?, progress = ?, is_processed = ? WHERE id = ?',
-      [
-        firstTick,
-        lastTick,
-        firstBlockNumber,
-        lastBlockNumber,
-        progress,
-        toSqliteBoolean(isProcessed),
-        id,
-      ],
+      [firstTick, lastTick, firstBlockNumber, lastBlockNumber, progress, toSqliteBoolean(isProcessed), id],
     );
   }
 

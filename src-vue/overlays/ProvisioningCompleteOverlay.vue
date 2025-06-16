@@ -12,9 +12,7 @@
       <BgOverlay />
     </TransitionChild>
 
-    <div
-      class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none"
-    >
+    <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">
       <TransitionChild
         as="template"
         enter="ease-out duration-300"
@@ -32,14 +30,11 @@
           </h2>
 
           <p>
-            We verified your server configurations, installed all required software, and
-            double-checked that everything is in working order.
-            <template v-if="config.isServerReadyForMining">
-              Click the Let's Go button to get started.
-            </template>
+            We verified your server configurations, installed all required software, and double-checked that everything
+            is in working order.
+            <template v-if="config.isServerReadyForMining">Click the Let's Go button to get started.</template>
             <template v-else>
-              Only two items remain. Click the Let's Go button and we'll guide you through the final
-              steps.
+              Only two items remain. Click the Let's Go button and we'll guide you through the final steps.
             </template>
           </p>
 

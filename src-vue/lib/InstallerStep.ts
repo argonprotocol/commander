@@ -29,11 +29,7 @@ export const stepMetas: IStep[] = [
     key: InstallStepKey.FileCheck,
     progress: 0,
     status: InstallStepStatus.Pending,
-    labels: [
-      `Upload Core Server Files`,
-      `Uploading Core Server Files`,
-      `Uploaded Core Server Files`,
-    ] as IStepLabel,
+    labels: [`Upload Core Server Files`, `Uploading Core Server Files`, `Uploaded Core Server Files`] as IStepLabel,
   },
   {
     key: InstallStepKey.UbuntuCheck,

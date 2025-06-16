@@ -40,15 +40,7 @@ import { createChartOptions } from '../lib/ChartOptions';
 import XAxis from './XAxis.vue';
 
 dayjs.extend(dayjsUtc);
-Chart.register(
-  LineController,
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  TimeScale,
-  Tooltip,
-);
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, TimeScale, Tooltip);
 
 const props = defineProps<{
   isRunning?: boolean;
@@ -203,16 +195,14 @@ function getItemIndexFromEvent(event: MouseEvent, override: { x?: number; y?: nu
     y: Math.min(eventY, maxY),
   };
   const interactionItems =
-    chart?.getElementsAtEventForMode(wrappedEvent as any, 'index', { intersect: false }, true) ||
-    [];
+    chart?.getElementsAtEventForMode(wrappedEvent as any, 'index', { intersect: false }, true) || [];
   return interactionItems[0]?.index;
 }
 
 function getPrevMonthIndex(index: number) {
   const currentDate = dayjs.utc(pointItems[index].date);
   const dayOfMonth = currentDate.date();
-  const previousDate =
-    dayOfMonth === 1 ? currentDate.subtract(1, 'month') : currentDate.startOf('month');
+  const previousDate = dayOfMonth === 1 ? currentDate.subtract(1, 'month') : currentDate.startOf('month');
   const daysToSubtract = currentDate.diff(previousDate, 'day');
   return index - daysToSubtract;
 }

@@ -56,17 +56,14 @@
       v-if="step.key === InstallStepKey.ServerConnect"
       class="text-black/70 border-t border-slate-400/50 pt-3 mt-3 px-2.5 relative z-10"
     >
-      Commander could not connect to your server. Click the Configure Cloud Machine button if your
-      IP address has changed. You can also retry the connection. If this issue persists, you might
-      need to remove the current server and start afresh with a new one.
+      Commander could not connect to your server. Click the Configure Cloud Machine button if your IP address has
+      changed. You can also retry the connection. If this issue persists, you might need to remove the current server
+      and start afresh with a new one.
     </p>
-    <p
-      v-else
-      class="text-black/70 border-t border-slate-400/50 pt-3 pb-5 mt-3 px-2.5 relative z-10"
-    >
-      Commander has encountered an unrecoverable error while trying to provision your server. You
-      can rerun this step by clicking Retry. If the issue persists, you might need to remove the
-      current server and start afresh with a new one.
+    <p v-else class="text-black/70 border-t border-slate-400/50 pt-3 pb-5 mt-3 px-2.5 relative z-10">
+      Commander has encountered an unrecoverable error while trying to provision your server. You can rerun this step by
+      clicking Retry. If the issue persists, you might need to remove the current server and start afresh with a new
+      one.
     </p>
   </li>
 </template>
@@ -200,8 +197,7 @@ li.Component.InstallProgressStep {
       border-radius: 50%;
       display: block;
       border: 10px solid;
-      border-color: rgba(166, 0, 212, 0.15) rgba(166, 0, 212, 0.25) rgba(166, 0, 212, 0.35)
-        rgba(166, 0, 212, 0.5);
+      border-color: rgba(166, 0, 212, 0.15) rgba(166, 0, 212, 0.25) rgba(166, 0, 212, 0.35) rgba(166, 0, 212, 0.5);
       animation: rotation 1s linear infinite;
     }
   }

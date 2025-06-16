@@ -12,9 +12,7 @@
       <BgOverlay />
     </TransitionChild>
 
-    <div
-      class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none"
-    >
+    <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">
       <TransitionChild
         as="template"
         enter="ease-out duration-300"
@@ -31,10 +29,7 @@
           <h2 v-if="isUpgrading" class="text-xl font-bold text-slate-800/70 pt-5">
             {{ installer.isFreshInstall ? 'Installing' : 'Upgrading' }} Your Cloud Machine...
           </h2>
-          <h2
-            v-else
-            class="text-2xl font-bold text-slate-800/70 border-b border-slate-300 pt-6 pb-3 mb-6"
-          >
+          <h2 v-else class="text-2xl font-bold text-slate-800/70 border-b border-slate-300 pt-6 pb-3 mb-6">
             Upgrade Required
           </h2>
 
@@ -43,9 +38,9 @@
           </div>
           <div v-else>
             <p>
-              You have been upgraded to Commander version {{ config.version }}. This new version
-              requires an upgrade to your cloud machine. Don't worry, we'll take care of all the
-              details. Just click the "Upgrade" button to begin.
+              You have been upgraded to Commander version {{ config.version }}. This new version requires an upgrade to
+              your cloud machine. Don't worry, we'll take care of all the details. Just click the "Upgrade" button to
+              begin.
             </p>
 
             <div class="flex flex-row justify-end gap-4 mt-6 border-t border-slate-300 pt-4">

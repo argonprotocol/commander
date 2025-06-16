@@ -12,9 +12,7 @@
       <BgOverlay @close="closeOverlay" />
     </TransitionChild>
 
-    <div
-      class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none"
-    >
+    <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">
       <TransitionChild
         as="template"
         enter="ease-out duration-300"
@@ -40,13 +38,13 @@
           </h2>
 
           <p>
-            Changing the IP address of your cloud machine will not uninstall or stop any mining
-            software that is already running. It will only switch Commander to use the new server.
+            Changing the IP address of your cloud machine will not uninstall or stop any mining software that is already
+            running. It will only switch Commander to use the new server.
           </p>
 
-          <label class="text-sm font-bold text-slate-800/70 mt-6 mb-2 block"
-            >Public SSH Key (ensure this is added to your server)</label
-          >
+          <label class="text-sm font-bold text-slate-800/70 mt-6 mb-2 block">
+            Public SSH Key (ensure this is added to your server)
+          </label>
           <CopyToClipboard
             ref="copyToClipboard"
             @click="highlightCopiedContent"
@@ -69,9 +67,9 @@
               <div
                 class="bg-white py-3 pl-3 pr-8 border border-slate-300 rounded-md w-full pointer-events-none overflow-hidden"
               >
-                <span class="bg-blue-200 whitespace-nowrap w-full inline-block">{{
-                  config.serverDetails.sshPublicKey
-                }}</span>
+                <span class="bg-blue-200 whitespace-nowrap w-full inline-block">
+                  {{ config.serverDetails.sshPublicKey }}
+                </span>
               </div>
               <div
                 class="flex flex-row items-center absolute right-[1px] top-1/2 -translate-y-1/2 pointer-events-none bg-white pl-2 pr-[15px]"
@@ -96,10 +94,7 @@
               </div>
             </div>
           </div>
-          <div
-            v-else-if="hasServerDetailsError"
-            class="grow rounded-md bg-red-200 p-2 pl-4 flex items-center"
-          >
+          <div v-else-if="hasServerDetailsError" class="grow rounded-md bg-red-200 p-2 pl-4 flex items-center">
             <div class="flex">
               <div class="shrink-0">
                 <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />

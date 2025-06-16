@@ -6,11 +6,10 @@
         <div>Hedging Against Downside Volatility</div>
       </div>
       <p class="text-base text-justify w-[780px] !mx-auto mt-10 text-[#4B2B4E]">
-        Argon's Liquid Locking allows you to convert the market value of your Bitcoin into Argon
-        Stablecoins in a way that hedges against a drop in bitcoin price. Your newly received argons
-        can be invested or spent however you want. The best thing is, your locked bitcoin creates an
-        unencumbered argon short, which becomes immensely valuable if the argon ever falls below
-        target price.
+        Argon's Liquid Locking allows you to convert the market value of your Bitcoin into Argon Stablecoins in a way
+        that hedges against a drop in bitcoin price. Your newly received argons can be invested or spent however you
+        want. The best thing is, your locked bitcoin creates an unencumbered argon short, which becomes immensely
+        valuable if the argon ever falls below target price.
       </p>
     </div>
     <button
@@ -29,7 +28,7 @@
               <template v-if="isLoaded">
                 {{ fmtCommas(fmtDecimalsMax(bitcoinLocked)) }}
               </template>
-              <template v-else> --- </template>
+              <template v-else>---</template>
             </div>
             <div>Locked Bitcoins</div>
           </li>
@@ -37,12 +36,12 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">{{
-                  currencySymbol
-                }}</span
-                >{{ fmtMoney(argonTo(liquidityRealized), 1_000) }}
+                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">
+                  {{ currencySymbol }}
+                </span>
+                {{ fmtMoney(argonTo(liquidityRealized), 1_000) }}
               </template>
-              <template v-else> --- </template>
+              <template v-else>---</template>
             </div>
             <div>Realized Liquidity</div>
           </li>
@@ -50,11 +49,9 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                {{ fmtMoney(Math.min(hodlerAPR, 999_999), 100) }}%{{
-                  hodlerAPR >= 9_999 ? '+' : ' '
-                }}
+                {{ fmtMoney(Math.min(hodlerAPR, 999_999), 100) }}%{{ hodlerAPR >= 9_999 ? '+' : ' ' }}
               </template>
-              <template v-else> --- </template>
+              <template v-else>---</template>
             </div>
             <div>Bitcoin Hodling Return</div>
           </li>
@@ -66,7 +63,7 @@
                   liquidLockingAPR >= 9_999 ? '+' : ' '
                 }}
               </template>
-              <template v-else> --- </template>
+              <template v-else>---</template>
             </div>
             <div>Liquid Locking Return</div>
           </li>
@@ -134,15 +131,7 @@ function loadChartData() {
   // updateLeftSlider(sliderIndexes.value.left);
   // updateRightSlider(sliderIndexes.value.right);
 
-  const vault = new Vault(
-    '2025-01-01',
-    '2025-05-09',
-    10,
-    [],
-    bitcoinPrices,
-    bitcoinFees as BitcoinFees,
-    1,
-  );
+  const vault = new Vault('2025-01-01', '2025-05-09', 10, [], bitcoinPrices, bitcoinFees as BitcoinFees, 1);
   const snapshot = new VaultSnapshot();
   snapshot.update(vault);
   hodlerAPR.value = snapshot.hodlerProfit * 100;

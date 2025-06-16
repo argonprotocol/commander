@@ -37,17 +37,12 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     if (!blockRewardEvent) {
       return { argons: 0, argonots: 0 };
     }
-    const argonots = Number(
-      (blockRewardEvent?.event?.data.rewards[0].ownership.toNumber() / 1_000_000).toFixed(2),
-    );
-    const argons = Number(
-      (blockRewardEvent?.event?.data.rewards[0].argons.toNumber() / 1_000_000).toFixed(2),
-    );
+    const argonots = Number((blockRewardEvent?.event?.data.rewards[0].ownership.toNumber() / 1_000_000).toFixed(2));
+    const argons = Number((blockRewardEvent?.event?.data.rewards[0].argons.toNumber() / 1_000_000).toFixed(2));
     return { argons, argonots };
   }
 
   async function fetchBlock(client: MainchainClient, blockHash: BlockHash) {
-    console.log('fetchBlock', blockHash);
     const block = await client.derive.chain.getBlock(blockHash);
     const events = await client.query.system.events.at(blockHash);
     const blockRewardEvent = events.filter(({ event }: { event: any }) =>
@@ -68,11 +63,7 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     return newBlock;
   }
 
-  async function fetchBlocks(
-    lastBlockNumber: number | null,
-    endingFrameId: number | null,
-    maxBlockCount: number,
-  ) {
+  async function fetchBlocks(lastBlockNumber: number | null, endingFrameId: number | null, maxBlockCount: number) {
     const client = await getMainchainClient();
     const blocks: IBlock[] = [];
 

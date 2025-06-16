@@ -8,10 +8,7 @@ interface IBitcoinActivityRecord {
 }
 
 export class BitcoinActivitiesTable extends BaseTable {
-  async insert(
-    localNodeBlockNumber: number,
-    mainNodeBlockNumber: number,
-  ): Promise<IBitcoinActivityRecord> {
+  async insert(localNodeBlockNumber: number, mainNodeBlockNumber: number): Promise<IBitcoinActivityRecord> {
     const [rawRecord] = await this.db.sql.select<any[]>(
       'INSERT INTO bitcoin_activities (local_node_block_number, main_node_block_number) VALUES (?1, ?2) RETURNING *',
       [localNodeBlockNumber, mainNodeBlockNumber],

@@ -1,8 +1,6 @@
 <template>
   <div>
-    <div
-      class="flex flex-row justify-between items-center w-full pt-2 pb-3 space-x-1 border-b border-black/20"
-    >
+    <div class="flex flex-row justify-between items-center w-full pt-2 pb-3 space-x-1 border-b border-black/20">
       <div class="flex flex-row items-center hover:bg-[#f1f3f7] rounded-md p-1 cursor-pointer ml-3">
         <ChevronLeftIcon @click="goBack" class="w-6 h-6 cursor-pointer relative -top-0.25" />
       </div>
@@ -19,13 +17,12 @@
       <div class="flex flex-col grow pt-2 text-md">
         <div v-if="config.biddingRules">
           <p class="font-light">
-            You can use any polkadot/substrate compatible wallet to add funds to your Commander
-            account. Just scan the QR code shown on the right, or copy and paste the address that’s
-            printed below it.
+            You can use any polkadot/substrate compatible wallet to add funds to your Commander account. Just scan the
+            QR code shown on the right, or copy and paste the address that’s printed below it.
           </p>
           <p class="mt-2 font-light">
-            Based on the rules you configured, your Bidding Bot needs the following tokens in order
-            to optimize its ability to win seats:
+            Based on the rules you configured, your Bidding Bot needs the following tokens in order to optimize its
+            ability to win seats:
           </p>
 
           <table>
@@ -49,8 +46,9 @@
                         ? 'bg-green-600/90 border border-green-700'
                         : 'bg-gray-400/90 border border-gray-500'
                     "
-                    >FOR OPTIMAL</span
                   >
+                    FOR OPTIMAL
+                  </span>
                 </td>
               </tr>
               <tr>
@@ -65,16 +63,17 @@
                         ? 'bg-green-500/90 border border-green-700'
                         : 'bg-gray-400/90 border border-gray-500'
                     "
-                    >FOR OPTIMAL</span
                   >
+                    FOR OPTIMAL
+                  </span>
                 </td>
               </tr>
             </tbody>
           </table>
 
           <p class="mt-6">
-            The above table shows the optimal amounts desired. However, your Bot cannot operate if
-            it has anything less than the following:
+            The above table shows the optimal amounts desired. However, your Bot cannot operate if it has anything less
+            than the following:
           </p>
 
           <table>
@@ -98,8 +97,9 @@
                         ? 'bg-red-500 border border-red-700'
                         : 'bg-gray-400/90 border border-gray-500'
                     "
-                    >FOR MINIMUM</span
                   >
+                    FOR MINIMUM
+                  </span>
                 </td>
               </tr>
               <tr>
@@ -114,8 +114,9 @@
                         ? 'bg-red-500 border border-red-700'
                         : 'bg-gray-400/90 border border-gray-500'
                     "
-                    >FOR MINIMUM</span
                   >
+                    FOR MINIMUM
+                  </span>
                 </td>
               </tr>
             </tbody>
@@ -171,8 +172,7 @@ function goBack() {
 const qrCode = Vue.ref('');
 
 function stillNeeded(amount: number, walletValue: number) {
-  const stillNeeded =
-    amount - walletValue === 0 ? 0 : Math.ceil((amount - walletValue) * 100) / 100;
+  const stillNeeded = amount - walletValue === 0 ? 0 : Math.ceil((amount - walletValue) * 100) / 100;
   return stillNeeded > 0 ? stillNeeded : 0;
 }
 

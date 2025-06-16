@@ -1,11 +1,4 @@
-import {
-  activateNotary,
-  runOnTeardown,
-  sudo,
-  teardown,
-  TestMainchain,
-  TestNotary,
-} from '@argonprotocol/testing';
+import { activateNotary, runOnTeardown, sudo, teardown, TestMainchain, TestNotary } from '@argonprotocol/testing';
 import { MiningRotations, mnemonicGenerate } from '@argonprotocol/mainchain';
 import { afterAll, afterEach, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
@@ -88,9 +81,7 @@ it('can autobid and store stats', async () => {
     });
   });
 
-  console.log(
-    `Rotations with earnings: ${[...cohortActivatingFrameIdsWithEarnings]}. First cohort ${firstCohort}`,
-  );
+  console.log(`Rotations with earnings: ${[...cohortActivatingFrameIdsWithEarnings]}. First cohort ${firstCohort}`);
   expect(cohortActivatingFrameIdsWithEarnings.size).toBeGreaterThan(0);
 
   const cohort1Bids = await bot.storage.bidsFile(firstCohort).get();
@@ -113,9 +104,7 @@ it('can autobid and store stats', async () => {
     const earningsData = await bot.storage.earningsFile(frameId!).get();
     expect(earningsData).toBeDefined();
     expect(Object.keys(earningsData!.byCohortActivatingFrameId).length).toBeGreaterThanOrEqual(1);
-    for (const [cohortActivatingFrameId, cohortData] of Object.entries(
-      earningsData!.byCohortActivatingFrameId,
-    )) {
+    for (const [cohortActivatingFrameId, cohortData] of Object.entries(earningsData!.byCohortActivatingFrameId)) {
       cohortActivatingFrameIds.add(Number(cohortActivatingFrameId!));
       expect(Number(cohortActivatingFrameId)).toBeGreaterThan(0);
       expect(cohortData.argonsMined).toBeGreaterThan(0);

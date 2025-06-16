@@ -52,9 +52,7 @@ export function fmtDecimalsMax(num: number, decimals = 2, ifDecimalsThenAtLeast?
   decStr = (decStr ?? '').slice(0, decimals);
   decStr = decStr.replace(/0+$/, '');
 
-  return num.toFixed(
-    decStr.length && ifDecimalsThenAtLeast ? ifDecimalsThenAtLeast : decStr.length,
-  );
+  return num.toFixed(decStr.length && ifDecimalsThenAtLeast ? ifDecimalsThenAtLeast : decStr.length);
 }
 
 export function isInt(n: any) {

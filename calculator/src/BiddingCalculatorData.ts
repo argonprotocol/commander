@@ -24,8 +24,7 @@ export default class BiddingCalculatorData {
   private async initialize(mainchain: Mainchain) {
     const currentBlockRewards = await mainchain.fetchCurrentRewardsPerBlock();
 
-    this.argonRewardsForFullYear =
-      await mainchain.argonBlockRewardsForFullYear(currentBlockRewards);
+    this.argonRewardsForFullYear = await mainchain.argonBlockRewardsForFullYear(currentBlockRewards);
     this.argonRewardsForThisSeat = (currentBlockRewards * 1_440) / 10;
     this.argonotsRequiredForBid = await mainchain.getOwnershipAmountMinimum();
     this.argonotRewardsForThisSeat = (await mainchain.argonotBlockRewardsForThisSlot()) / 10;

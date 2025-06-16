@@ -12,9 +12,7 @@
       <BgOverlay />
     </TransitionChild>
 
-    <div
-      class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none"
-    >
+    <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">
       <TransitionChild
         as="template"
         enter="ease-out duration-300"
@@ -29,21 +27,17 @@
         >
           <h2 class="text-2xl font-bold text-slate-800/70 border-b border-slate-300 pb-3 mb-6">
             You Are About to Remove This Server
-            <XMarkIcon
-              class="w-6 h-6 text-slate-800/70 cursor-pointer absolute top-6 right-6"
-              @click="closeOverlay"
-            />
+            <XMarkIcon class="w-6 h-6 text-slate-800/70 cursor-pointer absolute top-6 right-6" @click="closeOverlay" />
           </h2>
 
           <p>
-            You are about to remove your cloud machine from Argon Commander. This action will not
-            stop any active processes that are running on the server nor will it delete the server
-            from your cloud provider.
+            You are about to remove your cloud machine from Argon Commander. This action will not stop any active
+            processes that are running on the server nor will it delete the server from your cloud provider.
           </p>
 
           <p class="mt-2">
-            After clicking Confirm, you should probably log into your provider and delete this
-            server. Otherwise you will continue to be charged for the resource.
+            After clicking Confirm, you should probably log into your provider and delete this server. Otherwise you
+            will continue to be charged for the resource.
           </p>
 
           <div class="flex flex-row justify-end gap-4 mt-6 border-t border-slate-300 pt-4">

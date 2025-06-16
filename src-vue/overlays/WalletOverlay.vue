@@ -12,9 +12,7 @@
       <BgOverlay @close="closeOverlay" />
     </TransitionChild>
 
-    <div
-      class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none"
-    >
+    <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">
       <TransitionChild
         as="template"
         enter="ease-out duration-300"
@@ -28,24 +26,17 @@
           class="bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl relative w-8/12 max-h-9/12 overflow-scroll"
         >
           <Send v-if="activeScreen === 'send'" @navigate="navigate" :walletId="walletId" />
-          <Receive
-            v-else-if="activeScreen === 'receive'"
-            @navigate="navigate"
-            :walletId="walletId"
-          />
+          <Receive v-else-if="activeScreen === 'receive'" @navigate="navigate" :walletId="walletId" />
           <div v-else>
             <div
               class="flex flex-row justify-between items-center w-full px-3 py-3 space-x-4 text-5xl font-bold border-b border-black/20"
             >
               <h2 class="text-2xl font-bold">{{ walletName }} Wallet</h2>
-              <CopyToClipboard
-                :content="wallet.address"
-                class="relative text-2xl font-normal grow cursor-pointer"
-              >
-                <span class="opacity-50"
-                  >{{ abreviateAddress(wallet.address) }}
-                  <CopyIcon class="w-5 h-5 ml-1 inline-block"
-                /></span>
+              <CopyToClipboard :content="wallet.address" class="relative text-2xl font-normal grow cursor-pointer">
+                <span class="opacity-50">
+                  {{ abreviateAddress(wallet.address) }}
+                  <CopyIcon class="w-5 h-5 ml-1 inline-block" />
+                </span>
                 <template #copied>
                   <div class="absolute top-0 left-0 w-full h-full pointer-events-none">
                     {{ abreviateAddress(wallet.address) }}
@@ -61,9 +52,8 @@
               </div>
             </div>
             <div class="w-full text-center py-14 text-5xl font-bold border-b border-black/20">
-              {{ currencyStore.currencySymbol
-              }}{{ fmtCommas(argonTo(wallet.totalValue).toFixed()).split('.')[0]
-              }}<span class="opacity-50">.{{ wallet.totalValue.toFixed(2).split('.')[1] }}</span>
+              {{ currencyStore.currencySymbol }}{{ fmtCommas(argonTo(wallet.totalValue).toFixed()).split('.')[0] }}
+              <span class="opacity-50">.{{ wallet.totalValue.toFixed(2).split('.')[1] }}</span>
             </div>
             <div
               class="flex flex-row justify-between items-center w-full text-center pt-5 pb-2 px-3 space-x-4 font-bold"

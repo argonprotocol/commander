@@ -9,12 +9,8 @@
       as="div"
       class="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 cursor-default w-160 h-120 bg-white rounded-lg shadow-lg border border-gray-300"
     >
-      <div
-        class="absolute top-full left-1/2 -translate-x-1/2 w-[30px] h-[15px] rotate-180 overflow-hidden"
-      >
-        <div
-          class="relative top-[5px] left-[5px] w-[20px] h-[20px] rotate-45 bg-white ring-1 ring-gray-900/20"
-        ></div>
+      <div class="absolute top-full left-1/2 -translate-x-1/2 w-[30px] h-[15px] rotate-180 overflow-hidden">
+        <div class="relative top-[5px] left-[5px] w-[20px] h-[20px] rotate-45 bg-white ring-1 ring-gray-900/20"></div>
       </div>
       <div class="text-center text-base px-6 pt-5 pb-3 h-full">
         <table class="w-full h-full">
@@ -30,18 +26,18 @@
             <tr v-for="(bid, index) in networkBids" :key="bid.address">
               <td class="text-left opacity-50">{{ index + 1 }})</td>
               <td class="text-left">{{ currencySymbol }}{{ formatArgonsBid(bid.argonsBid) }}</td>
-                {{ currencySymbol }}{{ fmtMoney(currencyStore.argonTo(bid.amount)) }}
-              </td>
               <td class="text-left">{{ lastBidAtTickFromNow(bid.lastBidAtTick) }}</td>
               <td class="text-right relative">
                 {{ bid.address.slice(0, 10) }}...{{ bid.address.slice(-7) }}
                 <span
                   v-if="bid.subAccountIndex !== undefined"
                   class="absolute right-0 top-1/2 -translate-y-1/2 bg-argon-600 text-white px-1.5 pb-0.25 rounded text-sm"
-                  >YOU<span
+                >
+                  YOU
+                  <span
                     class="absolute top-0 -left-3 inline-block h-full bg-gradient-to-r from-transparent to-white w-3"
-                  ></span
-                ></span>
+                  ></span>
+                </span>
               </td>
             </tr>
             <tr v-for="i in 10 - networkBids.length" :key="i">

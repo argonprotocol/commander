@@ -29,18 +29,13 @@
         class="absolute -left-[1px] z-100 mt-2 flex w-screen max-w-min"
       >
         <div class="absolute -top-[15px] left-2 w-[30px] h-[15px] overflow-hidden">
-          <div
-            class="relative top-[5px] left-[5px] w-[20px] h-[20px] rotate-45 bg-white ring-1 ring-gray-900/20"
-          ></div>
+          <div class="relative top-[5px] left-[5px] w-[20px] h-[20px] rotate-45 bg-white ring-1 ring-gray-900/20"></div>
         </div>
         <div
           class="flex flex-col p-1 shrink rounded bg-white text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
         >
           <a
-            v-for="(record, id) of currencyStore.displayCurrencies as Record<
-              ICurrency,
-              ICurrencyRecord
-            >"
+            v-for="(record, id) of currencyStore.displayCurrencies as Record<ICurrency, ICurrencyRecord>"
             :key="id"
             @click="
               () => {
@@ -54,8 +49,9 @@
             <span
               :class="currencyStore.displayCurrency.id === id ? 'opacity-100' : 'opacity-40'"
               class="font-medium group-hover/item:opacity-100 mr-4"
-              >{{ record.name }}</span
             >
+              {{ record.name }}
+            </span>
             <span class="w-8 text-center" v-html="record.symbol"></span>
           </a>
         </div>

@@ -21,9 +21,7 @@
           <div class="">{{ fmtCommas(mngWallet.argons) }} ARGN</div>
         </div>
         <div class="flex flex-col justify-between items-end">
-          <div class="font-bold">
-            {{ currencyStore.currencySymbol }}{{ fmtMoney(argonTo(mngWallet.argons)) }}
-          </div>
+          <div class="font-bold">{{ currencyStore.currencySymbol }}{{ fmtMoney(argonTo(mngWallet.argons)) }}</div>
           <div class="">0.03%</div>
         </div>
       </MenuButton>
@@ -97,9 +95,7 @@
           <div class="">{{ fmtCommas(mngWallet.argonots) }} ARGNOT</div>
         </div>
         <div class="flex flex-col justify-between items-end">
-          <div class="font-bold">
-            {{ currencyStore.currencySymbol }}{{ fmtMoney(argonotTo(mngWallet.argonots)) }}
-          </div>
+          <div class="font-bold">{{ currencyStore.currencySymbol }}{{ fmtMoney(argonotTo(mngWallet.argonots)) }}</div>
           <div class="">0.03%</div>
         </div>
       </MenuButton>

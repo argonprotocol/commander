@@ -1,16 +1,10 @@
 <template>
-  <div
-    class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center m-3 overflow-hidden"
-  >
+  <div class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center m-3 overflow-hidden">
     <ConfettiIcon class="absolute top-[10px] left-[10px]" style="width: calc(100% - 20px)" />
     <div class="relative mx-auto inline-block w-6/10">
-      <h1 class="text-6xl font-bold text-argon-600 text-center mt-32 mb-10 whitespace-nowrap">
-        YOUR BIDDING BOT
-      </h1>
+      <h1 class="text-6xl font-bold text-argon-600 text-center mt-32 mb-10 whitespace-nowrap">YOUR BIDDING BOT</h1>
 
-      <div
-        class="text-center mt-6 mb-5 uppercase text-base flex flex-row justify-center items-center"
-      >
+      <div class="text-center mt-6 mb-5 uppercase text-base flex flex-row justify-center items-center">
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
         <div class="whitespace-nowrap px-5 text-gray-500">IS SUBMITTING ITS</div>
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
@@ -23,36 +17,30 @@
       >
         Your bidding bot has successfully connected to the Argon blockchain. It's now trying to win
         {{ maxSeatCount }} mining seat{{ maxSeatCount === 1 ? '' : 's' }} with a
-        <span
-          @click="openBiddingBudgetOverlay"
-          class="text-argon-600 underline cursor-pointer underline-offset-2"
-          >budget cap of {{ currencySymbol
-          }}{{ fmtMoney(currencyStore.argonTo(maxBidPerSeat)) }} per seat</span
-        >.
+        <span @click="openBiddingBudgetOverlay" class="text-argon-600 underline cursor-pointer underline-offset-2">
+          budget cap of {{ currencySymbol }}{{ fmtMoney(currencyStore.argonTo(maxBidPerSeat)) }} per seat
+        </span>
+        .
         <template v-if="auctionIsClosing && startOfAuctionClosing">
-          The currently active auction is in the process of closing. Bids can still be submitted for
-          the next
+          The currently active auction is in the process of closing. Bids can still be submitted for the next
           <CountdownClock
             :time="startOfAuctionClosing"
             @tick="handleAuctionClosingTick"
             v-slot="{ hours, minutes, seconds }"
           >
-            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }}, </template>
-            <template v-if="minutes"
-              >{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and
-            </template>
+            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},</template>
+            <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and</template>
             {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
           </CountdownClock>
         </template>
         <template v-else-if="startOfNextCohort">
           The current auction will begin closing in
           <CountdownClock :time="startOfNextCohort" v-slot="{ hours, minutes, seconds }">
-            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }}, </template>
-            <template v-if="minutes"
-              >{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and
-            </template>
-            {{ seconds }} second{{ seconds > 1 ? 's' : '' }} </CountdownClock
-          >.
+            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},</template>
+            <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and</template>
+            {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
+          </CountdownClock>
+          .
         </template>
         This page will update automatically when a successful bid is confirmed.
       </p>
@@ -94,10 +82,7 @@ const startOfAuctionClosing: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
 const startOfNextCohort: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
 const maxSeatCount = Vue.ref(0);
 
-const biddingParamsHelper = new BiddingParamsHelper(
-  config.biddingRules as IBiddingRules,
-  mainchain,
-);
+const biddingParamsHelper = new BiddingParamsHelper(config.biddingRules as IBiddingRules, mainchain);
 
 const maxBidPerSeat = Vue.computed(() => config.biddingRules?.finalAmount || 0);
 

@@ -4,10 +4,7 @@ import { platform as getPlatform } from '@tauri-apps/plugin-os';
 import { ref } from 'vue';
 
 // Throttle utility function
-function throttle<T extends (...args: any[]) => any>(
-  func: T,
-  limit: number,
-): (...args: Parameters<T>) => void {
+function throttle<T extends (...args: any[]) => any>(func: T, limit: number): (...args: Parameters<T>) => void {
   let inThrottle: boolean = false;
 
   return function (this: any, ...args: Parameters<T>): void {

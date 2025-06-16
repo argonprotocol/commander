@@ -10,14 +10,9 @@
     class="absolute bottom-3 cursor-col-resize z-1"
   >
     <div class="Selected"></div>
-    <div
-      NibWrapper
-      class="absolute left-1/2 bottom-0.5 ml-[1.5px] w-[26.5px] h-6 -translate-x-1/2 translate-y-1/2"
-    >
+    <div NibWrapper class="absolute left-1/2 bottom-0.5 ml-[1.5px] w-[26.5px] h-6 -translate-x-1/2 translate-y-1/2">
       <TriangleNib class="absolute left-0 bottom-0 w-[24.5px] h-6 cursor-grab" />
-      <TriangleNibBasic
-        class="Selected absolute left-[2.5px] bottom-1 w-[18px] h-4 pointer-events-none"
-      />
+      <TriangleNibBasic class="Selected absolute left-[2.5px] bottom-1 w-[18px] h-4 pointer-events-none" />
     </div>
   </div>
 </template>

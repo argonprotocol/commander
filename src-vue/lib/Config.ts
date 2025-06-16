@@ -103,11 +103,7 @@ export class Config {
         const defaultValue = await value();
         configData[key] = defaultValue;
         fieldsToSave.add(key);
-        fieldsSerialized[key as keyof typeof fieldsSerialized] = JSON.stringify(
-          defaultValue,
-          null,
-          2,
-        );
+        fieldsSerialized[key as keyof typeof fieldsSerialized] = JSON.stringify(defaultValue, null, 2);
         continue;
       }
 
@@ -127,9 +123,7 @@ export class Config {
 
   get seedAccount(): KeyringPair {
     if (!this.isLoaded) return {} as KeyringPair;
-    return (this._seedAccount ||= new Keyring({ type: 'sr25519' }).createFromUri(
-      this.security.walletMnemonic,
-    ));
+    return (this._seedAccount ||= new Keyring({ type: 'sr25519' }).createFromUri(this.security.walletMnemonic));
   }
 
   get mngAccount(): KeyringPair {
@@ -250,10 +244,7 @@ export class Config {
 
   get isServerSyncing(): boolean {
     if (!this.isLoaded) return false;
-    return (
-      this._unserialized.syncDetails.startDate !== null &&
-      this._unserialized.syncDetails.progress < 100
-    );
+    return this._unserialized.syncDetails.startDate !== null && this._unserialized.syncDetails.progress < 100;
   }
 
   get isWaitingForUpgradeApproval(): boolean {
@@ -322,8 +313,7 @@ export class Config {
   }
 
   private _throwErrorIfNotLoaded() {
-    if (!this.isLoaded)
-      throw new Error('Config is not yet loaded. You must wait for isLoaded to be true.');
+    if (!this.isLoaded) throw new Error('Config is not yet loaded. You must wait for isLoaded to be true.');
   }
 
   private _tryFieldsToSave(field: keyof typeof dbFields, value: any) {

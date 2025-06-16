@@ -3,9 +3,7 @@
     class="absolute top-10 w-[570px] right-[33.3%] bottom-10 z-100 bg-argon-menu-bg border border-black/30 rounded shadow-xl flex flex-col gap-6 px-5 pt-5 pb-3 text-md"
   >
     <div class="flex flex-col gap-2 grow">
-      <h4 class="font-bold text-xl whitespace-nowrap">
-        Bid Breakdown for {{ scenarioName }} Annual Percentage Rate
-      </h4>
+      <h4 class="font-bold text-xl whitespace-nowrap">Bid Breakdown for {{ scenarioName }} Annual Percentage Rate</h4>
 
       <div class="w-full h-[1px] bg-slate-700/60 my-1"></div>
       <table class="w-full">
@@ -21,9 +19,7 @@
           </tr>
           <tr>
             <td>Expected Change In Price</td>
-            <td>
-              {{ data.argonotPriceChange > 0 ? '+' : '' }}{{ data.argonotPriceChange.toFixed(2) }}%
-            </td>
+            <td>{{ data.argonotPriceChange > 0 ? '+' : '' }}{{ data.argonotPriceChange.toFixed(2) }}%</td>
           </tr>
           <tr>
             <td>ARGNOT Staking Cost</td>
@@ -67,14 +63,7 @@
         <tbody>
           <tr>
             <td>
-              {{
-                fmtCommas(
-                  fmtDecimals(
-                    data.argonRewardsForThisSeat,
-                    data.argonRewardsForThisSeat >= 100 ? 0 : 1,
-                  ),
-                )
-              }}
+              {{ fmtCommas(fmtDecimals(data.argonRewardsForThisSeat, data.argonRewardsForThisSeat >= 100 ? 0 : 1)) }}
               ARGN Block Rewards
             </td>
             <td>{{ currencySymbol }}{{ fmtMoney(argonTo(data.argonRewardsForThisSeat)) }}</td>
@@ -82,12 +71,7 @@
           <tr>
             <td>
               {{
-                fmtCommas(
-                  fmtDecimals(
-                    data.argonotRewardsForThisSeat,
-                    data.argonotRewardsForThisSeat > -100 ? 0 : 1,
-                  ),
-                )
+                fmtCommas(fmtDecimals(data.argonotRewardsForThisSeat, data.argonotRewardsForThisSeat > -100 ? 0 : 1))
               }}
               ARGNOT Block Rewards
             </td>
@@ -95,11 +79,7 @@
           </tr>
           <tr>
             <td>
-              {{
-                fmtCommas(
-                  fmtDecimals(data.argonsToMintThisSeat, data.argonsToMintThisSeat >= 100 ? 0 : 1),
-                )
-              }}
+              {{ fmtCommas(fmtDecimals(data.argonsToMintThisSeat, data.argonsToMintThisSeat >= 100 ? 0 : 1)) }}
               ARGNs Expected to Mint
             </td>
             <td>{{ currencySymbol }}{{ fmtMoney(argonTo(data.argonsToMintThisSeat)) }}</td>
@@ -115,31 +95,22 @@
         <thead class="font-bold">
           <tr>
             <td>Ten Day Percentage Rate (TDPR)</td>
-            <td>
-              {{ fmtMoney(Math.min(data.TDPR, 999_999_999_999))
-              }}{{ data.TDPR > 999_999_999_999 ? '+' : '' }}%
-            </td>
+            <td>{{ fmtMoney(Math.min(data.TDPR, 999_999_999_999)) }}{{ data.TDPR > 999_999_999_999 ? '+' : '' }}%</td>
           </tr>
           <tr>
             <td>Annual Percentage Rate (APR)</td>
-            <td>
-              {{ fmtMoney(Math.min(data.APR, 999_999_999_999))
-              }}{{ data.APR > 999_999_999_999 ? '+' : '' }}%
-            </td>
+            <td>{{ fmtMoney(Math.min(data.APR, 999_999_999_999)) }}{{ data.APR > 999_999_999_999 ? '+' : '' }}%</td>
           </tr>
           <tr>
             <td>Annual Percentage Yield (APY)</td>
-            <td>
-              {{ fmtMoney(Math.min(data.APY, 999_999_999_999))
-              }}{{ data.APY > 999_999_999_999 ? '+' : '' }}%
-            </td>
+            <td>{{ fmtMoney(Math.min(data.APY, 999_999_999_999)) }}{{ data.APY > 999_999_999_999 ? '+' : '' }}%</td>
           </tr>
         </thead>
       </table>
     </div>
     <p class="pb-2">
-      * Some of these numbers will vary across seats due to randomness. Although they will achieve
-      eventual consistancy over the long-run, it is not guranteed within a single slot window.
+      * Some of these numbers will vary across seats due to randomness. Although they will achieve eventual consistancy
+      over the long-run, it is not guranteed within a single slot window.
     </p>
   </div>
 </template>

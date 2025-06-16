@@ -96,10 +96,7 @@ export default class LlbVault {
   }
 
   public get hodlerProfit(): number {
-    return LlbVault.calculateProfit(
-      this.prices[0].price * this.bitcoinCount,
-      this.totalHodlerValue,
-    );
+    return LlbVault.calculateProfit(this.prices[0].price * this.bitcoinCount, this.totalHodlerValue);
   }
 
   public get startingPrice(): number {
@@ -172,9 +169,7 @@ export default class LlbVault {
       const changePct = LlbVault.calculateProfit(lastAction.price, currentPrice);
       const changeAbs = currentPrice - lastAction.price;
       const isEnoughChange =
-        this.ratchetDec &&
-        Math.abs(changeAbs) >= this.ratchetDec &&
-        Math.abs(changePct) >= this.ratchetDec;
+        this.ratchetDec && Math.abs(changeAbs) >= this.ratchetDec && Math.abs(changePct) >= this.ratchetDec;
       if (!isEnoughChange && !currentShort) {
         continue;
       }
@@ -186,9 +181,7 @@ export default class LlbVault {
 
       if (currentShort) {
         qtyOfArgonsToBurn =
-          LlbVault.calculateUnlockBurnPerBitcoinDollar(currentShort.lowestPrice) *
-          unlockPriceOfBtc *
-          bitcoinCount;
+          LlbVault.calculateUnlockBurnPerBitcoinDollar(currentShort.lowestPrice) * unlockPriceOfBtc * bitcoinCount;
         const newCostOfArgonsToBurn = qtyOfArgonsToBurn * currentShort.lowestPrice;
         this.profitFromShorts += costOfArgonsToBurn - newCostOfArgonsToBurn;
         costOfArgonsToBurn = newCostOfArgonsToBurn;
@@ -236,9 +229,7 @@ export default class LlbVault {
       if (this.shortsByDate.EXIT) {
         const currentShort = this.shortsByDate.EXIT;
         qtyOfArgonsToBurn =
-          LlbVault.calculateUnlockBurnPerBitcoinDollar(currentShort.lowestPrice) *
-          unlockPriceOfBtc *
-          bitcoinCount;
+          LlbVault.calculateUnlockBurnPerBitcoinDollar(currentShort.lowestPrice) * unlockPriceOfBtc * bitcoinCount;
         const newCostOfArgonsToBurn = qtyOfArgonsToBurn * currentShort.lowestPrice;
         this.profitFromShorts += costOfArgonsToBurn - newCostOfArgonsToBurn;
         costOfArgonsToBurn = newCostOfArgonsToBurn;

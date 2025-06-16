@@ -44,11 +44,7 @@ export default class BiddingCalculator {
   }
 
   public get totalRewards() {
-    return (
-      this.data.argonRewardsForThisSeat +
-      this.argonotRewardsAsArgonValue +
-      this.argonsToMintThisSeat
-    );
+    return this.data.argonRewardsForThisSeat + this.argonotRewardsAsArgonValue + this.argonsToMintThisSeat;
   }
 
   public get TDPR() {

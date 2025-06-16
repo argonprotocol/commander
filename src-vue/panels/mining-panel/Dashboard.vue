@@ -17,22 +17,14 @@
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
           <span>{{ formatLargeNumber(stats.dashboard.global.totalBlocksMined || 0) }}</span>
-          <label>
-            Total Block{{ stats.dashboard.global.totalBlocksMined === 1 ? '' : 's' }} Mined
-          </label>
+          <label>Total Block{{ stats.dashboard.global.totalBlocksMined === 1 ? '' : 's' }} Mined</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span
-            >{{ currencySymbol
-            }}{{ formatLargeNumber(argonTo(globalArgonsInvested / 1_000_000)) }}</span
-          >
+          <span>{{ currencySymbol }}{{ formatLargeNumber(argonTo(globalArgonsInvested / 1_000_000)) }}</span>
           <label>Total Invested</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span
-            >{{ currencySymbol
-            }}{{ formatLargeNumber(argonTo(globalArgonsEarned / 1_000_000)) }}</span
-          >
+          <span>{{ currencySymbol }}{{ formatLargeNumber(argonTo(globalArgonsEarned / 1_000_000)) }}</span>
           <label>Total Earned</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
@@ -48,13 +40,9 @@
         <div class="flex flex-row py-2">
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
             <span class="opacity-50">Last Bitcoin Block</span>
-            <CountupClock
-              as="span"
-              :time="lastBitcoinActivityAt"
-              v-slot="{ hours, minutes, seconds, isNull }"
-            >
-              <template v-if="hours">{{ hours }}h, </template>
-              <template v-if="minutes">{{ minutes }}m and </template>
+            <CountupClock as="span" :time="lastBitcoinActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
+              <template v-if="hours">{{ hours }}h,</template>
+              <template v-if="minutes">{{ minutes }}m and</template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
               <template v-else>-- ----</template>
             </CountupClock>
@@ -62,13 +50,9 @@
           <div class="h-full w-[1px] bg-slate-400/30"></div>
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
             <span class="opacity-50">Last Argon Block</span>
-            <CountupClock
-              as="span"
-              :time="lastArgonActivityAt"
-              v-slot="{ hours, minutes, seconds, isNull }"
-            >
-              <template v-if="hours">{{ hours }}h, </template>
-              <template v-if="minutes">{{ minutes }}m and </template>
+            <CountupClock as="span" :time="lastArgonActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
+              <template v-if="hours">{{ hours }}h,</template>
+              <template v-if="minutes">{{ minutes }}m and</template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
               <template v-else>-- ----</template>
             </CountupClock>
@@ -76,13 +60,9 @@
           <div class="h-full w-[1px] bg-slate-400/30"></div>
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
             <span class="opacity-50">Last Bidding Activity</span>
-            <CountupClock
-              as="span"
-              :time="lastBotActivityAt"
-              v-slot="{ hours, minutes, seconds, isNull }"
-            >
-              <template v-if="hours">{{ hours }}h, </template>
-              <template v-if="minutes">{{ minutes }}m and </template>
+            <CountupClock as="span" :time="lastBotActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
+              <template v-if="hours">{{ hours }}h,</template>
+              <template v-if="minutes">{{ minutes }}m and</template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
               <template v-else>-- ----</template>
             </CountupClock>
@@ -102,8 +82,7 @@
             PREV SLOT
           </div>
           <span class="flex flex-row items-center">
-            COHORT #{{ stats.dashboard.cohort?.cohortId }} ({{ cohortStartDate }} -
-            {{ cohortEndDate }})
+            COHORT #{{ stats.dashboard.cohort?.cohortId }} ({{ cohortStartDate }} - {{ cohortEndDate }})
             <span class="inline-block rounded-full bg-green-500/80 w-2.5 h-2.5 ml-2"></span>
           </span>
           <div
@@ -123,22 +102,23 @@
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
-                <span>{{
-                  fmtCommas(
-                    fmtDecimalsMax(
-                      (stats.dashboard.cohort.argonsMined + stats.dashboard.cohort.argonsMinted) /
-                        1_000_000,
-                      2,
-                    ),
-                  )
-                }}</span>
+                <span>
+                  {{
+                    fmtCommas(
+                      fmtDecimalsMax(
+                        (stats.dashboard.cohort.argonsMined + stats.dashboard.cohort.argonsMinted) / 1_000_000,
+                        2,
+                      ),
+                    )
+                  }}
+                </span>
                 <label>Argons Earned</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
-                <span>{{
-                  fmtCommas(fmtDecimalsMax(stats.dashboard.cohort.argonotsMined / 1_000_000, 2))
-                }}</span>
+                <span>
+                  {{ fmtCommas(fmtDecimalsMax(stats.dashboard.cohort.argonotsMined / 1_000_000, 2)) }}
+                </span>
                 <label>Argonots Earned</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
@@ -165,10 +145,7 @@
             <table class="relative h-full">
               <thead>
                 <tr class="text-md text-gray-500 text-left">
-                  <th
-                    class="py-2 border-b border-slate-400/30 pl-1"
-                    :style="{ height: `${blocks.length + 1 / 100}%` }"
-                  >
+                  <th class="py-2 border-b border-slate-400/30 pl-1" :style="{ height: `${blocks.length + 1 / 100}%` }">
                     Block
                   </th>
                   <th class="py-2 border-b border-slate-400/30">Time</th>
@@ -178,18 +155,14 @@
               </thead>
               <tbody>
                 <tr v-for="block in blocks" :key="block.number" class="text-gray-500">
-                  <td
-                    class="text-left border-t border-slate-400/30"
-                    :style="{ height: `${blocks.length + 1 / 100}%` }"
-                  >
+                  <td class="text-left border-t border-slate-400/30" :style="{ height: `${blocks.length + 1 / 100}%` }">
                     ...{{ block.number.toString().slice(-4) }}
                   </td>
                   <td class="text-left border-t border-slate-400/30">
                     {{ block.timestamp.fromNow() }}
                   </td>
                   <td class="text-left border-t border-slate-400/30">
-                    {{ currencySymbol
-                    }}{{ fmtMoney(argonotToArgon(block.argonots) + block.argons) }}
+                    {{ currencySymbol }}{{ fmtMoney(argonotToArgon(block.argonots) + block.argons) }}
                   </td>
                   <td class="text-right border-t border-slate-400/30">
                     {{ abreviateAddress(block.author, 10) }}
@@ -263,14 +236,7 @@ import { storeToRefs } from 'pinia';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import utc from 'dayjs/plugin/utc';
-import {
-  fmtCommas,
-  fmtMoney,
-  calculateAPY,
-  fmtDecimals,
-  fmtDecimalsMax,
-  abreviateAddress,
-} from '../../lib/Utils';
+import { fmtCommas, fmtMoney, calculateAPY, fmtDecimals, fmtDecimalsMax, abreviateAddress } from '../../lib/Utils';
 import { useStats } from '../../stores/stats';
 import { useCurrencyStore } from '../../stores/currency';
 import { useBlockchainStore } from '../../stores/blockchain';
@@ -297,9 +263,7 @@ const blocks = Vue.ref<IBlock[]>([]);
 
 const globalArgonsEarned = Vue.computed(() => {
   const global = stats.dashboard.global;
-  return (
-    global.totalArgonsMined + global.totalArgonsMinted + argonotToArgon(global.totalArgonotsMined)
-  );
+  return global.totalArgonsMined + global.totalArgonsMinted + argonotToArgon(global.totalArgonotsMined);
 });
 
 const globalArgonsInvested = Vue.computed(() => {
@@ -432,4 +396,3 @@ function formatLargeNumber(number: number, maxLength = 5) {
   }
 }
 </style>
-					

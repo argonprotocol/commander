@@ -2,9 +2,7 @@
   <h2
     class="flex flex-row justify-between items-center text-2xl font-bold text-slate-800/70 border-b border-slate-300 pb-3 pl-2 pr-3 mb-4"
   >
-    <div
-      class="flex flex-row items-center hover:bg-[#f1f3f7] rounded-md p-1 pl-0 mr-2 cursor-pointer"
-    >
+    <div class="flex flex-row items-center hover:bg-[#f1f3f7] rounded-md p-1 pl-0 mr-2 cursor-pointer">
       <ChevronLeftIcon @click="goBack" class="w-6 h-6 cursor-pointer relative -top-0.25" />
     </div>
     <div class="grow">Wallet Recovery Mnemonic</div>
@@ -17,9 +15,9 @@
   </h2>
 
   <p class="text-md text-slate-500 px-3">
-    The following words constitute your wallet recovery phrase (the order is important). They are
-    used to recover your wallet if this device or app is lost or damaged. Keep them in a safe place!
-    Anyone who knows this mnemonic can access your wallet and funds.
+    The following words constitute your wallet recovery phrase (the order is important). They are used to recover your
+    wallet if this device or app is lost or damaged. Keep them in a safe place! Anyone who knows this mnemonic can
+    access your wallet and funds.
   </p>
 
   <ol class="grid grid-cols-3 gap-2 px-3 mt-4 mb-3 ml-6">

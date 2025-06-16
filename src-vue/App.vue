@@ -19,9 +19,7 @@
     <SecuritySettingsOverlay />
     <BiddingRulesOverlay />
     <!-- <ProvisioningCompleteOverlay /> -->
-    <SyncingOverlay
-      v-if="config.isServerSyncing && !config.isServerInstalling && !shouldShowUpgradeOverlay"
-    />
+    <SyncingOverlay v-if="config.isServerSyncing && !config.isServerInstalling && !shouldShowUpgradeOverlay" />
   </div>
 </template>
 
