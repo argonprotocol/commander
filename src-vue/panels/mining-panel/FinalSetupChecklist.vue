@@ -26,7 +26,7 @@
               <h2 class="text-2xl text-[#A600D4] font-bold">Configure Bidding Rules</h2>
               <p>
                 You need to set a few basic rules like your starting bid amount, the maximum price
-                you’re willing to invest, and other basic settings.
+                you're willing to invest, and other basic settings.
               </p>
             </div>
           </section>
@@ -160,7 +160,7 @@ async function launchMiningBot() {
   }
   isLaunchingMiningBot.value = true;
 
-  await installer.updateBiddingBot();
+  await installer.upgradeBiddingBotFiles();
   isLaunchingMiningBot.value = false;
 }
 </script>

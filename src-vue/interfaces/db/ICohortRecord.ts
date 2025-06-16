@@ -8,13 +8,3 @@ export interface ICohortRecord {
   createdAt: string;
   updatedAt: string;
 }
-
-export interface ICohortRecordWithTicks {
-  id: number;
-  frameTickStart: number;
-  frameTickEnd: number;
-  transactionFees: number;
-  argonotsStaked: number;
-  argonsBid: number;
-  seatsWon: number;
-}

@@ -20,7 +20,7 @@
     <BiddingRulesOverlay />
     <!-- <ProvisioningCompleteOverlay /> -->
     <SyncingOverlay
-      v-if="config.isServerSyncing && !config.isServerInstalling && !isWaitingForUpgradeApproval"
+      v-if="config.isServerSyncing && !config.isServerInstalling && !shouldShowUpgradeOverlay"
     />
   </div>
 </template>

@@ -3,7 +3,7 @@
     <PopoverButton
       class="focus:outline-none border border-argon-300 whitespace-nowrap text-argon-600 px-7 py-2 rounded cursor-pointer hover:bg-argon-50/40 hover:border-argon-600 transition-all duration-300"
     >
-      View Active Bids
+      View Bidding Activity
     </PopoverButton>
     <PopoverPanel
       as="div"
@@ -20,23 +20,23 @@
         <table class="w-full h-full">
           <thead class="font-bold">
             <tr>
-              <th class="text-left pb-2">#</th>
-              <th class="text-left pb-2">Amount</th>
-              <th class="text-left pb-2">Bid Submitted</th>
-              <th class="text-right pb-2">Bidding Account</th>
+              <th class="text-left"></th>
+              <th class="text-left">Bid Amount</th>
+              <th class="text-left">Submitted</th>
+              <th class="text-right">Account</th>
             </tr>
           </thead>
           <tbody class="font-light font-mono">
-            <tr v-for="(bid, index) in networkBids" :key="bid.address">
-              <td class="text-left opacity-50">{{ index + 1 }})</td>
-              <td class="text-left">{{ currencySymbol }}{{ formatArgonsBid(bid.argonsBid) }}</td>
+            <tr v-for="(bid, index) in allBids" :key="bid.accountId">
+              <td class="text-left">{{ index + 1 }}</td>
+              <td class="text-left">
                 {{ currencySymbol }}{{ fmtMoney(currencyStore.argonTo(bid.amount)) }}
               </td>
-              <td class="text-left">{{ lastBidAtTickFromNow(bid.lastBidAtTick) }}</td>
+              <td class="text-left">recently</td>
               <td class="text-right relative">
-                {{ bid.address.slice(0, 10) }}...{{ bid.address.slice(-7) }}
+                {{ bid.accountId.slice(0, 10) }}...{{ bid.accountId.slice(-7) }}
                 <span
-                  v-if="bid.subAccountIndex !== undefined"
+                  v-if="bid.isMine"
                   class="absolute right-0 top-1/2 -translate-y-1/2 bg-argon-600 text-white px-1.5 pb-0.25 rounded text-sm"
                   >YOU<span
                     class="absolute top-0 -left-3 inline-block h-full bg-gradient-to-r from-transparent to-white w-3"
@@ -44,8 +44,8 @@
                 ></span>
               </td>
             </tr>
-            <tr v-for="i in 10 - networkBids.length" :key="i">
-              <td class="text-left">{{ networkBids.length + i }}</td>
+            <tr v-for="i in 10 - allBids.length" :key="i">
+              <td class="text-left">{{ allBids.length + i }}</td>
               <td class="text-left text-gray-400">---</td>
               <td class="text-left text-gray-400">---</td>
               <td class="text-right text-gray-400">-------------</td>
@@ -60,48 +60,12 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { storeToRefs } from 'pinia';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { useCurrencyStore } from '../stores/currency';
 import { fmtMoney } from '../lib/Utils';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
-import { useStats } from '../stores/stats';
-import { IBidsFile } from '@argonprotocol/commander-bot/src/storage';
 
-dayjs.extend(utc);
-dayjs.extend(relativeTime);
-
-const stats = useStats();
 const currencyStore = useCurrencyStore();
-
 const { currencySymbol } = storeToRefs(currencyStore);
 
-const networkBids = Vue.computed<IBidsFile['winningBids']>(() => stats.winningBids);
-
-function formatArgonsBid(argonsBid: bigint | undefined): string {
-  if (!argonsBid) return '---';
-  return fmtMoney(currencyStore.argonTo(Number(argonsBid) / 1_000_000));
-}
-
-function lastBidAtTickFromNow(lastBidAtTick: number | undefined): string {
-  if (!lastBidAtTick) return '---';
-  return dayjs.utc(lastBidAtTick * 60_000).fromNow();
-}
+const allBids = Vue.ref([]);
 </script>
-
-<style scoped>
-@reference "../main.css";
-
-th,
-td {
-  @apply border-b border-gray-300;
-}
-
-tbody tr:last-child {
-  th,
-  td {
-    @apply border-b-0;
-  }
-}
-</style>

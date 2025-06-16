@@ -66,6 +66,7 @@ export const ConfigInstallDetailsSchema = z.object({
 export const ConfigSyncDetailsSchema = z.object({
   progress: z.number(),
   startDate: z.string().nullable(),
+  startPosition: z.number().nullable(),
   errorType: z.string().nullable(),
   errorMessage: z.string().nullable(),
 });
@@ -87,6 +88,7 @@ export const ConfigSchema = z.object({
   isWaitingForUpgradeApproval: z.boolean(), // isRequiringUpgrade
 
   hasMiningSeats: z.boolean(), // hasMiningSeats
+  hasMiningBids: z.boolean(), // hasMiningBids
   biddingRules: BiddingRulesSchema.nullable(),
 });
 

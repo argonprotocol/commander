@@ -22,11 +22,12 @@
         class="text-center text-lg mt-6 border-t border-b border-gray-300 pt-8 pb-7 font-light leading-7.5 inline-block"
       >
         Your bidding bot has successfully connected to the Argon blockchain. It's now trying to win
-        some mining seats with a
+        {{ maxSeatCount }} mining seat{{ maxSeatCount === 1 ? '' : 's' }} with a
         <span
           @click="openBiddingBudgetOverlay"
           class="text-argon-600 underline cursor-pointer underline-offset-2"
-          >budget of {{ currencySymbol }}{{ fmtMoney(currencyStore.argonTo(biddingBudget)) }}</span
+          >budget cap of {{ currencySymbol
+          }}{{ fmtMoney(currencyStore.argonTo(maxBidPerSeat)) }} per seat</span
         >.
         <template v-if="auctionIsClosing && startOfAuctionClosing">
           The currently active auction is in the process of closing. Bids can still be submitted for
@@ -53,7 +54,7 @@
             {{ seconds }} second{{ seconds > 1 ? 's' : '' }} </CountdownClock
           >.
         </template>
-        This page will update automatically when you have a successful bid.
+        This page will update automatically when a successful bid is confirmed.
       </p>
       <div class="flex flex-row justify-center items-center space-x-6">
         <ActiveBidsOverlayButton />
@@ -98,10 +99,7 @@ const biddingParamsHelper = new BiddingParamsHelper(
   mainchain,
 );
 
-const biddingBudget = Vue.computed(() => {
-  const amountPerSeat = config.biddingRules?.finalAmount || 0;
-  return amountPerSeat * maxSeatCount.value;
-});
+const maxBidPerSeat = Vue.computed(() => config.biddingRules?.finalAmount || 0);
 
 function handleAuctionClosingTick(totalSecondsRemaining: number) {
   if (totalSecondsRemaining <= 0) {

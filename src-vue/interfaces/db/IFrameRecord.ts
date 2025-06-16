@@ -1,8 +1,8 @@
 export interface IFrameRecord {
   id: number;
   progress: number;
-  tickStart: number;
-  tickEnd: number;
+  firstTick: number;
+  lastTick: number;
   isProcessed: boolean;
   createdAt: string;
   updatedAt: string;

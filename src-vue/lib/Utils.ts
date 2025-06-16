@@ -62,8 +62,8 @@ export function isInt(n: any) {
   return n % 1 === 0;
 }
 
-export function abreviateAddress(address: string) {
-  return address.slice(0, 6) + '...' + address.slice(-4);
+export function abreviateAddress(address: string, length = 4) {
+  return address.slice(0, 6) + '...' + address.slice(-length);
 }
 
 export function calculateAPY(costs: number, rewards: number) {
@@ -84,4 +84,19 @@ export function convertBigIntStringToNumber(bigIntStr: string | undefined): bigi
   if (!bigIntStr) return 0n;
   // The string is formatted as "1234567890n"
   return BigInt(bigIntStr.slice(0, -1));
+}
+
+export function toSqliteBoolean(bool: boolean): number {
+  return bool ? 1 : 0;
+}
+
+export function fromSqliteBoolean(num: number): boolean {
+  return num === 1;
+}
+
+export function convertSqliteBooleans(obj: any, fields: string[]): any {
+  return fields.reduce((acc, field) => {
+    acc[field] = fromSqliteBoolean(obj[field]);
+    return acc;
+  }, obj);
 }

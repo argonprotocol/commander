@@ -181,6 +181,9 @@ const argonotMenuButton = Vue.ref<typeof MenuButton>();
 const argonPopoverOpen = Vue.ref(false);
 const argonotPopoverOpen = Vue.ref(false);
 
+console.log('argnots: ', mngWallet.value.argonots);
+console.log('value of argonots: ', argonotTo(mngWallet.value.argonots));
+
 function navigate(screen: string) {
   emit('navigate', { screen });
 }

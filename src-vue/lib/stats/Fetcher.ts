@@ -1,5 +1,7 @@
 import { IBlockNumbers } from '@argonprotocol/commander-bot/src/Dockers';
 import {
+  ISyncState,
+  IEarningsFile,
   IBidsFile,
   IBidsHistory,
   IEarningsFile,
@@ -39,6 +41,8 @@ export class StatsFetcher {
         currentFrameId: data.currentFrameId,
         loadProgress: data.loadProgress,
         queueDepth: data.queueDepth,
+        maxSeatsPossible: data.maxSeatsPossible,
+        maxSeatsReductionReason: data.maxSeatsReductionReason,
       };
     } catch (error) {
       if (retries > 3) {
@@ -96,6 +100,8 @@ export class StatsFetcher {
   }
 
   public static async fetchEarningsFile(frameId: number): Promise<IEarningsFile> {
+    frameId: number,
+  ): Promise<IEarningsFile> {
     console.log(`Fetching earnings/${frameId}`);
     const { data } = await SSH.runHttpGet<IEarningsFile>(`earnings/${frameId}`);
     console.log('Earnings file fetched:', data);
@@ -119,15 +125,19 @@ export class StatsFetcher {
     );
     console.log('By cohort activating frame id:', byCohortActivatingFrameId);
     return {
+      frameId: data.frameId,
       frameProgress: data.frameProgress,
-      frameTickStart: data.frameTickStart,
-      frameTickEnd: data.frameTickEnd,
+      firstTick: data.firstTick,
+      lastTick: data.lastTick,
+      firstBlockNumber: data.firstBlockNumber,
       lastBlockNumber: data.lastBlockNumber,
       byCohortActivatingFrameId: Object.fromEntries(byCohortActivatingFrameId),
     };
   }
 
   public static async fetchBidsFile(frameId: number): Promise<IBidsFile> {
+    let url = `http://127.0.0.1:${localPort}/bids`;
+    if (frameId) {
     const { data } = await SSH.runHttpGet<IBidsFile>(`bids/${frameId}`);
     console.log('Bids file fetched:', data);
     return {

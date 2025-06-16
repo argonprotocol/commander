@@ -29,7 +29,22 @@ const bot = new Bot({
   }),
 });
 
+function notStarted(res: express.Response): boolean {
+  if (bot.isWaitingToStart) {
+    jsonExt({ isWaitingToStart: true }, res);
+    return true;
+  } else if (bot.isStarting) {
+    jsonExt({ isStarting: true }, res);
+    return true;
+  } else if (!bot.isStarted) {
+    jsonExt({ isStarted: false }, res);
+    return true;
+  }
+  return false;
+}
+
 const app = express();
+
 app.use(
   cors({
     origin: true,
@@ -43,7 +58,7 @@ app.get('/start', async (_req, res) => {
 });
 
 app.get('/sync-state', async (_req, res) => {
-  if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
+  if (notStarted(res)) return;
   const syncState = await bot.blockSync.state();
   jsonExt(syncState, res);
 });
@@ -59,7 +74,7 @@ app.get('/bitcoin-blockchain-status', async (_req, res) => {
 });
 
 app.get('/bids', async (_req, res) => {
-  if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
+  if (notStarted(res)) return;
   const currentFrameId = await bot.currentFrameId();
   const nextFrameId = currentFrameId + 1;
   const data = await bot.storage.bidsFile(nextFrameId).get();
@@ -67,27 +82,27 @@ app.get('/bids', async (_req, res) => {
 });
 
 app.get('/bids-history', async (_req, res) => {
-  if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
-  const data = bot.autobidder.bidHistory;
+  if (notStarted(res)) return;
+  const data = bot.history;
   jsonExt(data, res);
 });
 
 app.get('/bids/:cohortActivatingFrameId', async (req, res) => {
-  if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
+  if (notStarted(res)) return;
   const cohortActivatingFrameId = Number(req.params.cohortActivatingFrameId);
   const data = await bot.storage.bidsFile(cohortActivatingFrameId).get();
   jsonExt(data, res);
 });
 
 app.get('/earnings/:frameId', async (req, res) => {
-  if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
+  if (notStarted(res)) return;
   const frameId = Number(req.params.frameId);
   const data = await bot.storage.earningsFile(frameId).get();
   jsonExt(data, res);
 });
 
 app.post('/restart-bidder', async (_req, res) => {
-  if (bot.isWaitingToStart) return jsonExt({ isWaitingToStart: true }, res);
+  if (notStarted(res)) return;
   await bot.autobidder.restart();
   res.status(200).json({ ok: true });
 });

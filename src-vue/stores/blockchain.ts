@@ -1,11 +1,11 @@
 import * as Vue from 'vue';
 import { defineStore } from 'pinia';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { type MainchainClient } from '@argonprotocol/commander-calculator';
-import { type UnsubscribePromise } from '@polkadot/api-base/types/base';
 import { getMainchain, getMainchainClient } from '../stores/mainchain.ts';
+import { BlockHash } from '@argonprotocol/mainchain';
 
 dayjs.extend(utc);
 dayjs.extend(relativeTime);
@@ -18,11 +18,17 @@ export type IActiveBid = {
   isMine?: boolean;
 };
 
-export const useBlockchainStore = defineStore('blockchain', () => {
-  const recentBlocks = Vue.reactive<any[]>([]);
-  const recentBlocksAreLoaded = Vue.ref(false);
-  const lastBlockTimestamp = Vue.ref(0);
+export type IBlock = {
+  number: number;
+  hash: string;
+  author: string;
+  extrinsics: number;
+  argonots: number;
+  argons: number;
+  timestamp: Dayjs;
+};
 
+export const useBlockchainStore = defineStore('blockchain', () => {
   const miningSeatCount = Vue.ref(0);
   const aggregatedBidCosts = Vue.ref(0);
   const aggregatedBlockRewards = Vue.ref({ argons: 0, argonots: 0 });
@@ -31,82 +37,76 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     if (!blockRewardEvent) {
       return { argons: 0, argonots: 0 };
     }
-    const argonots = (
-      blockRewardEvent?.event?.data.rewards[0].ownership.toNumber() / 1_000_000
-    ).toFixed(2);
-    const argons = (blockRewardEvent?.event?.data.rewards[0].argons.toNumber() / 1_000_000).toFixed(
-      2,
+    const argonots = Number(
+      (blockRewardEvent?.event?.data.rewards[0].ownership.toNumber() / 1_000_000).toFixed(2),
+    );
+    const argons = Number(
+      (blockRewardEvent?.event?.data.rewards[0].argons.toNumber() / 1_000_000).toFixed(2),
     );
     return { argons, argonots };
   }
 
-  async function addRecentBlock(client: MainchainClient, blockHash: any) {
+  async function fetchBlock(client: MainchainClient, blockHash: BlockHash) {
+    console.log('fetchBlock', blockHash);
     const block = await client.derive.chain.getBlock(blockHash);
     const events = await client.query.system.events.at(blockHash);
     const blockRewardEvent = events.filter(({ event }: { event: any }) =>
       client.events.blockRewards.RewardCreated.is(event),
     )[0];
     const { argons, argonots } = extractBlockRewardsFromEvent(blockRewardEvent);
-
-    const timestamp = await client.query.timestamp.now.at(blockHash);
-    lastBlockTimestamp.value = timestamp.toNumber();
-
-    const newBlock = {
+    const timestamp = (await client.query.timestamp.now.at(blockHash)).toNumber();
+    const newBlock: IBlock = {
       number: block.block.header.number.toNumber(),
       hash: block.block.header.hash.toHex(),
-      author: block.author?.toHex(),
+      author: block.author?.toHex() || '',
       extrinsics: block.block.extrinsics.length,
       argonots,
       argons,
-      timestamp: lastBlockTimestamp,
+      timestamp: dayjs.utc(timestamp),
     };
-    recentBlocks.push(newBlock);
-    if (recentBlocks.length > 6) {
-      recentBlocks.shift();
-    }
+
+    return newBlock;
   }
 
-  async function subscribeToRecentBlocks() {
+  async function fetchBlocks(
+    lastBlockNumber: number | null,
+    endingFrameId: number | null,
+    maxBlockCount: number,
+  ) {
     const client = await getMainchainClient();
+    const blocks: IBlock[] = [];
 
-    // Initial load of recent blocks
-    const lastBlockHash = await client.rpc.chain.getHeader();
-    const lastBlock = await client.rpc.chain.getBlock(lastBlockHash.hash);
-    const lastBlockNumber = lastBlock.block.header.number.toNumber();
-    const sinceBlockNumber = lastBlockNumber - 6;
-
-    for (let blockNumber = sinceBlockNumber; blockNumber <= lastBlockNumber; blockNumber++) {
-      const blockHash = await client.rpc.chain.getBlockHash(blockNumber);
-      await addRecentBlock(client, blockHash);
+    if (!lastBlockNumber) {
+      const lastestBlockHash = await client.rpc.chain.getHeader();
+      const lastestBlock = await client.rpc.chain.getBlock(lastestBlockHash.hash);
+      lastBlockNumber = lastestBlock.block.header.number.toNumber();
     }
 
-    recentBlocksAreLoaded.value = true;
+    let blockNumber = lastBlockNumber;
+    while (blocks.length < maxBlockCount) {
+      const blockHash = await client.rpc.chain.getBlockHash(blockNumber);
+      if (!blockHash) break;
+      const block = await fetchBlock(client, blockHash);
+      blocks.push(block);
+      blockNumber--;
+    }
+
+    return blocks;
+  }
+
+  async function subscribeToBlocks(onBlock: (block: IBlock) => void) {
+    const client = await getMainchainClient();
 
     // Subscribe to new blocks
-    await client.rpc.chain.subscribeNewHeads(async header => {
+    return await client.rpc.chain.subscribeNewHeads(async header => {
       const blockHash = header.hash;
-      addRecentBlock(client, blockHash);
+      const block = await fetchBlock(client, blockHash);
+      onBlock(block);
     });
-
-    recentBlocks.sort((a, b) => a.number - b.number);
   }
 
-  async function subscribeToActiveBids(
-    callbackFn: (activeBids: IActiveBid[]) => void,
-  ): UnsubscribePromise {
-    const client = await getMainchainClient();
-    return client.query.miningSlot.nextSlotCohort(nextSlotCohort => {
-      const newBids: IActiveBid[] = [];
-      for (const bid of nextSlotCohort) {
-        newBids.push({
-          cohortId: bid.cohortId.toNumber(),
-          accountId: bid.accountId.toString(),
-          amount: bid.bid.toNumber() / 1_000_000,
-          submittedAt: dayjs.utc(bid.bidAtTick.toNumber() * 60_000),
-        });
-      }
-      callbackFn(newBids);
-    });
+  async function unsubscribeFromBlocks(subscription: any) {
+    subscription.unsubscribe();
   }
 
   async function updateMiningSeatCount() {
@@ -122,16 +122,14 @@ export const useBlockchainStore = defineStore('blockchain', () => {
   }
 
   return {
-    recentBlocks,
-    recentBlocksAreLoaded,
-    lastBlockTimestamp,
     aggregatedBidCosts,
     aggregatedBlockRewards,
     miningSeatCount,
-    subscribeToRecentBlocks,
+    subscribeToBlocks,
+    unsubscribeFromBlocks,
     updateAggregateBidCosts,
     updateAggregateBlockRewards,
     updateMiningSeatCount,
-    subscribeToActiveBids,
+    fetchBlocks,
   };
 });

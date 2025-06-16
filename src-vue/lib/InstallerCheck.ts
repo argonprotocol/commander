@@ -24,10 +24,13 @@ export class InstallerCheck {
   }
 
   public start(): void {
-    this.isCompletedPromise = new Promise(async resolve => {
+    this.isCompletedPromise = new Promise(async (resolve, reject) => {
       while (true) {
         await this.updateInstallStatus();
-        if (this.hasError) return;
+        if (this.hasError) {
+          reject(new Error('Install process has error'));
+          return;
+        }
 
         if (this.isServerInstallComplete) {
           this.config.isServerInstalling = false;
@@ -36,7 +39,7 @@ export class InstallerCheck {
           return;
         }
 
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
       resolve();
     });
@@ -119,6 +122,10 @@ export class InstallerCheck {
       prevStep = stepNewData;
     }
 
+    if (installDetailsPending[InstallStepKey.MiningLaunch].progress >= 100) {
+      installDetailsPending[InstallStepKey.MiningLaunch].status = InstallStepStatus.Completed;
+    }
+
     this.config.installDetails = installDetailsPending;
     await this.config.save();
   }
@@ -132,8 +139,12 @@ export class InstallerCheck {
     stepOldData: IConfigInstallStep,
     filenames: String[],
   ): 'Pending' | 'Started' | 'Finished' | 'Failed' {
-    if (stepName === InstallStepKey.ServerConnect) {
-      const nextStepHasStarted = filenames.includes(`${InstallStepKey.FileCheck}.started`);
+    if ([InstallStepKey.ServerConnect, InstallStepKey.FileCheck].includes(stepName)) {
+      const nextStepName =
+        stepName === InstallStepKey.ServerConnect
+          ? InstallStepKey.FileCheck
+          : InstallStepKey.UbuntuCheck;
+      const nextStepHasStarted = filenames.includes(`${nextStepName}.started`);
       if (stepOldData.progress >= 100 || nextStepHasStarted) {
         return 'Finished';
       } else {

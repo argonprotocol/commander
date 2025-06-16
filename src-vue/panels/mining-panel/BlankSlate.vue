@@ -73,12 +73,9 @@
         <ul
           Blocks
           class="w-full flex flex-row justify-end h-[137px]"
-          :style="{ opacity: blockchainStore.recentBlocksAreLoaded ? 1 : 0.1 }"
+          :style="{ opacity: blocksAreLoaded ? 1 : 0.1 }"
         >
-          <template
-            v-for="(block, index) in blockchainStore.recentBlocks"
-            :key="`${block.hash}-${index}`"
-          >
+          <template v-for="(block, index) in blocks" :key="`${block.hash}-${index}`">
             <li Block class="leading-6">
               <div class="border-b border-slate-300 pb-1 mb-2">
                 #<span class="font-bold opacity-50">{{ block.number }}</span>
@@ -111,11 +108,10 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import emitter from '../../emitters/basic';
-import { useBlockchainStore } from '../../stores/blockchain';
-import { useConfig } from '../../stores/config';
+import { useBlockchainStore, type IBlock } from '../../stores/blockchain';
 import { useCurrencyStore } from '../../stores/currency';
 import { fmtCommas, fmtMoney, calculateAPY } from '../../lib/Utils';
 import { storeToRefs } from 'pinia';
@@ -143,11 +139,30 @@ const currentAPY = Vue.computed(() => {
   return calculateAPY(blockchainStore.aggregatedBidCosts, aggregatedBlockRewards.value);
 });
 
+const blocks = Vue.ref<IBlock[]>([]);
+const blocksAreLoaded = Vue.ref(false);
+let blocksSubscription: any = null;
+let lastBlockTimestamp: Dayjs;
+
+function loadBlocks() {
+  blockchainStore.fetchBlocks(null, null, 8).then(newBlocks => {
+    blocks.value = newBlocks;
+    blocksAreLoaded.value = true;
+  });
+  lastBlockTimestamp = blocks.value[0]?.timestamp;
+  blocksSubscription = blockchainStore.subscribeToBlocks(newBlock => {
+    blocks.value.unshift(newBlock);
+    lastBlockTimestamp = newBlock.timestamp;
+    if (blocks.value.length > 8) {
+      blocks.value.pop();
+    }
+  });
+}
+
 function updateTimeSinceBlock() {
-  if (blockchainStore.lastBlockTimestamp) {
+  if (lastBlockTimestamp) {
     const now = dayjs.utc();
-    const lastBlockTime = dayjs.utc(blockchainStore.lastBlockTimestamp);
-    const totalSecondsSinceBlock = now.diff(lastBlockTime, 'seconds');
+    const totalSecondsSinceBlock = now.diff(lastBlockTimestamp, 'seconds');
     minutesSinceBlock.value =
       totalSecondsSinceBlock < 60 ? 0 : Math.floor(totalSecondsSinceBlock / 60);
     secondsSinceBlock.value = totalSecondsSinceBlock % 60;
@@ -162,9 +177,9 @@ function openServerConnectOverlay() {
 
 Vue.onMounted(async () => {
   updateTimeSinceBlock();
+  loadBlocks();
 
   Promise.all([
-    blockchainStore.subscribeToRecentBlocks(),
     blockchainStore.updateAggregateBidCosts(),
     blockchainStore.updateAggregateBlockRewards(),
     blockchainStore.updateMiningSeatCount(),

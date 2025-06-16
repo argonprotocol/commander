@@ -13,6 +13,10 @@ import CloudMachineIsProvisioning from './mining-panel/CloudMachineIsProvisionin
 import FirstAuction from './mining-panel/FirstAuction.vue';
 import Dashboard from './mining-panel/Dashboard.vue';
 import { useConfig } from '../stores/config';
+import { useStats } from '../stores/stats';
 
 const config = useConfig();
+const stats = useStats();
+
+console.log('config.hasMiningSeats', config.hasMiningSeats);
 </script>

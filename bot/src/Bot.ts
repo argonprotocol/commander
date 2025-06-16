@@ -1,8 +1,9 @@
-import { CohortStorage } from './storage.ts';
 import { Accountset, getClient, type KeyringPair } from '@argonprotocol/mainchain';
+import { CohortStorage } from './storage.ts';
 import { AutoBidder } from './AutoBidder.ts';
 import { BlockSync } from './BlockSync.ts';
 import { Dockers } from './Dockers.ts';
+import { type IBidHistoryItem } from './interfaces/IBidHistoryItem.ts';
 
 interface IBotOptions {
   datadir: string;
@@ -25,6 +26,8 @@ export default class Bot {
   public isStarting: boolean = false;
   public isStarted: boolean = false;
 
+  public history: IBidHistoryItem[] = [];
+
   private options: IBotOptions;
 
   constructor(options: IBotOptions) {
@@ -46,6 +49,7 @@ export default class Bot {
     this.autobidder = new AutoBidder(this.accountset, this.storage, this.options.biddingRulesPath);
     this.blockSync = new BlockSync(
       this,
+      this.autobidder,
       this.accountset,
       this.storage,
       this.options.archiveRpcUrl,
@@ -73,7 +77,10 @@ export default class Bot {
 
     const argonBlockNumbers = await Dockers.getArgonBlockNumbers();
     const bitcoinBlockNumbers = await Dockers.getBitcoinBlockNumbers();
-    console.log('Dockers are synced, starting bot', { argonBlockNumbers, bitcoinBlockNumbers });
+    console.log('Dockers are synced, starting bot', {
+      argonBlockNumbers,
+      bitcoinBlockNumbers,
+    });
 
     this.isWaitingToStart = false;
     await this.start();

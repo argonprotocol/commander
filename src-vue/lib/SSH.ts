@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { Config } from './Config';
 import { IConfigServerDetails } from '../interfaces/IConfig';
 
 export class SSH {

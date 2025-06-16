@@ -85,6 +85,7 @@ export class Config {
       isServerReadyForMining: false,
       isWaitingForUpgradeApproval: false,
       hasMiningSeats: false,
+      hasMiningBids: false,
       biddingRules: null,
     };
   }
@@ -277,6 +278,17 @@ export class Config {
     this._unserialized.hasMiningSeats = value;
   }
 
+  get hasMiningBids(): boolean {
+    if (!this.isLoaded) return false;
+    return this._unserialized.hasMiningBids;
+  }
+
+  set hasMiningBids(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._tryFieldsToSave(dbFields.hasMiningBids, value);
+    this._unserialized.hasMiningBids = value;
+  }
+
   get biddingRules(): IConfig['biddingRules'] {
     if (!this.isLoaded) return {} as IConfig['biddingRules'];
     return this._unserialized.biddingRules;
@@ -351,6 +363,7 @@ const dbFields = {
   isServerReadyForMining: 'isServerReadyForMining',
   isWaitingForUpgradeApproval: 'isWaitingForUpgradeApproval',
   hasMiningSeats: 'hasMiningSeats',
+  hasMiningBids: 'hasMiningBids',
   biddingRules: 'biddingRules',
 } as const;
 
@@ -366,6 +379,7 @@ interface IConfigDefaults {
   isServerReadyForMining: () => IConfig['isServerReadyForMining'];
   isWaitingForUpgradeApproval: () => IConfig['isWaitingForUpgradeApproval'];
   hasMiningSeats: () => IConfig['hasMiningSeats'];
+  hasMiningBids: () => IConfig['hasMiningBids'];
   biddingRules: () => IConfig['biddingRules'];
 }
 
@@ -415,6 +429,7 @@ const defaults: IConfigDefaults = {
   syncDetails: () => ({
     progress: 0,
     startDate: null,
+    startPosition: null,
     errorType: null,
     errorMessage: null,
   }),
@@ -424,5 +439,6 @@ const defaults: IConfigDefaults = {
   isServerReadyForMining: () => false,
   isWaitingForUpgradeApproval: () => false,
   hasMiningSeats: () => false,
+  hasMiningBids: () => false,
   biddingRules: () => null,
 };

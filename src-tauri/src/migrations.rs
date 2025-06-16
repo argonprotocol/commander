@@ -8,6 +8,7 @@ pub fn get_migrations() -> Vec<Migration> {
         .files()
         .filter_map(|file| {
             if file.path().extension()?.to_str()? != "sql" {
+            description: "bootup".into(),
                 return None;
             }
 

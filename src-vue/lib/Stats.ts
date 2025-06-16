@@ -1,10 +1,13 @@
-import { ISyncState } from '@argonprotocol/commander-bot/src/storage';
+import { IBidsFile, ISyncState } from '@argonprotocol/commander-bot/src/storage';
 import { StatsFetcher } from './stats/Fetcher';
 import { StatsSyncer } from './stats/Syncer';
-import { IActiveBids, IDashboardStats, IStats } from '../interfaces/IStats';
+import { IStats, IActiveBids, IDashboardStats } from '../interfaces/IStats';
 import { Db } from './Db';
 import { Config } from './Config';
+import { SSH } from './SSH';
 import { Installer } from '../stores/installer';
+import { getMainchainClient } from '../stores/mainchain';
+import { MiningFrames } from '@argonprotocol/commander-bot/src/MiningFrames';
 
 let IS_INITIALIZED = false;
 
@@ -16,20 +19,25 @@ interface CohortAccount {
 }
 
 export class Stats {
-  public hasMiningSeats: boolean;
   public cohortId: number | null;
-  public data: IStats;
+
+  public dashboard: IDashboardStats;
+  public argonActivity: any[];
+  public bitcoinActivity: any[];
+  public botActivity: any[];
+
+  public winningBids: IBidsFile['winningBids'];
+
+  public maxSeatsPossible: number;
+  public maxSeatsReductionReason: string;
 
   public isLoaded: boolean;
   public isLoadedPromise: Promise<void>;
+  public isRunning: boolean;
 
   private _loadingFns!: { resolve: () => void; reject: (error: Error) => void };
 
   private syncState!: ISyncState;
-  private oldestFrameIdToSync!: number;
-  private currentFrameId!: number;
-  private lastProcessedFrameId!: number;
-  private isMissingCurrentFrame: boolean = false;
   private db!: Db;
 
   private _config!: Config;
@@ -37,8 +45,35 @@ export class Stats {
   private _dbPromise: Promise<Db>;
 
   constructor(dbPromise: Promise<Db>, config: Config, installer: Installer) {
-    if (IS_INITIALIZED) throw new Error('Stats already initialized');
+    if (IS_INITIALIZED) {
+      console.log(new Error().stack);
+      throw new Error('Stats already initialized');
+    }
     IS_INITIALIZED = true;
+
+    this.isLoaded = false;
+    this.isRunning = false;
+    this.maxSeatsReductionReason = '';
+    this.maxSeatsPossible = 10; // TODO: instead of hardcoded 10, fetch from chain
+    this.cohortId = null;
+    this.winningBids = [];
+    this.dashboard = {
+      cohortId: null,
+      cohort: null,
+      global: {
+        activeCohorts: 0,
+        activeSeats: 0,
+        totalBlocksMined: 0,
+        totalArgonsBid: 0,
+        totalTransactionFees: 0,
+        totalArgonotsMined: 0,
+        totalArgonsMined: 0,
+        totalArgonsMinted: 0,
+      },
+    };
+    this.argonActivity = [];
+    this.bitcoinActivity = [];
+    this.botActivity = [];
 
     this._dbPromise = dbPromise;
     this._config = config;
@@ -47,31 +82,6 @@ export class Stats {
     this.isLoadedPromise = new Promise((resolve, reject) => {
       this._loadingFns = { resolve, reject };
     });
-    this.isLoaded = false;
-    this.hasMiningSeats = false;
-    this.cohortId = null;
-    this.data = {
-      activeBids: {
-        subaccounts: [],
-      },
-      dashboard: {
-        cohortId: null,
-        cohort: null,
-        global: {
-          activeCohorts: 0,
-          activeSeats: 0,
-          totalBlocksMined: 0,
-          totalArgonsBid: 0,
-          totalTransactionFees: 0,
-          totalArgonotsMined: 0,
-          totalArgonsMined: 0,
-          totalArgonsMinted: 0,
-        },
-      },
-      argonActivity: [],
-      bitcoinActivity: [],
-      botActivity: [],
-    };
   }
 
   public async load() {
@@ -83,126 +93,70 @@ export class Stats {
 
     console.info('Loading stats...', { isServerInstalling: this._config.isServerInstalling });
     this.db = await this._dbPromise;
-    this.lastProcessedFrameId = (await this.db.framesTable.latestId()) || 0;
+
+    console.info('Ensuring tunnel...');
+    this.localPort = await SSH.ensureTunnel(this._config.serverDetails);
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     console.info('Fetching sync state...');
-    this.syncState = await StatsFetcher.fetchSyncState();
+    await this.updateSyncState();
 
-    await this.updateServerDetailsFromSyncState(this.syncState);
-    this.oldestFrameIdToSync = this.syncState.oldestFrameIdToSync;
-    this.currentFrameId = this.syncState.currentFrameId;
+    console.info('Trying to sync state...');
+    const syncer = await new StatsSyncer(this.localPort, this._config, this.db);
+    await syncer.sync(this.syncState);
 
-    const syncProgress = await this.calculateSyncProgress();
-
-    this._config.syncDetails = {
-      startDate: new Date().toISOString(),
-      progress: syncProgress,
-      errorType: null,
-      errorMessage: null,
-    };
-    await this._config.save();
-
-    if (syncProgress < 100.0) {
-      console.info('TODO: SYNC DATABASE...');
-      // await new StatsSyncer(this.localPort, this.db).run(
-      //     this.oldestFrameIdToSync,
-      //     this.currentFrameId
-      // );
-    } else {
-      this.run();
-    }
+    this.run(syncer);
 
     this.isLoaded = true;
     this._loadingFns.resolve();
   }
 
-  public async run(): Promise<IStats> {
-    this.cohortId ??= await this.fetchLatestCohortIdFromDb();
-    const syncer = new StatsSyncer(this.db);
+  private async run(syncer: StatsSyncer): Promise<void> {
+    if (this.isRunning) return;
+    this.isRunning = true;
 
-    const bidsFile = await StatsFetcher.fetchBidsFile(this.currentFrameId + 1);
-    console.info('CURRENT Bids file:', bidsFile);
-
-    if (this.isMissingCurrentFrame) {
-      const yesterdayFrame = await this.db.framesTable.fetchById(this.currentFrameId - 1);
-      if (!yesterdayFrame.isProcessed) {
-        await syncer.syncDbFrame(yesterdayFrame.id);
-      }
+    while (!this.isRunnable) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
+
+    console.log('RUNNING STATS');
+    this.cohortId ??= await this.fetchLatestCohortIdFromDb();
+
+    await this.updateSyncState();
+    const currentFrameId = this.syncState.currentFrameId;
+    const activeBidsFile = await StatsFetcher.fetchBidsFile(this.localPort);
+    this.winningBids = activeBidsFile.winningBids;
+
     try {
-      await syncer.syncDbFrame(this.currentFrameId);
+      await syncer.syncDbFrame(currentFrameId);
     } catch (e) {
       console.info('Failed to sync db frame:', e);
     }
-    // await this.updateArgonActivity();
-    // try {
-    //   await this.updateBitcoinActivity();
-    // } catch (e) {
-    //   console.info('Failed to update bitcoin activity:', e);
-    // }
 
-    const activeBids = await this.fetchActiveBidsFromDb();
-    const dashboard = await this.fetchDashboardFromDb();
+    if (syncer.isMissingCurrentFrame) {
+      const yesterdayFrameId = currentFrameId - 1;
+      const yesterdayFrame = await this.db.framesTable.fetchById(yesterdayFrameId);
+      if (!yesterdayFrame?.isProcessed) {
+        await syncer.syncDbFrame(yesterdayFrameId);
+      }
+    }
 
-    return {
-      activeBids,
-      dashboard,
-      argonActivity: await this.db.argonActivitiesTable.fetchLastFiveRecords(),
-      bitcoinActivity: await this.db.bitcoinActivitiesTable.fetchLastFiveRecords(),
-      botActivity: await this.db.botActivitiesTable.fetchLastFiveRecords(),
-    };
+    await this.updateArgonActivity();
+    await this.updateBitcoinActivity();
+
+    this.dashboard = await this.fetchDashboardFromDb();
+    this.argonActivity = await this.db.argonActivitiesTable.fetchLastFiveRecords();
+    this.bitcoinActivity = await this.db.bitcoinActivitiesTable.fetchLastFiveRecords();
+    this.botActivity = await this.db.botActivitiesTable.fetchLastFiveRecords();
+
+    this.isRunning = false;
+    setTimeout(() => {
+      this.run(syncer);
+    }, 1e3);
   }
 
   private get isRunnable(): boolean {
     return !this._config.isServerInstalling && !this._config.isWaitingForUpgradeApproval;
-  }
-
-  private async calculateSyncProgress(): Promise<number> {
-    const botLoadProgress = this.syncState.loadProgress * 0.9;
-
-    if (botLoadProgress < 90.0) {
-      return botLoadProgress;
-    }
-
-    const dbSyncProgress = (await this.calculateDbSyncProgress()) * 0.1;
-
-    return botLoadProgress + dbSyncProgress;
-  }
-
-  private async calculateDbSyncProgress(): Promise<number> {
-    const dbRowsExpected = this.currentFrameId - this.oldestFrameIdToSync + 1;
-    const dbRowsFound = await this.db.framesTable.fetchRecordCount();
-
-    if (dbRowsFound === dbRowsExpected) {
-      this.lastProcessedFrameId = this.currentFrameId - 1;
-      this.isMissingCurrentFrame = false;
-      return 100.0;
-    }
-
-    if (dbRowsFound === dbRowsExpected - 1) {
-      try {
-        await this.db.framesTable.fetchById(this.currentFrameId);
-      } catch {
-        this.isMissingCurrentFrame = true;
-        return 100.0;
-      }
-    }
-
-    return (dbRowsFound / dbRowsExpected) * 100.0;
-  }
-
-  private async fetchActiveBidsFromDb(): Promise<IActiveBids> {
-    const cohortAccounts = await this.db.cohortAccountsTable.fetchForCohortId(this.currentFrameId);
-    return {
-      subaccounts: cohortAccounts.map((account: CohortAccount) => ({
-        index: account.idx,
-        address: account.address,
-        bidPosition: account.bidPosition,
-        argonsBid: account.argonsBid,
-        isRebid: null,
-        lastBidAtTick: null,
-      })),
-    };
   }
 
   public async fetchDashboardFromDb(): Promise<IDashboardStats> {
@@ -249,12 +203,14 @@ export class Stats {
 
     return {
       cohortId: cohort.id,
-      frameTickStart: cohort.frameTickStart,
-      frameTickEnd: cohort.frameTickEnd,
+      firstTick: cohort.firstTick,
+      lastTick: cohort.lastTick,
+      lastBlockNumber: cohort.lastBlockNumber,
       transactionFees: cohort.transactionFees,
       argonotsStaked: cohort.argonotsStaked,
       argonsBid: cohort.argonsBid,
       seatsWon: cohort.seatsWon,
+      progress: cohort.progress,
       blocksMined: cohortStats.totalBlocksMined,
       argonotsMined: cohortStats.totalArgonotsMined,
       argonsMined: cohortStats.totalArgonsMined,
@@ -262,17 +218,23 @@ export class Stats {
     };
   }
 
-  private async updateServerDetailsFromSyncState(syncState: ISyncState): Promise<void> {
-    if (syncState.oldestFrameIdToSync > 0) {
-      this._config.serverDetails.oldestFrameIdToSync = syncState.oldestFrameIdToSync;
+  private async updateSyncState(): Promise<void> {
+    this.syncState = await StatsFetcher.fetchSyncState(this.localPort);
+    this.maxSeatsReductionReason = this.syncState.maxSeatsReductionReason;
+    this.maxSeatsPossible = this.syncState.maxSeatsPossible;
+
+    if (this.syncState.oldestFrameIdToSync > 0) {
+      this._config.serverDetails.oldestFrameIdToSync = this.syncState.oldestFrameIdToSync;
     }
 
-    this._config.hasMiningSeats = syncState.hasMiningSeats;
+    this._config.hasMiningSeats = this.syncState.hasMiningSeats;
+    this._config.hasMiningBids = this.syncState.hasMiningBids;
+
     await this._config.save();
   }
 
   private async updateArgonActivity(): Promise<void> {
-    const latestBlockNumbers = await StatsFetcher.fetchArgonBlockchainStatus();
+    const latestBlockNumbers = this.syncState.argonBlockNumbers;
     const lastArgonActivity = await this.db.argonActivitiesTable.latest();
 
     const localhostMatches =
@@ -288,7 +250,7 @@ export class Stats {
   }
 
   private async updateBitcoinActivity(): Promise<void> {
-    const latestBlockNumbers = await StatsFetcher.fetchBitcoinBlockchainStatus();
+    const latestBlockNumbers = this.syncState.bitcoinBlockNumbers;
     const savedActivity = await this.db.bitcoinActivitiesTable.latest();
 
     const localhostMatches = savedActivity?.localNodeBlockNumber === latestBlockNumbers.localNode;
@@ -303,7 +265,8 @@ export class Stats {
   }
 
   private async updateBotActivity(): Promise<void> {
-    const botHistory = await StatsFetcher.fetchBotHistory();
+    const botHistory = await StatsFetcher.fetchBotHistory(this.localPort);
     // TODO: Implement bot activity update logic
   }
 }
+			

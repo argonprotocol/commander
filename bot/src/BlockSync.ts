@@ -2,7 +2,6 @@ import {
   AccountMiners,
   type Accountset,
   type ArgonClient,
-  CohortBidderHistory,
   type FrameSystemEventRecord,
   type GenericEvent,
   getAuthorFromHeader,
@@ -13,6 +12,7 @@ import {
   type SpRuntimeDispatchError,
   type Vec,
 } from '@argonprotocol/mainchain';
+import { CohortBidderHistory } from './CohortBidderHistory.ts';
 import {
   type CohortStorage,
   type IWinningBid,
@@ -23,6 +23,7 @@ import {
 import { MiningFrames } from './MiningFrames.ts';
 import { Dockers } from './Dockers.ts';
 import type Bot from './Bot.ts';
+import type { AutoBidder } from './AutoBidder.ts';
 
 const defaultCohort = {
   blocksMined: 0,
@@ -70,6 +71,7 @@ export class BlockSync {
 
   constructor(
     public bot: Bot,
+    public autobidder: AutoBidder,
     public accountset: Accountset,
     public storage: CohortStorage,
     public archiveUrl: string,
@@ -82,7 +84,7 @@ export class BlockSync {
 
   async state(): Promise<ISyncState> {
     const syncStateData = (await this.syncStateFile.get())!;
-
+    const latestBidHistory = this.autobidder.bidHistory[0];
     return {
       isStarting: this.bot.isStarting || undefined,
       isStarted: this.bot.isStarted || undefined,
@@ -98,6 +100,8 @@ export class BlockSync {
       currentFrameId: syncStateData.currentFrameId ?? 0,
       loadProgress: await this.calculateLoadProgress(),
       queueDepth: this.queue.length,
+      maxSeatsPossible: latestBidHistory?.maxSeatsInPlay ?? 10, // TODO: instead of hardcoded 10, fetch from chain
+      maxSeatsReductionReason: latestBidHistory?.maxSeatsReductionReason ?? '',
     };
   }
 
@@ -267,7 +271,9 @@ export class BlockSync {
         return false;
       }
       x.frameProgress = this.calculateProgress(tick, this.currentFrameTickRange);
-      x.lastBlockNumber = header.number.toNumber();
+      const blockNumber = header.number.toNumber();
+      x.firstBlockNumber = x.firstBlockNumber === 0 ? blockNumber : x.firstBlockNumber;
+      x.lastBlockNumber = blockNumber;
       for (const [cohortActivatingFrameIdStr, earnings] of Object.entries(
         cohortEarningsAtFrameId,
       )) {

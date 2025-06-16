@@ -74,11 +74,11 @@
 
         <div class="bg-slate-400/50 w-[1px] h-[28px]"></div>
 
-        <Popover class="relative pointer-events-auto">
+        <Popover v-slot="{ open }" class="relative pointer-events-auto">
           <PopoverButton
             class="relative flex flex-row text-xl font-bold text-[#B74CBA] pt-[1px] pl-[14px] pr-[10px] mr-[0px] h-[30px] items-center hover:bg-slate-400/10 cursor-pointer focus-visible:outline-none"
           >
-            {{ fmtMoney(argonTo(currencyStore.totalWalletValue), 99.99) }}
+            {{ fmtMoney(argonTo(currencyStore.totalWalletValue), 999.99) }}
             <AlertIcon
               v-if="!mngWalletIsFullyFunded"
               class="absolute -top-0 right-[-6px] w-3 h-3 text-[#B74CBA] mr-[7px] inline-block shadow-md"
@@ -94,7 +94,7 @@
           >
             <PopoverPanel
               ref="walletControlPopoverElem"
-              v-slot="{ close: closeFn }"
+              v-slot="{ close }"
               class="absolute -right-2 z-[1000] mt-2 flex w-screen max-w-min"
             >
               <div class="absolute -top-[15px] right-[20px] w-[30px] h-[15px] overflow-hidden">
@@ -106,8 +106,8 @@
                 class="flex flex-row shrink rounded bg-white text-sm/6 font-semibold text-gray-900 shadow-lg py-1 px-1 ring-1 ring-gray-900/20"
               >
                 <section
-                  @click="openWalletOverlay('mng', closeFn)"
-                  class="relative flex flex-col items-center w-60 pt-7 px-6 hover:bg-argon-menu-hover/70 cursor-pointer"
+                  @click="() => openWalletOverlay('mng', close)"
+                  class="relative flex flex-col items-center w-68 pt-7 px-6 hover:bg-argon-menu-hover/70 cursor-pointer"
                 >
                   <header class="text-lg font-bold text-gray-900">Mining Wallet</header>
                   <div class="relative">
@@ -124,7 +124,7 @@
                     ></span
                   >
 
-                  <span class="relative text-sm text-gray-500 flex flex-row">
+                  <div class="relative text-sm text-gray-500 flex flex-row w-full justify-center">
                     <CopyToClipboard
                       @click.stop
                       :content="currencyStore.mngWallet.address"
@@ -143,13 +143,13 @@
                     </CopyToClipboard>
                     <div
                       v-if="!mngWalletIsFullyFunded"
-                      @click.stop="openFundMiningWalletOverlay(closeFn)"
-                      class="absolute flex flex-row top-1 left-1/2 -translate-x-1/2 border border-fuchsia-950 shadow-md items-center justify-center whitespace-nowrap uppercase text-white bg-argon-button hover:bg-argon-button-hover rounded px-5 w-48 text-center py-1 text-sm"
+                      @click.stop="() => openFundMiningWalletOverlay(close)"
+                      class="absolute flex flex-row top-1 left-0 border border-fuchsia-950 shadow-md items-center justify-center whitespace-nowrap uppercase text-white bg-argon-button hover:bg-argon-button-hover rounded px-5 w-full text-center py-1 text-sm"
                     >
                       <AlertIcon class="w-4 h-4 text-white mr-2 inline-block" />
                       <span class="relative top-[0.4px]">Funds Are Low</span>
                     </div>
-                  </span>
+                  </div>
                   <ul
                     class="relative flex flex-col items-center whitespace-nowrap w-full mt-4 mb-4"
                   >
@@ -171,8 +171,8 @@
                 <div class="bg-slate-400/30 w-[1px] h-full mx-1"></div>
 
                 <section
-                  @click="openWalletOverlay('llb', closeFn)"
-                  class="relative flex flex-col items-center w-60 pt-7 px-6 hover:bg-argon-menu-hover/70 cursor-pointer"
+                  @click="() => openWalletOverlay('llb', close)"
+                  class="relative flex flex-col items-center w-68 pt-7 px-6 hover:bg-argon-menu-hover/70 cursor-pointer"
                 >
                   <header class="text-lg font-bold text-gray-900">Liquid Locking Wallet</header>
                   <div class="relative">
@@ -184,7 +184,7 @@
                       >.{{ argonTo(llbWallet.totalValue).toFixed(2).split('.')[1] }}</span
                     ></span
                   >
-                  <span class="relative text-sm text-gray-500 flex flex-row">
+                  <div class="relative text-sm text-gray-500 flex flex-row w-full justify-center">
                     <CopyToClipboard
                       @click.stop
                       :content="currencyStore.llbWallet.address"
@@ -201,7 +201,7 @@
                         </div>
                       </template>
                     </CopyToClipboard>
-                  </span>
+                  </div>
                   <ul class="flex flex-col items-center whitespace-nowrap w-full mt-4 mb-4">
                     <li
                       class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2"
@@ -221,8 +221,8 @@
                 <div class="bg-slate-400/30 w-[1px] h-full mx-1"></div>
 
                 <section
-                  @click="openWalletOverlay('vlt', closeFn)"
-                  class="relative flex flex-col items-center w-60 pt-7 px-6 hover:bg-argon-menu-hover/70 cursor-pointer"
+                  @click="() => openWalletOverlay('vlt', close)"
+                  class="relative flex flex-col items-center w-68 pt-7 px-6 hover:bg-argon-menu-hover/70 cursor-pointer"
                 >
                   <header class="text-lg font-bold text-gray-900">Vaulting Wallet</header>
                   <div class="relative">
@@ -234,7 +234,7 @@
                       >.{{ argonTo(vltWallet.totalValue).toFixed(2).split('.')[1] }}</span
                     ></span
                   >
-                  <span class="relative text-sm text-gray-500 flex flex-row">
+                  <div class="relative text-sm text-gray-500 flex flex-row w-full justify-center">
                     <CopyToClipboard
                       @click.stop
                       :content="currencyStore.vltWallet.address"
@@ -251,7 +251,7 @@
                         </div>
                       </template>
                     </CopyToClipboard>
-                  </span>
+                  </div>
                   <ul class="flex flex-col items-center whitespace-nowrap w-full mt-4 mb-4">
                     <li
                       class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2"
@@ -307,7 +307,7 @@
               <ul AccountMenu>
                 <li
                   v-if="config.isServerConnected"
-                  @click="openServerConfigureOverlay(close)"
+                  @click="() => openServerConfigureOverlay(close)"
                   class="pt-3 pb-2"
                 >
                   <header>Configure Cloud Machine</header>
@@ -316,18 +316,18 @@
                     operations
                   </p>
                 </li>
-                <li v-else class="pt-3 pb-2" @click="openServerConnectOverlay(close)">
+                <li v-else class="pt-3 pb-2" @click="() => openServerConnectOverlay(close)">
                   <header>Connect Cloud Machine</header>
                   <p>Connect a new cloud server to<br />run your Argon mining operations</p>
                 </li>
-                <li @click="openBiddingRulesOverlay(close)" class="pt-2 pb-3">
+                <li @click="() => openBiddingRulesOverlay(close)" class="pt-2 pb-3">
                   <header>Configure Bidding Rules</header>
                   <p>
                     Set bid pricing and other required<br />parameters for upcoming mining auctions
                   </p>
                 </li>
                 <li class="bg-slate-400/30 h-[1px] w-full my-1"></li>
-                <li @click="openSecuritySettingsOverlay(close)" class="py-2">
+                <li @click="() => openSecuritySettingsOverlay(close)" class="py-2">
                   <header>Security Settings</header>
                 </li>
                 <li class="bg-slate-400/30 h-[1px] w-full my-1"></li>

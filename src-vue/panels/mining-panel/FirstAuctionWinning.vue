@@ -4,12 +4,12 @@
   >
     <ConfettiIcon class="absolute top-[10px] left-[10px]" style="width: calc(100% - 20px)" />
     <div class="relative mx-auto inline-block">
-      <h1 class="text-5xl font-bold text-center mt-32 mb-10 whitespace-nowrap">
-        Your First Auction Is Live!
+      <h1 class="text-5xl font-bold text-center mt-24 mb-10 whitespace-nowrap relative z-0">
+        <span FadeBgToWhite class="relative text-argon-600 z-20">Your First Auction Is Live!</span>
       </h1>
 
       <div
-        class="text-center mt-6 mb-5 uppercase text-base flex flex-row justify-center items-center"
+      <div class="text-center mb-5 uppercase text-base flex flex-row justify-center items-center">
       >
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
         <div class="whitespace-nowrap px-5 text-gray-500">
@@ -77,65 +77,14 @@
             </template>
             {{ seconds }} second{{ seconds > 1 ? 's' : '' }} </CountdownClock
           >.<br />
-          Your account allows for an additional bid raise of {{ currencySymbol
-          }}{{ fmtMoney(currencyStore.argonTo(remainingBidBudget)) }} if needed.
+          Your account allows for a total bidding budget of of {{ currencySymbol
+          }}{{ fmtMoney(currencyStore.argonTo(totalBiddingBudget)) }} if needed.
         </template>
       </p>
-      <Popover as="div" class="relative text-center text-lg font-bold mt-10">
-        <PopoverButton
-          class="focus:outline-none border border-argon-300 text-argon-600 px-7 py-2 rounded cursor-pointer hover:bg-argon-50/40 hover:border-argon-600 transition-all duration-300 w-10/12"
-          >View Active Bids</PopoverButton
-        >
-        <PopoverPanel
-          as="div"
-          class="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 cursor-default w-160 h-120 bg-white rounded-lg shadow-lg border border-gray-300"
-        >
-          <div
-            class="absolute top-full left-1/2 -translate-x-1/2 w-[30px] h-[15px] rotate-180 overflow-hidden"
-          >
-            <div
-              class="relative top-[5px] left-[5px] w-[20px] h-[20px] rotate-45 bg-white ring-1 ring-gray-900/20"
-            ></div>
-          </div>
-          <div class="text-center text-base px-6 pt-5 pb-3 h-full">
-            <table class="w-full h-full">
-              <thead class="font-bold">
-                <tr>
-                  <th class="text-left"></th>
-                  <th class="text-left">Bid Amount</th>
-                  <th class="text-left">Submitted</th>
-                  <th class="text-right">Account</th>
-                </tr>
-              </thead>
-              <tbody class="font-light font-mono">
-                <tr v-for="(bid, index) in allBids" :key="bid.accountId">
-                  <td class="text-left">{{ index + 1 }}</td>
-                  <td class="text-left">
-                    {{ config.currencySymbol }}{{ fmtMoney(config.argonTo(bid.amount)) }}
-                  </td>
-                  <td class="text-left">recently</td>
-                  <td class="text-right relative">
-                    {{ bid.accountId.slice(0, 10) }}...{{ bid.accountId.slice(-7) }}
-                    <span
-                      v-if="bid.isMine"
-                      class="absolute right-0 top-1/2 -translate-y-1/2 bg-argon-600 text-white px-1.5 pb-0.25 rounded text-sm"
-                      >ME<span
-                        class="absolute top-0 -left-3 inline-block h-full bg-gradient-to-r from-transparent to-white w-3"
-                      ></span
-                    ></span>
-                  </td>
-                </tr>
-                <tr v-for="i in 10 - allBids.length" :key="i">
-                  <td class="text-left">{{ allBids.length + i }}</td>
-                  <td class="text-left text-gray-400">---</td>
-                  <td class="text-left text-gray-400">---</td>
-                  <td class="text-right text-gray-400">-------------</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </PopoverPanel>
-      </Popover>
+      <div class="flex flex-row justify-center items-center space-x-6">
+        <ActiveBidsOverlayButton />
+        <ActiveBidsActivityOverlayButton />
+      </div>
     </div>
   </div>
 </template>
@@ -148,31 +97,39 @@ import { useConfig } from '../../stores/config';
 import { useCurrencyStore } from '../../stores/currency';
 import { storeToRefs } from 'pinia';
 import { IBiddingRules, BiddingParamsHelper } from '@argonprotocol/commander-calculator';
+import { IWinningBid } from '@argonprotocol/commander-bot/src/storage';
 import { fmtMoney } from '../../lib/Utils';
-import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
-import { useBlockchainStore, type IActiveBid } from '../../stores/blockchain';
 import CountdownClock from '../../components/CountdownClock.vue';
 import ConfettiIcon from '../../assets/confetti.svg?component';
+import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
+import ActiveBidsActivityOverlayButton from '../../overlays/ActiveBidsActivityOverlayButton.vue';
 import { getMainchain } from '../../stores/mainchain';
+import { useStats } from '../../stores/stats';
 
 dayjs.extend(utc);
 
 const mainchain = getMainchain();
 
+const stats = useStats();
 const config = useConfig();
-const blockchainStore = useBlockchainStore();
+
 const currencyStore = useCurrencyStore();
 const { currencySymbol } = storeToRefs(currencyStore);
 
 const auctionIsClosing = Vue.ref(false);
 
-const allBids = Vue.ref<IActiveBid[]>([]);
-const myBids = Vue.ref<any>(null);
+const totalBiddingBudget = Vue.ref(0);
 
-const maxBidPrice = Vue.ref(0);
-const currentBidPrice = Vue.ref(0);
-const remainingBidBudget = Vue.ref(0);
-const seatPositions = Vue.ref<number[]>([]);
+const currentBidPrice = Vue.computed(() => {
+  const myBids = stats.winningBids.filter((bid: IWinningBid) => bid.subAccountIndex !== undefined);
+  const total = myBids.reduce((acc: bigint, bid: IWinningBid) => acc + (bid.argonsBid ?? 0n), 0n);
+  return Number(total / 10_000n) / 100;
+});
+
+const seatPositions = Vue.computed(() => {
+  const myBids = stats.winningBids.filter((bid: IWinningBid) => bid.subAccountIndex !== undefined);
+  return myBids.map((bid: IWinningBid) => (bid.bidPosition ?? 0) + 1);
+});
 
 const priceTextSize = Vue.computed(() => {
   return seatPositions.value.length > 8 ? 'text-6xl' : 'text-7xl';
@@ -191,41 +148,8 @@ function handleAuctionClosingTick(totalSecondsRemaining: number) {
   }
 }
 
-function processBids() {
-  const seatCount = myBids.value.subaccounts.length;
-  const totalArgonsBid = Number(myBids.value.argonsBidTotal);
-  currentBidPrice.value = totalArgonsBid * seatCount;
-  remainingBidBudget.value = maxBidPrice.value - currentBidPrice.value;
-  seatPositions.value = [];
-
-  for (const bid of allBids.value) {
-    const bidIndex = myBids.value.subaccounts.findIndex((s: any) => s.address === bid.accountId);
-    if (bidIndex !== -1) {
-      seatPositions.value.push(bidIndex + 1);
-      bid.isMine = true;
-    }
-  }
-}
-
 Vue.onMounted(async () => {
   if (!config.biddingRules) return;
-
-  blockchainStore.subscribeToActiveBids(newActiveBids => {
-    allBids.value = newActiveBids;
-    if (!myBids.value) {
-      console.log('no bidder data');
-      return;
-    }
-    processBids();
-  });
-
-  config.subscribeToMyBids(myNewBids => {
-    myBids.value = myNewBids;
-    if (!allBids.value.length) {
-      return;
-    }
-    processBids();
-  });
 
   if (!startOfAuctionClosing.value || !startOfNextCohort.value) {
     const tickAtStartOfAuctionClosing = await mainchain.getTickAtStartOfAuctionClosing();
@@ -235,8 +159,7 @@ Vue.onMounted(async () => {
   }
 
   const seatCount = await biddingParamsHelper.getMaxSeats();
-  maxBidPrice.value = config.biddingRules.finalAmount * seatCount;
-  remainingBidBudget.value = maxBidPrice.value - currentBidPrice.value;
+  totalBiddingBudget.value = config.biddingRules.finalAmount * seatCount;
 });
 </script>
 
@@ -262,6 +185,13 @@ Vue.onMounted(async () => {
 <style scoped>
 @reference "../../main.css";
 
+[FadeBgToWhite] {
+  @apply relative bg-white;
+  &:before {
+    @apply absolute top-0 left-0 right-0 h-full z-[-1] -translate-y-full bg-gradient-to-b from-transparent to-white;
+    content: '';
+  }
+}
 table {
   thead th {
     @apply pb-2;

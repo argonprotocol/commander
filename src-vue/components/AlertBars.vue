@@ -75,7 +75,9 @@ import { useConfig } from '../stores/config';
 import { useCurrencyStore } from '../stores/currency';
 import AlertIcon from '../assets/alert.svg?component';
 import emitter from '../emitters/basic';
+import { useStats } from '../stores/stats';
 
+const stats = useStats();
 const config = useConfig();
 const currencyStore = useCurrencyStore();
 
@@ -105,8 +107,7 @@ const hasInsufficientFunds = Vue.computed(() => {
 
 const maxBudgetIsTooLow = Vue.computed(() => {
   if (!currencyStore.isLoaded) return false;
-  // if server has thrown a MaxBudgetTooLow error
-  return false;
+  return !stats.maxSeatsPossible && stats.maxSeatsReductionReason === 'MaxBudgetTooLow';
 });
 
 const maxBidIsTooLow = Vue.computed(() => {

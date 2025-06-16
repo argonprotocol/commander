@@ -1,5 +1,4 @@
 export interface IStats {
-  activeBids: IActiveBids;
   dashboard: IDashboardStats;
   argonActivity: any[]; // TODO: Define proper type
   bitcoinActivity: any[]; // TODO: Define proper type
@@ -38,12 +37,14 @@ export interface IDashboardGlobalStats {
 
 export interface IDashboardCohortStats {
   cohortId: number;
-  frameTickStart: number;
-  frameTickEnd: number;
+  firstTick: number;
+  lastTick: number;
+  lastBlockNumber: number;
   transactionFees: number;
   argonotsStaked: number;
   argonsBid: number;
   seatsWon: number;
+  progress: number;
   blocksMined: number;
   argonotsMined: number;
   argonsMined: number;

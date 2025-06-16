@@ -13,9 +13,11 @@ export interface ILastModifiedAt {
 }
 
 export interface IEarningsFile extends ILastModifiedAt {
+  frameId: number;
   frameProgress: number;
-  frameTickStart: number;
-  frameTickEnd: number;
+  firstTick: number;
+  lastTick: number;
+  firstBlockNumber: number;
   lastBlockNumber: number;
   byCohortActivatingFrameId: {
     [cohortActivatingFrameId: number]: IEarningsFileCohort;
@@ -68,6 +70,8 @@ export interface ISyncState extends ILastModifiedAt {
   currentFrameId: number;
   loadProgress: number;
   queueDepth: number;
+  maxSeatsPossible: number;
+  maxSeatsReductionReason: string;
 }
 
 export interface ISyncStateFile extends ISyncState {
@@ -166,6 +170,8 @@ export class CohortStorage {
         currentFrameId: 0,
         loadProgress: 0,
         queueDepth: 0,
+        maxSeatsPossible: 10, // TODO: instead of hardcoded 10, fetch from chain
+        maxSeatsReductionReason: '',
         lastBlockNumberByFrameId: {},
       }));
       this.lruCache.set(key, entry);
@@ -184,7 +190,11 @@ export class CohortStorage {
         const client = await this.clientPromise;
         const tickRange = await new MiningFrames().getTickRangeForFrame(client, frameId);
         return {
+          frameId,
           frameProgress: 0,
+          firstTick: tickRange[0],
+          lastTick: tickRange[1],
+          firstBlockNumber: 0,
           lastBlockNumber: 0,
           frameTickStart: tickRange[0],
           frameTickEnd: tickRange[1],

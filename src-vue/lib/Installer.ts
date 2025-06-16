@@ -9,6 +9,10 @@ import { Config, DEPLOY_ENV_FILE, NETWORK_NAME } from './Config';
 import { app } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
 import { InstallerCheck } from './InstallerCheck';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 
 let IS_INITIALIZED = false;
 
@@ -54,12 +58,17 @@ export default class Installer {
   }
 
   public async tryToRun(): Promise<void> {
-    console.info('Trying to run installer');
+    if (await this.isInstallRunning()) {
+      console.log('CANNOT tryToRun because install is running');
+      return;
+    }
+
     await this.isLoadedPromise;
     if (this.reasonToSkipInstall) {
       console.info('Skipping Installer:', this.reasonToSkipInstall, this.reasonToSkipInstallData);
       return;
     }
+    console.info('Trying to run installer');
 
     await SSH.ensureConnection(this.config.serverDetails);
 
@@ -72,19 +81,35 @@ export default class Installer {
   }
 
   public async retryFailedStep(stepKey: string): Promise<void> {
-    if (await this.isInstallRunning()) return;
+    if (await this.isInstallRunning()) {
+      console.log('CANNOT retryFailedStep because install is running');
+      return;
+    }
 
-    await this.clearStepFiles([stepKey]);
+    await this.clearStepFiles([stepKey], { setFirstStepToWorking: true });
+
+    for (const step of Object.values(this.config.installDetails) as any) {
+      if (!step?.status) continue;
+      if (step.status === InstallStepStatus.Hidden) {
+        step.status = InstallStepStatus.Pending;
+        step.startDate = dayjs.utc().toISOString();
+      }
+    }
+    this.config.installDetails = this.config.installDetails;
+    await this.config.save();
 
     this.installerCheck.clearCachedFilenames();
     this.installerCheck.bypassCachedFilenames = false;
 
-    this.clearReasonsToSkipInstall();
+    this.removeReasonsToSkipInstall();
     this.tryToRun();
   }
 
   public async startUpgrade(): Promise<void> {
-    if (await this.isInstallRunning()) return;
+    if (await this.isInstallRunning()) {
+      console.log('CANNOT startUpgrade because install is running');
+      return;
+    }
 
     this.hasApprovedUpgrade = true;
 
@@ -95,12 +120,12 @@ export default class Installer {
       InstallStepErrorType.ArgonInstall,
       InstallStepErrorType.MiningLaunch,
     ];
-    await this.clearStepFiles(stepsToClear);
+    await this.clearStepFiles(stepsToClear, { setFirstStepToWorking: true });
 
     this.installerCheck.clearCachedFilenames();
     this.installerCheck.bypassCachedFilenames = false;
 
-    this.clearReasonsToSkipInstall();
+    this.removeReasonsToSkipInstall();
     this.config.resetField('installDetails');
     this.config.isWaitingForUpgradeApproval = false;
     await this.config.save();
@@ -108,7 +133,7 @@ export default class Installer {
     this.tryToRun();
   }
 
-  public async updateBiddingBot(): Promise<void> {
+  public async upgradeBiddingBotFiles(): Promise<void> {
     await this.uploadBotConfigFiles();
     await this.restartBotDocker();
 
@@ -191,13 +216,14 @@ export default class Installer {
     if (isFreshInstall) {
       // If the server is fresh, we need to reset the install details, and we can't skip the install process
       // even if next two conditions are met.
-      this.clearReasonsToSkipInstall();
+      this.removeReasonsToSkipInstall();
       this.config.resetField('installDetails');
       this.config.isWaitingForUpgradeApproval = false;
       await this.config.save();
       return;
     }
 
+    console.log('this.installerCheck.hasError', this.installerCheck.hasError);
     if (this.installerCheck.hasError) {
       this.reasonToSkipInstall = 'Server has error';
       this.reasonToSkipInstallData = { hasInstallError: this.installerCheck.hasError };
@@ -215,7 +241,7 @@ export default class Installer {
     }
   }
 
-  private clearReasonsToSkipInstall(): void {
+  private removeReasonsToSkipInstall(): void {
     this.reasonToSkipInstall = '';
     this.reasonToSkipInstallData = {};
   }
@@ -326,7 +352,7 @@ export default class Installer {
           InstallStepErrorType.MiningLaunch,
         ];
         console.info('Clearing step files');
-        await this.clearStepFiles(stepsToClear);
+        await this.clearStepFiles(stepsToClear, { setFirstStepToWorking: true });
 
         console.info('Uploading sha256');
         await this.uploadSha256();
@@ -343,9 +369,16 @@ export default class Installer {
 
       this.installerCheck.bypassCachedFilenames = true;
 
+      console.info('Waiting for install to complete');
       await this.installerCheck.waitForInstallToComplete();
+
+      console.info('Setting isServerInstalling to false');
       this.isRunningLocally = false;
       this.remoteFilesNeedUpdating = false;
+
+      this.config.isServerInstalling = false;
+      await this.config.save();
+      console.info('Installer finished');
     } catch (e) {
       console.error(`Installation failed: ${e}`);
       errorMessage = `Installation failed: ${e}`;
@@ -359,13 +392,9 @@ export default class Installer {
       } catch (e) {
         console.error(`Failed to save install status: ${e}`);
       }
-      this.isRunningLocally = false;
-      return;
     }
 
-    console.info('Installer finished');
-    this.config.isServerInstalling = false;
-    await this.config.save();
+    this.isRunningLocally = false;
   }
 
   private async serverHasSha256File(): Promise<boolean> {
@@ -436,7 +465,10 @@ export default class Installer {
     await SSH.runCommand(`cd deploy && docker compose --env-file=${DEPLOY_ENV_FILE} up bot -d`);
   }
 
-  private async clearStepFiles(stepKeys: string[]): Promise<void> {
+  private async clearStepFiles(
+    stepKeys: string[],
+    options: { setFirstStepToWorking?: boolean } = {},
+  ): Promise<void> {
     if (stepKeys.includes('all')) {
       await this.config.resetField('installDetails');
       await this.config.save();
@@ -444,8 +476,10 @@ export default class Installer {
       return;
     }
 
-    this.config.installDetails.errorType = null;
-    this.config.installDetails.errorMessage = null;
+    const installDetails = this.config.installDetails;
+
+    installDetails.errorType = null;
+    installDetails.errorMessage = null;
     const defaultStatus: IConfigInstallStep = {
       status: InstallStepStatus.Pending,
       progress: 0,
@@ -453,10 +487,15 @@ export default class Installer {
     };
 
     for (const stepKey of stepKeys as InstallStepKey[]) {
-      this.config.installDetails[stepKey] = { ...defaultStatus };
+      if (stepKey === stepKeys[0] && options.setFirstStepToWorking) {
+        defaultStatus.status = InstallStepStatus.Working;
+        defaultStatus.startDate = dayjs.utc().toISOString();
+      }
+      installDetails[stepKey] = { ...defaultStatus };
       await SSH.runCommand(`rm -rf ~/install-logs/${stepKey}.*`);
     }
 
+    this.config.installDetails = installDetails;
     await this.config.save();
   }
 

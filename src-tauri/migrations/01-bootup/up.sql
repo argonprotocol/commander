@@ -90,8 +90,10 @@ END;
 
 CREATE TABLE frames (
   id INTEGER NOT NULL PRIMARY KEY,
-  tick_start INTEGER NOT NULL,
-  tick_end INTEGER NOT NULL,
+  first_tick INTEGER NOT NULL,
+  last_tick INTEGER NOT NULL,
+  first_block_number INTEGER NOT NULL,
+  last_block_number INTEGER NOT NULL,
   progress REAL NOT NULL,
   is_processed INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

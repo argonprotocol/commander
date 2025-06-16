@@ -1,6 +1,7 @@
-import { type Accountset, CohortBidder, MiningBids } from '@argonprotocol/mainchain';
-import type { CohortStorage } from './storage.ts';
+import { type Accountset, MiningBids } from '@argonprotocol/mainchain';
 import { createBidderParams } from '@argonprotocol/commander-calculator';
+import { type CohortStorage } from './storage.ts';
+import { CohortBidder } from './CohortBidder.ts';
 import { readJsonFileOrNull } from './utils.ts';
 
 /**
@@ -77,7 +78,7 @@ export class AutoBidder {
         await this.accountset.client,
       );
       for (const winningBid of bidsFileData.winningBids) {
-        if (!winningBid.subAccountIndex) continue;
+        if (winningBid.subAccountIndex === undefined) continue;
         const account = miningAccounts.find(x => x.address === winningBid.address);
         if (account) {
           subaccounts.push({
