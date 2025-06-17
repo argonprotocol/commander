@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 COPY syncstatus.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/syncstatus.sh
 
-COPY latestblock.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/latestblock.sh
+COPY latestblocks.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/latestblocks.sh
 
 USER argon

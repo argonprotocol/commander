@@ -1,0 +1,13 @@
+{
+  "name": "argon-commander-bot",
+  "private": true,
+  "version": "0.1.0-rc1",
+  "scripts": {
+    "start": "yarn workspace @argonprotocol/commander-bot start"
+  },
+  "workspaces": [
+    "bot",
+    "calculator"
+  ],
+  "packageManager": "yarn@4.9.1"
+}

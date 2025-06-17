@@ -1,48 +1,77 @@
-CREATE TABLE IF NOT EXISTS argon_activities (
-  localhost_block_number INTEGER NOT NULL,
-  mainchain_block_number INTEGER NOT NULL,
+CREATE TABLE config (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER config_update_timestamp 
+AFTER UPDATE ON config
+BEGIN
+  UPDATE config SET updated_at = CURRENT_TIMESTAMP WHERE key = NEW.key;
+END;
+
+CREATE TABLE argon_activities (
+  local_node_block_number INTEGER NOT NULL,
+  main_node_block_number INTEGER NOT NULL,
   inserted_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS bitcoin_activities (
-  localhost_block_number INTEGER NOT NULL,
-  mainchain_block_number INTEGER NOT NULL,
+CREATE TABLE bitcoin_activities (
+  local_node_block_number INTEGER NOT NULL,
+  main_node_block_number INTEGER NOT NULL,
   inserted_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS bot_activities (
-  ACTION TEXT NOT NULL,
+CREATE TABLE bot_activities (
+  block_number INTEGER NOT NULL,
+  tick INTEGER NOT NULL,
+  address TEXT NOT NULL,
+  bid_amount INTEGER NOT NULL,
+  bid_position INTEGER NOT NULL,
+  prev_position INTEGER NOT NULL,
   inserted_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS cohort_accounts (
-  frame_id_at_cohort_activation INTEGER NOT NULL,
+CREATE TABLE cohort_accounts (
   idx INTEGER NOT NULL,
+  cohort_id INTEGER NOT NULL,
   address TEXT NOT NULL,
   argons_bid INTEGER NOT NULL,
   bid_position INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (frame_id_at_cohort_activation, idx),
-  FOREIGN KEY (frame_id_at_cohort_activation) REFERENCES cohorts (frame_id_at_cohort_activation)
+  PRIMARY KEY (idx, cohort_id),
+  FOREIGN KEY (cohort_id) REFERENCES cohorts(id)
 );
 
-CREATE TABLE IF NOT EXISTS cohort_frames (
+CREATE TRIGGER cohort_accounts_update_timestamp 
+AFTER UPDATE ON cohort_accounts
+BEGIN
+  UPDATE cohort_accounts SET updated_at = CURRENT_TIMESTAMP WHERE idx = NEW.idx AND cohort_id = NEW.cohort_id;
+END;
+
+CREATE TABLE cohort_frames (
   frame_id INTEGER NOT NULL,
-  frame_id_at_cohort_activation INTEGER NOT NULL,
+  cohort_id INTEGER NOT NULL,
   blocks_mined INTEGER NOT NULL,
   argonots_mined INTEGER NOT NULL,
   argons_mined INTEGER NOT NULL,
   argons_minted INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (frame_id, frame_id_at_cohort_activation),
-  FOREIGN KEY (frame_id) REFERENCES frames (id),
-  FOREIGN KEY (frame_id_at_cohort_activation) REFERENCES cohorts (frame_id_at_cohort_activation)
+  PRIMARY KEY (frame_id, cohort_id),
+  FOREIGN KEY (frame_id) REFERENCES frames(id),
+  FOREIGN KEY (cohort_id) REFERENCES cohorts(id)
 );
 
-CREATE TABLE IF NOT EXISTS cohorts (
-  frame_id_at_cohort_activation INTEGER NOT NULL PRIMARY KEY,
+CREATE TRIGGER cohort_frames_update_timestamp 
+AFTER UPDATE ON cohort_frames
+BEGIN
+  UPDATE cohort_frames SET updated_at = CURRENT_TIMESTAMP WHERE frame_id = NEW.frame_id AND cohort_id = NEW.cohort_id;
+END;
+
+CREATE TABLE cohorts (
+  id INTEGER NOT NULL PRIMARY KEY,
   progress REAL NOT NULL,
   transaction_fees INTEGER NOT NULL,
   argonots_staked INTEGER NOT NULL,
@@ -50,15 +79,29 @@ CREATE TABLE IF NOT EXISTS cohorts (
   seats_won INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (frame_id_at_cohort_activation) REFERENCES frames (id)
+  FOREIGN KEY (id) REFERENCES frames(id)
 );
 
-CREATE TABLE IF NOT EXISTS frames (
+CREATE TRIGGER cohorts_update_timestamp 
+AFTER UPDATE ON cohorts
+BEGIN
+  UPDATE cohorts SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+CREATE TABLE frames (
   id INTEGER NOT NULL PRIMARY KEY,
-  tick_start INTEGER NOT NULL,
-  tick_end INTEGER NOT NULL,
+  first_tick INTEGER NOT NULL,
+  last_tick INTEGER NOT NULL,
+  first_block_number INTEGER NOT NULL,
+  last_block_number INTEGER NOT NULL,
   progress REAL NOT NULL,
   is_processed INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TRIGGER frames_update_timestamp 
+AFTER UPDATE ON frames
+BEGIN
+  UPDATE frames SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;

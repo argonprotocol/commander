@@ -43,6 +43,9 @@ services:
       - BITCOIN_CHAIN=${BITCOIN_CHAIN}
     volumes:
       - $BITCOIN_DATA_FOLDER:/data
+    profiles:
+      - all
+      - miners
 
   argon-miner:
     <<: *common-config
@@ -85,17 +88,24 @@ services:
       - ARGON_ARCHIVE_NODE=${ARGON_ARCHIVE_NODE}
     volumes:
       - $ARGON_DATA_FOLDER:/data
+    profiles:
+      - all
+      - miners
 
   bot:
     <<: *common-config
-    image: ghcr.io/argonprotocol/commander/bot:v0.0.1
+    build:
+      context: ..
+      dockerfile: deploy/bot/Dockerfile
     restart: unless-stopped
     depends_on:
       - argon-miner
     ports:
       - '3000:3000'
+    working_dir: /usr/src/app
     env_file:
-      - ../commander-config/security.env
+      - ../config/.env.state
+      - ../config/.env.security
     environment:
       - PORT=3000
       - BIDDING_RULES_PATH=/tmp/biddingRules.json
@@ -103,14 +113,13 @@ services:
       - LOCAL_RPC_URL=ws://argon-miner:9944
       - ARCHIVE_NODE_URL=${ARGON_ARCHIVE_NODE}
       - DATADIR=/data
-      - OLDEST_FRAME_ID_TO_SYNC=${OLDEST_FRAME_ID_TO_SYNC}
     volumes:
-      - ../commander-config/wallet.json:/tmp/wallet.json
-      - ../commander-config/biddingRules.json:/tmp/biddingRules.json
-      - ../commander-config/bidding-calculator/src:/usr/src/app/bidding-calculator/src
-      - ../commander-config/bot/src:/usr/src/app/bot/src
-      - ../commander-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../config/wallet.json:/tmp/wallet.json
+      - ../config/biddingRules.json:/tmp/biddingRules.json
+      - ../data:/data
     profiles:
+      - all
       - bot
 
 networks:

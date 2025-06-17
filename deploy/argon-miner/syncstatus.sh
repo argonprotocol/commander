@@ -1,23 +1,21 @@
 #!/bin/bash
 
-# Function to get block number from a given URL
-get_block_number() {
-  local url="${1/wss:/https:}"
-  curl -s -H "Content-Type: application/json" \
-       -d '{"jsonrpc":"2.0","id":1,"method":"chain_getHeader","params":[]}' \
-       "$url" | jq -r '.result.number' | xargs printf "%d\n"
-}
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Get block numbers
-localhost_block_number=$(get_block_number "http://localhost:9944")
-mainchain_block_number=$(get_block_number "$ARGON_ARCHIVE_NODE")
-
-# Check if values were retrieved successfully
-if [[ -z "$localhost_block_number" || -z "$mainchain_block_number" ]]; then
+# Get block numbers from latestblocks.sh
+block_numbers=$("$SCRIPT_DIR/latestblocks.sh")
+if [ $? -ne 0 ]; then
   echo "Error: Could not retrieve block numbers"
   exit 1
 fi
 
+# Split the output into local and main chain block numbers
+local_node_block_number=$(echo "$block_numbers" | cut -d'-' -f1)
+main_node_block_number=$(echo "$block_numbers" | cut -d'-' -f2)
+
 # Calculate sync percentage (capped at 100%)
-sync_pct=$(awk -v local="$localhost_block_number" -v main="$mainchain_block_number" 'BEGIN { pct = (local / main) * 100; print (pct > 100 ? 100 : pct) }' | xargs printf "%.2f")
+sync_pct=$(awk -v local="$local_node_block_number" -v main="$main_node_block_number" 'BEGIN { pct = (local / main) * 100; print (pct > 100 ? 100 : pct) }' | xargs printf "%.2f")
+
+# Save output to file and display it
 echo "$sync_pct%"
