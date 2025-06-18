@@ -57,7 +57,7 @@ pub async fn try_open_ssh_connection(ssh_config: &SSHConfig) -> Result<SSH> {
         }
 
         // Create new connection
-        log::info!("Creating new SSH connection");
+        log::info!("Creating new SSH connection to {}", ssh_config.host());
         let new_ssh = SSH::connect(&ssh_config).await?;
         *ssh_connection = Some(new_ssh.clone());
     }

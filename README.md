@@ -1,6 +1,7 @@
 # Argon Commander
 
-Argon Commander is a desktop application that helps you interact with the [Argon](https://argon.network) mainchain. Among the core activities are:
+Argon Commander is a desktop application that helps you interact with the [Argon](https://argon.network) mainchain.
+Among the core activities are:
 
 - **Mining**: Argon is a proof-of-authorized-work blockchain. Use Argon Commander to mine Argon tokens.
 - **Liquid Locking** Secure Bitcoins into Vaults to unlock the equivalent Argon liquidity.
@@ -23,7 +24,10 @@ The workflow will help you:
 
 ### Liquid Locking
 
-Liquid Locking is a way to lock Bitcoin into a vault, and receive Argon tokens in return. This is a way to unlock the liquidity of your Bitcoin, while still maintaining custody. Your Bitcoin Lock produces an option against the Argon network that can be called by burning Argons to release your Bitcoin. If the Argon price is below target, this can result in arbitrage opportunities.
+Liquid Locking is a way to lock Bitcoin into a vault, and receive Argon tokens in return. This is a way to unlock the
+liquidity of your Bitcoin, while still maintaining custody. Your Bitcoin Lock produces an option against the Argon
+network that can be called by burning Argons to release your Bitcoin. If the Argon price is below target, this can
+result in arbitrage opportunities.
 
 Activities:
 
@@ -36,9 +40,12 @@ Activities:
 
 ### Vaults
 
-Vaults provide collateralization security to Bitcoin Lockers. As a Vault operator, you are able to set the APR per Argon for Bitcoin Locks, as well as the percent you're willing to share with Liquidity Pool providers (for more details, refer to the Argon documentation amd white-papers).
+Vaults provide collateralization security to Bitcoin Lockers. As a Vault operator, you are able to set the APR per Argon
+for Bitcoin Locks, as well as the percent you're willing to share with Liquidity Pool providers (for more details, refer
+to the Argon documentation amd white-papers).
 
 Activities:
+
 - Create a Vault
 - Cosign Bitcoin Lock release-requests
 - Monitor Liquidity Pool returns
@@ -47,7 +54,9 @@ Activities:
 
 ## Installation
 
-This project has an automated action to build from the source of the project for each release. The action is triggered by a push to a `version` branch. These releases are guaranteed to match a git hash, so you can see what you're installing. However, they are unsigned, so will require steps to open on Mac/Windows.
+This project has an automated action to build from the source of the project for each release. The action is triggered
+by a push to a `version` branch. These releases are guaranteed to match a git hash, so you can see what you're
+installing. However, they are unsigned, so will require steps to open on Mac/Windows.
 
 Downloads are available for each "release" on the [releases page](./releases/latest).
 
@@ -55,12 +64,12 @@ Downloads are available for each "release" on the [releases page](./releases/lat
 
 1. Download the latest "dmg" installer from the [releases page](./releases/latest).
 2. Click to run the installer once downloaded
-   - Drag the `Argon Commander` app to your Applications folder
-     <img src="docs/images/mac-install.png" alt="Installer" width="100%"/>
+    - Drag the `Argon Commander` app to your Applications folder
+      <img src="docs/images/mac-install.png" alt="Installer" width="100%"/>
 3. Try to open the app once (it will be blocked and prompt you to move it to the trash)
-   - Click `Done`
-     <br/>
-     <img src="docs/images/mac-malware.png" alt="Malware" width="30%"/>
+    - Click `Done`
+      <br/>
+      <img src="docs/images/mac-malware.png" alt="Malware" width="30%"/>
 4. Open the "System Settings" app
 5. Click `Security & Privacy`
 6. Navigate down to `Security`
@@ -77,8 +86,8 @@ Downloads are available for each "release" on the [releases page](./releases/lat
 1. Download the latest windows installer (exe or msi) from the [releases page](./releases/latest).
 2. Run the installer
 3. You will likely see a screen that says "Windows protected your PC"
-   - Click `More info`
-     <br/><img src="docs/images/windows-smartscreen.png" alt="Windows SmartScreen" width="60%"/>
+    - Click `More info`
+      <br/><img src="docs/images/windows-smartscreen.png" alt="Windows SmartScreen" width="60%"/>
 4. Click "Run Anyway"
 5. Complete the installation
 
@@ -90,3 +99,21 @@ You can build this project from source by running:
 yarn install
 yarn tauri build
 ```
+
+## Running a Development Server
+
+You can use a local docker as a development server by running:
+
+```bash
+docker build -t commander-host -f dev.Dockerfile .
+docker run -d --name commander-host-1 -p 2222:22 commander-host
+```
+
+When you add your server address during setup, you should append the port `:2222` to the end of the address (ie,
+`localhost:2222`). Any local port will be fine if you wish to run multiple.
+
+## Using Pre-generated Keys
+
+You can use pre-generated keys to connect to a server. This is useful for testing or if you want to use a specific key
+pair. You can provide a `SSH_KEY_FILE` path in an .env file during run of `yarn tauri dev`. The path should point to
+your private key, and a public key should be present in the same path with `.pub` appended to the filename (see the `dev.ssh_key` and `dev.ssh_key.pub` files in the repository for an example).
