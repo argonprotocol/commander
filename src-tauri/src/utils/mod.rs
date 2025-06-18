@@ -19,7 +19,7 @@ pub struct Utils;
 
 impl Utils {
     pub fn get_instance_name() -> String {
-        std_env::var("INSTANCE_NAME").unwrap_or("default".to_string())
+        std_env::var("VITE_INSTANCE_NAME").unwrap_or("default".to_string())
     }
 
     pub fn get_embedded_path(app: &AppHandle, path: impl AsRef<Path>) -> anyhow::Result<PathBuf> {
