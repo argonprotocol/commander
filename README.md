@@ -118,7 +118,7 @@ To add the server configuration SSH key to the server, you can copy the public k
 echo '<YOUR KEY>' | docker exec -i commander-host-1 tee -a /root/.ssh/authorized_keys
 ```
 
-So, as an example, if you want to add the `dev.ssh_key.pub` file from the repository, you can run:
+So, as an example, if you want to add a specific key, you can run:
 
 ```bash
 cat 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINxAnT9A1/gwiFYimdT0R38sWzu6Y4QOE11FvzWj53lm' | docker exec -i commander-host-1 tee -a /root/.ssh/authorized_keys

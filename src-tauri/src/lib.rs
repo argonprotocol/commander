@@ -4,7 +4,7 @@ use serde;
 use ssh::singleton;
 use ssh::SSH;
 use std;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use utils::Utils;

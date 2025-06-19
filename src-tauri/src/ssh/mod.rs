@@ -1,7 +1,7 @@
 use crate::utils::Utils;
 use anyhow::Result;
 use async_trait::async_trait;
-use log::{error, info, trace};
+use log::{error, info};
 use rand::rngs::OsRng;
 use russh::client::{AuthResult, Msg};
 use russh::keys::ssh_key::LineEnding;
