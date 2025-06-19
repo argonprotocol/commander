@@ -33,8 +33,8 @@ export class InstallerCheck {
         }
 
         if (this.isServerInstallComplete) {
-          this.config.isServerInstalling = false;
-          this.config.isServerNew = false;
+          this.config.isServerInstalled = true;
+          this.config.isServerUpToDate = true;
           await this.config.save();
           return;
         }

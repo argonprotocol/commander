@@ -2379,6 +2379,7 @@ __metadata:
     typescript: "npm:~5.8.3"
     vite: "npm:^6.0.3"
     vite-svg-loader: "npm:^5.1.0"
+    vitest: "npm:^3.1.2"
     vue: "npm:^3.5.13"
     vue-tsc: "npm:^2.1.10"
     zod: "npm:^3.25.55"

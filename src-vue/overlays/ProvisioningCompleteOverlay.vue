@@ -32,7 +32,7 @@
           <p>
             We verified your server configurations, installed all required software, and double-checked that everything
             is in working order.
-            <template v-if="config.isServerReadyForMining">Click the Let's Go button to get started.</template>
+            <template v-if="config.isServerReadyForBidding">Click the Let's Go button to get started.</template>
             <template v-else>
               Only two items remain. Click the Let's Go button and we'll guide you through the final steps.
             </template>
