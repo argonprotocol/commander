@@ -1,7 +1,7 @@
 use crate::utils::Utils;
 use anyhow::Result;
 use async_trait::async_trait;
-use log::{error, info};
+use log::{error, info, trace};
 use rand::rngs::OsRng;
 use russh::client::{AuthResult, Msg};
 use russh::keys::ssh_key::LineEnding;
@@ -41,6 +41,10 @@ impl SSHConfig {
             username: username.to_string(),
             private_key: Arc::new(private_key),
         })
+    }
+
+    pub fn host(&self) -> String {
+        format!("{}:{}", self.addrs.0, self.addrs.1)
     }
 }
 
@@ -236,6 +240,19 @@ impl SSH {
                 .await?;
         }
         Ok(())
+    }
+
+    pub fn read_keys(path: PathBuf) -> Result<(String, String), String> {
+        trace!("Reading keys from {}", path.display());
+        let private_key_openssh = fs::read_to_string(&path)
+            .map_err(|e| format!("Failed to read private key file: {}", e))?;
+        let pub_path = path.with_extension(match path.extension() {
+            Some(ext) => format!("{}.pub", ext.to_string_lossy()),
+            None => "pub".to_string(),
+        });
+        let public_key_openssh = fs::read_to_string(pub_path)
+            .map_err(|e| format!("Failed to read public key file: {}", e))?;
+        Ok((private_key_openssh, public_key_openssh))
     }
 
     pub fn generate_keys() -> Result<(String, String), String> {

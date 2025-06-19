@@ -1,9 +1,10 @@
 use log;
+use log::trace;
 use serde;
 use ssh::singleton;
 use ssh::SSH;
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use utils::Utils;
@@ -28,8 +29,8 @@ async fn try_ssh_connection(
     private_key: String,
 ) -> Result<String, String> {
     log::info!("try_ssh_connection");
-    let port = 22;
-    let ssh_config = ssh::SSHConfig::new(host, port, username, private_key).unwrap();
+    let (host, port) = get_host(host);
+    let ssh_config = ssh::SSHConfig::new(&host, port, username, private_key).unwrap();
     let ssh = SSH::connect(&ssh_config).await.map_err(|e| {
         log::error!("Error connecting to SSH: {:#}", e);
         e.to_string()
@@ -45,6 +46,18 @@ async fn try_ssh_connection(
     Ok("success".to_string())
 }
 
+fn get_host(host: &str) -> (String, u16) {
+    if host.contains(":") {
+        let mut parts = host.split(':');
+        let host_str = parts.next().unwrap_or("").to_string();
+        let port_str = parts.next().unwrap_or("22").parse().unwrap_or(22);
+
+        (host_str, port_str)
+    } else {
+        (host.to_string(), 22)
+    }
+}
+
 #[tauri::command]
 async fn ensure_ssh_connection(
     host: &str,
@@ -52,8 +65,8 @@ async fn ensure_ssh_connection(
     private_key: String,
 ) -> Result<String, String> {
     log::info!("ensure_ssh_connection");
-    let port = 22;
-    let ssh_config = ssh::SSHConfig::new(host, port, username, private_key).unwrap();
+    let (host, port) = get_host(host);
+    let ssh_config = ssh::SSHConfig::new(&host, port, username, private_key).unwrap();
     singleton::try_open_ssh_connection(&ssh_config)
         .await
         .map_err(|e| {
@@ -122,8 +135,13 @@ async fn ssh_upload_file(contents: String, remote_path: String) -> Result<String
 #[tauri::command]
 async fn get_ssh_keys() -> Result<IKeys, String> {
     log::info!("get_ssh_keys");
-    let keys = SSH::generate_keys().unwrap_or_else(|_| ("".to_string(), "".to_string()));
-    let (private_key, public_key) = keys;
+    let (private_key, public_key)  = if let Ok(path) = env::var("SSH_KEY_FILE") {
+        SSH::read_keys(PathBuf::from(path))
+    } else {
+        SSH::generate_keys()
+    }.inspect_err(|e| {
+        log::error!("Error generating ssh_keys {}", e);
+    })?;
 
     Ok(IKeys {
         private_key,
@@ -183,7 +201,7 @@ fn init_config_instance_dir(app: &AppHandle) -> Result<(), tauri::Error> {
         .path()
         .resolve(instance_name, tauri::path::BaseDirectory::AppConfig)?;
     if !config_instance_dir.exists() {
-        println!(
+        trace!(
             "Creating config directory at: {}",
             config_instance_dir.to_string_lossy()
         );
@@ -195,6 +213,16 @@ fn init_config_instance_dir(app: &AppHandle) -> Result<(), tauri::Error> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     dotenv::dotenv().ok();
+    if let Ok(node_env) = env::var("NODE_ENV") {
+        if let Ok(path) = dotenv::from_filename(format!(".env.{}", node_env)) {
+            if let Ok(keys_path) = env::var("SSH_KEY_FILE") {
+                let path = path.parent().unwrap().to_path_buf().join(keys_path);
+                unsafe {
+                    env::set_var("SSH_KEY_FILE", path.into_os_string());
+                }
+            }
+        }
+    }
     color_backtrace::install();
 
     let instance_name = Utils::get_instance_name();
@@ -213,7 +241,8 @@ pub fn run() {
                 .add_migrations(&db_url, migrations)
                 .build(),
         )
-        .setup(|app| {
+        .setup(move |app| {
+            log::info!("Starting Commander with instance name: {}", instance_name);
             let window = app.get_webview_window("main").unwrap();
             let handle = app.handle();
 
