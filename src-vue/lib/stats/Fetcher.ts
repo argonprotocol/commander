@@ -19,6 +19,10 @@ export class StatsFetcher {
         throw new Error(`Failed to fetch bot status: ${response.status}`);
       }
       const data = response.data;
+      if (!data.isStarted) {
+        console.log('Bot has not started, retrying...');
+        return this.fetchSyncState(retries);
+      }
       console.log('SyncState fetched:', data);
       return {
         hasMiningSeats: data.hasMiningSeats,

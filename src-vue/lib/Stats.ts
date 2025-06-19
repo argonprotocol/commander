@@ -96,7 +96,7 @@ export class Stats {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    console.info('Loading stats...', { isServerInstalling: this._config.isServerInstalling });
+    console.info('Loading stats...', { isServerUpToDate: this._config.isServerUpToDate });
     this.db = await this._dbPromise;
 
     console.info('Fetching sync state...');
@@ -157,7 +157,7 @@ export class Stats {
   }
 
   private get isRunnable(): boolean {
-    return !this._config.isServerInstalling && !this._config.isWaitingForUpgradeApproval;
+    return this._config.isServerUpToDate && !this._config.isWaitingForUpgradeApproval;
   }
 
   public async fetchDashboardFromDb(): Promise<IDashboardStats> {
@@ -218,7 +218,7 @@ export class Stats {
   }
 
   private async updateSyncState(): Promise<void> {
-    this.syncState = await StatsFetcher.fetchSyncState(this.localPort);
+    this.syncState = await StatsFetcher.fetchSyncState();
     this.maxSeatsReductionReason = this.syncState.maxSeatsReductionReason;
     this.maxSeatsPossible = this.syncState.maxSeatsPossible;
 

@@ -107,9 +107,9 @@ const stepProgress = Vue.computed(() => {
 });
 
 // installer.finishedFn = () => {
-//   config.isServerInstalling = false;
+//   config.isServerUpToDate = true;
 //   config.isWaitingForUpgradeApproval = false;
-//   if (config.isServerNew) {
+//   if (!config.isServerInstalled) {
 //     emitter.emit('openProvisioningCompleteOverlay');
 //   }
 // };
@@ -156,7 +156,7 @@ function getLabel(step: IStep, offset: number = 0) {
 
 async function retryFailedStep(step: IStep) {
   isRetrying.value = true;
-  await installer.retryFailedStep(step.key);
+  await installer.runFailedStep(step.key);
   isRetrying.value = false;
 }
 

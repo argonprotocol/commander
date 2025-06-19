@@ -1,10 +1,10 @@
 import { activateNotary, runOnTeardown, sudo, teardown, TestMainchain, TestNotary } from '@argonprotocol/testing';
 import { MiningRotations, mnemonicGenerate } from '@argonprotocol/mainchain';
+import * as BiddingCalculator from '@argonprotocol/commander-calculator';
 import { afterAll, afterEach, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import Path from 'node:path';
 import Bot from '../src/Bot.ts';
-import * as BiddingCalculator from '@argonprotocol/commander-calculator';
 
 afterEach(teardown);
 afterAll(teardown);

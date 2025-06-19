@@ -269,6 +269,7 @@ import dayjs from 'dayjs';
 import { TransitionRoot, Dialog, DialogPanel } from '@headlessui/vue';
 import emitter from '../emitters/basic';
 import { useConfig } from '../stores/config';
+import { useInstaller } from '../stores/installer';
 import BgOverlay from '../components/BgOverlay.vue';
 import CopyIcon from '../assets/copy.svg?component';
 import { ExclamationTriangleIcon } from '@heroicons/vue/20/solid';
@@ -278,6 +279,8 @@ import { SSH } from '../lib/SSH';
 import { IConfigServerDetails } from '../interfaces/IConfig';
 
 const config = useConfig();
+const installer = useInstaller();
+
 const serverDetails = Vue.computed(() => config.serverDetails);
 
 let openedAt = dayjs();
@@ -326,19 +329,24 @@ async function addServer() {
       ...config.serverDetails,
       ipAddress: ipAddress.value,
     };
+    console.log('Connecting to server', newServerDetails);
     await SSH.ensureConnection(newServerDetails);
     await SSH.runCommand("echo 'test'");
+    console.log('Connected to server');
 
-    config.isServerNew = true;
     config.isServerConnected = true;
-    config.isServerInstalling = true;
+    config.isServerInstalled = false;
+    config.isServerUpToDate = false;
     config.serverDetails = newServerDetails;
+    console.log('Saving config');
     config.save();
-    closeOverlay();
   } catch (error) {
     console.log('error', error);
     hasServerDetailsError.value = true;
   }
+  closeOverlay();
+  console.log('Running installer');
+  installer.run();
   isSaving.value = false;
 }
 

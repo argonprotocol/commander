@@ -3,8 +3,8 @@ import { Config } from './Config';
 import { IConfigServerDetails } from '../interfaces/IConfig';
 
 export class SSH {
-  public static async tryConnection(serverDetails: IConfigServerDetails): Promise<number> {
-    return await invoke('try_ssh_connection', {
+  public static async tryConnection(serverDetails: IConfigServerDetails): Promise<void> {
+    await invoke('try_ssh_connection', {
       host: serverDetails.ipAddress,
       username: serverDetails.sshUser,
       privateKey: serverDetails.sshPrivateKey,
@@ -15,8 +15,8 @@ export class SSH {
     await invoke('close_ssh_connection', {});
   }
 
-  public static async ensureConnection(serverDetails: IConfigServerDetails): Promise<number> {
-    return await invoke('ensure_ssh_connection', {
+  public static async ensureConnection(serverDetails: IConfigServerDetails): Promise<void> {
+    await invoke('ensure_ssh_connection', {
       host: serverDetails.ipAddress,
       username: serverDetails.sshUser,
       privateKey: serverDetails.sshPrivateKey,

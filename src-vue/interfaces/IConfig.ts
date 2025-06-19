@@ -81,10 +81,10 @@ export const ConfigSchema = z.object({
   installDetails: ConfigInstallDetailsSchema,
   syncDetails: ConfigSyncDetailsSchema,
 
-  isServerNew: z.boolean(), // isNewServer
-  isServerInstalling: z.boolean(), // isInstalling
   isServerConnected: z.boolean(), // isConnected
-  isServerReadyForMining: z.boolean(), // isReadyForMining
+  isServerInstalled: z.boolean(), // isNewServer
+  isServerUpToDate: z.boolean(), // isInstalling
+  isServerReadyForBidding: z.boolean(), // isReadyForMining
   isWaitingForUpgradeApproval: z.boolean(), // isRequiringUpgrade
 
   hasMiningSeats: z.boolean(), // hasMiningSeats
@@ -104,3 +104,19 @@ export type IConfig = z.infer<typeof ConfigSchema>;
 export type IConfigStringified = {
   [K in keyof IConfig]: string;
 };
+
+export interface IConfigDefaults {
+  requiresPassword: () => IConfig['requiresPassword'];
+  security: () => IConfig['security'];
+  serverDetails: () => Promise<IConfig['serverDetails']>;
+  installDetails: () => IConfig['installDetails'];
+  syncDetails: () => IConfig['syncDetails'];
+  isServerConnected: () => IConfig['isServerConnected'];
+  isServerInstalled: () => IConfig['isServerInstalled'];
+  isServerUpToDate: () => IConfig['isServerUpToDate'];
+  isServerReadyForBidding: () => IConfig['isServerReadyForBidding'];
+  isWaitingForUpgradeApproval: () => IConfig['isWaitingForUpgradeApproval'];
+  hasMiningSeats: () => IConfig['hasMiningSeats'];
+  hasMiningBids: () => IConfig['hasMiningBids'];
+  biddingRules: () => IConfig['biddingRules'];
+}

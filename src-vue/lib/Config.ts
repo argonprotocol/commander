@@ -2,6 +2,7 @@ import packageJson from '../../package.json';
 import { Db } from './Db';
 import {
   IConfig,
+  IConfigDefaults,
   IConfigStringified,
   IConfigInstallStep,
   InstallStepStatus,
@@ -27,7 +28,7 @@ export class Config {
   private _db!: Db;
   private _fieldsToSave: Set<string> = new Set();
   private _dbPromise: Promise<Db>;
-  private _unserialized!: IConfig;
+  private _unstringified!: IConfig;
   private _stringified = {} as IConfigStringified;
   private _seedAccount!: KeyringPair;
   private _mngAccount!: KeyringPair;
@@ -46,7 +47,7 @@ export class Config {
     this.isLoaded = false;
 
     this._dbPromise = dbPromise;
-    this._unserialized = {
+    this._unstringified = {
       version: packageJson.version,
       requiresPassword: false,
       security: {
@@ -61,32 +62,16 @@ export class Config {
         sshUser: '',
         oldestFrameIdToSync: null,
       },
-      installDetails: {
-        [InstallStepKey.ServerConnect]: { ...installDetailsStep },
-        [InstallStepKey.UbuntuCheck]: { ...installDetailsStep },
-        [InstallStepKey.FileCheck]: { ...installDetailsStep },
-        [InstallStepKey.DockerInstall]: { ...installDetailsStep },
-        [InstallStepKey.BitcoinInstall]: { ...installDetailsStep },
-        [InstallStepKey.ArgonInstall]: { ...installDetailsStep },
-        [InstallStepKey.MiningLaunch]: { ...installDetailsStep },
-        errorType: null,
-        errorMessage: null,
-        isRunning: false,
-      },
-      syncDetails: {
-        progress: 0,
-        startDate: null,
-        errorType: null,
-        errorMessage: null,
-      },
-      isServerNew: true,
-      isServerInstalling: false,
-      isServerConnected: false,
-      isServerReadyForMining: false,
-      isWaitingForUpgradeApproval: false,
-      hasMiningSeats: false,
-      hasMiningBids: false,
-      biddingRules: null,
+      installDetails: Config.getDefault(dbFields.installDetails) as IConfig['installDetails'],
+      syncDetails: Config.getDefault(dbFields.syncDetails) as IConfig['syncDetails'],
+      isServerConnected: Config.getDefault(dbFields.isServerConnected) as boolean,
+      isServerInstalled: Config.getDefault(dbFields.isServerInstalled) as boolean,
+      isServerUpToDate: Config.getDefault(dbFields.isServerUpToDate) as boolean,
+      isServerReadyForBidding: Config.getDefault(dbFields.isServerReadyForBidding) as boolean,
+      isWaitingForUpgradeApproval: Config.getDefault(dbFields.isWaitingForUpgradeApproval) as boolean,
+      hasMiningSeats: Config.getDefault(dbFields.hasMiningSeats) as boolean,
+      hasMiningBids: Config.getDefault(dbFields.hasMiningBids) as boolean,
+      biddingRules: Config.getDefault(dbFields.biddingRules) as IConfig['biddingRules'],
     };
   }
 
@@ -117,7 +102,7 @@ export class Config {
     this.isLoaded = true;
     this._stringified = fieldsSerialized;
     this._db = db;
-    this._unserialized = configData as IConfig;
+    this._unstringified = configData as IConfig;
     this._loadingFns.resolve();
   }
 
@@ -145,150 +130,150 @@ export class Config {
 
   get requiresPassword(): boolean {
     if (!this.isLoaded) return false;
-    return this._unserialized.requiresPassword;
+    return this._unstringified.requiresPassword;
   }
 
   set requiresPassword(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.requiresPassword, value);
-    this._unserialized.requiresPassword = value;
+    this._unstringified.requiresPassword = value;
   }
 
   get security(): IConfig['security'] {
     if (!this.isLoaded) return {} as IConfig['security'];
-    return this._unserialized.security;
+    return this._unstringified.security;
   }
 
   set security(value: IConfig['security']) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.security, value);
-    this._unserialized.security = value;
+    this._unstringified.security = value;
   }
 
   get serverDetails(): IConfig['serverDetails'] {
     if (!this.isLoaded) return {} as IConfig['serverDetails'];
-    return this._unserialized.serverDetails;
+    return this._unstringified.serverDetails;
   }
 
   set serverDetails(value: IConfig['serverDetails']) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.serverDetails, value);
-    this._unserialized.serverDetails = value;
+    this._unstringified.serverDetails = value;
   }
 
   get installDetails(): IConfig['installDetails'] {
     if (!this.isLoaded) return {} as IConfig['installDetails'];
-    return this._unserialized.installDetails;
+    return this._unstringified.installDetails;
   }
 
   set installDetails(value: IConfig['installDetails']) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.installDetails, value);
-    this._unserialized.installDetails = value;
+    this._unstringified.installDetails = value;
   }
 
   get syncDetails(): IConfig['syncDetails'] {
     if (!this.isLoaded) return {} as IConfig['syncDetails'];
-    return this._unserialized.syncDetails;
+    return this._unstringified.syncDetails;
   }
 
   set syncDetails(value: IConfig['syncDetails']) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.syncDetails, value);
-    this._unserialized.syncDetails = value;
-  }
-
-  get isServerNew(): boolean {
-    if (!this.isLoaded) return false;
-    return this._unserialized.isServerNew;
-  }
-
-  set isServerNew(value: boolean) {
-    this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.isServerNew, value);
-    this._unserialized.isServerNew = value;
-  }
-
-  get isServerInstalling(): boolean {
-    if (!this.isLoaded) return false;
-    return this._unserialized.isServerInstalling;
-  }
-
-  set isServerInstalling(value: boolean) {
-    this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.isServerInstalling, value);
-    this._unserialized.isServerInstalling = value;
+    this._unstringified.syncDetails = value;
   }
 
   get isServerConnected(): boolean {
     if (!this.isLoaded) return false;
-    return this._unserialized.isServerConnected;
+    return this._unstringified.isServerConnected;
   }
 
   set isServerConnected(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.isServerConnected, value);
-    this._unserialized.isServerConnected = value;
+    this._unstringified.isServerConnected = value;
   }
 
-  get isServerReadyForMining(): boolean {
+  get isServerUpToDate(): boolean {
     if (!this.isLoaded) return false;
-    return this._unserialized.isServerReadyForMining;
+    return this._unstringified.isServerUpToDate;
   }
 
-  set isServerReadyForMining(value: boolean) {
+  set isServerUpToDate(value: boolean) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.isServerReadyForMining, value);
-    this._unserialized.isServerReadyForMining = value;
+    this._tryFieldsToSave(dbFields.isServerUpToDate, value);
+    this._unstringified.isServerUpToDate = value;
+  }
+
+  get isServerInstalled(): boolean {
+    if (!this.isLoaded) return false;
+    return this._unstringified.isServerInstalled;
+  }
+
+  set isServerInstalled(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._tryFieldsToSave(dbFields.isServerInstalled, value);
+    this._unstringified.isServerInstalled = value;
+  }
+
+  get isServerReadyForBidding(): boolean {
+    if (!this.isLoaded) return false;
+    return this._unstringified.isServerReadyForBidding;
+  }
+
+  set isServerReadyForBidding(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._tryFieldsToSave(dbFields.isServerReadyForBidding, value);
+    this._unstringified.isServerReadyForBidding = value;
   }
 
   get isServerSyncing(): boolean {
     if (!this.isLoaded) return false;
-    return this._unserialized.syncDetails.startDate !== null && this._unserialized.syncDetails.progress < 100;
+    return this._unstringified.syncDetails.startDate !== null && this._unstringified.syncDetails.progress < 100;
   }
 
   get isWaitingForUpgradeApproval(): boolean {
     if (!this.isLoaded) return false;
-    return this._unserialized.isWaitingForUpgradeApproval;
+    return this._unstringified.isWaitingForUpgradeApproval;
   }
 
   set isWaitingForUpgradeApproval(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.isWaitingForUpgradeApproval, value);
-    this._unserialized.isWaitingForUpgradeApproval = value;
+    this._unstringified.isWaitingForUpgradeApproval = value;
   }
 
   get hasMiningSeats(): boolean {
     if (!this.isLoaded) return false;
-    return this._unserialized.hasMiningSeats;
+    return this._unstringified.hasMiningSeats;
   }
 
   set hasMiningSeats(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.hasMiningSeats, value);
-    this._unserialized.hasMiningSeats = value;
+    this._unstringified.hasMiningSeats = value;
   }
 
   get hasMiningBids(): boolean {
     if (!this.isLoaded) return false;
-    return this._unserialized.hasMiningBids;
+    return this._unstringified.hasMiningBids;
   }
 
   set hasMiningBids(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.hasMiningBids, value);
-    this._unserialized.hasMiningBids = value;
+    this._unstringified.hasMiningBids = value;
   }
 
   get biddingRules(): IConfig['biddingRules'] {
     if (!this.isLoaded) return {} as IConfig['biddingRules'];
-    return this._unserialized.biddingRules;
+    return this._unstringified.biddingRules;
   }
 
   set biddingRules(value: IConfig['biddingRules']) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.biddingRules, value);
-    this._unserialized.biddingRules = value;
+    this._unstringified.biddingRules = value;
   }
 
   public async save() {
@@ -299,7 +284,7 @@ export class Config {
 
     const dataToLog = Object.keys(dataToSave).reduce<Partial<IConfig>>((acc, key) => {
       const typedKey = key as keyof IConfig;
-      (acc as any)[typedKey] = this._unserialized[typedKey];
+      (acc as any)[typedKey] = this._unstringified[typedKey];
       return acc;
     }, {});
     console.log('SAVING:', this._fieldsToSave, dataToLog);
@@ -347,31 +332,15 @@ const dbFields = {
   serverDetails: 'serverDetails',
   installDetails: 'installDetails',
   syncDetails: 'syncDetails',
-  isServerNew: 'isServerNew',
   isServerConnected: 'isServerConnected',
-  isServerInstalling: 'isServerInstalling',
-  isServerReadyForMining: 'isServerReadyForMining',
+  isServerInstalled: 'isServerInstalled',
+  isServerUpToDate: 'isServerUpToDate',
+  isServerReadyForBidding: 'isServerReadyForBidding',
   isWaitingForUpgradeApproval: 'isWaitingForUpgradeApproval',
   hasMiningSeats: 'hasMiningSeats',
   hasMiningBids: 'hasMiningBids',
   biddingRules: 'biddingRules',
 } as const;
-
-interface IConfigDefaults {
-  requiresPassword: () => IConfig['requiresPassword'];
-  security: () => IConfig['security'];
-  serverDetails: () => Promise<IConfig['serverDetails']>;
-  installDetails: () => IConfig['installDetails'];
-  syncDetails: () => IConfig['syncDetails'];
-  isServerNew: () => IConfig['isServerNew'];
-  isServerConnected: () => IConfig['isServerConnected'];
-  isServerInstalling: () => IConfig['isServerInstalling'];
-  isServerReadyForMining: () => IConfig['isServerReadyForMining'];
-  isWaitingForUpgradeApproval: () => IConfig['isWaitingForUpgradeApproval'];
-  hasMiningSeats: () => IConfig['hasMiningSeats'];
-  hasMiningBids: () => IConfig['hasMiningBids'];
-  biddingRules: () => IConfig['biddingRules'];
-}
 
 const defaults: IConfigDefaults = {
   requiresPassword: () => false,
@@ -423,10 +392,10 @@ const defaults: IConfigDefaults = {
     errorType: null,
     errorMessage: null,
   }),
-  isServerNew: () => true,
   isServerConnected: () => false,
-  isServerInstalling: () => false,
-  isServerReadyForMining: () => false,
+  isServerInstalled: () => false,
+  isServerUpToDate: () => false,
+  isServerReadyForBidding: () => false,
   isWaitingForUpgradeApproval: () => false,
   hasMiningSeats: () => false,
   hasMiningBids: () => false,

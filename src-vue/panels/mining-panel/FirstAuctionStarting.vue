@@ -15,7 +15,7 @@
       <p
         class="text-center text-lg mt-6 border-t border-b border-gray-300 pt-8 pb-7 font-light leading-7.5 inline-block"
       >
-        Your bidding bot has successfully connected to the Argon blockchain. It's now trying to win
+        Your bidding bot has successfully connected. It's now trying to win
         {{ maxSeatCount }} mining seat{{ maxSeatCount === 1 ? '' : 's' }} with a
         <span @click="openBiddingBudgetOverlay" class="text-argon-600 underline cursor-pointer underline-offset-2">
           budget cap of {{ currencySymbol }}{{ fmtMoney(currencyStore.argonTo(maxBidPerSeat)) }} per seat
@@ -23,24 +23,27 @@
         .
         <template v-if="auctionIsClosing && startOfAuctionClosing">
           The currently active auction is in the process of closing. Bids can still be submitted for the next
-          <CountdownClock
-            :time="startOfAuctionClosing"
-            @tick="handleAuctionClosingTick"
-            v-slot="{ hours, minutes, seconds }"
-          >
-            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},</template>
-            <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and</template>
-            {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
-          </CountdownClock>
+          <div class="font-bold py-2">
+            <CountdownClock
+              :time="startOfAuctionClosing"
+              @tick="handleAuctionClosingTick"
+              v-slot="{ hours, minutes, seconds }"
+            >
+              <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},</template>
+              <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and</template>
+              {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
+            </CountdownClock>
+          </div>
         </template>
         <template v-else-if="startOfNextCohort">
           The current auction will begin closing in
-          <CountdownClock :time="startOfNextCohort" v-slot="{ hours, minutes, seconds }">
-            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},</template>
-            <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and</template>
-            {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
-          </CountdownClock>
-          .
+          <div class="font-bold py-2">
+            <CountdownClock :time="startOfNextCohort" v-slot="{ hours, minutes, seconds }">
+              <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},</template>
+              <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and</template>
+              {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
+            </CountdownClock>
+          </div>
         </template>
         This page will update automatically when a successful bid is confirmed.
       </p>

@@ -110,12 +110,10 @@ const walletIsMinimallyFunded = Vue.computed(() => {
   }
 
   if (currencyStore.mngWallet.argons < config.biddingRules.requiredArgons) {
-    console.log('argons', currencyStore.mngWallet.argons, config.biddingRules.requiredArgons);
     return false;
   }
 
   if (currencyStore.mngWallet.argonots < config.biddingRules.requiredArgonots) {
-    console.log('argonots', currencyStore.mngWallet.argonots, config.biddingRules.requiredArgonots);
     return false;
   }
 

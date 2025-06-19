@@ -74,12 +74,12 @@ const isOpen = Vue.ref(true);
 const isStartingUpgrade = Vue.ref(false);
 
 const isUpgrading = Vue.computed(() => {
-  return config.isServerInstalling && !config.isWaitingForUpgradeApproval;
+  return !config.isServerUpToDate && !config.isWaitingForUpgradeApproval;
 });
 
 async function startUpgrade() {
   isStartingUpgrade.value = true;
-  await installer.startUpgrade();
+  await installer.runUpgrade();
   isStartingUpgrade.value = false;
 }
 </script>

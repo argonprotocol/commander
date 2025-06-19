@@ -11,7 +11,7 @@
         <div class="text-2xl font-bold text-slate-600/40 uppercase">Loading...</div>
       </div>
     </div>
-    <UpgradeOverlay v-if="shouldShowUpgradeOverlay" />
+    <UpgradeOverlay v-if="isNeedingUpgradeApproval" />
     <ServerConnectOverlay />
     <WalletOverlay />
     <ServerRemoveOverlay />
@@ -19,7 +19,7 @@
     <SecuritySettingsOverlay />
     <BiddingRulesOverlay />
     <!-- <ProvisioningCompleteOverlay /> -->
-    <SyncingOverlay v-if="config.isServerSyncing && !config.isServerInstalling && !shouldShowUpgradeOverlay" />
+    <SyncingOverlay v-if="config.isServerSyncing && config.isServerUpToDate && !isNeedingUpgradeApproval" />
   </div>
 </template>
 
@@ -44,8 +44,6 @@ import { useInstaller } from './stores/installer';
 import { checkForUpdates } from './tauri-controls/utils/checkForUpdates.ts';
 import { onBeforeMount, onBeforeUnmount, onMounted } from 'vue';
 import { waitForLoad } from '@argonprotocol/mainchain';
-import { getVersion } from '@tauri-apps/api/app';
-import { invoke } from '@tauri-apps/api/core';
 
 const basicStore = useBasicStore();
 const config = useConfig();
@@ -53,8 +51,8 @@ const installer = useInstaller();
 
 let timeout: number | undefined;
 
-const shouldShowUpgradeOverlay = Vue.computed(() => {
-  return config.isWaitingForUpgradeApproval || (config.isServerInstalling && !config.isServerNew);
+const isNeedingUpgradeApproval = Vue.computed(() => {
+  return config.isWaitingForUpgradeApproval || (config.isServerInstalled && !config.isServerUpToDate);
 });
 
 onBeforeMount(async () => {
@@ -62,7 +60,10 @@ onBeforeMount(async () => {
 });
 
 onMounted(async () => {
-  installer.tryToRun();
+  const shouldRunInstaller = await installer.calculateIsRunnable();
+  if (shouldRunInstaller) {
+    installer.run();
+  }
   timeout = setInterval(() => checkForUpdates(), 60e3) as unknown as number;
 });
 

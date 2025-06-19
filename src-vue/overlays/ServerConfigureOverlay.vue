@@ -141,6 +141,7 @@ import emitter from '../emitters/basic';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import BgOverlay from '../components/BgOverlay.vue';
 import { useConfig } from '../stores/config';
+import { useInstaller } from '../stores/installer';
 import CopyIcon from '../assets/copy.svg?component';
 import { ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
 import CopyToClipboard from '../components/CopyToClipboard.vue';
@@ -148,6 +149,7 @@ import { SSH } from '../lib/SSH';
 import { IConfigServerDetails } from '../interfaces/IConfig';
 
 const config = useConfig();
+const installer = useInstaller();
 
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
@@ -182,6 +184,7 @@ async function updateServer() {
     isSaving.value = false;
     return;
   }
+
   if (ipAddress.value === config.serverDetails.ipAddress) {
     isSaving.value = false;
     closeOverlay();
@@ -196,14 +199,15 @@ async function updateServer() {
     await SSH.tryConnection(newServerDetails);
 
     config.isServerConnected = true;
-    config.isServerInstalling = true;
+    config.isServerUpToDate = false;
     config.serverDetails = newServerDetails;
     config.save();
-    closeOverlay();
   } catch (error) {
     console.log('error', error);
     hasServerDetailsError.value = true;
   }
+  closeOverlay();
+  installer.run();
   isSaving.value = false;
 }
 

@@ -16,22 +16,28 @@ dayjs.extend(utc);
 
 let IS_INITIALIZED = false;
 
+export function resetInstaller(): void {
+  IS_INITIALIZED = false;
+}
+
 export default class Installer {
-  private config: Config;
-  private installerCheck: InstallerCheck;
-  private isRunningLocally = false;
+  public isFreshInstall: boolean = false;
+  public remoteFilesNeedUpdating: boolean = false;
+
+  public isLoaded: boolean = false;
+  public isLoadedPromise: Promise<void>;
+  public isRunnable: boolean = false;
+
+  public isRunning = false;
+
+  public reasonToSkipInstall: string = '';
+  public reasonToSkipInstallData: any = null;
+
   private hasApprovedUpgrade = false;
 
-  private reasonToSkipInstall: string = '';
-  private reasonToSkipInstallData: any = null;
-
-  public isFreshInstall: boolean;
-  public remoteFilesNeedUpdating: boolean;
-
-  public isLoaded: boolean;
-  public isLoadedPromise: Promise<void>;
-
-  private _loadingFns!: { resolve: () => void; reject: (error: Error) => void };
+  private loadingFns!: { resolve: () => void; reject: (error: Error) => void };
+  private config: Config;
+  private installerCheck: InstallerCheck;
 
   constructor(config: Config) {
     if (IS_INITIALIZED) throw new Error('Installer already initialized');
@@ -41,48 +47,64 @@ export default class Installer {
     this.installerCheck = new InstallerCheck(config);
 
     this.isLoadedPromise = new Promise((resolve, reject) => {
-      this._loadingFns = { resolve, reject };
+      this.loadingFns = { resolve, reject };
     });
-
-    this.isLoaded = false;
-    this.isFreshInstall = false;
-    this.remoteFilesNeedUpdating = false;
   }
 
   public async load(): Promise<void> {
     await this.config.isLoadedPromise;
-    await this.checkWhetherToSkipInstall();
 
     this.isLoaded = true;
-    this._loadingFns.resolve();
+    this.loadingFns.resolve();
   }
 
-  public async tryToRun(): Promise<void> {
+  public async run(): Promise<boolean> {
     await this.isLoadedPromise;
+
+    if ((this.isRunning ||= await this.calculateIsRunning())) {
+      console.log('CANNOT run because Installer is already running');
+      return false;
+    }
+
+    if (!(this.isRunnable ||= await this.calculateIsRunnable(false))) {
+      console.log(
+        'CANNOT run because Installer is not runnable',
+        this.reasonToSkipInstall,
+        this.reasonToSkipInstallData,
+      );
+      this.isRunning = false;
+      return false;
+    }
+
     if (this.reasonToSkipInstall) {
       console.info('Skipping Installer:', this.reasonToSkipInstall, this.reasonToSkipInstallData);
-      return;
-    }
-    console.info('Trying to run installer');
-
-    await SSH.ensureConnection(this.config.serverDetails);
-
-    if (await this.isInstallRunning()) {
-      console.log('CANNOT tryToRun because install is running');
-      return;
+      this.isRunning = false;
+      return false;
     }
 
-    this.config.isWaitingForUpgradeApproval = false;
-    this.config.isServerInstalling = true;
-    await this.config.save();
+    try {
+      await SSH.ensureConnection(this.config.serverDetails);
 
-    console.info('Starting install process');
-    await this.startInstall();
+      this.config.isWaitingForUpgradeApproval = false;
+      this.config.isServerUpToDate = false;
+      await this.config.save();
+
+      console.info('Starting install process');
+      await this.startInstallSteps();
+    } catch (e) {
+      console.error(`Installer failed: ${e}`);
+      this.isRunning = false;
+      throw e;
+    }
+
+    return true;
   }
 
-  public async retryFailedStep(stepKey: string): Promise<void> {
-    if (await this.isInstallRunning()) {
-      console.log('CANNOT retryFailedStep because install is running');
+  public async runFailedStep(stepKey: string): Promise<void> {
+    await this.isLoadedPromise;
+
+    if ((this.isRunning ||= await this.calculateIsRunning())) {
+      console.log('CANNOT runFailedStep because install is already running');
       return;
     }
 
@@ -102,12 +124,14 @@ export default class Installer {
     this.installerCheck.bypassCachedFilenames = false;
 
     this.removeReasonsToSkipInstall();
-    this.tryToRun();
+    this.run();
   }
 
-  public async startUpgrade(): Promise<void> {
-    if (await this.isInstallRunning()) {
-      console.log('CANNOT startUpgrade because install is running');
+  public async runUpgrade(): Promise<void> {
+    await this.isLoadedPromise;
+
+    if ((this.isRunning ||= await this.calculateIsRunning())) {
+      console.log('CANNOT runFailedStep because install is already running');
       return;
     }
 
@@ -130,53 +154,76 @@ export default class Installer {
     this.config.isWaitingForUpgradeApproval = false;
     await this.config.save();
 
-    this.tryToRun();
+    this.run();
   }
 
   public async upgradeBiddingBotFiles(): Promise<void> {
-    await this.uploadBotConfigFiles();
-    await this.restartBotDocker();
+    await this.isLoadedPromise;
+    console.log('Upgrading bidding bot files');
 
-    this.config.isServerReadyForMining = true;
-    await this.config.save();
-  }
-
-  private async checkWhetherToSkipInstall(): Promise<void> {
-    if (!this.config.isServerConnected) {
-      this.reasonToSkipInstall = 'Server is not connected';
-      this.reasonToSkipInstallData = { isServerConnected: this.config.isServerConnected };
-      this.config.isServerInstalling = false;
-      this.config.isWaitingForUpgradeApproval = false;
-      await this.config.save();
+    if ((this.isRunning ||= await this.calculateIsRunning())) {
+      console.log('CANNOT runFailedStep because install is already running');
       return;
     }
 
-    const localFilesAreValid = await this.localFilesMatchLocalShasums();
-    if (!localFilesAreValid) {
-      this.reasonToSkipInstall = 'Local shasums are not accurate';
-      this.reasonToSkipInstallData = { localFilesAreValid };
-      this.config.isServerInstalling = false;
+    this.isRunning = true;
+    try {
+      this.config.isServerReadyForBidding = true;
+      await this.uploadBotConfigFiles();
+      await this.restartBotDocker();
+    } catch (e) {
+      console.error(`Failed to upgrade bidding bot files: ${e}`);
+      throw e;
+    } finally {
+      this.isRunning = false;
+    }
+
+    await this.config.save();
+  }
+
+  public async calculateIsRunnable(checkIfIsRunning: boolean = true): Promise<boolean> {
+    await this.isLoadedPromise;
+    this.reasonToSkipInstall = '';
+    this.reasonToSkipInstallData = {};
+
+    if (!this.config.isServerConnected) {
+      this.reasonToSkipInstall = 'ServerNotConnected';
+      this.reasonToSkipInstallData = { isServerConnected: this.config.isServerConnected };
+      this.config.isServerUpToDate = false;
+      this.config.isWaitingForUpgradeApproval = false;
       await this.config.save();
-      return;
+      this.isRunnable = false;
+      return false;
+    }
+
+    const localFilesAreValid = await this.doLocalFilesMatchLocalShasums();
+    if (!localFilesAreValid) {
+      this.reasonToSkipInstall = 'LocalShasumsNotAccurate';
+      this.reasonToSkipInstallData = { localFilesAreValid };
+      await this.config.save();
+      this.isRunnable = false;
+      return false;
     }
 
     await SSH.ensureConnection(this.config.serverDetails);
 
-    // If the install process is currently running, we don't need to start it again.
-    const installProcessIsRunning = await this.isInstallRunning();
-    if (installProcessIsRunning) {
-      this.reasonToSkipInstall = 'Install process is currently running';
-      this.reasonToSkipInstallData = { installProcessIsRunning };
-      this.config.isServerInstalling = true;
-      this.config.isWaitingForUpgradeApproval = false;
-      await this.config.save();
-      return;
+    if (checkIfIsRunning) {
+      // If the install process is currently running, we don't need to start it again.
+      const installProcessIsRunning = await this.calculateIsRunning();
+      if (installProcessIsRunning) {
+        this.reasonToSkipInstall = 'InstallAlreadyRunning';
+        this.reasonToSkipInstallData = { installProcessIsRunning };
+        this.config.isWaitingForUpgradeApproval = false;
+        await this.config.save();
+        this.isRunnable = false;
+        return false;
+      }
     }
 
     // We will begin by running through a series of checks to determine if the install process
     // should be started. We don't use serverDetails.isInstalling because the local value could
     // be out of date with the server.
-    const tmpInstallChecks = await this.checkInstall();
+    const tmpInstallChecks = await this.extractTmpInstallChecks();
     const isFreshInstall = tmpInstallChecks.isFreshInstall;
     const isServerInstallComplete = tmpInstallChecks.isServerInstallComplete;
     const remoteFilesNeedUpdating = tmpInstallChecks.remoteFilesNeedUpdating;
@@ -185,32 +232,32 @@ export default class Installer {
     this.remoteFilesNeedUpdating = remoteFilesNeedUpdating;
 
     if (isServerInstallComplete && !remoteFilesNeedUpdating) {
-      this.reasonToSkipInstall = 'Server is up-to-date';
+      this.reasonToSkipInstall = 'ServerUpToDate';
       this.reasonToSkipInstallData = { isServerInstallComplete, remoteFilesNeedUpdating };
-      this.config.isServerInstalling = false;
+      this.config.isServerUpToDate = true;
       this.config.isWaitingForUpgradeApproval = false;
       await this.config.save();
-      return;
+      return false;
     }
 
-    const requiresExplicitUpgradeApproval =
-      isServerInstallComplete && !isFreshInstall && !this.config.isServerInstalling;
+    const requiresExplicitUpgradeApproval = isServerInstallComplete && !isFreshInstall && !this.config.isServerUpToDate;
     console.info('requiresExplicitUpgradeApproval =', requiresExplicitUpgradeApproval, {
       isServerInstallComplete,
       isFreshInstall,
-      isServerInstalling: this.config.isServerInstalling,
+      isServerUpToDate: this.config.isServerUpToDate,
       hasApprovedUpgrade: this.hasApprovedUpgrade,
     });
+
     if (requiresExplicitUpgradeApproval && !this.hasApprovedUpgrade) {
-      this.reasonToSkipInstall = 'Server is not new so upgrade requires user approval';
+      this.reasonToSkipInstall = 'UpgradeRequiresApproval';
       this.reasonToSkipInstallData = {
         isServerInstallComplete,
         isFreshInstall,
-        isServerInstalling: this.config.isServerInstalling,
+        isServerUpToDate: this.config.isServerUpToDate,
       };
       this.config.isWaitingForUpgradeApproval = true;
       await this.config.save();
-      return;
+      return false;
     }
 
     if (isFreshInstall) {
@@ -220,25 +267,27 @@ export default class Installer {
       this.config.resetField('installDetails');
       this.config.isWaitingForUpgradeApproval = false;
       await this.config.save();
-      return;
+      return true;
     }
 
     console.log('this.installerCheck.hasError', this.installerCheck.hasError);
     if (this.installerCheck.hasError) {
-      this.reasonToSkipInstall = 'Server has error';
+      this.reasonToSkipInstall = 'InstallHasError';
       this.reasonToSkipInstallData = { hasInstallError: this.installerCheck.hasError };
-      this.config.isServerInstalling = true;
+      this.config.isServerUpToDate = false;
       await this.config.save();
-      return;
+      return false;
     }
 
     const isWaitingForMinersToSync = this.config.installDetails.MiningLaunch.progress > 0.0;
     if (isWaitingForMinersToSync && !remoteFilesNeedUpdating) {
-      this.reasonToSkipInstall = 'Install script has finished, but waiting for miners to sync';
+      this.reasonToSkipInstall = 'MinersAreSyncing';
       this.reasonToSkipInstallData = { isWaitingForMinersToSync, remoteFilesNeedUpdating };
       await this.config.save();
-      return;
+      return false;
     }
+
+    return true;
   }
 
   private removeReasonsToSkipInstall(): void {
@@ -246,26 +295,27 @@ export default class Installer {
     this.reasonToSkipInstallData = {};
   }
 
-  private async isInstallRunning(): Promise<boolean> {
-    if (this.isRunningLocally) {
-      console.info('Install process IS running locally');
+  private async calculateIsRunning(): Promise<boolean> {
+    if (this.isRunning) {
+      console.log('Install process IS running 1');
       return true;
     }
-    console.info('Install process is NOT running locally');
 
     try {
-      console.info('Checking if install process is running remotely');
       const [pid] = await SSH.runCommand('pgrep -f ~/scripts/install_server.sh');
       const isRunningRemotely = pid.trim() !== '';
-      console.info(`Install process ${isRunningRemotely ? 'IS' : 'is NOT'} running remotely`);
-      return isRunningRemotely;
+      if (isRunningRemotely) {
+        console.log('Install process IS running remotely');
+      }
+      this.isRunning = isRunningRemotely;
     } catch {
-      console.info('Install process is NOT running remotely');
-      return false;
+      this.isRunning = false;
     }
+
+    return this.isRunning;
   }
 
-  private async checkInstall(): Promise<TmpInstallChecks> {
+  private async extractTmpInstallChecks(): Promise<TmpInstallChecks> {
     const isFreshInstall = !(await this.serverHasSha256File());
 
     if (isFreshInstall) {
@@ -278,7 +328,7 @@ export default class Installer {
 
     await this.installerCheck.updateInstallStatus();
     const isServerInstallComplete = this.installerCheck.isServerInstallComplete;
-    const remoteFilesNeedUpdating = !(await this.remoteFilesMatchLocalShasums());
+    const remoteFilesNeedUpdating = !(await this.doRemoteFilesMatchLocalShasums());
 
     return {
       isFreshInstall,
@@ -287,7 +337,7 @@ export default class Installer {
     };
   }
 
-  private async remoteFilesMatchLocalShasums(): Promise<boolean> {
+  private async doRemoteFilesMatchLocalShasums(): Promise<boolean> {
     const [remoteShasums] = await SSH.runCommand('cat ~/SHASUMS256.copied 2>/dev/null || true');
     const localShasums = await this.getLocalShasums();
     const remoteFilesMatchLocalShasums = localShasums === remoteShasums;
@@ -301,7 +351,7 @@ export default class Installer {
     return remoteFilesMatchLocalShasums;
   }
 
-  private async localFilesMatchLocalShasums(): Promise<boolean> {
+  private async doLocalFilesMatchLocalShasums(): Promise<boolean> {
     const localShasums = await this.getLocalShasums();
     console.info(`Local shasums: ${localShasums}`);
     let dynamicShasums = '';
@@ -334,9 +384,7 @@ export default class Installer {
     return shasumsMatch;
   }
 
-  private async startInstall(): Promise<void> {
-    console.info('Installer starting');
-    this.isRunningLocally = true;
+  private async startInstallSteps(): Promise<void> {
     this.installerCheck.start();
 
     let errorMessage = '';
@@ -370,11 +418,10 @@ export default class Installer {
       console.info('Waiting for install to complete');
       await this.installerCheck.waitForInstallToComplete();
 
-      console.info('Setting isServerInstalling to false');
-      this.isRunningLocally = false;
+      console.info('Confirming all install flags');
+      this.isRunning = false;
       this.remoteFilesNeedUpdating = false;
-
-      this.config.isServerInstalling = false;
+      this.config.isServerUpToDate = false;
       await this.config.save();
       console.info('Installer finished');
     } catch (e) {
@@ -392,7 +439,7 @@ export default class Installer {
       }
     }
 
-    this.isRunningLocally = false;
+    this.isRunning = false;
   }
 
   private async serverHasSha256File(): Promise<boolean> {
@@ -424,7 +471,7 @@ export default class Installer {
     const envSecurity = `SESSION_KEYS_MNEMONIC="${this.config.security.sessionMnemonic}"\n` + `KEYPAIR_PASSPHRASE=`;
     const envState =
       `OLDEST_FRAME_ID_TO_SYNC=${this.config.serverDetails.oldestFrameIdToSync || ''}\n` +
-      `IS_READY_FOR_BIDDING=${this.config.isServerReadyForMining}\n`;
+      `IS_READY_FOR_BIDDING=${this.config.isServerReadyForBidding}\n`;
 
     const files = [
       [this.config.security.walletJson, '~/config/wallet.json'],
