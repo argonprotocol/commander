@@ -15,7 +15,7 @@ export const env = (import.meta as any).env;
 export const NETWORK_NAME = env.VITE_NETWORK_NAME || 'mainnet';
 export const NETWORK_URL = env.VITE_NETWORK_URL || 'wss://rpc.argon.network';
 export const INSTANCE_NAME = env.VITE_INSTANCE_NAME || 'default';
-export const DEPLOY_ENV_FILE = NETWORK_NAME === 'testnet' ? '.env.testnet' : '.env';
+export const DEPLOY_ENV_FILE = NETWORK_NAME === 'testnet' ? '.env.testnet' : '.env.mainnet';
 
 export class Config {
   public readonly version: string = packageJson.version;

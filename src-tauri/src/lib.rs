@@ -3,13 +3,14 @@ use log::trace;
 use serde;
 use ssh::singleton;
 use ssh::SSH;
-use std::env;
+use std;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use utils::Utils;
 use window_vibrancy::*;
 
+mod env;
 mod migrations;
 mod ssh;
 mod utils;
@@ -135,7 +136,7 @@ async fn ssh_upload_file(contents: String, remote_path: String) -> Result<String
 #[tauri::command]
 async fn get_ssh_keys() -> Result<IKeys, String> {
     log::info!("get_ssh_keys");
-    let (private_key, public_key)  = if let Ok(path) = env::var("SSH_KEY_FILE") {
+    let (private_key, public_key)  = if let Ok(path) = std::env::var("SSH_KEY_FILE") {
         SSH::read_keys(PathBuf::from(path))
     } else {
         SSH::generate_keys()
@@ -180,7 +181,7 @@ fn init_logger(instance_name: &String) -> tauri_plugin_log::Builder {
         .with_colors(ColoredLevelConfig::default());
 
     let rust_log =
-        env::var("RUST_LOG").unwrap_or("debug, tauri=debug, hyper=info, russh=error".into());
+        std::env::var("RUST_LOG").unwrap_or("debug, tauri=debug, hyper=info, russh=error".into());
 
     for part in rust_log.split(',') {
         if let Some((target, level)) = part.split_once('=') {
@@ -212,17 +213,8 @@ fn init_config_instance_dir(app: &AppHandle) -> Result<(), tauri::Error> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    dotenv::dotenv().ok();
-    if let Ok(node_env) = env::var("NODE_ENV") {
-        if let Ok(path) = dotenv::from_filename(format!(".env.{}", node_env)) {
-            if let Ok(keys_path) = env::var("SSH_KEY_FILE") {
-                let path = path.parent().unwrap().to_path_buf().join(keys_path);
-                unsafe {
-                    env::set_var("SSH_KEY_FILE", path.into_os_string());
-                }
-            }
-        }
-    }
+    env::load_env_vars();
+    
     color_backtrace::install();
 
     let instance_name = Utils::get_instance_name();
