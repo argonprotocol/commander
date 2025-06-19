@@ -242,19 +242,6 @@ impl SSH {
         Ok(())
     }
 
-    pub fn read_keys(path: PathBuf) -> Result<(String, String), String> {
-        trace!("Reading keys from {}", path.display());
-        let private_key_openssh = fs::read_to_string(&path)
-            .map_err(|e| format!("Failed to read private key file: {}", e))?;
-        let pub_path = path.with_extension(match path.extension() {
-            Some(ext) => format!("{}.pub", ext.to_string_lossy()),
-            None => "pub".to_string(),
-        });
-        let public_key_openssh = fs::read_to_string(pub_path)
-            .map_err(|e| format!("Failed to read public key file: {}", e))?;
-        Ok((private_key_openssh, public_key_openssh))
-    }
-
     pub fn generate_keys() -> Result<(String, String), String> {
         // Generate a new key pair using Ed25519
         let private_key =

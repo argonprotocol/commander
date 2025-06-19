@@ -21,19 +21,6 @@ pub fn load_env_vars() {
     
     // 4. Load .env.[mode].local (only loaded in specified mode, ignored by git)
     dotenv::from_filename(format!(".env.{}.local", mode)).ok();
-
-    // Resolve SSH key file path to absolute path
-    if let Ok(keys_path) = std::env::var("SSH_KEY_FILE") {
-        println!("SSH_KEY_FILE: {}", keys_path);
-        if let Ok(current_dir) = std::env::current_dir() {
-            // Get the parent directory of the current directory
-            let path = current_dir.parent().unwrap().join(keys_path);
-            println!("Resolved SSH key file path to: {}", path.to_string_lossy());
-            unsafe {
-                std::env::set_var("SSH_KEY_FILE", path.into_os_string());
-            }
-        }
-    }
 }
 
 /// Determines the current mode following Vite's logic

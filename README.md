@@ -112,6 +112,18 @@ docker run -d --name commander-host-1 -p 2222:22 commander-host
 When you add your server address during setup, you should append the port `:2222` to the end of the address (ie,
 `localhost:2222`). Any local port will be fine if you wish to run multiple.
 
+To add the server configuration SSH key to the server, you can copy the public key to the docker container by running:
+
+```bash
+echo '<YOUR KEY>' | docker exec -i commander-host-1 tee -a /root/.ssh/authorized_keys
+```
+
+So, as an example, if you want to add the `dev.ssh_key.pub` file from the repository, you can run:
+
+```bash
+cat 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINxAnT9A1/gwiFYimdT0R38sWzu6Y4QOE11FvzWj53lm' | docker exec -i commander-host-1 tee -a /root/.ssh/authorized_keys
+```
+
 ## Using Pre-generated Keys
 
 You can use pre-generated keys to connect to a server. This is useful for testing or if you want to use a specific key

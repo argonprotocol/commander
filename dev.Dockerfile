@@ -10,8 +10,6 @@ RUN mkdir -p /run/sshd
 RUN mkdir -p /root/.ssh && \
     chmod 700 /root/.ssh
 
-COPY dev.ssh_key.pub /root/.ssh/authorized_keys
-
 # Update sshd_config
 RUN sed -i 's/#\?PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
     sed -i 's/#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config

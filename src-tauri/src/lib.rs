@@ -136,11 +136,7 @@ async fn ssh_upload_file(contents: String, remote_path: String) -> Result<String
 #[tauri::command]
 async fn get_ssh_keys() -> Result<IKeys, String> {
     log::info!("get_ssh_keys");
-    let (private_key, public_key)  = if let Ok(path) = std::env::var("SSH_KEY_FILE") {
-        SSH::read_keys(PathBuf::from(path))
-    } else {
-        SSH::generate_keys()
-    }.inspect_err(|e| {
+    let (private_key, public_key) = SSH::generate_keys().inspect_err(|e| {
         log::error!("Error generating ssh_keys {}", e);
     })?;
 
@@ -214,7 +210,7 @@ fn init_config_instance_dir(app: &AppHandle) -> Result<(), tauri::Error> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     env::load_env_vars();
-    
+
     color_backtrace::install();
 
     let instance_name = Utils::get_instance_name();
