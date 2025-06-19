@@ -113,10 +113,10 @@ if ! (already_ran "UbuntuCheck"); then
     echo "-----------------------------------------------------------------"
     echo "CHECKING UBUNTU VERSION"
 
-    command_output=$(run_command "lsb_release -d")
+    command_output=$(run_command "cat /etc/os-release")
     
-    # Extract version numbers from the output
-    version=$(echo "$command_output" | grep -oE '[0-9]+\.[0-9]+' | head -1)
+    # Extract VERSION_ID from the output
+    version=$(echo "$command_output" | grep "^VERSION_ID=" | cut -d'"' -f2)
     if [ -z "$version" ]; then
         failed "Could not extract Ubuntu version from: $command_output"
     fi
