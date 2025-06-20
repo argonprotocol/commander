@@ -48,7 +48,6 @@ impl SSHConfig {
     }
 }
 
-// Explicitly implement Send for SSH
 unsafe impl Send for SSH {}
 
 impl Drop for SSH {
@@ -87,7 +86,6 @@ impl SSH {
             ..<_>::default()
         };
         let config = Arc::new(config);
-
         let handler = ClientHandler {};
 
         let mut client = client::connect(config, ssh_config.addrs.clone(), handler).await?;
@@ -130,10 +128,11 @@ impl SSH {
     }
 
     pub async fn run_command(&self, command: impl Display) -> Result<(String, u32)> {
+        info!("Executing ssh command: {}", command);
         let shell_command = format!("bash -c '{}'", command);
-        info!("Executing shell command: {}", shell_command);
         let mut channel = self.open_channel().await?;
         channel.exec(true, shell_command).await?;
+        channel.eof().await?;
 
         let mut code = None;
         let mut output = String::new();
@@ -148,7 +147,6 @@ impl SSH {
                 russh::ChannelMsg::Data { ref data } => {
                     output.push_str(&String::from_utf8_lossy(data));
                 }
-                // Collect stderr data
                 russh::ChannelMsg::ExtendedData { ref data, ext } => {
                     if ext == 1 {
                         // 1 is stderr
@@ -158,17 +156,16 @@ impl SSH {
                 // The command has returned an exit code
                 russh::ChannelMsg::ExitStatus { exit_status } => {
                     code = Some(exit_status);
-                    // cannot leave the loop immediately, there might still be more data to receive
                 }
                 _ => {}
             }
         }
         let _ = channel.close().await;
-        let exit_code = code.ok_or_else(|| {
-            anyhow::anyhow!("SSH command exited without status — likely failed early (e.g. bad command or missing file)")
+        let code = code.ok_or_else(|| {
+            anyhow::anyhow!("SSHCommandMissingExitStatus")
         })?;
 
-        Ok((output, exit_code))
+        Ok((output, code))
     }
 
     pub async fn upload_directory(

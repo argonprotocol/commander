@@ -22,7 +22,7 @@
             class="flex flex-row cursor-pointer mt-8 border-t border-[#CCCEDA] py-6 hover:bg-argon-menu-hover"
           >
             <Checkbox :isChecked="hasBiddingRules" />
-            <div>
+            <div class="px-4">
               <h2 class="text-2xl text-[#A600D4] font-bold">Configure Bidding Rules</h2>
               <p>
                 You need to set a few basic rules like your starting bid amount, the maximum price you're willing to
@@ -36,7 +36,7 @@
             class="flex flex-row cursor-pointer border-t border-b border-[#CCCEDA] py-6"
           >
             <Checkbox :isChecked="walletIsFullyFunded" :isPartiallyChecked="walletIsMinimallyFunded" />
-            <div>
+            <div class="px-4">
               <h2 class="text-2xl text-[#A600D4] font-bold">
                 {{ walletIsPartiallyFunded ? 'Finish' : '' }} Fund{{ walletIsPartiallyFunded ? 'ing' : '' }}
                 Your Wallet

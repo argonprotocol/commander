@@ -101,4 +101,16 @@ impl Utils {
         };
         Ok(key)
     }
+
+    pub fn extract_host_port(host: &str) -> (String, u16) {
+        if host.contains(":") {
+            let mut parts = host.split(':');
+            let host_str = parts.next().unwrap_or("").to_string();
+            let port_str = parts.next().unwrap_or("22").parse().unwrap_or(22);
+    
+            (host_str, port_str)
+        } else {
+            (host.to_string(), 22)
+        }
+    }
 }

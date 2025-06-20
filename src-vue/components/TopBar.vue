@@ -8,7 +8,7 @@
       <WindowControls />
       <div class="text-xl font-bold">
         Argon Commander
-        <span class="font-light">(beta)</span>
+        <span class="font-light">({{ NETWORK_NAME }})</span>
       </div>
     </div>
 
@@ -311,7 +311,7 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { useBasicStore } from '../stores/basic';
-import { useConfig } from '../stores/config';
+import { useConfig, NETWORK_NAME } from '../stores/config';
 import { useCurrencyStore } from '../stores/currency';
 import WindowControls from '../tauri-controls/WindowControls.vue';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';

@@ -60,8 +60,8 @@ onBeforeMount(async () => {
 });
 
 onMounted(async () => {
-  const shouldRunInstaller = await installer.calculateIsRunnable();
-  if (shouldRunInstaller) {
+  const isReadyToRun = await installer.calculateIsReadyToRun();
+  if (isReadyToRun) {
     installer.run();
   }
   timeout = setInterval(() => checkForUpdates(), 60e3) as unknown as number;

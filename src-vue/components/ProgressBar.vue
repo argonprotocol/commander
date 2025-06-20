@@ -1,6 +1,6 @@
 <template>
   <div class="Component ProgressBar" :hasError="props.hasError">
-    <div :style="{ width: `calc(${progress}% + 2px)` }">
+    <div Bar :style="{ width: `calc(${progress}% + 2px)` }">
       <span v-if="hasError">ERROR</span>
       <span v-else :style="{ opacity: progress / 25 }">{{ progressLabel }}</span>
     </div>
@@ -33,11 +33,11 @@ const progressLabel = Vue.computed(() => {
 @reference "../main.css";
 
 .Component.ProgressBar {
-  @apply w-full h-7 bg-[#F2EAF3] rounded border relative;
+  @apply w-full h-8 bg-[#F2EAF3] rounded border relative;
   border-color: rgba(0, 0, 0, 0.15);
   box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.15);
-  div {
-    @apply flex items-center justify-end bg-white rounded border overflow-hidden;
+  div[Bar] {
+    @apply flex items-center justify-end bg-white rounded border overflow-hidden transition-[width] duration-[1.2s];
     border-color: rgba(0, 0, 0, 0.3);
     height: calc(100% + 2px);
     position: absolute;
@@ -55,7 +55,7 @@ const progressLabel = Vue.computed(() => {
     }
   }
   &[hasError='true'] {
-    div {
+    div[Bar] {
       @apply bg-[#FAD1D8];
       opacity: 0.7;
       width: calc(100% + 1px) !important;
