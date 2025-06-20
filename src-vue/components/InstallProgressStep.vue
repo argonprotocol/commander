@@ -6,10 +6,11 @@
     class="Component InstallProgressStep relative flex flex-row items-center border-t border-slate-300 text-black/30 whitespace-nowrap w-full pl-1"
   >
     <div v-if="stepStatus === 'Working'" spinner />
-    <Checkbox
-      v-if="['Completed', 'Completing'].includes(stepStatus)"
-      :isChecked="true"
-      class="absolute top-1/2 -translate-y-1/2 left-0 w-4 h-4 max-w-4 max-h-4"
+    <CheckboxGray
+      v-else
+      :isChecked="['Completed', 'Completing'].includes(stepStatus)"
+      color="gray"
+      class="absolute top-1/2 -translate-y-1/2 left-0"
     />
     <label>{{ getLabel(step) }}</label>
     <ProgressBar
@@ -26,7 +27,7 @@
   >
     <div
       class="absolute top-2 left-0 bottom-0 w-full z-0"
-      style="background-image: linear-gradient(to bottom, #fad1d8 90%, transparent 100%)"
+      style="background-image: linear-gradient(to bottom, transparent 100%, #fad1d8 90%)"
     ></div>
     <div class="flex flex-row items-center whitespace-nowrap px-2 relative z-10 pt-4">
       <AlertIcon class="w-7 h-7 mr-2.5 text-argon-button" />
@@ -74,7 +75,7 @@ import { useConfig, type Config } from '../stores/config';
 import type { IStep } from '../lib/InstallerStep';
 import { InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
 import ProgressBar from '../components/ProgressBar.vue';
-import Checkbox from '../components/Checkbox.vue';
+import CheckboxGray from '../components/CheckboxGray.vue';
 import AlertIcon from '../assets/alert.svg?component';
 import emitter from '../emitters/basic';
 import { useInstaller } from '../stores/installer';
@@ -83,6 +84,7 @@ const props = defineProps<{
   isCompact?: boolean;
   step: IStep;
   stepCount: number;
+  stepIndex: number;
 }>();
 
 const config = useConfig();
@@ -94,7 +96,20 @@ const isRetrying = Vue.ref(false);
 const hasError = Vue.ref('');
 
 const stepStatus = Vue.computed(() => {
-  return config.installDetails[step.value.key].status;
+  let stepStatus = step.value.status;
+  if (stepStatus === InstallStepStatus.Pending && props.stepIndex === 0) {
+    stepStatus = InstallStepStatus.Working;
+  }
+  if (stepStatus === InstallStepStatus.Working) {
+    console.log(
+      step.value.key,
+      config.installDetails[step.value.key].status,
+      props.stepIndex,
+      'STATUS IS WORKING',
+      JSON.stringify(step.value, null, 2),
+    );
+  }
+  return stepStatus;
 });
 
 const stepProgress = Vue.computed(() => {
@@ -105,22 +120,6 @@ const stepProgress = Vue.computed(() => {
   }
   return config.installDetails[step.value.key].progress;
 });
-
-// installer.finishedFn = () => {
-//   config.isServerUpToDate = true;
-//   config.isWaitingForUpgradeApproval = false;
-//   if (!config.isServerInstalled) {
-//     emitter.emit('openProvisioningCompleteOverlay');
-//   }
-// };
-
-// const hasError = Vue.computed(() => {
-//   return installer.hasError.value;
-// });
-
-// Vue.watch(() => config.serverDetails.ipAddress, (ipAddress) => {
-//   installer.setIpAddress(ipAddress);
-// }, { immediate: true });
 
 const stepHeightPct = Vue.computed(() => {
   let totalHeight = 100;
@@ -171,17 +170,10 @@ function openServerRemoveOverlay() {
 li.Component.InstallProgressStep {
   &[isCompact='true'] {
     label {
-      @apply mr-3;
+      @apply pl-7 mr-3;
     }
     [spinner] {
-      @apply -left-0 -translate-x-0 min-w-6 min-h-6 w-6 h-6;
-    }
-    &[status='Working'],
-    &[status='Completing'],
-    &[status='Completed'] {
-      label {
-        @apply pl-7;
-      }
+      @apply min-w-6 min-h-6 w-6 h-6;
     }
   }
 
@@ -215,11 +207,11 @@ li.Component.InstallProgressStep {
   }
 
   label {
-    @apply mr-5 text-gray-700/50 font-bold;
+    @apply pl-9 mr-5 text-gray-700/50 font-bold;
   }
 
   [spinner] {
-    @apply hidden min-w-8 min-h-8 w-8 h-8 border absolute top-1/2 -translate-y-1/2 -left-3 -translate-x-full;
+    @apply hidden min-w-8 min-h-8 w-8 h-8 border absolute top-1/2 -translate-y-1/2 -left-0 -translate-x-0;
   }
 }
 

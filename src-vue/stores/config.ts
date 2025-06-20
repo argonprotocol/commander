@@ -1,10 +1,12 @@
 import * as Vue from 'vue';
-import { Config } from '../lib/Config';
+import { Config, NETWORK_NAME } from '../lib/Config';
 import { getDbPromise } from './helpers/dbPromise';
 import handleUnknownFatalError from './helpers/handleUnknownFatalError';
+import { SSH } from '../lib/SSH';
 
 let config: Vue.Reactive<Config>;
 
+export { NETWORK_NAME };
 export type { Config };
 
 export function useConfig(): Vue.Reactive<Config> {
@@ -12,6 +14,7 @@ export function useConfig(): Vue.Reactive<Config> {
     const dbPromise = getDbPromise();
     config = Vue.reactive(new Config(dbPromise));
     config.load().catch(handleUnknownFatalError);
+    SSH.setConfig(config as Config);
   }
 
   return config;

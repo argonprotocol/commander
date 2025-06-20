@@ -5,26 +5,16 @@ vi.mock('../lib/SSH', async () => {
   return sshMockFn();
 });
 
-import { Db } from '../lib/Db';
 import Installer, { resetInstaller } from '../lib/Installer';
 import { Config } from '../lib/Config';
-import { IConfigStringified } from '../interfaces/IConfig';
+import { createMockedDbPromise } from './helpers/db';
 
 beforeEach(() => {
   resetInstaller();
 });
 
-async function createDbPromise(allAsObject: { [key: string]: string } = {}): Promise<Db> {
-  return {
-    configTable: {
-      fetchAllAsObject: async () => allAsObject,
-      insertOrReplace: async (obj: Partial<IConfigStringified>) => {},
-    },
-  } as unknown as Db;
-}
-
 it('should skip install if server is not connected', async () => {
-  const dbPromise = createDbPromise({ isServerConnected: 'false' });
+  const dbPromise = createMockedDbPromise({ isServerConnected: 'false' });
   const config = new Config(dbPromise);
   await config.load();
 
@@ -37,7 +27,7 @@ it('should skip install if server is not connected', async () => {
 });
 
 it('should skip install if local files are invalid', async () => {
-  const dbPromise = createDbPromise({ isServerConnected: 'true' });
+  const dbPromise = createMockedDbPromise({ isServerConnected: 'true' });
   const config = new Config(dbPromise);
   await config.load();
 
@@ -52,7 +42,7 @@ it('should skip install if local files are invalid', async () => {
 });
 
 it('should skip install if install is already running', async () => {
-  const dbPromise = createDbPromise({ isServerConnected: 'true' });
+  const dbPromise = createMockedDbPromise({ isServerConnected: 'true' });
   const config = new Config(dbPromise);
   await config.load();
 
@@ -65,7 +55,7 @@ it('should skip install if install is already running', async () => {
 });
 
 it('should install if all conditions are met', async () => {
-  const dbPromise = createDbPromise({});
+  const dbPromise = createMockedDbPromise({});
   const config = new Config(dbPromise);
   await config.load();
 

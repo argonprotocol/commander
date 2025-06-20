@@ -287,7 +287,7 @@ export class Config {
       (acc as any)[typedKey] = this._unstringified[typedKey];
       return acc;
     }, {});
-    console.log('SAVING:', this._fieldsToSave, dataToLog);
+    // console.log('Saving Config', this._fieldsToSave, dataToLog);
     await this._db.configTable.insertOrReplace(dataToSave);
   }
 
@@ -374,8 +374,8 @@ const defaults: IConfigDefaults = {
     };
     return {
       [InstallStepKey.ServerConnect]: { ...defaultStep },
-      [InstallStepKey.UbuntuCheck]: { ...defaultStep },
       [InstallStepKey.FileCheck]: { ...defaultStep },
+      [InstallStepKey.UbuntuCheck]: { ...defaultStep },
       [InstallStepKey.DockerInstall]: { ...defaultStep },
       [InstallStepKey.BitcoinInstall]: { ...defaultStep },
       [InstallStepKey.ArgonInstall]: { ...defaultStep },

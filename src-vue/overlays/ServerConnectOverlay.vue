@@ -329,23 +329,18 @@ async function addServer() {
       ...config.serverDetails,
       ipAddress: ipAddress.value,
     };
-    console.log('Connecting to server', newServerDetails);
-    await SSH.ensureConnection(newServerDetails);
-    await SSH.runCommand("echo 'test'");
-    console.log('Connected to server');
+    await SSH.tryConnection(newServerDetails);
 
     config.isServerConnected = true;
     config.isServerInstalled = false;
     config.isServerUpToDate = false;
     config.serverDetails = newServerDetails;
-    console.log('Saving config');
-    config.save();
+    await config.save();
   } catch (error) {
     console.log('error', error);
     hasServerDetailsError.value = true;
   }
   closeOverlay();
-  console.log('Running installer');
   installer.run();
   isSaving.value = false;
 }

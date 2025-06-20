@@ -6,20 +6,10 @@ vi.mock('../lib/SSH', async () => {
 });
 
 import { Config } from '../lib/Config';
-import { IConfigStringified } from '../interfaces/IConfig';
-import { Db } from '../lib/Db';
-
-async function createDbPromise(allAsObject: { [key: string]: string } = {}): Promise<Db> {
-  return {
-    configTable: {
-      fetchAllAsObject: async () => allAsObject,
-      insertOrReplace: async (obj: Partial<IConfigStringified>) => {},
-    },
-  } as unknown as Db;
-}
+import { createMockedDbPromise } from './helpers/db';
 
 it.only('can load config defaults', async () => {
-  const dbPromise = createDbPromise();
+  const dbPromise = createMockedDbPromise();
   const config = new Config(dbPromise);
   await config.load();
   expect(config.isServerConnected).toBe(false);
@@ -33,7 +23,7 @@ it.only('can load config defaults', async () => {
 });
 
 it('can load config from db state', async () => {
-  const dbPromise = createDbPromise({ isServerInstalled: 'true' });
+  const dbPromise = createMockedDbPromise({ isServerInstalled: 'true' });
   const config = new Config(dbPromise);
   await config.load();
   expect(config.isServerInstalled).toBe(true);

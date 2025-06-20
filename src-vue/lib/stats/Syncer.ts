@@ -30,7 +30,7 @@ export class StatsSyncer {
     if (rawProgress >= 100.0) {
       if (this.config.syncDetails.startDate) {
         this.config.resetField('syncDetails');
-        this.config.save();
+        await this.config.save();
       }
       this.isSynced = true;
       console.log('SYNC NOT NEEDED');

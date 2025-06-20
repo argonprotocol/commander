@@ -3,8 +3,8 @@ import { BiddingRulesSchema, IBiddingRules } from './IBiddingRules';
 
 export enum InstallStepKey {
   ServerConnect = 'ServerConnect',
-  UbuntuCheck = 'UbuntuCheck',
   FileCheck = 'FileCheck',
+  UbuntuCheck = 'UbuntuCheck',
   DockerInstall = 'DockerInstall',
   BitcoinInstall = 'BitcoinInstall',
   ArgonInstall = 'ArgonInstall',
@@ -13,8 +13,8 @@ export enum InstallStepKey {
 
 export enum InstallStepErrorType {
   Unknown = 'Unknown',
-  UbuntuCheck = InstallStepKey.UbuntuCheck,
   FileCheck = InstallStepKey.FileCheck,
+  UbuntuCheck = InstallStepKey.UbuntuCheck,
   DockerInstall = InstallStepKey.DockerInstall,
   BitcoinInstall = InstallStepKey.BitcoinInstall,
   ArgonInstall = InstallStepKey.ArgonInstall,
@@ -52,8 +52,8 @@ export const ConfigInstallStep = z.object({
 
 export const ConfigInstallDetailsSchema = z.object({
   [InstallStepKey.ServerConnect]: ConfigInstallStep,
-  [InstallStepKey.UbuntuCheck]: ConfigInstallStep,
   [InstallStepKey.FileCheck]: ConfigInstallStep,
+  [InstallStepKey.UbuntuCheck]: ConfigInstallStep,
   [InstallStepKey.DockerInstall]: ConfigInstallStep,
   [InstallStepKey.BitcoinInstall]: ConfigInstallStep,
   [InstallStepKey.ArgonInstall]: ConfigInstallStep,

@@ -30,7 +30,7 @@ async fn try_ssh_connection(
     private_key: String,
 ) -> Result<String, String> {
     log::info!("try_ssh_connection");
-    let (host, port) = get_host(host);
+    let (host, port) = Utils::extract_host_port(host);
     let ssh_config = ssh::SSHConfig::new(&host, port, username, private_key).unwrap();
     let ssh = SSH::connect(&ssh_config).await.map_err(|e| {
         log::error!("Error connecting to SSH: {:#}", e);
@@ -47,26 +47,14 @@ async fn try_ssh_connection(
     Ok("success".to_string())
 }
 
-fn get_host(host: &str) -> (String, u16) {
-    if host.contains(":") {
-        let mut parts = host.split(':');
-        let host_str = parts.next().unwrap_or("").to_string();
-        let port_str = parts.next().unwrap_or("22").parse().unwrap_or(22);
-
-        (host_str, port_str)
-    } else {
-        (host.to_string(), 22)
-    }
-}
-
 #[tauri::command]
-async fn ensure_ssh_connection(
+async fn open_ssh_connection(
     host: &str,
     username: String,
     private_key: String,
 ) -> Result<String, String> {
     log::info!("ensure_ssh_connection");
-    let (host, port) = get_host(host);
+    let (host, port) = Utils::extract_host_port(host);
     let ssh_config = ssh::SSHConfig::new(&host, port, username, private_key).unwrap();
     singleton::try_open_ssh_connection(&ssh_config)
         .await
@@ -246,7 +234,7 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
             try_ssh_connection,
-            ensure_ssh_connection,
+            open_ssh_connection,
             close_ssh_connection,
             ssh_run_command,
             ssh_upload_directory,
