@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div
     class="absolute top-10 w-[570px] right-[33.3%] bottom-10 z-100 bg-argon-menu-bg border border-black/30 rounded shadow-xl flex flex-col gap-6 px-5 pt-5 pb-3 text-md"

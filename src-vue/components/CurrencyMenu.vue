@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <Popover class="relative pointer-events-auto" v-slot="{ open: isOpen }">
     <PopoverButton

@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div ref="$el" class="relative" @click="copyContent">
     <slot></slot>

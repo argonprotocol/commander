@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="flex flex-col h-full opacity-60 pointer-events-none">
     <div style="text-shadow: 1px 1px 0 white">

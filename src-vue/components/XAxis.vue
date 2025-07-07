@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="X-AXIS COMPONENT text-sm text-slate-400 border-t border-slate-300 select-none relative -top-7">
     <ul Dates class="flex flex-row justify-around pt-0.5 text-center whitespace-nowrap mb-1">

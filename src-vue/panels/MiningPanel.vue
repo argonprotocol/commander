@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <BlankSlate v-if="!config.biddingRules" />
   <FinalSetupChecklist v-else-if="!config.isServerConnected" />

@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <TransitionRoot
     :show="isOpen"

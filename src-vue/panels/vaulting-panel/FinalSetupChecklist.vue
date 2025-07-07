@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="flex flex-col h-full w-full p-3">
     <div class="grow relative bg-[#FCF9FD] rounded border border-[#CCCEDA] shadow">
@@ -8,7 +9,8 @@
           </h1>
 
           <p class="mb-4">
-            Your vault is almost ready to start earning income. All that remains is funding the capital needed for operations. Click below to complete.
+            Your vault is almost ready to start earning income. All that remains is funding the capital needed for
+            operations. Click below to complete.
           </p>
 
           <section
@@ -40,11 +42,15 @@
                 {{ microgonToArgonNm(config.vaultingRules?.requiredMicrogons || 0n).format('0,0.[00000000]') }} argon{{
                   microgonToArgonNm(config.vaultingRules?.requiredMicrogons || 0n).format('0') === '1' ? '' : 's'
                 }}
-                and {{ micronotToArgonotNm(config.vaultingRules?.requiredMicronots || 0n).format('0,0.[00000000]') }} argonot{{
+                and
+                {{
+                  micronotToArgonotNm(config.vaultingRules?.requiredMicronots || 0n).format('0,0.[00000000]')
+                }}
+                argonot{{
                   micronotToArgonotNm(config.vaultingRules?.requiredMicronots || 0n).format('0') === '1' ? '' : 's'
                 }}
-                to operate your vault. A secure wallet is already attached to your account. All
-                you need to do is move some tokens.
+                to operate your vault. A secure wallet is already attached to your account. All you need to do is move
+                some tokens.
               </p>
             </div>
           </section>
@@ -53,7 +59,9 @@
         <button
           @click="createVault"
           :class="[
-            walletIsFullyFunded && config.serverDetails.ipAddress ? 'text-white' : 'text-white/70 pointer-events-none opacity-30',
+            walletIsFullyFunded && config.serverDetails.ipAddress
+              ? 'text-white'
+              : 'text-white/70 pointer-events-none opacity-30',
             isLaunchingVault ? 'opacity-30 pointer-events-none' : '',
           ]"
           class="bg-argon-button border border-argon-button-hover mt-8 text-2xl font-bold px-4 py-4 rounded-md w-full cursor-pointer hover:bg-argon-button-hover hover:inner-button-shadow"

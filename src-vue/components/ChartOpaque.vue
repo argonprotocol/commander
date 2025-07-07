@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div ChartOpaque class="bg-[#E6EAF3] opacity-70"></div>
 </template>

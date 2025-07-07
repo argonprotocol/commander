@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
     <TransitionChild

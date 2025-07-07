@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <li
     v-if="!['Hidden', 'Failed'].includes(stepStatus)"

@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center m-3 overflow-hidden">
     <div class="relative mx-auto inline-block w-6/10">

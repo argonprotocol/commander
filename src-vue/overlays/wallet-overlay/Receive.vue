@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div>
     <div class="flex flex-row justify-between items-center w-full pt-2 pb-3 space-x-1 border-b border-black/20">

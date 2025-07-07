@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="Component ProgressBar" :hasError="props.hasError">
     <div Bar :style="{ width: `calc(${progress}% + 2px)` }">

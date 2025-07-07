@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="Component InstallProgress flex flex-col grow relative h-full">
     <div

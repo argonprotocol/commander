@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="h-screen w-screen flex flex-col">
     <TopBar />

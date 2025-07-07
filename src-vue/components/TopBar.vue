@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div
     class="bg-white/95 min-h-14 w-full flex flex-row items-center select-none"

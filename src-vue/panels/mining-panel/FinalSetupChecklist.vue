@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="flex flex-col h-full w-full p-3">
     <div class="grow relative bg-[#FCF9FD] rounded border border-[#CCCEDA] shadow">
@@ -40,11 +41,15 @@
                 {{ microgonToArgonNm(config.biddingRules?.requiredMicrogons || 0n).format('0,0.[00000000]') }} argon{{
                   microgonToArgonNm(config.biddingRules?.requiredMicrogons || 0n).format('0') === '1' ? '' : 's'
                 }}
-                and {{ micronotToArgonotNm(config.biddingRules?.requiredMicronots || 0n).format('0,0.[00000000]') }} argonot{{
+                and
+                {{
+                  micronotToArgonotNm(config.biddingRules?.requiredMicronots || 0n).format('0,0.[00000000]')
+                }}
+                argonot{{
                   micronotToArgonotNm(config.biddingRules?.requiredMicronots || 0n).format('0') === '1' ? '' : 's'
                 }}
-                to submit auction bids. A secure wallet is already attached to your account. All
-                you need to do is move some tokens.
+                to submit auction bids. A secure wallet is already attached to your account. All you need to do is move
+                some tokens.
               </p>
             </div>
           </section>
@@ -55,12 +60,10 @@
           >
             <Checkbox :isChecked="!!config.serverDetails.ipAddress" />
             <div class="px-4">
-              <h2 class="text-2xl text-[#A600D4] font-bold">
-                Connect Mining Machine
-              </h2>
+              <h2 class="text-2xl text-[#A600D4] font-bold">Connect Mining Machine</h2>
               <p>
-                Argon's mining software is runnable on cheap virtual cloud machines. We will guide you step-by-step through the
-                process of spinning up a new server and installing the software.
+                Argon's mining software is runnable on cheap virtual cloud machines. We will guide you step-by-step
+                through the process of spinning up a new server and installing the software.
               </p>
             </div>
           </section>
@@ -69,7 +72,9 @@
         <button
           @click="launchMiningBot"
           :class="[
-            walletIsFullyFunded && config.serverDetails.ipAddress ? 'text-white' : 'text-white/70 pointer-events-none opacity-30',
+            walletIsFullyFunded && config.serverDetails.ipAddress
+              ? 'text-white'
+              : 'text-white/70 pointer-events-none opacity-30',
             isLaunchingMiningBot ? 'opacity-30 pointer-events-none' : '',
           ]"
           class="bg-argon-button border border-argon-button-hover mt-8 text-2xl font-bold px-4 py-4 rounded-md w-full cursor-pointer hover:bg-argon-button-hover hover:inner-button-shadow"

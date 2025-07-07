@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <Popover as="div" class="relative text-center text-lg font-bold mt-10">
     <PopoverButton

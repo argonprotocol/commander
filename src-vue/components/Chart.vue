@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div Wrapper class="grow h-full flex flex-col relative w-full">
     <div class="absolute w-full h-full">

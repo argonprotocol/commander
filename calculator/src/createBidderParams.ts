@@ -54,7 +54,7 @@ export class Helper {
     await this.calculatorData.isInitialized;
 
     let maxSeats = this.calculatorData.miningSeatCount / 10;
-    
+
     if (this.biddingRules.seatGoalType === SeatGoalType.Max) {
       return this.biddingRules.seatGoalCount || 0;
     }

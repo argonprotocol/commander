@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
     <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
@@ -390,14 +391,16 @@ function closeOverlay() {
 }
 
 function calculateMicronotsRequired(): bigint {
-  let possibleSeats = Math.ceil(BigNumber(capitalToCommit.value).dividedBy(calculatorData.previousDayMidBid).toNumber());
+  let possibleSeats = Math.ceil(
+    BigNumber(capitalToCommit.value).dividedBy(calculatorData.previousDayMidBid).toNumber(),
+  );
 
   if (seatGoalType.value === SeatGoalType.Max) {
     possibleSeats = Math.min(possibleSeats, seatGoalCount.value);
   }
 
   const totalMicronotsRequired = BigInt(possibleSeats) * calculatorData.micronotsRequiredForBid;
-  
+
   // Ceil to the nearest million (argonot)
   return BigInt(Math.ceil(Number(totalMicronotsRequired) / 1_000_000) * 1_000_000);
 }
@@ -474,8 +477,10 @@ emitter.on('openConfigureMiningBotOverlay', async () => {
   calculatorData.isInitialized.then(() => {
     const biddingRules = config.biddingRules || undefined;
 
-    argonCirculationGrowthPctMin.value = biddingRules?.argonCirculationGrowthPctMin || argonCirculationGrowthPctMin.value;
-    argonCirculationGrowthPctMax.value = biddingRules?.argonCirculationGrowthPctMax || argonCirculationGrowthPctMax.value;
+    argonCirculationGrowthPctMin.value =
+      biddingRules?.argonCirculationGrowthPctMin || argonCirculationGrowthPctMin.value;
+    argonCirculationGrowthPctMax.value =
+      biddingRules?.argonCirculationGrowthPctMax || argonCirculationGrowthPctMax.value;
 
     micronotPriceChangeType.value = biddingRules?.micronotPriceChangeType || micronotPriceChangeType.value;
     micronotPriceChangePctMin.value = biddingRules?.micronotPriceChangePctMin || micronotPriceChangePctMin.value;
@@ -492,7 +497,8 @@ emitter.on('openConfigureMiningBotOverlay', async () => {
     rebiddingDelay.value = biddingRules?.rebiddingDelay || rebiddingDelay.value;
 
     finalBidAmountFormulaType.value = biddingRules?.finalBidAmountFormulaType || finalBidAmountFormulaType.value;
-    finalBidAmountAdjustmentType.value = biddingRules?.finalBidAmountAdjustmentType || finalBidAmountAdjustmentType.value;
+    finalBidAmountAdjustmentType.value =
+      biddingRules?.finalBidAmountAdjustmentType || finalBidAmountAdjustmentType.value;
     finalBidAmountAbsolute.value = biddingRules?.finalBidAmountAbsolute || finalBidAmountAbsolute.value;
     finalBidAmountRelative.value = biddingRules?.finalBidAmountRelative || finalBidAmountRelative.value;
 

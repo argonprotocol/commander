@@ -50,7 +50,7 @@ export const BiddingRulesSchema = z.object({
   seatGoalType: z.nativeEnum(SeatGoalType),
   seatGoalCount: z.number(),
   seatGoalInterval: z.nativeEnum(SeatGoalInterval),
-  
+
   requiredMicrogons: z.bigint(),
   requiredMicronots: z.bigint(),
 });

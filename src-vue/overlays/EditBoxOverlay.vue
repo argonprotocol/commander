@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="absolute w-[120%] bg-white border border-slate-400 rounded shadow-md z-50">
     <div class="flex flex-col">

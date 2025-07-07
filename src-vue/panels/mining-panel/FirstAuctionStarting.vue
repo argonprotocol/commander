@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center m-3 overflow-hidden">
     <ConfettiIcon class="absolute top-[10px] left-[10px]" style="width: calc(100% - 20px)" />

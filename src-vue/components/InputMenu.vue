@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <Listbox as="div" ref="$el" class="flex relative z-30">
     <div class="relative grow focus-within:relative">

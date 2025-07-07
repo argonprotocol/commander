@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <ul>
     <li v-for="transaction in transactions" :key="transaction.id">
