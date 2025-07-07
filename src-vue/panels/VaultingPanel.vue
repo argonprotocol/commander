@@ -1,9 +1,9 @@
 <template>
-  <div class="flex flex-col h-full opacity-60 pointer-events-none">
+  <div class="flex flex-col h-full">
     <div style="text-shadow: 1px 1px 0 white">
       <div class="text-5xl leading-tight font-bold text-center mt-20 text-[#4B2B4E]">
-        Earn Revenue By Operating Vaults
-        <div>And Funding Liquidity Pools</div>
+        Earn Revenue By Operating
+        <div>Stabilization Vaults for the Network</div>
       </div>
       <p class="text-base text-justify w-[780px] !mx-auto mt-10 text-[#4B2B4E]">
         Argon's Stabilization Vaults are the backbone of its enginuity. Bitcoins are locked into vaults, which generates
@@ -14,15 +14,10 @@
     </div>
     <div class="flex flex-row items-center text-2xl mt-10 w-full justify-center">
       <button
-        class="opacity-60 bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow font-bold text-white px-14 py-2 rounded-lg cursor-pointer"
+        @click="openConfigureStabilizationVaultOverlay"
+        class="bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow font-bold text-white px-14 py-2 rounded-lg cursor-pointer"
       >
-        Operate a Stabilization Vault
-      </button>
-      <div class="text-xl font-bold text-slate-400 px-7">OR</div>
-      <button
-        class="opacity-60 bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow font-bold text-white px-14 py-2 rounded-lg cursor-pointer"
-      >
-        Fund a Liquidity Pool
+        Create Stabilization Vault
       </button>
     </div>
 
@@ -44,10 +39,20 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">
-                  {{ currencySymbol }}
+                {{ numeral(bitcoinLocked).format('0,0.[00000000]') }}
+              </template>
+              <template v-else>---</template>
+            </div>
+            <div>Bitcoin In Vaults</div>
+          </li>
+          <li style="width: 1px" class="bg-slate-300"></li>
+          <li class="w-1/4">
+            <div class="text-4xl font-bold">
+              <template v-if="isLoaded">
+                <span :class="[currency.symbol === '₳' ? 'font-semibold' : 'font-bold']">
+                  {{ currency.symbol }}
                 </span>
-                {{ fmtMoney(argonTo(valueInVaults), 1_000) }}
+                {{ microgonToMoneyNm(microgonValueInVaults).formatIfElse('< 1_000', '0,0.00', '0,0') }}
               </template>
               <template v-else>---</template>
             </div>
@@ -57,24 +62,22 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                {{ fmtMoney(Math.min(annualVaultAPY, 999_999), 100) }}%{{ annualVaultAPY >= 9_999 ? '+' : ' ' }}
+                {{ numeral(annualVaultAPY).formatIfElseCapped('< 1_000', '0,0.00', '0,0', 9_999) }}%
               </template>
               <template v-else>---</template>
             </div>
             <div>Average Vault APY</div>
           </li>
-          <li style="width: 1px" class="bg-slate-300"></li>
+          <!-- <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                {{ fmtCommas(fmtDecimalsMax(Math.min(annualPoolAPY, 999_999))) }}%{{
-                  annualPoolAPY >= 9_999 ? '+' : ' '
-                }}
+                {{ numeral(annualPoolAPY).formatIfElseCapped('< 1_000', '0,0.00', '0,0', 9_999) }}%
               </template>
               <template v-else>---</template>
             </div>
-            <div>Annual Pool APY</div>
-          </li>
+            <div>Average Pool APY</div>
+          </li> -->
         </ul>
         <ul class="flex flex-row w-full overflow-x-hidden relative h-[117px]">
           <div class="flex flex-row h-full animate-scroll" :class="{ 'animate-paused': !isLoaded }">
@@ -131,19 +134,17 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { fmtMoney, fmtCommas, fmtDecimalsMax } from '../lib/Utils';
-import { useCurrencyStore } from '../stores/currency';
-import { storeToRefs } from 'pinia';
+import emitter from '../emitters/basic';
+import { useCurrency } from '../stores/currency';
 import { IVault } from '@argonprotocol/commander-calculator/src/Mainchain';
 import VaultImage from '../assets/vault.svg?component';
 import { getMainchain } from '../stores/mainchain';
+import numeral, { createNumeralHelpers } from '../lib/numeral';
 
 const mainchain = getMainchain();
+const currency = useCurrency();
 
-const currencyStore = useCurrencyStore();
-
-const { argonTo, btcToArgon } = currencyStore;
-const { currencySymbol } = storeToRefs(currencyStore);
+const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
 const isLoaded = Vue.ref(false);
 
@@ -154,15 +155,23 @@ const cloneCount = Vue.computed(() => {
   return Math.ceil(minVaults / Math.max(1, vaults.value.length));
 });
 
+const bitcoinLocked = Vue.ref(0);
 const vaultCount = Vue.ref(0);
-const valueInVaults = Vue.ref(0);
+const microgonValueInVaults = Vue.ref(0n);
 const annualVaultAPY = Vue.ref(350);
 const annualPoolAPY = Vue.ref(72);
+
+function openConfigureStabilizationVaultOverlay() {
+  emitter.emit('openConfigureStabilizationVaultOverlay');
+}
 
 Vue.onMounted(async () => {
   vaults.value = await mainchain.fetchVaults();
   vaultCount.value = vaults.value.length;
-  valueInVaults.value = btcToArgon(vaults.value.reduce((acc, vault) => acc + vault.bitcoinLocked, 0));
+  microgonValueInVaults.value = currency.btcToMicrogon(
+    vaults.value.reduce((acc, vault) => acc + vault.bitcoinLocked, 0),
+  );
+  bitcoinLocked.value = vaults.value.reduce((acc, vault) => acc + vault.bitcoinLocked, 0);
   isLoaded.value = true;
 });
 </script>

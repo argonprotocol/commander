@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { Config } from './Config';
+import { Config, DEPLOY_ENV_FILE } from './Config';
 import { IConfigServerDetails } from '../interfaces/IConfig';
 
 export class SSH {
@@ -30,13 +30,18 @@ export class SSH {
     if (result[1] !== 0) {
       throw new Error(`HTTP GET command failed with status ${result[1]}`);
     }
-    console.log('HTTP GET result:', result);
-    const httpResponse: { status: number; data: T } = JSON.parse(result[0]);
+
+    const httpResponse: { status: number; data?: T; error?: string } = JSON.parse(result[0]);
+    console.log('HTTP result:', httpResponse.data || httpResponse.error || httpResponse.status);
 
     if (httpResponse.status !== 200) {
-      throw new Error(`HTTP GET request failed with status ${httpResponse.status}`);
+      throw new Error(httpResponse.error);
     }
-    return httpResponse;
+
+    return {
+      status: httpResponse.status,
+      data: httpResponse.data!,
+    };
   }
 
   public static async runCommand(command: string, retries = 0): Promise<[string, number]> {
@@ -61,6 +66,18 @@ export class SSH {
   public static async uploadDirectory(app: any, localRelativeDir: string, remoteDir: string): Promise<void> {
     this.isConnected || (await this.openConnection());
     await invoke('ssh_upload_directory', { app, localRelativeDir, remoteDir });
+  }
+
+  public static async stopMiningDockers(): Promise<void> {
+    await this.runCommand(`cd deploy && docker compose --env-file=${DEPLOY_ENV_FILE} --profile miners down`);
+  }
+
+  public static async stopBotDocker(): Promise<void> {
+    await this.runCommand(`cd deploy && docker compose --env-file=${DEPLOY_ENV_FILE} down bot`);
+  }
+
+  public static async startBotDocker(): Promise<void> {
+    await this.runCommand(`cd deploy && docker compose --env-file=${DEPLOY_ENV_FILE} up bot -d`);
   }
 
   public static async getKeys(): Promise<IKeys> {

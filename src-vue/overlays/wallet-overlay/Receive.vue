@@ -35,14 +35,14 @@
             </thead>
             <tbody>
               <tr>
-                <td>{{ config.biddingRules?.desiredArgons }} ARGN</td>
-                <td>{{ wallet.argons }} ARGN</td>
+                <td>{{ config.biddingRules?.desiredMicrogons }} ARGN</td>
+                <td>{{ wallet.availableMicrogons }} ARGN</td>
                 <td>
-                  {{ fmtCommas(desiredArgonsStillNeeded) }} ARGN
+                  {{ microgonToArgonNm(desiredMicrogonsStillNeeded).format('0,0.[00000000]') }} ARGN
                   <span
                     tag
                     :class="
-                      desiredArgonsStillNeeded > 0
+                      desiredMicrogonsStillNeeded > 0
                         ? 'bg-green-600/90 border border-green-700'
                         : 'bg-gray-400/90 border border-gray-500'
                     "
@@ -52,14 +52,14 @@
                 </td>
               </tr>
               <tr>
-                <td>{{ config.biddingRules?.desiredArgonots }} ARGNOT</td>
-                <td>{{ wallet.argonots }} ARGNOT</td>
+                <td>{{ config.biddingRules?.desiredMicronots }} ARGNOT</td>
+                <td>{{ wallet.availableMicronots }} ARGNOT</td>
                 <td>
-                  {{ fmtCommas(desiredArgonotsStillNeeded) }} ARGNOT
+                  {{ micronotToArgonotNm(desiredMicronotsStillNeeded).format('0,0.[00000000]') }} ARGNOT
                   <span
                     tag
                     :class="
-                      desiredArgonotsStillNeeded > 0
+                      desiredMicronotsStillNeeded > 0
                         ? 'bg-green-500/90 border border-green-700'
                         : 'bg-gray-400/90 border border-gray-500'
                     "
@@ -86,14 +86,14 @@
             </thead>
             <tbody>
               <tr>
-                <td>{{ config.biddingRules?.requiredArgons }} ARGN</td>
-                <td>{{ wallet.argons }} ARGN</td>
+                <td>{{ config.biddingRules?.requiredMicrogons }} ARGN</td>
+                <td>{{ wallet.availableMicrogons }} ARGN</td>
                 <td>
-                  {{ fmtCommas(requiredArgonsStillNeeded) }} ARGN
+                  {{ microgonToArgonNm(requiredMicrogonsStillNeeded).format('0,0.[00000000]') }} ARGN
                   <span
                     tag
                     :class="
-                      requiredArgonsStillNeeded > 0
+                      requiredMicrogonsStillNeeded > 0
                         ? 'bg-red-500 border border-red-700'
                         : 'bg-gray-400/90 border border-gray-500'
                     "
@@ -103,14 +103,14 @@
                 </td>
               </tr>
               <tr>
-                <td>{{ config.biddingRules?.requiredArgonots }} ARGNOT</td>
-                <td>{{ wallet.argonots }} ARGNOT</td>
+                <td>{{ config.biddingRules?.requiredMicronots }} ARGNOT</td>
+                <td>{{ wallet.availableMicronots }} ARGNOT</td>
                 <td>
-                  {{ fmtCommas(requiredArgonotsStillNeeded) }} ARGNOT
+                  {{ micronotToArgonotNm(requiredMicronotsStillNeeded).format('0,0.[00000000]') }} ARGNOT
                   <span
                     tag
                     :class="
-                      requiredArgonotsStillNeeded > 0
+                      requiredMicronotsStillNeeded > 0
                         ? 'bg-red-500 border border-red-700'
                         : 'bg-gray-400/90 border border-gray-500'
                     "
@@ -147,11 +147,13 @@
 import * as Vue from 'vue';
 import QRCode from 'qrcode';
 import { useConfig } from '../../stores/config';
-import { useCurrencyStore } from '../../stores/currency';
-import { fmtCommas, abreviateAddress } from '../../lib/Utils';
+import { useWallets } from '../../stores/wallets';
+import { useCurrency } from '../../stores/currency';
+import { abreviateAddress } from '../../lib/Utils';
 import { ChevronLeftIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import CopyIcon from '../../assets/copy.svg?component';
 import CopyToClipboard from '../../components/CopyToClipboard.vue';
+import numeral, { createNumeralHelpers } from '../../lib/numeral';
 
 const props = defineProps({
   walletId: {
@@ -161,7 +163,10 @@ const props = defineProps({
 });
 
 const config = useConfig();
-const currencyStore = useCurrencyStore();
+const wallets = useWallets();
+const currency = useCurrency();
+
+const { microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
 
 const emit = defineEmits(['navigate']);
 
@@ -171,25 +176,25 @@ function goBack() {
 
 const qrCode = Vue.ref('');
 
-function stillNeeded(amount: number, walletValue: number) {
-  const stillNeeded = amount - walletValue === 0 ? 0 : Math.ceil((amount - walletValue) * 100) / 100;
-  return stillNeeded > 0 ? stillNeeded : 0;
+function stillNeeded(amount: bigint, walletValue: bigint) {
+  const stillNeeded = amount - walletValue === 0n ? 0n : amount - walletValue;
+  return stillNeeded > 0n ? stillNeeded : 0n;
 }
 
-const desiredArgonsStillNeeded = Vue.computed(() => {
-  return stillNeeded(config.biddingRules?.desiredArgons || 0, wallet.value.argons || 0);
+const desiredMicrogonsStillNeeded = Vue.computed(() => {
+  return stillNeeded(config.biddingRules?.desiredMicrogons || 0n, wallet.value.availableMicrogons || 0n);
 });
 
-const desiredArgonotsStillNeeded = Vue.computed(() => {
-  return stillNeeded(config.biddingRules?.desiredArgonots || 0, wallet.value.argonots || 0);
+const desiredMicronotsStillNeeded = Vue.computed(() => {
+  return stillNeeded(config.biddingRules?.desiredMicronots || 0n, wallet.value.availableMicronots || 0n);
 });
 
-const requiredArgonsStillNeeded = Vue.computed(() => {
-  return stillNeeded(config.biddingRules?.requiredArgons || 0, wallet.value.argons || 0);
+const requiredMicrogonsStillNeeded = Vue.computed(() => {
+  return stillNeeded(config.biddingRules?.requiredMicrogons || 0n, wallet.value.availableMicrogons || 0n);
 });
 
-const requiredArgonotsStillNeeded = Vue.computed(() => {
-  return stillNeeded(config.biddingRules?.requiredArgonots || 0, wallet.value.argonots || 0);
+const requiredMicronotsStillNeeded = Vue.computed(() => {
+  return stillNeeded(config.biddingRules?.requiredMicronots || 0n, wallet.value.availableMicronots || 0n);
 });
 
 const walletName = Vue.computed(() => {
@@ -204,17 +209,16 @@ const walletName = Vue.computed(() => {
 
 const wallet = Vue.computed(() => {
   if (props.walletId === 'mng') {
-    return currencyStore.mngWallet;
+    return wallets.mngWallet;
   } else if (props.walletId === 'llb') {
-    return currencyStore.llbWallet;
+    return wallets.llbWallet;
   } else if (props.walletId === 'vlt') {
-    return currencyStore.vltWallet;
+    return wallets.vltWallet;
   } else {
     return {
       address: '',
-      argons: 0,
-      argonots: 0,
-      totalValue: 0,
+      availableMicrogons: 0n,
+      availableMicronots: 0n,
     };
   }
 });
@@ -222,11 +226,11 @@ const wallet = Vue.computed(() => {
 async function loadQRCode() {
   let address = '';
   if (props.walletId === 'mng') {
-    address = currencyStore.mngWallet.address;
+    address = wallets.mngWallet.address;
   } else if (props.walletId === 'llb') {
-    address = currencyStore.llbWallet.address;
+    address = wallets.llbWallet.address;
   } else if (props.walletId === 'vlt') {
-    address = currencyStore.vltWallet.address;
+    address = wallets.vltWallet.address;
   }
   qrCode.value = await QRCode.toDataURL(address);
 }

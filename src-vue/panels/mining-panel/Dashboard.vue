@@ -3,7 +3,7 @@
     <AlertBars />
 
     <div
-      :class="stats.isLoaded ? '' : 'opacity-30 pointer-events-none'"
+      :class="stats.isReady ? '' : 'opacity-30 pointer-events-none'"
       class="flex flex-col h-full px-3.5 py-3 gap-y-2.5 justify-stretch grow"
     >
       <section class="flex flex-row gap-x-3">
@@ -16,26 +16,31 @@
           <label>Active Seat{{ stats.dashboard.global.activeSeats === 1 ? '' : 's' }}</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ formatLargeNumber(stats.dashboard.global.totalBlocksMined || 0) }}</span>
+          <span>{{ numeral(stats.dashboard.global.totalBlocksMined || 0).format('0,0') }}</span>
           <label>Total Block{{ stats.dashboard.global.totalBlocksMined === 1 ? '' : 's' }} Mined</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ currencySymbol }}{{ formatLargeNumber(argonTo(globalArgonsInvested / 1_000_000)) }}</span>
+          <span>
+            {{ currency.symbol
+            }}{{ microgonToMoneyNm(globalMicrogonsInvested).formatIfElse('< 1_000', '0,0.00', '0,0') }}
+          </span>
           <label>Total Invested</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ currencySymbol }}{{ formatLargeNumber(argonTo(globalArgonsEarned / 1_000_000)) }}</span>
+          <span>
+            {{ currency.symbol }}{{ microgonToMoneyNm(globalMicrogonsEarned).formatIfElse('< 1_000', '0,0.00', '0,0') }}
+          </span>
           <label>Total Earned</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ fmtCommas(globalAPY) }}%</span>
+          <span>{{ numeral(globalAPY).formatIfElseCapped('< 100', '0,0.00', '0,0', 9_999) }}%</span>
           <label>Current APY</label>
         </div>
       </section>
 
       <section box class="flex flex-col text-center px-2">
         <header class="text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30">
-          YOUR CLOUD MACHINE IS LIVE
+          YOUR CLOUD MACHINE {{ stats.isReady ? 'IS LIVE' : '' }}
         </header>
         <div class="flex flex-row py-2">
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
@@ -104,39 +109,44 @@
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
                 <span>
                   {{
-                    fmtCommas(
-                      fmtDecimalsMax(
-                        (stats.dashboard.cohort.argonsMined + stats.dashboard.cohort.argonsMinted) / 1_000_000,
-                        2,
-                      ),
-                    )
+                    microgonToMoneyNm(
+                      stats.dashboard.cohort.microgonsMined + stats.dashboard.cohort.microgonsMinted,
+                    ).formatIfElse('< 1_000', '0,0.00', '0,0')
                   }}
                 </span>
-                <label>Argons Earned</label>
+                <label>Argons Collected</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
                 <span>
-                  {{ fmtCommas(fmtDecimalsMax(stats.dashboard.cohort.argonotsMined / 1_000_000, 2)) }}
+                  {{
+                    microgonToMoneyNm(stats.dashboard.cohort.micronotsMined).formatIfElse('< 1_000', '0,0.00', '0,0')
+                  }}
                 </span>
-                <label>Argonots Earned</label>
+                <label>Argonots Collected</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
             </div>
             <div class="flex flex-row w-full h-1/2 gap-x-2">
               <div stat-box class="flex flex-col w-1/3 h-full">
-                <span>{{ currencySymbol }}{{ fmtMoney(cohortArgonsInvested / 1_000_000) }}</span>
+                <span>
+                  {{ currency.symbol
+                  }}{{ microgonToMoneyNm(cohortMicrogonsInvested).formatIfElse('< 1_000', '0,0.00', '0,0') }}
+                </span>
                 <label>Total Invested</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full">
-                <span>{{ currencySymbol }}{{ fmtMoney(cohortArgonsEarned / 1_000_000) }}</span>
-                <label>Expected Earnings</label>
+                <span>
+                  {{ currency.symbol
+                  }}{{ microgonToMoneyNm(cohortMicrogonsExpected).formatIfElse('< 1_000', '0,0.00', '0,0') }}
+                </span>
+                <label>Earnings Expected</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full">
-                <span>{{ fmtCommas(fmtDecimalsMax(cohortAPY, 2)) }}%</span>
-                <label>Expected APY</label>
+                <span>{{ numeral(cohortAPY).formatIfElse('< 1_000', '0,0.00', '0,0') }}%</span>
+                <label>APY Expected</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
             </div>
@@ -162,7 +172,14 @@
                     {{ block.timestamp.fromNow() }}
                   </td>
                   <td class="text-left border-t border-slate-400/30">
-                    {{ currencySymbol }}{{ fmtMoney(argonotToArgon(block.argonots) + block.argons) }}
+                    {{ currency.symbol
+                    }}{{
+                      microgonToMoneyNm(currency.micronotToMicrogon(block.micronots) + block.microgons).formatIfElse(
+                        '< 1_000',
+                        '0,0.00',
+                        '0,0',
+                      )
+                    }}
                   </td>
                   <td class="text-right border-t border-slate-400/30">
                     {{ abreviateAddress(block.author, 10) }}
@@ -232,28 +249,27 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { storeToRefs } from 'pinia';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import utc from 'dayjs/plugin/utc';
-import { fmtCommas, fmtMoney, calculateAPY, fmtDecimals, fmtDecimalsMax, abreviateAddress } from '../../lib/Utils';
+import { calculateAPY, abreviateAddress } from '../../lib/Utils';
 import { useStats } from '../../stores/stats';
-import { useCurrencyStore } from '../../stores/currency';
+import { useCurrency } from '../../stores/currency';
 import { useBlockchainStore } from '../../stores/blockchain';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import CountupClock from '../../components/CountupClock.vue';
 import AlertBars from '../../components/AlertBars.vue';
 import { IBlock } from '../../stores/blockchain';
+import numeral, { createNumeralHelpers } from '../../lib/numeral';
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
 
 const stats = useStats();
-const currencyStore = useCurrencyStore();
+const currency = useCurrency();
 const blockchainStore = useBlockchainStore();
 
-const { argonTo, argonotToArgon } = currencyStore;
-const { currencySymbol } = storeToRefs(currencyStore);
+const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
 const dayInYear = dayjs().diff(dayjs().startOf('year'), 'days') + 1;
 const percentOfYear = Math.min(dayInYear / 365, 1) * 100;
@@ -261,34 +277,37 @@ const percentOfYear = Math.min(dayInYear / 365, 1) * 100;
 const currentCohortId = Vue.ref(0);
 const blocks = Vue.ref<IBlock[]>([]);
 
-const globalArgonsEarned = Vue.computed(() => {
+const globalMicrogonsEarned = Vue.computed(() => {
   const global = stats.dashboard.global;
-  return global.totalArgonsMined + global.totalArgonsMinted + argonotToArgon(global.totalArgonotsMined);
+  return (
+    global.totalMicrogonsMined + global.totalMicrogonsMinted + currency.micronotToMicrogon(global.totalMicronotsMined)
+  );
 });
 
-const globalArgonsInvested = Vue.computed(() => {
+const globalMicrogonsInvested = Vue.computed(() => {
   const global = stats.dashboard.global;
-  return global.totalArgonsBid + global.totalTransactionFees;
+  return global.totalMicrogonsBid + global.totalTransactionFees;
 });
 
 const globalAPY = Vue.computed(() => {
-  return calculateAPY(globalArgonsInvested.value, globalArgonsEarned.value);
+  return calculateAPY(globalMicrogonsInvested.value, globalMicrogonsEarned.value);
 });
 
-const cohortArgonsEarned = Vue.computed(() => {
+const cohortMicrogonsExpected = Vue.computed(() => {
   const cohort = stats.dashboard.cohort;
-  if (!cohort) return 0;
-  return cohort.argonsMined + cohort.argonsMinted + argonotToArgon(cohort.argonotsMined);
+  if (!cohort) return 0n;
+  console.log('cohort', cohort);
+  return cohort.microgonsMined + cohort.microgonsMinted + currency.micronotToMicrogon(cohort.micronotsMined);
 });
 
-const cohortArgonsInvested = Vue.computed(() => {
+const cohortMicrogonsInvested = Vue.computed(() => {
   const cohort = stats.dashboard.cohort;
-  if (!cohort) return 0;
-  return cohort.argonsBid + cohort.transactionFees;
+  if (!cohort) return 0n;
+  return cohort.microgonsBid + cohort.transactionFees;
 });
 
 const cohortAPY = Vue.computed(() => {
-  return calculateAPY(cohortArgonsInvested.value, cohortArgonsEarned.value);
+  return calculateAPY(cohortMicrogonsInvested.value, cohortMicrogonsExpected.value);
 });
 
 const cohortStartDate = Vue.computed(() => {
@@ -311,7 +330,6 @@ const cohortEndDate = Vue.computed(() => {
 
 const lastBitcoinActivityAt = Vue.computed(() => {
   const lastActivity = stats.bitcoinActivity[0];
-  console.log('lastBitcoinActivityAt', lastActivity);
   return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
 });
 
@@ -367,16 +385,13 @@ async function goToNextCohort() {
   const nextCohortId = cohortId + 1;
 }
 
-function formatLargeNumber(number: number, maxLength = 5) {
-  if (number < 10 ** (maxLength - 2)) {
-    // 1_000
-    return fmtDecimalsMax(number, 2, 2);
-  } else if (number < 99 ** (maxLength - 2)) {
-    // 99_000
-    return fmtCommas(fmtDecimals(number, 0));
-  }
-  return number;
-}
+Vue.onMounted(() => {
+  stats.start();
+});
+
+Vue.onUnmounted(() => {
+  stats.stop();
+});
 </script>
 
 <style scoped>

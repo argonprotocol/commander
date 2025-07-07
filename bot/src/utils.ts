@@ -1,5 +1,7 @@
 import * as Fs from 'node:fs';
 import express from 'express';
+import { ApiPromise, WsProvider } from '@polkadot/api';
+import type { ArgonClient } from '@argonprotocol/mainchain';
 
 export function onExit(fn: () => void | Promise<void>) {
   const handler = async () => {
@@ -44,4 +46,9 @@ export function readJsonFileOrNull(path: string) {
   } catch (error) {
     return null;
   }
+}
+
+export async function getClient(host: string): Promise<ArgonClient> {
+  const provider = new WsProvider(host);
+  return await ApiPromise.create({ provider, noInitWarn: true, throwOnConnect: true });
 }

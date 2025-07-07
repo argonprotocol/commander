@@ -23,23 +23,35 @@ export type IBlock = {
   hash: string;
   author: string;
   extrinsics: number;
-  argonots: number;
-  argons: number;
+  microgons: bigint;
+  micronots: bigint;
   timestamp: Dayjs;
 };
 
 export const useBlockchainStore = defineStore('blockchain', () => {
   const miningSeatCount = Vue.ref(0);
-  const aggregatedBidCosts = Vue.ref(0);
-  const aggregatedBlockRewards = Vue.ref({ argons: 0, argonots: 0 });
+  const aggregatedBidCosts = Vue.ref(0n);
+  const aggregatedBlockRewards = Vue.ref({ microgons: 0n, micronots: 0n });
+
+  const cachedBlockLoading = { hash: null } as unknown as IBlock;
+  const cachedBlocks = Vue.ref<IBlock[]>([
+    cachedBlockLoading,
+    cachedBlockLoading,
+    cachedBlockLoading,
+    cachedBlockLoading,
+    cachedBlockLoading,
+    cachedBlockLoading,
+    cachedBlockLoading,
+    cachedBlockLoading,
+  ]);
 
   function extractBlockRewardsFromEvent(blockRewardEvent: any) {
     if (!blockRewardEvent) {
-      return { argons: 0, argonots: 0 };
+      return { microgons: 0n, micronots: 0n };
     }
-    const argonots = Number((blockRewardEvent?.event?.data.rewards[0].ownership.toNumber() / 1_000_000).toFixed(2));
-    const argons = Number((blockRewardEvent?.event?.data.rewards[0].argons.toNumber() / 1_000_000).toFixed(2));
-    return { argons, argonots };
+    const micronots = blockRewardEvent?.event?.data.rewards[0].ownership.toBigInt();
+    const microgons = blockRewardEvent?.event?.data.rewards[0].argons.toBigInt();
+    return { microgons, micronots };
   }
 
   async function fetchBlock(client: MainchainClient, blockHash: BlockHash) {
@@ -48,15 +60,15 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     const blockRewardEvent = events.filter(({ event }: { event: any }) =>
       client.events.blockRewards.RewardCreated.is(event),
     )[0];
-    const { argons, argonots } = extractBlockRewardsFromEvent(blockRewardEvent);
+    const { microgons, micronots } = extractBlockRewardsFromEvent(blockRewardEvent);
     const timestamp = (await client.query.timestamp.now.at(blockHash)).toNumber();
     const newBlock: IBlock = {
       number: block.block.header.number.toNumber(),
       hash: block.block.header.hash.toHex(),
       author: block.author?.toHex() || '',
       extrinsics: block.block.extrinsics.length,
-      argonots,
-      argons,
+      microgons,
+      micronots,
       timestamp: dayjs.utc(timestamp),
     };
 
@@ -116,6 +128,7 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     aggregatedBidCosts,
     aggregatedBlockRewards,
     miningSeatCount,
+    cachedBlocks,
     subscribeToBlocks,
     unsubscribeFromBlocks,
     updateAggregateBidCosts,

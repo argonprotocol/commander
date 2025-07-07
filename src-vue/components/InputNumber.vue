@@ -94,7 +94,7 @@
                 >
                   <div class="flex flex-row justify-between items-center">
                     <div class="whitespace-nowrap grow pr-3">
-                      {{ option.title || fmtCommas(option.value) }}
+                      {{ option.title || numeral(option.value).format('0,0') }}
                     </div>
                     <div v-if="option.value !== undefined" class="opacity-70 font-light relative">
                       {{ formatFn(option.value) }}
@@ -132,17 +132,17 @@
 import * as Vue from 'vue';
 import { LightBulbIcon } from '@heroicons/vue/24/outline';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
-import { fmtCommas, fmtDecimalsMax } from '../lib/Utils';
 import NumArrow from '../assets/num-arrow.svg?component';
-import { useCurrencyStore } from '../stores/currency';
+import { useCurrency } from '../stores/currency';
+import numeral from '../lib/numeral';
 
-const currencyStore = useCurrencyStore();
+const currency = useCurrency();
 
 const props = withDefaults(
   defineProps<{
-    modelValue: number;
-    max?: number;
-    min?: number;
+    modelValue: number | bigint;
+    max?: number | bigint;
+    min?: number | bigint;
     options?: any[];
     dragBy?: number;
     dragByMin?: number;
@@ -160,11 +160,15 @@ const props = withDefaults(
   },
 );
 
+const isBigInt = typeof props.modelValue === 'bigint';
+const minValue: number | bigint = props.min || 0;
+const maxValue: number | bigint = props.max || 0;
+
 let loginValueOriginal = props.modelValue;
 let loginValueConverted = originalToConverted(props.modelValue);
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: number): void;
+  (e: 'update:modelValue', value: number | bigint): void;
 }>();
 
 const showMenu = Vue.ref(false);
@@ -179,7 +183,7 @@ const initialDelay = 500; // Initial delay before starting continuous updates
 const updateInterval = 50; // Interval between updates once continuous mode starts
 
 const prefix = Vue.computed(() => {
-  return props.prefix + (props.format === 'argons' ? currencyStore.currencySymbol : '');
+  return props.prefix + (props.format === 'argons' ? currency.symbol : '');
 });
 
 const suffix = Vue.computed(() => {
@@ -192,30 +196,30 @@ const suffix = Vue.computed(() => {
   }
 });
 
-function originalToConverted(valueOriginal: number) {
-  return props.format === 'argons' ? currencyStore.argonTo(valueOriginal) : valueOriginal;
+function originalToConverted(valueOriginal: number | bigint): number {
+  return props.format === 'argons' ? currency.microgonTo(valueOriginal as bigint) : Number(valueOriginal);
 }
 
-function convertedToOriginal(convertedValue: number) {
-  return props.format === 'argons' ? currencyStore.toArgon(convertedValue) : convertedValue;
+function convertedToOriginal(convertedValue: number): number | bigint {
+  return props.format === 'argons' ? currency.toMicrogon(convertedValue) : convertedValue;
 }
 
 function updateInputValue(valueConverted: number) {
   let valueOriginal = convertedToOriginal(valueConverted);
 
-  if (props.max !== undefined && valueOriginal > props.max) {
-    valueOriginal = props.max;
+  if (maxValue !== undefined && valueOriginal > maxValue) {
+    valueOriginal = maxValue;
     valueConverted = originalToConverted(valueOriginal);
   }
-  if (props.min !== undefined && valueOriginal < props.min) {
-    valueOriginal = props.min;
+  if (minValue !== undefined && valueOriginal < minValue) {
+    valueOriginal = minValue;
     valueConverted = originalToConverted(valueOriginal);
   }
 
   loginValueOriginal = valueOriginal;
   loginValueConverted = valueConverted;
 
-  emit('update:modelValue', valueOriginal);
+  emit('update:modelValue', isBigInt ? BigInt(valueOriginal) : valueOriginal);
   insertIntoInputElem(valueConverted);
 }
 
@@ -231,7 +235,7 @@ function insertIntoInputElem(convertedValue: number) {
 }
 
 function formatFn(value: number) {
-  return fmtCommas(fmtDecimalsMax(value, 2, 2));
+  return numeral(value).formatIfElse(x => x.toString().split('.')[1]?.length > 0, '0,0.00', '0,0');
 }
 
 function moveCursorToEnd() {
@@ -352,11 +356,11 @@ function emitDrag(event: PointerEvent) {
   }
 
   // Apply min/max constraints
-  if (props.min !== undefined && newValue < props.min) {
-    newValue = props.min;
+  if (minValue !== undefined && newValue < minValue) {
+    newValue = minValue;
   }
-  if (props.max !== undefined && newValue > props.max) {
-    newValue = props.max;
+  if (maxValue !== undefined && newValue > maxValue) {
+    newValue = maxValue;
   }
 
   // Update visual feedback
@@ -600,7 +604,7 @@ function selectAllText() {
 Vue.watch(
   () => props.modelValue,
   newModelValue => {
-    const valueConverted = originalToConverted(newModelValue);
+    const valueConverted = originalToConverted(Number(newModelValue));
     if (valueConverted !== loginValueConverted) {
       updateInputValue(valueConverted);
     }
@@ -610,8 +614,9 @@ Vue.watch(
 Vue.watch(
   () => props.min,
   newMin => {
-    if (newMin !== undefined && loginValueConverted < newMin) {
-      updateInputValue(newMin);
+    const newMinValue = typeof newMin === 'bigint' ? Number(newMin) : newMin;
+    if (newMinValue !== undefined && loginValueConverted < newMinValue) {
+      updateInputValue(newMinValue);
     }
   },
   { immediate: true },

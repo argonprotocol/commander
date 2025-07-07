@@ -11,9 +11,11 @@ export type { Config };
 
 export function useConfig(): Vue.Reactive<Config> {
   if (!config) {
+    console.log('Initializing config');
     const dbPromise = getDbPromise();
     config = Vue.reactive(new Config(dbPromise));
     config.load().catch(handleUnknownFatalError);
+    console.log('Setting config');
     SSH.setConfig(config as Config);
   }
 

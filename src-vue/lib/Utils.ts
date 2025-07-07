@@ -1,59 +1,4 @@
-function isScientific(num: number): boolean {
-  return (Math.abs(num) < 1e-6 && num !== 0) || Math.abs(num) >= 1e21 ? true : false;
-}
-
-export function fmtMoney(numStr: number, removeDecimalsOver?: number) {
-  if (isScientific(numStr)) {
-    return numStr.toString();
-  }
-
-  let num: string;
-  if (removeDecimalsOver === undefined) {
-    num = fmtDecimals(numStr, 2);
-  } else if (numStr > removeDecimalsOver) {
-    num = fmtDecimals(numStr, 0);
-  } else {
-    num = fmtDecimals(numStr, 2);
-  }
-
-  return fmtCommas(num);
-}
-
-export function fmtCommas(num: string | number) {
-  if (typeof num === 'number') {
-    num = num.toString();
-  }
-
-  if (num.includes('e')) {
-    return num;
-  }
-
-  const arr = num.split('.');
-  const int = arr[0].replace(/(\d)(?=(\d{3})+$)/g, '$1,');
-  const dec = arr[1];
-
-  return dec ? `${int}.${dec}` : int;
-}
-
-export function fmtDecimals(num: number, decimals = 2): string {
-  if (isScientific(num)) {
-    return num.toString();
-  }
-
-  return num.toFixed(decimals);
-}
-
-export function fmtDecimalsMax(num: number, decimals = 2, ifDecimalsThenAtLeast?: number) {
-  if (isScientific(num)) {
-    return num.toString();
-  }
-
-  let [intStr, decStr] = num.toFixed(decimals).split('.');
-  decStr = (decStr ?? '').slice(0, decimals);
-  decStr = decStr.replace(/0+$/, '');
-
-  return num.toFixed(decStr.length && ifDecimalsThenAtLeast ? ifDecimalsThenAtLeast : decStr.length);
-}
+import BigNumber from 'bignumber.js';
 
 export function isInt(n: any) {
   if (typeof n === 'string') return !n.includes('.');
@@ -64,16 +9,17 @@ export function abreviateAddress(address: string, length = 4) {
   return address.slice(0, 6) + '...' + address.slice(-length);
 }
 
-export function calculateAPY(costs: number, rewards: number) {
-  if (costs === 0 && rewards > 0) return 9_999;
-  if (costs === 0) return 0;
+export function calculateAPY(costs: bigint, rewards: bigint): number {
+  if (costs === 0n && rewards > 0n) return 9_999;
+  if (costs === 0n) return 0;
 
-  const tenDayRate = (rewards - costs) / costs;
+  const tenDayRate = Number(((rewards - costs) * 100_000n) / costs) / 100_000;
   // Compound APR over 36.5 cycles (10-day periods in a year)
   const apy = (Math.pow(1 + tenDayRate, 36.5) - 1) * 100;
   if (apy > 9_999) {
     return 9_999;
   }
+  console.log('apy', apy);
   return apy;
 }
 
@@ -92,9 +38,90 @@ export function fromSqliteBoolean(num: number): boolean {
   return num === 1;
 }
 
-export function convertSqliteBooleans(obj: any, fields: string[]): any {
-  return fields.reduce((acc, field) => {
-    acc[field] = fromSqliteBoolean(obj[field]);
+export function toSqliteBigInt(num: bigint): number {
+  return Number(num);
+}
+
+export function fromSqliteBigInt(num: number): bigint {
+  try {
+    return BigInt(num);
+  } catch (e) {
+    console.log('num', num);
+    console.error('Error converting sqlite bigint', e);
+    throw e;
+  }
+}
+
+export function toSqliteBnJson(data: any): string {
+  return JSON.stringify(
+    data,
+    (_key, value) => {
+      if (value instanceof BigNumber) {
+        return value.toString();
+      }
+      return value;
+    },
+    2,
+  );
+}
+
+export function fromSqliteBnJson(data: any): any {
+  return JSON.parse(data, (_key, value) => {
+    if (typeof value === 'string' && /^\d+$/.test(value)) {
+      return BigNumber(value);
+    }
+    return value;
+  });
+}
+
+export function convertSqliteBooleans(obj: any, booleanFields: string[]): any {
+  // Handle array of objects
+  if (Array.isArray(obj)) {
+    return obj.map(item => convertSqliteBooleans(item, booleanFields));
+  }
+
+  // Handle single object
+  return booleanFields.reduce((acc, fieldName) => {
+    if (!(fieldName in obj)) return acc;
+    acc[fieldName] = fromSqliteBoolean(obj[fieldName]);
     return acc;
   }, obj);
+}
+
+export function convertSqliteBigInts(obj: any, bigIntFields: string[]): any {
+  // Handle array of objects
+  if (Array.isArray(obj)) {
+    return obj.map(item => convertSqliteBigInts(item, bigIntFields));
+  }
+
+  // Handle single object
+  return bigIntFields.reduce((acc, fieldName) => {
+    if (!(fieldName in obj)) return acc;
+    acc[fieldName] = fromSqliteBigInt(obj[fieldName]);
+    return acc;
+  }, obj);
+}
+
+export function convertSqliteFields(obj: any, fields: { [type: string]: string[] }): any {
+  // Handle array of objects
+  if (Array.isArray(obj)) {
+    return obj.map(item => convertSqliteFields(item, fields));
+  }
+
+  // Handle single object
+  for (const [type, fieldNames] of Object.entries(fields)) {
+    for (const fieldName of fieldNames) {
+      if (!(fieldName in obj)) continue;
+      if (type === 'bigint') {
+        obj[fieldName] = fromSqliteBigInt(obj[fieldName]);
+      } else if (type === 'boolean') {
+        obj[fieldName] = fromSqliteBoolean(obj[fieldName]);
+      } else if (type === 'bnJson') {
+        obj[fieldName] = fromSqliteBnJson(obj[fieldName]);
+      } else {
+        throw new Error(`${fieldName} has unknown type: ${type}`);
+      }
+    }
+  }
+  return obj;
 }

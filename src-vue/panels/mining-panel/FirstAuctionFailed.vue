@@ -43,7 +43,7 @@ const config = useConfig();
 const blockchainStore = useBlockchainStore();
 
 function openBiddingBudgetOverlay() {
-  emitter.emit('openBiddingRulesOverlay');
+  emitter.emit('openConfigureMiningBotOverlay');
 }
 
 Vue.onMounted(async () => {

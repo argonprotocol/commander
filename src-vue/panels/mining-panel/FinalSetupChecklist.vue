@@ -18,7 +18,7 @@
           </p>
 
           <section
-            @click="openBiddingRulesOverlay"
+            @click="openConfigureMiningBotOverlay"
             class="flex flex-row cursor-pointer mt-8 border-t border-[#CCCEDA] py-6 hover:bg-argon-menu-hover"
           >
             <Checkbox :isChecked="hasBiddingRules" />
@@ -42,11 +42,12 @@
                 Your Wallet
               </h2>
               <p v-if="config.biddingRules">
-                Your acccounts needs a minimum of {{ config.biddingRules.requiredArgons }} argon{{
-                  config.biddingRules.requiredArgons === 1 ? '' : 's'
+                Your acccounts needs a minimum of
+                {{ microgonToArgonNm(config.biddingRules.requiredMicrogons).format('0,0.[00000000]') }} argon{{
+                  microgonToArgonNm(config.biddingRules.requiredMicrogons).format('0') === '1' ? '' : 's'
                 }}
-                and {{ config.biddingRules.requiredArgonots }} argonot{{
-                  config.biddingRules.requiredArgonots === 1 ? '' : 's'
+                and {{ micronotToArgonotNm(config.biddingRules.requiredMicronots).format('0,0.[00000000]') }} argonot{{
+                  micronotToArgonotNm(config.biddingRules.requiredMicronots).format('0') === '1' ? '' : 's'
                 }}
                 to submit auction bids. We already created a secure wallet and attached it to your mining server. All
                 you need is move some tokens in.
@@ -80,15 +81,20 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import emitter from '../../emitters/basic';
 import { useConfig } from '../../stores/config';
-import { useCurrencyStore } from '../../stores/currency';
+import { useWallets } from '../../stores/wallets';
+import { useCurrency } from '../../stores/currency';
 import Checkbox from '../../components/Checkbox.vue';
 import { useInstaller } from '../../stores/installer';
+import { createNumeralHelpers } from '../../lib/numeral';
 
 dayjs.extend(utc);
 
 const config = useConfig();
 const installer = useInstaller();
-const currencyStore = useCurrencyStore();
+const wallets = useWallets();
+const currency = useCurrency();
+
+const { microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
 
 const isLaunchingMiningBot = Vue.ref(false);
 
@@ -101,7 +107,7 @@ const walletIsPartiallyFunded = Vue.computed(() => {
     return false;
   }
 
-  return (currencyStore.mngWallet.argons || currencyStore.mngWallet.argonots) > 0;
+  return (wallets.mngWallet.availableMicrogons || wallets.mngWallet.availableMicronots) > 0;
 });
 
 const walletIsMinimallyFunded = Vue.computed(() => {
@@ -109,11 +115,11 @@ const walletIsMinimallyFunded = Vue.computed(() => {
     return false;
   }
 
-  if (currencyStore.mngWallet.argons < config.biddingRules.requiredArgons) {
+  if (wallets.mngWallet.availableMicrogons < config.biddingRules.requiredMicrogons) {
     return false;
   }
 
-  if (currencyStore.mngWallet.argonots < config.biddingRules.requiredArgonots) {
+  if (wallets.mngWallet.availableMicronots < config.biddingRules.requiredMicronots) {
     return false;
   }
 
@@ -125,19 +131,19 @@ const walletIsFullyFunded = Vue.computed(() => {
     return false;
   }
 
-  if (currencyStore.mngWallet.argons < config.biddingRules.desiredArgons) {
+  if (wallets.mngWallet.availableMicrogons < config.biddingRules.desiredMicrogons) {
     return false;
   }
 
-  if (currencyStore.mngWallet.argonots < config.biddingRules.desiredArgonots) {
+  if (wallets.mngWallet.availableMicronots < config.biddingRules.desiredMicronots) {
     return false;
   }
 
   return true;
 });
 
-function openBiddingRulesOverlay() {
-  emitter.emit('openBiddingRulesOverlay');
+function openConfigureMiningBotOverlay() {
+  emitter.emit('openConfigureMiningBotOverlay');
 }
 
 function openFundMiningAccountOverlay() {

@@ -14,8 +14,8 @@
         </thead>
         <tbody>
           <tr>
-            <td>{{ data.argonotsRequiredForBid }} ARGNOTs</td>
-            <td>{{ currencySymbol }}{{ fmtMoney(argonotTo(data.argonotsRequiredForBid)) }}</td>
+            <td>{{ data.micronotsRequiredForBid }} ARGNOTs</td>
+            <td>{{ currency.symbol }}{{ micronotToMoneyNm(data.micronotsRequiredForBid).format('0,0.00') }}</td>
           </tr>
           <tr>
             <td>Expected Change In Price</td>
@@ -23,7 +23,7 @@
           </tr>
           <tr>
             <td>ARGNOT Staking Cost</td>
-            <td>{{ currencySymbol }}{{ fmtMoney(argonTo(data.costOfArgonotLoss)) }}</td>
+            <td>{{ currency.symbol }}{{ microgonToMoneyNm(data.costOfArgonotLoss).format('0,0.00') }}</td>
           </tr>
         </tbody>
       </table>
@@ -37,19 +37,19 @@
         <tbody>
           <tr>
             <td>ARGNOT Staking Cost</td>
-            <td>{{ currencySymbol }}{{ fmtMoney(argonTo(data.costOfArgonotLoss)) }}</td>
+            <td>{{ currency.symbol }}{{ microgonToMoneyNm(data.costOfArgonotLoss).format('0,0.00') }}</td>
           </tr>
           <tr>
             <td>ARGN Bid Premium</td>
-            <td>{{ currencySymbol }}{{ fmtMoney(argonTo(data.argonBidPremium)) }}</td>
+            <td>{{ currency.symbol }}{{ microgonToMoneyNm(data.microgonBidPremium).format('0,0.00') }}</td>
           </tr>
           <tr>
             <td>Transaction Fee</td>
-            <td>{{ currencySymbol }}{{ fmtMoney(argonTo(data.transactionFee)) }}</td>
+            <td>{{ currency.symbol }}{{ microgonToMoneyNm(data.transactionFee).format('0,0.00') }}</td>
           </tr>
           <tr>
             <td>TOTAL COST</td>
-            <td>{{ currencySymbol }}{{ fmtMoney(argonTo(data.totalCost)) }}</td>
+            <td>{{ currency.symbol }}{{ microgonToMoneyNm(data.totalCost).format('0,0.00') }}</td>
           </tr>
         </tbody>
       </table>
@@ -63,30 +63,28 @@
         <tbody>
           <tr>
             <td>
-              {{ fmtCommas(fmtDecimals(data.argonRewardsForThisSeat, data.argonRewardsForThisSeat >= 100 ? 0 : 1)) }}
+              {{ microgonToArgonNm(data.microgonsRewardsForThisSeat).formatIfElse('>=100', '0,0', '0,0.00') }}
               ARGN Block Rewards
             </td>
-            <td>{{ currencySymbol }}{{ fmtMoney(argonTo(data.argonRewardsForThisSeat)) }}</td>
+            <td>{{ currency.symbol }}{{ microgonToMoneyNm(data.microgonsRewardsForThisSeat).format('0,0.00') }}</td>
           </tr>
           <tr>
             <td>
-              {{
-                fmtCommas(fmtDecimals(data.argonotRewardsForThisSeat, data.argonotRewardsForThisSeat > -100 ? 0 : 1))
-              }}
+              {{ micronotToArgonotNm(data.micronotRewardsForThisSeat).formatIfElse('>-100', '0,0', '0,0.00') }}
               ARGNOT Block Rewards
             </td>
-            <td>{{ currencySymbol }}{{ fmtMoney(argonTo(data.argonotRewardsAsArgonValue)) }}</td>
+            <td>{{ currency.symbol }}{{ microgonToMoneyNm(data.micronotRewardsAsMicrogonValue).format('0,0.00') }}</td>
           </tr>
           <tr>
             <td>
-              {{ fmtCommas(fmtDecimals(data.argonsToMintThisSeat, data.argonsToMintThisSeat >= 100 ? 0 : 1)) }}
+              {{ microgonToArgonNm(data.microgonsToMintThisSeat).formatIfElse('>=100', '0,0', '0,0.00') }}
               ARGNs Expected to Mint
             </td>
-            <td>{{ currencySymbol }}{{ fmtMoney(argonTo(data.argonsToMintThisSeat)) }}</td>
+            <td>{{ currency.symbol }}{{ microgonToMoneyNm(data.microgonsToMintThisSeat).format('0,0.00') }}</td>
           </tr>
           <tr>
             <td>TOTAL REWARDS</td>
-            <td>{{ currencySymbol }}{{ fmtMoney(argonTo(data.totalRewards)) }}</td>
+            <td>{{ currency.symbol }}{{ microgonToMoneyNm(data.totalRewards).format('0,0.00') }}</td>
           </tr>
         </tbody>
       </table>
@@ -95,15 +93,15 @@
         <thead class="font-bold">
           <tr>
             <td>Ten Day Percentage Rate (TDPR)</td>
-            <td>{{ fmtMoney(Math.min(data.TDPR, 999_999_999_999)) }}{{ data.TDPR > 999_999_999_999 ? '+' : '' }}%</td>
+            <td>{{ numeral(data.TDPR).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</td>
           </tr>
           <tr>
             <td>Annual Percentage Rate (APR)</td>
-            <td>{{ fmtMoney(Math.min(data.APR, 999_999_999_999)) }}{{ data.APR > 999_999_999_999 ? '+' : '' }}%</td>
+            <td>{{ numeral(data.APR).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</td>
           </tr>
           <tr>
             <td>Annual Percentage Yield (APY)</td>
-            <td>{{ fmtMoney(Math.min(data.APY, 999_999_999_999)) }}{{ data.APY > 999_999_999_999 ? '+' : '' }}%</td>
+            <td>{{ numeral(data.APY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</td>
           </tr>
         </thead>
       </table>
@@ -117,13 +115,11 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { useCurrencyStore } from '../stores/currency';
-import { storeToRefs } from 'pinia';
-import { fmtCommas, fmtDecimals, fmtMoney } from '../lib/Utils';
+import { useCurrency } from '../stores/currency';
+import numeral, { createNumeralHelpers } from '../lib/numeral';
 
-const currencyStore = useCurrencyStore();
-const { argonTo, argonotTo } = currencyStore;
-const { currencySymbol } = storeToRefs(currencyStore);
+const currency = useCurrency();
+const { microgonToArgonNm, micronotToArgonotNm, microgonToMoneyNm, micronotToMoneyNm } = createNumeralHelpers(currency);
 
 const props = defineProps({
   data: {

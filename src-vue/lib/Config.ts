@@ -60,10 +60,9 @@ export class Config {
         sshPublicKey: '',
         sshPrivateKey: '',
         sshUser: '',
-        oldestFrameIdToSync: null,
       },
       installDetails: Config.getDefault(dbFields.installDetails) as IConfig['installDetails'],
-      syncDetails: Config.getDefault(dbFields.syncDetails) as IConfig['syncDetails'],
+      oldestFrameIdToSync: Config.getDefault(dbFields.oldestFrameIdToSync) as number,
       isServerConnected: Config.getDefault(dbFields.isServerConnected) as boolean,
       isServerInstalled: Config.getDefault(dbFields.isServerInstalled) as boolean,
       isServerUpToDate: Config.getDefault(dbFields.isServerUpToDate) as boolean,
@@ -169,18 +168,22 @@ export class Config {
   set installDetails(value: IConfig['installDetails']) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.installDetails, value);
+    console.log(
+      'ServerConnect INSTALL DETAILS SET',
+      value.ServerConnect.progress === 0 ? new Error('PROGRESS IS 0') : value.ServerConnect.progress,
+    );
     this._unstringified.installDetails = value;
   }
 
-  get syncDetails(): IConfig['syncDetails'] {
-    if (!this.isLoaded) return {} as IConfig['syncDetails'];
-    return this._unstringified.syncDetails;
+  get oldestFrameIdToSync(): number {
+    if (!this.isLoaded) return 0;
+    return this._unstringified.oldestFrameIdToSync;
   }
 
-  set syncDetails(value: IConfig['syncDetails']) {
+  set oldestFrameIdToSync(value: number) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.syncDetails, value);
-    this._unstringified.syncDetails = value;
+    this._tryFieldsToSave(dbFields.oldestFrameIdToSync, value);
+    this._unstringified.oldestFrameIdToSync = value;
   }
 
   get isServerConnected(): boolean {
@@ -225,11 +228,6 @@ export class Config {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.isServerReadyForBidding, value);
     this._unstringified.isServerReadyForBidding = value;
-  }
-
-  get isServerSyncing(): boolean {
-    if (!this.isLoaded) return false;
-    return this._unstringified.syncDetails.startDate !== null && this._unstringified.syncDetails.progress < 100;
   }
 
   get isWaitingForUpgradeApproval(): boolean {
@@ -331,7 +329,7 @@ const dbFields = {
   security: 'security',
   serverDetails: 'serverDetails',
   installDetails: 'installDetails',
-  syncDetails: 'syncDetails',
+  oldestFrameIdToSync: 'oldestFrameIdToSync',
   isServerConnected: 'isServerConnected',
   isServerInstalled: 'isServerInstalled',
   isServerUpToDate: 'isServerUpToDate',
@@ -363,7 +361,6 @@ const defaults: IConfigDefaults = {
       sshPublicKey: keys.publicKey,
       sshPrivateKey: keys.privateKey,
       sshUser: 'root',
-      oldestFrameIdToSync: null,
     };
   },
   installDetails: () => {
@@ -374,7 +371,7 @@ const defaults: IConfigDefaults = {
     };
     return {
       [InstallStepKey.ServerConnect]: { ...defaultStep },
-      [InstallStepKey.FileCheck]: { ...defaultStep },
+      [InstallStepKey.FileUpload]: { ...defaultStep },
       [InstallStepKey.UbuntuCheck]: { ...defaultStep },
       [InstallStepKey.DockerInstall]: { ...defaultStep },
       [InstallStepKey.BitcoinInstall]: { ...defaultStep },
@@ -385,13 +382,7 @@ const defaults: IConfigDefaults = {
       isRunning: false,
     };
   },
-  syncDetails: () => ({
-    progress: 0,
-    startDate: null,
-    startPosition: null,
-    errorType: null,
-    errorMessage: null,
-  }),
+  oldestFrameIdToSync: () => 0,
   isServerConnected: () => false,
   isServerInstalled: () => false,
   isServerUpToDate: () => false,

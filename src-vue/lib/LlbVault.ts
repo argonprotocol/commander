@@ -12,7 +12,7 @@ export interface IAction {
   date: string;
   price: number;
   type: IActionType;
-  argonsMinted: number;
+  microgonsMinted: number;
   qtyOfArgonsToBurn: number;
   costOfArgonsToBurn: number;
   securityFee: number;
@@ -53,7 +53,7 @@ export default class LlbVault {
   public hodlerExpenses = 0;
 
   public totalExpenses = 0;
-  public totalArgonsMinted = 0;
+  public totalMicrogonsMinted = 0;
   public totalCostOfArgonsToBurn = 0;
   public totalCashUnlocked = 0;
   public totalAccruedValue = 0;
@@ -136,7 +136,7 @@ export default class LlbVault {
       this.hodlerExpenses = fees;
 
       this.totalExpenses = fees;
-      this.totalArgonsMinted = startingPrice * bitcoinCount;
+      this.totalMicrogonsMinted = startingPrice * bitcoinCount;
       this.totalCostOfArgonsToBurn = costOfArgonsToBurn * bitcoinCount;
       this.totalCashUnlocked = cashChange;
       this.totalAccruedValue = cashChange;
@@ -145,7 +145,7 @@ export default class LlbVault {
         date: this.startingDate,
         price: startingPrice,
         type: 'enter-vault',
-        argonsMinted: startingPrice * bitcoinCount,
+        microgonsMinted: startingPrice * bitcoinCount,
         qtyOfArgonsToBurn,
         costOfArgonsToBurn,
         securityFee,
@@ -194,7 +194,7 @@ export default class LlbVault {
       const cashChange = currentPrice * bitcoinCount - (costOfArgonsToBurn + fees);
 
       this.totalExpenses += fees;
-      this.totalArgonsMinted += currentPrice * bitcoinCount;
+      this.totalMicrogonsMinted += currentPrice * bitcoinCount;
       this.totalCostOfArgonsToBurn += costOfArgonsToBurn;
       this.totalCashUnlocked += cashChange;
       this.totalAccruedValue += cashChange;
@@ -203,7 +203,7 @@ export default class LlbVault {
         date: currentDate,
         price: currentPrice,
         type: currentShort ? 'short' : changePct > 0 ? 'ratchet-up' : 'ratchet-down',
-        argonsMinted: currentPrice * bitcoinCount,
+        microgonsMinted: currentPrice * bitcoinCount,
         qtyOfArgonsToBurn,
         costOfArgonsToBurn,
         securityFee,
@@ -244,7 +244,7 @@ export default class LlbVault {
       this.hodlerExpenses += fees;
 
       this.totalExpenses += fees;
-      this.totalArgonsMinted += 0;
+      this.totalMicrogonsMinted += 0;
       this.totalCostOfArgonsToBurn += costOfArgonsToBurn;
       this.totalAccruedValue += endingPrice * bitcoinCount + cashChange;
 
@@ -252,7 +252,7 @@ export default class LlbVault {
         date: this.endingDate,
         price: endingPrice,
         type: 'exit-vault',
-        argonsMinted: 0,
+        microgonsMinted: 0,
         qtyOfArgonsToBurn,
         costOfArgonsToBurn,
         securityFee,

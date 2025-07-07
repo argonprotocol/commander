@@ -4,6 +4,8 @@ import { AutoBidder } from './AutoBidder.ts';
 import { BlockSync } from './BlockSync.ts';
 import { Dockers } from './Dockers.ts';
 import { type IBidHistoryItem } from './interfaces/IBidHistoryItem.ts';
+import { readJsonFileOrNull } from './utils.ts';
+import type { IBiddingRules } from '@argonprotocol/commander-calculator';
 
 interface IBotOptions {
   datadir: string;
@@ -21,32 +23,48 @@ export default class Bot {
   public blockSync!: BlockSync;
   public storage!: CohortStorage;
 
-  public isInitialized: boolean = false;
-  public isWaitingToStart: boolean = false;
+  public isReady: boolean = false;
   public isStarting: boolean = false;
-  public isStarted: boolean = false;
+  public isSyncing: boolean = false;
+  public isWaitingForBiddingRules: boolean = false;
 
   public history: IBidHistoryItem[] = [];
 
   private options: IBotOptions;
+  private biddingRules: IBiddingRules | null = null;
 
   constructor(options: IBotOptions) {
     this.options = options;
   }
 
-  private init() {
-    if (this.isInitialized) return;
-    this.isInitialized = true;
+  public async currentFrameId() {
+    const state = await this.storage.syncStateFile().get();
+    return state?.currentFrameId ?? 0;
+  }
 
-    const client = getClient(this.options.localRpcUrl);
-    this.storage = new CohortStorage(this.options.datadir, client);
+  public async start() {
+    if (this.isStarting || this.isReady) return;
+    this.isStarting = true;
+
+    await this.waitForDockersToSync();
+
+    const clientPromise = getClient(this.options.localRpcUrl);
+    try {
+      await clientPromise;
+    } catch (error) {
+      console.error('Error initializing local client', error);
+      throw error;
+    }
+
+    this.biddingRules = readJsonFileOrNull(this.options.biddingRulesPath);
+    this.storage = new CohortStorage(this.options.datadir, clientPromise);
     this.accountset = new Accountset({
-      client,
+      client: clientPromise,
       seedAccount: this.options.pair,
       sessionKeyMnemonic: this.options.keysMnemonic,
       subaccountRange: new Array(99).fill(0).map((_, i) => i),
     });
-    this.autobidder = new AutoBidder(this.accountset, this.storage, this.options.biddingRulesPath);
+    this.autobidder = new AutoBidder(this.accountset, this.storage, this.biddingRules || ({} as IBiddingRules));
     this.blockSync = new BlockSync(
       this,
       this.autobidder,
@@ -55,42 +73,22 @@ export default class Bot {
       this.options.archiveRpcUrl,
       this.options.oldestFrameIdToSync,
     );
-  }
 
-  async currentFrameId() {
-    const state = await this.storage.syncStateFile().get();
-    return state?.currentFrameId ?? 0;
-  }
+    console.log('Initializing block sync');
 
-  async startAfterDockersSynced() {
-    if (this.isWaitingToStart || this.isStarting || this.isStarted) return;
-    this.isWaitingToStart = true;
-
-    console.log('Waiting for dockers to sync...');
-    while (true) {
-      const dockersAreSynced = await this.areDockersSynced();
-      if (dockersAreSynced) break;
-
-      console.log('Dockers are not synced, waiting 1 second');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      this.isSyncing = true;
+      await this.blockSync.load();
+      this.isSyncing = false;
+    } catch (error) {
+      console.error('Error loading block sync', error);
+      throw error;
     }
 
-    const argonBlockNumbers = await Dockers.getArgonBlockNumbers();
-    const bitcoinBlockNumbers = await Dockers.getBitcoinBlockNumbers();
-    console.log('Dockers are synced, starting bot', {
-      argonBlockNumbers,
-      bitcoinBlockNumbers,
-    });
-
-    this.isWaitingToStart = false;
-    await this.start();
-  }
-
-  async start() {
-    if (this.isStarting || this.isStarted) return;
-    this.isStarting = true;
-
-    this.init();
+    if (!this.biddingRules) {
+      this.isWaitingForBiddingRules = true;
+      return;
+    }
 
     try {
       await this.blockSync.start();
@@ -98,6 +96,7 @@ export default class Bot {
       console.error('Error starting block sync', error);
       throw error;
     }
+
     try {
       await this.autobidder.start(this.options.localRpcUrl);
     } catch (error) {
@@ -105,27 +104,47 @@ export default class Bot {
       throw error;
     }
 
+    this.isReady = true;
     this.isStarting = false;
-    this.isStarted = true;
 
-    const status = await this.blockSync.state();
-    console.log('Block sync updated', status);
+    try {
+      const state = await this.blockSync.state();
+      console.log('Block sync updated', state);
 
-    return status;
+      return state;
+    } catch (error) {
+      console.error('Error getting block sync state', error);
+      throw error;
+    }
   }
 
-  async stop() {
+  public async stop() {
     await this.blockSync.stop();
     await this.autobidder.stop();
     await this.accountset.client.then(x => x.disconnect());
   }
 
+  private async waitForDockersToSync() {
+    console.log('Waiting for dockers to sync...');
+    while (true) {
+      const areDockersSynced = await this.areDockersSynced();
+      if (areDockersSynced) break;
+
+      console.log('Dockers are not synced, checking again in 1 second');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    console.log('Dockers are synced!');
+  }
+
   private async areDockersSynced() {
     const argonBlockNumbers = await Dockers.getArgonBlockNumbers();
-    if (argonBlockNumbers.localNode < argonBlockNumbers.mainNode) return false;
+    if (!argonBlockNumbers.mainNode) return false;
+    if (argonBlockNumbers.localNode < argonBlockNumbers.mainNode - 10) return false;
 
     const bitcoinBlockNumbers = await Dockers.getBitcoinBlockNumbers();
-    if (bitcoinBlockNumbers.localNode < bitcoinBlockNumbers.mainNode) return false;
+    if (!bitcoinBlockNumbers.mainNode) return false;
+    if (bitcoinBlockNumbers.localNode < bitcoinBlockNumbers.mainNode - 1) return false;
 
     return true;
   }

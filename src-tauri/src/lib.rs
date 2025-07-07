@@ -12,6 +12,7 @@ use window_vibrancy::*;
 
 mod env;
 mod migrations;
+mod menu;
 mod ssh;
 mod utils;
 
@@ -207,16 +208,6 @@ pub fn run() {
     let migrations = migrations::get_migrations();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_http::init())
-        .plugin(logger.build())
-        .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(
-            tauri_plugin_sql::Builder::default()
-                .add_migrations(&db_url, migrations)
-                .build(),
-        )
         .setup(move |app| {
             log::info!("Starting Commander with instance name: {}", instance_name);
             let window = app.get_webview_window("main").unwrap();
@@ -228,8 +219,25 @@ pub fn run() {
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(16.0))
                 .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
 
+            // Create the application menu
+            let menu = menu::create_menu(app)?;
+            app.set_menu(menu)?;
+
             Ok(())
         })
+        .on_menu_event(|app, event| {
+            menu::handle_menu_event(&app, &event);
+        })
+        .plugin(tauri_plugin_http::init())
+        .plugin(logger.build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations(&db_url, migrations)
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![

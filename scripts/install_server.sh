@@ -92,8 +92,8 @@ logs_dir=~/install-logs
 source "$(dirname "$0")/helpers.sh"
 
 ########################################################################################
-reset "FileCheck"
-start "FileCheck"
+reset "FileUpload"
+start "FileUpload"
 
 echo "-----------------------------------------------------------------"
 echo "CHECKING COREFILES"
@@ -104,7 +104,7 @@ check_shasum "calculator"
 check_shasum "scripts"
 run_command "cp ~/SHASUMS256 ~/SHASUMS256.validated"
 
-finish "FileCheck"
+finish "FileUpload"
 
 ########################################################################################
 if ! (already_ran "UbuntuCheck"); then
@@ -255,5 +255,5 @@ fi
 sleep 2
 run_command "docker compose --env-file=.env.$ARGON_CHAIN up bot -d --build --force-recreate"
 
-finish "MiningLaunch"
-
+# Do NOT finish this step, it will be finished by the installer check
+# finish "MiningLaunch"

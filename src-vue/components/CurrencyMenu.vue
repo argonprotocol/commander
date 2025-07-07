@@ -8,11 +8,11 @@
           : `border-transparent hover:${buttonBorderProperty} hover:${buttonBgProperty}`,
       ]"
     >
-      <ArgonSign v-if="currencyStore.displayCurrency.id === 'ARGN'" class="h-[14px]" />
-      <DollarSign v-else-if="currencyStore.displayCurrency.id === 'USD'" class="h-[18px]" />
-      <EuroSign v-else-if="currencyStore.displayCurrency.id === 'EURO'" class="h-[18px]" />
-      <PoundSign v-else-if="currencyStore.displayCurrency.id === 'GBP'" class="h-[18px]" />
-      <RupeeSign v-else-if="currencyStore.displayCurrency.id === 'INR'" class="h-[18px]" />
+      <ArgonSign v-if="currency.record.key === 'ARGN'" class="h-[14px]" />
+      <DollarSign v-else-if="currency.record.key === 'USD'" class="h-[18px]" />
+      <EuroSign v-else-if="currency.record.key === 'EUR'" class="h-[18px]" />
+      <PoundSign v-else-if="currency.record.key === 'GBP'" class="h-[18px]" />
+      <RupeeSign v-else-if="currency.record.key === 'INR'" class="h-[18px]" />
     </PopoverButton>
 
     <transition
@@ -35,19 +35,19 @@
           class="flex flex-col p-1 shrink rounded bg-white text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
         >
           <a
-            v-for="(record, id) of currencyStore.displayCurrencies as Record<ICurrency, ICurrencyRecord>"
-            :key="id"
+            v-for="(record, key) of currency.records as Record<ICurrencyKey, ICurrencyRecord>"
+            :key="key"
             @click="
               () => {
-                setDisplayCurrency(id);
+                currency.setCurrencyKey(key);
                 close();
               }
             "
-            :class="currencyStore.displayCurrency.id === id ? '!text-indigo-500' : '!text-gray-900'"
+            :class="currency.record.key === key ? '!text-indigo-500' : '!text-gray-500'"
             class="group/item flex flex-row justify-between py-1 px-2 border-b last:border-b-0 border-argon-menu-hover hover:!text-indigo-600 hover:bg-argon-menu-hover cursor-pointer"
           >
             <span
-              :class="currencyStore.displayCurrency.id === id ? 'opacity-100' : 'opacity-40'"
+              :class="currency.record.key === key ? 'opacity-100' : 'opacity-80'"
               class="font-medium group-hover/item:opacity-100 mr-4"
             >
               {{ record.name }}
@@ -62,7 +62,8 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { ICurrencyRecord, useCurrencyStore, type ICurrency } from '../stores/currency';
+import { useCurrency } from '../stores/currency';
+import { ICurrencyRecord, type ICurrencyKey } from '../lib/Currency';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import ArgonSign from '../assets/currencies/argon.svg?component';
 import DollarSign from '../assets/currencies/dollar.svg?component';
@@ -84,8 +85,7 @@ const popoverElem = Vue.ref<{ el: HTMLElement | null }>({ el: null });
 const buttonBorderProperty = props.isDark ? 'border-slate-500/70' : 'border-slate-400/50';
 const buttonBgProperty = props.isDark ? 'bg-[#D6D9DF]' : 'bg-transparent';
 
-const currencyStore = useCurrencyStore();
-const { setDisplayCurrency } = currencyStore;
+const currency = useCurrency();
 
 Vue.watch(
   () => popoverElem.value?.el,

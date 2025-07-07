@@ -20,12 +20,18 @@
         </button>
       </div>
       <p class="text-black/70 pt-3 mt-3 px-2.5 relative z-10">
-        Your local files do not match your local shasums. Please update and try again.
+        Your local files do not match your local shasums. Please update and try again. You will probably need to
+        shutdown and restart this app.
       </p>
     </div>
     <ul v-else :isCompact="isCompact" class="flex flex-col grow relative h-full">
-      <template v-for="(step, index) in steps" :key="step.key">
-        <InstallProgressStep :step="step" :stepIndex="index" :stepCount="steps.length" :isCompact="isCompact" />
+      <template v-for="(stepLabel, index) in stepLabels" :key="stepLabel.key">
+        <InstallProgressStep
+          :stepLabel="stepLabel"
+          :stepIndex="index"
+          :stepsCount="stepLabels.length"
+          :isCompact="isCompact"
+        />
       </template>
     </ul>
   </div>
@@ -33,8 +39,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import type { IStep } from '../lib/InstallerStep';
-import { stepMetas } from '../lib/InstallerStep';
+import { stepLabels } from '../lib/InstallerStep';
 import InstallProgressStep from './InstallProgressStep.vue';
 import { useInstaller } from '../stores/installer';
 import { ReasonsToSkipInstall } from '../lib/Installer';
@@ -49,7 +54,6 @@ const installer = useInstaller();
 
 const isRetrying = Vue.ref(false);
 
-const steps: IStep[] = [...stepMetas];
 const hasInvalidLocalShasums = Vue.computed(() => {
   return installer.reasonToSkipInstall === ReasonsToSkipInstall.LocalShasumsNotAccurate;
 });

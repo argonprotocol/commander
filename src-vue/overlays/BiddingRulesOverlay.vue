@@ -86,23 +86,23 @@
                     <div class="flex flex-row items-center gap-2">
                       <header class="whitespace-nowrap pr-1">Argonot Ten Day Price Change =</header>
                       <InputMenu
-                        v-model="argonotPriceChangeType"
+                        v-model="micronotPriceChangeType"
                         :options="[{ value: 'Between' }, { value: 'Exactly' }]"
                       />
                       <InputNumber
-                        v-model="argonotPriceChangeMin"
+                        v-model="micronotPriceChangeMin"
                         :max="100"
                         :min="-100"
-                        :prefix="argonotPriceChangeMin > 0 ? '+' : ''"
+                        :prefix="micronotPriceChangeMin > 0 ? '+' : ''"
                         format="percent"
                       />
-                      <div v-if="argonotPriceChangeType === 'Between'" class="flex flex-row items-center gap-2">
+                      <div v-if="micronotPriceChangeType === 'Between'" class="flex flex-row items-center gap-2">
                         <span>and</span>
                         <InputNumber
-                          v-model="argonotPriceChangeMax"
+                          v-model="micronotPriceChangeMax"
                           :max="100"
-                          :min="argonotPriceChangeMin + 1"
-                          :prefix="argonotPriceChangeMax > 0 ? '+' : ''"
+                          :min="micronotPriceChangeMin + 1n"
+                          :prefix="micronotPriceChangeMax > 0 ? '+' : ''"
                           format="percent"
                         />
                       </div>
@@ -127,32 +127,27 @@
                     <label class="font-bold mt-6 mb-1.5">Starting Amount</label>
                     <div class="flex flex-row items-center gap-2">
                       <InputMenu
-                        v-model="startingAmountFormulaType"
+                        v-model="startingBidAmountFormulaType"
                         :options="[
-                          { name: 'Previous Day\'s Lowest Bid', value: 'PreviousLowestBid' },
-                          { name: 'Minimum Breakeven', value: 'MinimumBreakeven' },
-                          { name: 'Optimistic Breakeven', value: 'OptimisticBreakeven' },
+                          { name: 'Previous Day\'s Lowest Bid', value: 'PrevDayLow' },
+                          { name: 'Minimum Breakeven', value: 'MinBreakeven' },
+                          { name: 'Optimistic Breakeven', value: 'OptBreakeven' },
                           { name: 'Custom Amount', value: 'Custom' },
                         ]"
                       />
-                      <template v-if="startingAmountFormulaType !== 'Custom'">
+                      <template v-if="startingBidAmountFormulaType !== 'Custom'">
                         =
                         <InputNumber v-model="startingAmountFormulaPrice" :disabled="true" format="argons" />
                         +
-                        <InputNumber
-                          v-model="startingAmountFormulaIncrease"
-                          :min="-100"
-                          :dragBy="0.01"
-                          format="percent"
-                        />
+                        <InputNumber v-model="startingBidAmountAbsolute" :min="-100" :dragBy="0.01" format="percent" />
                       </template>
                       =
                       <InputNumber
-                        v-model="startingAmount"
+                        v-model="startingBidAmountAbsolute"
                         :min="0"
                         format="argons"
-                        :disabled="startingAmountFormulaType !== 'Custom'"
-                        :class="[startingAmountFormulaType === 'Custom' ? 'min-w-60' : '']"
+                        :disabled="startingBidAmountFormulaType !== 'Custom'"
+                        :class="[startingBidAmountFormulaType === 'Custom' ? 'min-w-60' : '']"
                       />
                     </div>
                   </div>
@@ -164,12 +159,8 @@
                       <div class="font-bold text-[22px] py-1">If You Buy @ Starting Bid</div>
                       <div class="font-light text-sm leading-6">
                         This box calculates your APR (Annual Percentage Rate) on a bid of
-                        {{ currencySymbol
-                        }}{{
-                          argonTo(startingAmount) < 10
-                            ? argonTo(startingAmount).toFixed(2)
-                            : argonTo(startingAmount).toFixed(0)
-                        }}.
+                        {{ currency.symbol
+                        }}{{ microgonToMoneyNm(startingBidAmountAbsolute).formatIfElse('< 10', '0,0.00', '0,0') }}.
                       </div>
 
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
@@ -181,11 +172,10 @@
                         <BidBreakdownTooltipArrow />
                         <div class="font-bold text-sm uppercase">Optimistic APR</div>
                         <div class="text-5xl font-bold py-1">
-                          {{ fmtCommas(Math.min(startingOptimisticAPR, 999_999).toString())
-                          }}{{ startingOptimisticAPR > 999_999 ? '+' : '' }}%
+                          {{ numeral(startingOptimisticAPR).formatCapped('0,0', 999_999) }}%
                         </div>
                         <div class="font-light text-md">
-                          ({{ fmtCommas(startingOptimisticTDPR.toString()) }}% Every 10 Days)
+                          ({{ numeral(startingOptimisticTDPR).formatIfElse('< 10', '0,0.00', '0,0') }} Every 10 Days)
                         </div>
                       </div>
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
@@ -197,11 +187,10 @@
                         <BidBreakdownTooltipArrow />
                         <div class="font-bold text-sm uppercase">Minimum APR</div>
                         <div class="text-5xl font-bold py-1">
-                          {{ fmtCommas(Math.min(startingMinimumAPR, 999_999).toString())
-                          }}{{ startingMinimumAPR > 999_999 ? '+' : '' }}%
+                          {{ numeral(startingMinimumAPR).formatCapped('0,0', 999_999) }}%
                         </div>
                         <div class="font-light text-md">
-                          ({{ fmtCommas(startingMinimumTDPR.toString()) }}% Every 10 Days)
+                          ({{ numeral(startingMinimumTDPR).formatIfElse('< 10', '0,0.00', '0,0') }} Every 10 Days)
                         </div>
                       </div>
                     </div>
@@ -218,11 +207,9 @@
                     </p>
 
                     <label class="font-bold mt-6 mb-1.5">Delay Before Submitting Next Bid</label>
-                    <!-- <p class="opacity-80 font-light">By default your bot tries to reup your losing bids in the next block (next minute), however, you can increase this delay.</p> -->
                     <InputNumber v-model="rebiddingDelay" :min="1" class="w-8/12" />
 
                     <label class="font-bold mt-6 mb-1.5">Increment By</label>
-                    <!-- <p class="opacity-80 font-light">The amount you want to increment your losing bids in order to get back in the game.</p> -->
                     <InputNumber
                       v-model="incrementAmount"
                       :min="0.01"
@@ -268,27 +255,27 @@
                     <label class="font-bold mt-6 mb-1.5">Your Final Bid Price</label>
                     <div class="flex flex-row items-center gap-2">
                       <InputMenu
-                        v-model="finalAmountFormulaType"
+                        v-model="finalBidAmountFormulaType"
                         :options="[
-                          { name: 'Previous Day\'s Winning Bid', value: 'PreviousHighestBid' },
-                          { name: 'Minimum Breakeven', value: 'MinimumBreakeven' },
-                          { name: 'Optimistic Breakeven', value: 'OptimisticBreakeven' },
+                          { name: 'Previous Day\'s Winning Bid', value: 'PrevDayHigh' },
+                          { name: 'Minimum Breakeven', value: 'MinBreakeven' },
+                          { name: 'Optimistic Breakeven', value: 'OptBreakeven' },
                           { name: 'Custom Amount', value: 'Custom' },
                         ]"
                       />
-                      <template v-if="finalAmountFormulaType !== 'Custom'">
+                      <template v-if="finalBidAmountFormulaType !== 'Custom'">
                         =
                         <InputNumber v-model="finalAmountFormulaPrice" :disabled="true" format="argons" />
                         +
-                        <InputNumber v-model="finalAmountFormulaIncrease" :min="-100" :dragBy="0.01" format="percent" />
+                        <InputNumber v-model="finalBidAmountAbsolute" :min="-100" :dragBy="0.01" format="percent" />
                       </template>
                       =
                       <InputNumber
-                        v-model="finalAmount"
+                        v-model="finalBidAmountAbsolute"
                         :min="0"
                         format="argons"
-                        :disabled="finalAmountFormulaType !== 'Custom'"
-                        :class="[finalAmountFormulaType === 'Custom' ? 'min-w-60' : '']"
+                        :disabled="finalBidAmountFormulaType !== 'Custom'"
+                        :class="[finalBidAmountFormulaType === 'Custom' ? 'min-w-60' : '']"
                       />
                     </div>
                   </div>
@@ -300,10 +287,8 @@
                       <div class="font-bold text-[22px] py-1">If You Buy @ Final Ceiling</div>
                       <div class="font-light text-sm leading-6">
                         This box calculates your APR (Annual Percentage Rate) on a bid of
-                        {{ currencySymbol
-                        }}{{
-                          argonTo(finalAmount) < 10 ? argonTo(finalAmount).toFixed(2) : argonTo(finalAmount).toFixed(0)
-                        }}.
+                        {{ currency.symbol
+                        }}{{ microgonToMoneyNm(finalBidAmountAbsolute).formatIfElse('< 10', '0,0.00', '0,0') }}.
                       </div>
 
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
@@ -315,11 +300,10 @@
                         <BidBreakdownTooltipArrow />
                         <div class="font-bold text-sm uppercase">Optimistic APR</div>
                         <div class="text-5xl font-bold py-1">
-                          {{ fmtCommas(Math.min(finalOptimisticAPR, 999_999).toString())
-                          }}{{ finalOptimisticAPR > 999_999 ? '+' : '' }}%
+                          {{ numeral(finalOptimisticAPR).formatCapped('0,0', 999_999) }}%
                         </div>
                         <div class="font-light text-md">
-                          ({{ fmtCommas(finalOptimisticTDPR.toString()) }}% Every 10 Days)
+                          ({{ numeral(finalOptimisticTDPR).formatIfElse('< 10', '0,0.00', '0,0') }} Every 10 Days)
                         </div>
                       </div>
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
@@ -331,11 +315,10 @@
                         <BidBreakdownTooltipArrow />
                         <div class="font-bold text-sm uppercase">Minimum APR</div>
                         <div class="text-5xl font-bold py-1">
-                          {{ fmtCommas(Math.min(finalMinimumAPR, 999_999).toString())
-                          }}{{ finalMinimumAPR > 999_999 ? '+' : '' }}%
+                          {{ numeral(finalMinimumAPR).formatCapped('0,0', 999_999) }}%
                         </div>
                         <div class="font-light text-md">
-                          ({{ fmtCommas(finalMinimumTDPR.toString()) }}% Every 10 Days)
+                          ({{ numeral(finalMinimumTDPR).formatIfElse('< 10', '0,0.00', '0,0') }} Every 10 Days)
                         </div>
                       </div>
                     </div>
@@ -444,14 +427,20 @@
                             CAP SPENDING
                           </div>
                           <span @click="throttleSpending = !throttleSpending">Spend no more than</span>
-                          <InputNumber
+                          <!-- <InputNumber
+                            v-model="throttleSpendingAmount"
+                            :min="finalBidAmountAbsolute"
+                            format="argons"
+                            class="mx-2"
+                          /> -->
+                          <!-- <InputNumber
                             @click="throttleSpending = true"
                             v-model="throttleSpendingAmount"
-                            :min="finalAmount"
+                            :min="finalBidAmountAbsolute"
                             :dragBy="1"
                             format="argons"
                             class="mx-2"
-                          />
+                          /> -->
                           <span @click="throttleSpending = !throttleSpending">per slot</span>
                         </div>
                       </li>
@@ -501,7 +490,7 @@
                       </li>
                     </ul>
                   </div>
-                  <div class="flex flex-col w-4/12">
+                  <!-- <div class="flex flex-col w-4/12">
                     <header>&nbsp;</header>
                     <div
                       class="flex flex-col bg-yellow-50/30 border border-yellow-800/20 rounded-md shadow-md px-10 pt-7 pb-8 text-center ml-5 mt-1 h-full"
@@ -524,10 +513,10 @@
                         <span v-else>Recommendations Applied</span>
                       </button>
                     </div>
-                  </div>
+                  </div> -->
                 </section>
 
-                <section class="flex flex-row mt-4">
+                <!-- <section class="flex flex-row mt-4">
                   <div class="flex flex-col w-8/12">
                     <header>Bot Longevity</header>
                     <p class="opacity-80 font-light">
@@ -540,40 +529,40 @@
                       <li class="flex flex-row w-full font-mono text-md items-center h-[32px]">
                         <RadioButton
                           name="disable-bot"
-                          :checked="disableBot === 'AfterFirstSeat'"
-                          @click="disableBot = 'AfterFirstSeat'"
+                          :checked="disableBotType === 'AfterFirstSeat'"
+                          @click="disableBotType = 'AfterFirstSeat'"
                         />
                         <div
-                          :class="disableBot === 'AfterFirstSeat' ? '' : 'opacity-50'"
+                          :class="disableBotType === 'AfterFirstSeat' ? '' : 'opacity-50'"
                           class="flex flex-row items-center cursor-default"
                         >
                           <div
-                            @click="disableBot = 'AfterFirstSeat'"
+                            @click="disableBotType = 'AfterFirstSeat'"
                             class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2"
                           >
                             SINGLE SEAT
                           </div>
-                          <span @click="disableBot = 'AfterFirstSeat'">Disable bot after winning first seat</span>
+                          <span @click="disableBotType = 'AfterFirstSeat'">Disable bot after winning first seat</span>
                         </div>
                       </li>
 
                       <li class="flex flex-row w-full font-mono text-md items-center h-[32px]">
                         <RadioButton
                           name="disable-bot"
-                          :checked="disableBot === 'AfterFirstSlot'"
-                          @click="disableBot = 'AfterFirstSlot'"
+                          :checked="disableBotType === 'AfterFirstSlot'"
+                          @click="disableBotType = 'AfterFirstSlot'"
                         />
                         <div
-                          :class="disableBot === 'AfterFirstSlot' ? '' : 'opacity-50'"
+                          :class="disableBotType === 'AfterFirstSlot' ? '' : 'opacity-50'"
                           class="flex flex-row items-center cursor-default"
                         >
                           <div
-                            @click="disableBot = 'AfterFirstSlot'"
+                            @click="disableBotType = 'AfterFirstSlot'"
                             class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2"
                           >
                             SINGLE SLOT
                           </div>
-                          <span @click="disableBot = 'AfterFirstSlot'">
+                          <span @click="disableBotType = 'AfterFirstSlot'">
                             Disable bot after winning seats in first slot
                           </span>
                         </div>
@@ -582,30 +571,30 @@
                       <li class="flex flex-row w-full font-mono text-md items-center h-[32px]">
                         <RadioButton
                           name="disable-bot"
-                          :checked="disableBot === 'Never'"
-                          @click="disableBot = 'Never'"
+                          :checked="disableBotType === 'Never'"
+                          @click="disableBotType = 'Never'"
                         />
                         <div
-                          :class="disableBot === 'Never' ? '' : 'opacity-50'"
+                          :class="disableBotType === 'Never' ? '' : 'opacity-50'"
                           class="flex flex-row items-center cursor-default"
                         >
-                          <div @click="disableBot = 'Never'" class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2">
+                          <div @click="disableBotType = 'Never'" class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2">
                             CONTINUOUS
                           </div>
-                          <span @click="disableBot = 'Never'">Empower bot to continue renewing my seats</span>
+                          <span @click="disableBotType = 'Never'">Empower bot to continue renewing my seats</span>
                         </div>
                       </li>
 
                       <li class="flex flex-row w-full font-mono text-md items-center h-[32px]">
-                        <RadioButton name="disable-bot" :checked="disableBot === 'Now'" @click="disableBot = 'Now'" />
+                        <RadioButton name="disable-bot" :checked="disableBotType === 'Now'" @click="disableBotType = 'Now'" />
                         <div
-                          :class="disableBot === 'Now' ? '' : 'opacity-50'"
+                          :class="disableBotType === 'Now' ? '' : 'opacity-50'"
                           class="flex flex-row items-center cursor-default"
                         >
-                          <div @click="disableBot = 'Now'" class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2">
+                          <div @click="disableBotType = 'Now'" class="text-white bg-[#96A1AD] px-2 py-0 rounded-md mx-2">
                             DISABLED
                           </div>
-                          <span @click="disableBot = 'Now'">Disable bot immediately</span>
+                          <span @click="disableBotType = 'Now'">Disable bot immediately</span>
                         </div>
                       </li>
                     </ul>
@@ -616,28 +605,28 @@
                       class="flex flex-col bg-yellow-50/30 border border-yellow-800/20 rounded-md shadow-md p-4 pt-6 mt-0.5 text-center ml-5"
                     >
                       <div class="font-bold text-xl py-1">Compounding Scenario</div>
-                      <div v-if="disableBot === 'AfterFirstSeat'" class="font-light text-sm leading-6">
+                      <div v-if="disableBotType === 'AfterFirstSeat'" class="font-light text-sm leading-6">
                         This box calculates your expected range
                         <br />
                         of returns based on shutting down after
                         <br />
                         winning a single seat.
                       </div>
-                      <div v-if="disableBot === 'AfterFirstSlot'" class="font-light text-sm leading-6">
+                      <div v-if="disableBotType === 'AfterFirstSlot'" class="font-light text-sm leading-6">
                         This box calculates your expected range
                         <br />
                         of returns based on shutting down after
                         <br />
                         winning a single slot.
                       </div>
-                      <div v-else-if="disableBot === 'Never'" class="font-light text-sm leading-6">
+                      <div v-else-if="disableBotType === 'Never'" class="font-light text-sm leading-6">
                         This box calculates your expected range
                         <br />
                         of returns based on a full year of mining.
                       </div>
 
                       <div class="h-[1px] bg-yellow-800/20 my-4"></div>
-                      <div v-if="disableBot === 'Now'" class="text-sm uppercase px-10 py-10 opacity-50">
+                      <div v-if="disableBotType === 'Now'" class="text-sm uppercase px-10 py-10 opacity-50">
                         Use the settings on the left to enable the bot so we can calculate your returns.
                       </div>
                       <div v-else>
@@ -647,22 +636,20 @@
                           @mouseleave="hideBreakdownTooltip()"
                         >
                           <BidBreakdownTooltipArrow />
-                          <div v-if="['AfterFirstSeat', 'AfterFirstSlot'].includes(disableBot)">
+                          <div v-if="['AfterFirstSeat', 'AfterFirstSlot'].includes(disableBotType)">
                             <div class="font-bold text-sm uppercase">Optimistic 10-Day Yield</div>
                             <div class="text-5xl font-bold py-1">
-                              {{ fmtCommas(Math.min(startingOptimisticTDPR, 999_999).toString())
-                              }}{{ startingOptimisticTDPR > 999_999 ? '+' : '' }}%
+                              {{ numeral(startingOptimisticTDPR).formatCapped('0,0', 999_999) }}%
                             </div>
                             <div class="font-light text-md">(Ends After Slot Completion)</div>
                           </div>
-                          <div v-else-if="disableBot === 'Never'">
+                          <div v-else-if="disableBotType === 'Never'">
                             <div class="font-bold text-sm uppercase">Optimistic APY</div>
                             <div class="text-5xl font-bold py-1">
-                              {{ fmtCommas(Math.min(startingOptimisticAPY, 999_999).toString())
-                              }}{{ startingOptimisticAPY > 999_999 ? '+' : '' }}%
+                              {{ numeral(startingOptimisticAPY).formatCapped('0,0', 999_999) }}%
                             </div>
                             <div class="font-light text-md">
-                              ({{ fmtCommas(startingOptimisticTDPR.toFixed(0)) }}% Compounding Every 10 Days)
+                              ({{ numeral(startingOptimisticTDPR).formatIfElse('< 10', '0,0.00', '0,0') }} Compounding Every 10 Days)
                             </div>
                           </div>
                         </div>
@@ -673,31 +660,29 @@
                           @mouseleave="hideBreakdownTooltip()"
                         >
                           <BidBreakdownTooltipArrow />
-                          <div v-if="['AfterFirstSeat', 'AfterFirstSlot'].includes(disableBot)">
+                          <div v-if="['AfterFirstSeat', 'AfterFirstSlot'].includes(disableBotType)">
                             <div class="font-bold text-sm uppercase">Minimum 10-Day Yield</div>
                             <div class="text-5xl font-bold py-1">
-                              {{ fmtCommas(Math.min(finalMinimumTDPR, 999_999).toString())
-                              }}{{ finalMinimumTDPR > 999_999 ? '+' : '' }}%
+                              {{ numeral(finalMinimumTDPR).formatCapped('0,0', 999_999) }}%
                             </div>
                             <div class="font-light text-md">(Ends After Slot Completion)</div>
                           </div>
-                          <div v-else-if="disableBot === 'Never'">
+                          <div v-else-if="disableBotType === 'Never'">
                             <div class="font-bold text-sm uppercase">Minimum APY</div>
                             <div class="text-5xl font-bold py-1">
-                              {{ fmtCommas(Math.min(finalMinimumAPY, 999_999).toString())
-                              }}{{ finalMinimumAPY > 999_999 ? '+' : '' }}%
+                              {{ numeral(finalMinimumAPY).formatCapped('0,0', 999_999) }}%
                             </div>
                             <div class="font-light text-md">
-                              ({{ fmtCommas(finalMinimumTDPR.toFixed(0)) }}% Compounding Every 10 Days)
+                              ({{ numeral(finalMinimumTDPR).formatIfElse('< 10', '0,0.00', '0,0') }} Compounding Every 10 Days)
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </section>
+                </section> -->
 
-                <section class="flex flex-row mt-4">
+                <!-- <section class="flex flex-row mt-4">
                   <div class="flex flex-col">
                     <header>&nbsp;</header>
                     <p class="opacity-80 font-light w-10/12 mt-5">
@@ -705,22 +690,26 @@
                       move in any necessary funds needed to cover your bids.
                     </p>
                   </div>
-                </section>
+                </section> -->
               </div>
             </div>
 
             <div class="flex flex-row justify-end px-14 border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
               <div class="grow font-bold text-lg text-slate-900/70">
                 Tokens Needed:
-                <template v-if="requiredArgons !== desiredArgons">
-                  Between {{ fmtCommas(requiredArgons.toString()) }} &
+                <template v-if="requiredMicrogons !== desiredMicrogons">
+                  Between {{ microgonToArgonNm(requiredMicrogons).format('0,0') }} &
                 </template>
-                {{ fmtCommas(desiredArgons.toString()) }} Argon{{ desiredArgons === 1 ? '' : 's' }}
+                {{ microgonToArgonNm(desiredMicrogons).format('0,0') }} Argon{{
+                  microgonToArgonNm(desiredMicrogons).format('0') === '1' ? '' : 's'
+                }}
                 +
-                <template v-if="requiredArgonots !== desiredArgonots">
-                  {{ fmtCommas(requiredArgonots.toString()) }} -
+                <template v-if="requiredMicronots !== desiredMicronots">
+                  {{ microgonToArgonNm(requiredMicronots).format('0,0') }} -
                 </template>
-                {{ fmtCommas(desiredArgonots.toString()) }} Argonot{{ desiredArgonots === 1 ? '' : 's' }}
+                {{ microgonToArgonNm(desiredMicronots).format('0,0') }} Argonot{{
+                  microgonToArgonNm(desiredMicronots).format('0') === '1' ? '' : 's'
+                }}
               </div>
               <div class="flex flex-row space-x-4">
                 <button
@@ -749,12 +738,10 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import dayjs from 'dayjs';
-import { storeToRefs } from 'pinia';
 import { Dialog, DialogPanel, TransitionRoot } from '@headlessui/vue';
 import emitter from '../emitters/basic';
-import { fmtCommas } from '../lib/Utils';
 import { useConfig } from '../stores/config';
-import { useCurrencyStore } from '../stores/currency';
+import { useCurrency } from '../stores/currency';
 import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon, LightBulbIcon } from '@heroicons/vue/24/outline';
 import RadioButton from '../components/RadioButton.vue';
@@ -765,13 +752,14 @@ import InfoTip from '../components/InfoTip.vue';
 import BidBreakdownTooltip from './BidBreakdownTooltip.vue';
 import BidBreakdownTooltipArrow from './BidBreakdownTooltipArrow.vue';
 import { getMainchain } from '../stores/mainchain.ts';
-import { DisableBotType } from '../interfaces/IBiddingRules.ts';
+import { BidAmountFormulaType, DisableBotType } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
+import numeral, { createNumeralHelpers } from '../lib/numeral';
+import { bigIntMax } from '@argonprotocol/commander-calculator/src/utils.ts';
+import { MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
 
 const config = useConfig();
-const currencyStore = useCurrencyStore();
-
-const { argonTo } = currencyStore;
-const { currencySymbol } = storeToRefs(currencyStore);
+const currency = useCurrency();
+const { microgonToArgonNm, microgonToMoneyNm } = createNumeralHelpers(currency);
 
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
@@ -782,11 +770,11 @@ const hasExistingRules = Vue.ref(false);
 const dialogPanel = Vue.ref(null);
 const isShowingBreakdownTooltip = Vue.ref(false);
 
-const requiredArgons = Vue.ref(1);
-const requiredArgonots = Vue.ref(1);
+const requiredMicrogons = Vue.ref(1n);
+const requiredMicronots = Vue.ref(1n);
 
-const desiredArgons = Vue.ref(1);
-const desiredArgonots = Vue.ref(1);
+const desiredMicrogons = Vue.ref(1n);
+const desiredMicronots = Vue.ref(1n);
 
 const calculatorData = new BiddingCalculatorData(getMainchain());
 const startingMinimumCalculator = new BiddingCalculator('Minimum', calculatorData);
@@ -847,86 +835,86 @@ const calculatedArgonCirculation = Vue.ref(calculatedArgonCirculationMenu.value[
 const calculatedArgonCirculationMin = Vue.ref(0);
 
 Vue.watch(calculatedArgonCirculation, () => {
-  startingOptimisticCalculator.setArgonCirculation(calculatedArgonCirculation.value);
-  finalOptimisticCalculator.setArgonCirculation(calculatedArgonCirculation.value);
+  startingOptimisticCalculator.setFutureArgonCirculation(calculatedArgonCirculation.value);
+  finalOptimisticCalculator.setFutureArgonCirculation(calculatedArgonCirculation.value);
   updateStartingAmountFormulaPrice();
   updateFinalAmountFormulaPrice();
 });
 
 // Argonot Price Change
-const argonotPriceChangeType = Vue.ref('Between' as IBiddingRules['argonotPriceChangeType']);
-const argonotPriceChangeMin = Vue.ref(0);
-const argonotPriceChangeMax = Vue.ref(0);
+const micronotPriceChangeType = Vue.ref('Between' as IBiddingRules['micronotPriceChangeType']);
+const micronotPriceChangeMin = Vue.ref(0n);
+const micronotPriceChangeMax = Vue.ref(0n);
 
-Vue.watch(argonotPriceChangeMin, () => {
-  startingMinimumCalculator.setArgonotPriceChange(argonotPriceChangeMin.value);
-  finalMinimumCalculator.setArgonotPriceChange(argonotPriceChangeMin.value);
+Vue.watch(micronotPriceChangeMin, () => {
+  startingMinimumCalculator.setArgonotPriceChangePct(micronotPriceChangeMin.value);
+  finalMinimumCalculator.setArgonotPriceChangePct(micronotPriceChangeMin.value);
   updateStartingAmountFormulaPrice();
   updateFinalAmountFormulaPrice();
 });
 
-Vue.watch(argonotPriceChangeMax, () => {
-  startingOptimisticCalculator.setArgonotPriceChange(argonotPriceChangeMax.value);
-  finalOptimisticCalculator.setArgonotPriceChange(argonotPriceChangeMax.value);
+Vue.watch(micronotPriceChangeMax, () => {
+  startingOptimisticCalculator.setArgonotPriceChangePct(micronotPriceChangeMax.value);
+  finalOptimisticCalculator.setArgonotPriceChangePct(micronotPriceChangeMax.value);
   updateStartingAmountFormulaPrice();
   updateFinalAmountFormulaPrice();
 });
 
 // Starting Amount
-const startingAmount = Vue.ref(0);
-const startingAmountFormulaType = Vue.ref('PreviousLowestBid' as IBiddingRules['startingAmountFormulaType']);
-const startingAmountFormulaPrice = Vue.ref(0);
-const startingAmountFormulaIncrease = Vue.ref(0);
+const startingBidAmountFormulaType = Vue.ref('PrevDayLow' as IBiddingRules['startingBidAmountFormulaType']);
+const startingAmountFormulaPrice = Vue.ref<bigint>(0n);
+const startingBidAmountAbsolute = Vue.ref<bigint>(0n);
+const startingBidAmountRelative = Vue.ref<number>(0);
 
 function updateStartingAmountFormulaPrice() {
-  if (startingAmountFormulaType.value === 'PreviousLowestBid') {
-    startingAmountFormulaPrice.value = calculatorData.previousLowestBid;
-  } else if (startingAmountFormulaType.value === 'MinimumBreakeven') {
-    startingAmountFormulaPrice.value = startingMinimumCalculator.breakevenBid;
-  } else if (startingAmountFormulaType.value === 'OptimisticBreakeven') {
-    startingAmountFormulaPrice.value = startingOptimisticCalculator.breakevenBid;
+  if (startingBidAmountFormulaType.value === BidAmountFormulaType.PreviousDayLow) {
+    startingAmountFormulaPrice.value = calculatorData.previousDayLowBid;
+  } else if (startingBidAmountFormulaType.value === BidAmountFormulaType.MinimumBreakeven) {
+    startingAmountFormulaPrice.value = startingMinimumCalculator.minimumBreakevenBid;
+  } else if (startingBidAmountFormulaType.value === BidAmountFormulaType.OptimisticBreakeven) {
+    startingAmountFormulaPrice.value = startingOptimisticCalculator.optimisticBreakevenBid;
   }
   updateStartingAmount();
 }
 
 function updateStartingAmount() {
-  if (startingAmountFormulaType.value !== 'Custom') {
-    startingAmount.value = startingAmountFormulaPrice.value * (1 + startingAmountFormulaIncrease.value / 100);
+  if (startingBidAmountFormulaType.value !== 'Custom') {
+    startingBidAmountAbsolute.value = startingAmountFormulaPrice.value * (1n + startingBidAmountAbsolute.value / 100n);
   }
 
   updateStartingCalculators();
 }
 
 function updateStartingCalculators() {
-  requiredArgons.value = Math.max(1, Math.ceil(startingAmount.value * calculatedTotalSeats.value * 1.1));
-  requiredArgonots.value = Math.max(
-    1,
-    Math.ceil(calculatorData.argonotsRequiredForBid * calculatedTotalSeats.value * 1.1),
-  );
+  const txnFee = 1n;
+  const seatCount = BigInt(calculatedTotalSeats.value);
+  requiredMicrogons.value = bigIntMax(1n, (startingBidAmountRelative.value + txnFee) * seatCount);
+  requiredMicronots.value = bigIntMax(1n, (calculatorData.micronotsRequiredForBid + txnFee) * seatCount);
 
-  startingMinimumCalculator.setBid(startingAmount.value);
-  startingOptimisticCalculator.setBid(startingAmount.value);
+  startingMinimumCalculator.setPrice(startingBidAmountRelative.value);
+  startingOptimisticCalculator.setPrice(startingBidAmountRelative.value);
 
-  startingOptimisticAPR.value = startingOptimisticCalculator.APR;
-  startingOptimisticAPY.value = startingOptimisticCalculator.APY;
-  startingOptimisticTDPR.value = startingOptimisticCalculator.TDPR;
-  startingMinimumAPR.value = startingMinimumCalculator.APR;
-  startingMinimumTDPR.value = startingMinimumCalculator.TDPR;
+  startingOptimisticAPR.value = startingOptimisticCalculator.minimumAPR;
+  startingOptimisticAPY.value = startingOptimisticCalculator.minimumAPY;
+  startingOptimisticTDPR.value = startingOptimisticCalculator.minimumTDPR;
+  startingMinimumAPR.value = startingMinimumCalculator.minimumAPR;
+  startingMinimumTDPR.value = startingMinimumCalculator.minimumTDPR;
 }
 
-Vue.watch(startingAmountFormulaType, updateStartingAmountFormulaPrice);
-Vue.watch(startingAmountFormulaIncrease, updateStartingAmount);
-Vue.watch(startingAmount, updateStartingCalculators);
+Vue.watch(startingBidAmountFormulaType, updateStartingAmountFormulaPrice);
+Vue.watch(startingBidAmountAbsolute, updateStartingAmount);
+Vue.watch(startingBidAmountRelative, updateStartingCalculators);
 Vue.watch(calculatedTotalSeats, updateStartingCalculators);
 
 // Rebidding
-const incrementAmount = Vue.ref(0.01);
+const incrementAmount = Vue.ref(BigInt(Math.floor(0.01 * MICROGONS_PER_ARGON)));
 const rebiddingDelay = Vue.ref(1);
+
 const appliedRecommendedRebiddingSettings = Vue.ref(false);
 
 function applyRecommendedRebiddingSettings() {
   rebiddingDelay.value = 10;
-  incrementAmount.value = 5;
+  incrementAmount.value = 5n;
   appliedRecommendedRebiddingSettings.value = true;
 }
 
@@ -937,63 +925,62 @@ Vue.watch(rebiddingDelay, () => {
 });
 
 Vue.watch(incrementAmount, () => {
-  if (incrementAmount.value !== 5) {
+  if (incrementAmount.value !== 5n) {
     appliedRecommendedRebiddingSettings.value = false;
   }
 });
 
 // Final Amount
-const finalAmount = Vue.ref(0);
-const finalAmountFormulaType = Vue.ref('PreviousHighestBid' as IBiddingRules['finalAmountFormulaType']);
-const finalAmountFormulaPrice = Vue.ref(0);
-const finalAmountFormulaIncrease = Vue.ref(0);
+const finalBidAmountRelative = Vue.ref(0);
+const finalBidAmountFormulaType = Vue.ref('PrevDayHigh' as IBiddingRules['finalBidAmountFormulaType']);
+const finalAmountFormulaPrice = Vue.ref(0n);
+const finalBidAmountAbsolute = Vue.ref(0n);
 
 function updateFinalAmountFormulaPrice() {
-  if (finalAmountFormulaType.value === 'PreviousHighestBid') {
-    finalAmountFormulaPrice.value = calculatorData.previousHighestBid;
-  } else if (finalAmountFormulaType.value === 'MinimumBreakeven') {
-    finalAmountFormulaPrice.value = calculatorData.argonRewardsForThisSeat;
-  } else if (finalAmountFormulaType.value === 'OptimisticBreakeven') {
-    finalAmountFormulaPrice.value = finalOptimisticCalculator.breakevenBid;
+  if (finalBidAmountFormulaType.value === BidAmountFormulaType.PreviousDayHigh) {
+    finalAmountFormulaPrice.value = calculatorData.previousDayHighBid;
+  } else if (finalBidAmountFormulaType.value === BidAmountFormulaType.MinimumBreakeven) {
+    finalAmountFormulaPrice.value = calculatorData.microgonsToMineThisSeat;
+  } else if (finalBidAmountFormulaType.value === BidAmountFormulaType.OptimisticBreakeven) {
+    finalAmountFormulaPrice.value = finalOptimisticCalculator.optimisticBreakevenBid;
   }
   updateFinalAmount();
 }
 
 function updateFinalAmount() {
-  if (finalAmountFormulaType.value !== 'Custom') {
-    finalAmount.value = finalAmountFormulaPrice.value * (1 + finalAmountFormulaIncrease.value / 100);
+  if (finalBidAmountFormulaType.value !== 'Custom') {
+    finalBidAmountAbsolute.value = finalAmountFormulaPrice.value * (1n + finalBidAmountAbsolute.value / 100n);
   }
 
   updateFinalCalculators();
 }
 
 function updateFinalCalculators() {
-  desiredArgons.value = Math.max(1, Math.ceil(finalAmount.value * calculatedTotalSeats.value * 1.1));
-  desiredArgonots.value = Math.max(
-    1,
-    Math.ceil(calculatorData.argonotsRequiredForBid * calculatedTotalSeats.value * 1.1),
-  );
+  const txnFee = 1n;
+  const seatCount = BigInt(calculatedTotalSeats.value);
+  desiredMicrogons.value = bigIntMax(1n, (finalBidAmountAbsolute.value + txnFee) * seatCount);
+  desiredMicronots.value = bigIntMax(1n, (calculatorData.micronotsRequiredForBid + txnFee) * seatCount);
 
-  finalMinimumCalculator.setBid(finalAmount.value);
-  finalOptimisticCalculator.setBid(finalAmount.value);
+  finalMinimumCalculator.setPrice(finalBidAmountRelative.value);
+  finalOptimisticCalculator.setPrice(finalBidAmountRelative.value);
 
-  finalOptimisticAPR.value = finalOptimisticCalculator.APR;
-  finalOptimisticTDPR.value = finalOptimisticCalculator.TDPR;
-  finalMinimumAPR.value = finalMinimumCalculator.APR;
-  finalMinimumAPY.value = finalMinimumCalculator.APY;
-  finalMinimumTDPR.value = finalMinimumCalculator.TDPR;
+  finalOptimisticAPR.value = finalOptimisticCalculator.minimumAPR;
+  finalOptimisticTDPR.value = finalOptimisticCalculator.minimumTDPR;
+  finalMinimumAPR.value = finalMinimumCalculator.minimumAPR;
+  finalMinimumAPY.value = finalMinimumCalculator.minimumAPY;
+  finalMinimumTDPR.value = finalMinimumCalculator.minimumTDPR;
 }
 
-Vue.watch(finalAmountFormulaType, updateFinalAmountFormulaPrice);
-Vue.watch(finalAmountFormulaIncrease, updateFinalAmount);
-Vue.watch(finalAmount, updateFinalCalculators);
+Vue.watch(finalBidAmountFormulaType, updateFinalAmountFormulaPrice);
+Vue.watch(finalBidAmountAbsolute, updateFinalAmount);
+Vue.watch(finalBidAmountRelative, updateFinalCalculators);
 Vue.watch(calculatedTotalSeats, updateFinalCalculators);
 
 // Throttles
 const throttleSeats = Vue.ref(false);
 const throttleSeatCount = Vue.ref(1);
 const throttleSpending = Vue.ref(false);
-const throttleSpendingAmount = Vue.ref(0);
+const throttleSpendingAmount = Vue.ref(0n);
 const throttleDistributeEvenly = Vue.ref(false);
 const appliedRecommendedThrottles = Vue.ref(false);
 
@@ -1005,27 +992,27 @@ function applyRecommendedThrottles() {
 }
 
 // Disable
-const disableBot: Vue.Ref<DisableBotType> = Vue.ref(DisableBotType.Never);
+const disableBotType: Vue.Ref<DisableBotType> = Vue.ref(DisableBotType.Never);
 
 async function saveRules() {
   isSaving.value = true;
   const rules: IBiddingRules = {
     calculatedTotalSeats: calculatedTotalSeats.value,
     calculatedArgonCirculation: calculatedArgonCirculation.value,
-    argonotPriceChangeType: argonotPriceChangeType.value,
-    argonotPriceChangeMin: argonotPriceChangeMin.value,
-    argonotPriceChangeMax: argonotPriceChangeMax.value,
+    micronotPriceChangeType: micronotPriceChangeType.value,
+    micronotPriceChangeMin: micronotPriceChangeMin.value,
+    micronotPriceChangeMax: micronotPriceChangeMax.value,
 
-    startingAmountFormulaType: startingAmountFormulaType.value,
-    startingAmountFormulaIncrease: startingAmountFormulaIncrease.value,
-    startingAmount: startingAmount.value,
+    startingBidAmountFormulaType: startingBidAmountFormulaType.value,
+    startingBidAmountAbsolute: startingBidAmountAbsolute.value,
+    startingBidAmountRelative: startingBidAmountRelative.value,
 
     rebiddingDelay: rebiddingDelay.value,
     incrementAmount: incrementAmount.value,
 
-    finalAmountFormulaType: finalAmountFormulaType.value,
-    finalAmountFormulaIncrease: finalAmountFormulaIncrease.value,
-    finalAmount: finalAmount.value,
+    finalBidAmountFormulaType: finalBidAmountFormulaType.value,
+    finalBidAmountAbsolute: finalBidAmountAbsolute.value,
+    finalBidAmountRelative: finalBidAmountRelative.value,
 
     throttleSeats: throttleSeats.value,
     throttleSeatCount: throttleSeatCount.value,
@@ -1035,13 +1022,13 @@ async function saveRules() {
 
     throttleDistributeEvenly: throttleDistributeEvenly.value,
 
-    disableBot: disableBot.value,
+    disableBotType: disableBotType.value,
 
-    requiredArgons: requiredArgons.value,
-    requiredArgonots: requiredArgonots.value,
+    requiredMicrogons: requiredMicrogons.value,
+    requiredMicronots: requiredMicronots.value,
 
-    desiredArgons: desiredArgons.value,
-    desiredArgonots: desiredArgonots.value,
+    desiredMicrogons: desiredMicrogons.value,
+    desiredMicronots: desiredMicronots.value,
   };
 
   config.biddingRules = rules;
@@ -1067,20 +1054,20 @@ function showBreakdownTooltip(calculator: BiddingCalculator) {
   isShowingBreakdownTooltip.value = true;
   scenarioData.value = {
     scenarioName: calculator.scenarioName,
-    costOfArgonotLoss: calculator.costOfArgonotLoss,
-    argonotPriceChange: calculator.argonotPriceChange,
-    argonotsRequiredForBid: calculatorData.argonotsRequiredForBid,
-    argonBidPremium: calculator.argonBidPremium,
-    transactionFee: calculatorData.transactionFee,
-    argonRewardsForThisSeat: calculatorData.argonRewardsForThisSeat,
-    argonotRewardsForThisSeat: calculatorData.argonotRewardsForThisSeat,
-    argonsToMintThisSeat: calculator.argonsToMintThisSeat,
-    argonotRewardsAsArgonValue: calculator.argonotRewardsAsArgonValue,
-    totalCost: calculator.totalCost,
+    costOfArgonotLoss: calculator.costOfArgonotLossInMicrogons,
+    argonotPriceChange: calculator.argonotPriceChangePct,
+    micronotsRequiredForBid: calculatorData.micronotsRequiredForBid,
+    microgonBidPremium: calculator.microgonBidPremium,
+    transactionFee: calculatorData.estimatedTransactionFee,
+    microgonRewardsForThisSeat: calculatorData.microgonsToMineThisSeat,
+    micronotRewardsForThisSeat: calculatorData.micronotsToMineThisSeat,
+    microgonsToMintThisSeat: calculator.microgonsToMintThisSeat,
+    micronotRewardsAsMicrogonValue: calculator.micronotRewardsAsMicrogonValue,
+    totalCost: calculator.totalCostOfBid,
     totalRewards: calculator.totalRewards,
-    TDPR: calculator.TDPR,
-    APR: calculator.APR,
-    APY: calculator.APY,
+    TDPR: calculator.minimumTDPR,
+    APR: calculator.minimumAPR,
+    APY: calculator.minimumAPY,
   };
 }
 
@@ -1095,31 +1082,34 @@ emitter.on('openBiddingRulesOverlay', async () => {
   openedAt = dayjs();
   isOpen.value = true;
   calculatorData.isInitialized.then(() => {
-    const biddingRules = config.biddingRules || ({} as IBiddingRules);
+    console.log('openBiddingRulesOverlay');
+    const biddingRules = config.biddingRules || undefined;
     hasExistingRules.value = !!biddingRules;
-    calculatedTotalSeats.value = biddingRules.calculatedTotalSeats || calculatedTotalSeats.value;
-    calculatedArgonCirculation.value = biddingRules.calculatedArgonCirculation || calculatedArgonCirculation.value;
-    argonotPriceChangeType.value = biddingRules.argonotPriceChangeType || argonotPriceChangeType.value;
-    argonotPriceChangeMin.value = biddingRules.argonotPriceChangeMin || argonotPriceChangeMin.value;
-    argonotPriceChangeMax.value = biddingRules.argonotPriceChangeMax || argonotPriceChangeMax.value;
-    startingAmount.value = biddingRules.startingAmount || startingAmount.value;
-    startingAmountFormulaType.value = biddingRules.startingAmountFormulaType || startingAmountFormulaType.value;
-    startingAmountFormulaIncrease.value =
-      biddingRules.startingAmountFormulaIncrease || startingAmountFormulaIncrease.value;
-    incrementAmount.value = biddingRules.incrementAmount || incrementAmount.value;
-    rebiddingDelay.value = biddingRules.rebiddingDelay || rebiddingDelay.value;
-    finalAmount.value = biddingRules.finalAmount || finalAmount.value;
-    finalAmountFormulaType.value = biddingRules.finalAmountFormulaType || finalAmountFormulaType.value;
-    finalAmountFormulaIncrease.value = biddingRules.finalAmountFormulaIncrease || finalAmountFormulaIncrease.value;
-    throttleSeats.value = biddingRules.throttleSeats || throttleSeats.value;
-    throttleSeatCount.value = biddingRules.throttleSeatCount || throttleSeatCount.value;
-    throttleSpending.value = biddingRules.throttleSpending || throttleSpending.value;
-    throttleSpendingAmount.value = biddingRules.throttleSpendingAmount || throttleSpendingAmount.value;
-    throttleDistributeEvenly.value = biddingRules.throttleDistributeEvenly || throttleDistributeEvenly.value;
-    disableBot.value = biddingRules.disableBot || disableBot.value;
+    // calculatedTotalSeats.value = biddingRules?.calculatedTotalSeats || calculatedTotalSeats.value;
+    // calculatedArgonCirculation.value = biddingRules?.calculatedArgonCirculation || calculatedArgonCirculation.value;
+    // micronotPriceChangeType.value = biddingRules?.micronotPriceChangeType || micronotPriceChangeType.value;
+    // micronotPriceChangeMin.value = biddingRules?.micronotPriceChangeMin || micronotPriceChangeMin.value;
+    // micronotPriceChangeMax.value = biddingRules?.micronotPriceChangeMax || micronotPriceChangeMax.value;
+    // startingBidAmountRelative.value = biddingRules?.startingBidAmountRelative || startingBidAmountRelative.value;
+    // startingBidAmountFormulaType.value = biddingRules?.startingBidAmountFormulaType || startingBidAmountFormulaType.value;
+    // startingBidAmountAbsolute.value =
+    //   biddingRules?.startingBidAmountAbsolute || startingBidAmountAbsolute.value;
+    // incrementAmount.value = biddingRules?.incrementAmount || incrementAmount.value;
+    // rebiddingDelay.value = biddingRules?.rebiddingDelay || rebiddingDelay.value;
+    // finalBidAmountRelative.value = biddingRules?.finalBidAmountRelative || finalBidAmountRelative.value;
+    // finalBidAmountFormulaType.value = biddingRules?.finalBidAmountFormulaType || finalBidAmountFormulaType.value;
+    // finalBidAmountAbsolute.value = biddingRules?.finalBidAmountAbsolute || finalBidAmountAbsolute.value;
+    // throttleSeats.value = biddingRules?.throttleSeats || throttleSeats.value;
+    // throttleSeatCount.value = biddingRules?.throttleSeatCount || throttleSeatCount.value;
+    // throttleSpending.value = biddingRules?.throttleSpending || throttleSpending.value;
+    // throttleSpendingAmount.value = biddingRules?.throttleSpendingAmount || throttleSpendingAmount.value;
+    // throttleDistributeEvenly.value = biddingRules?.throttleDistributeEvenly || throttleDistributeEvenly.value;
+    // disableBotType.value = biddingRules?.disableBotType || disableBotType.value;
 
     isLoaded.value = true;
-    calculatedArgonCirculationMin.value = Math.ceil(calculatorData.argonRewardsForFullYear);
+    calculatedArgonCirculationMin.value = Math.ceil(
+      Number(calculatorData.microgonsMinedThisNextYear) / MICROGONS_PER_ARGON,
+    );
 
     updateStartingAmountFormulaPrice();
     updateFinalAmountFormulaPrice();

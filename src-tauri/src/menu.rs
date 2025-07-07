@@ -1,0 +1,57 @@
+use tauri::{App, AppHandle, Manager, Runtime};
+use tauri::menu::{MenuBuilder, SubmenuBuilder, MenuItemBuilder};
+
+pub fn create_menu<R: Runtime>(app: &App<R>) -> Result<tauri::menu::Menu<R>, tauri::Error> {
+    let quit_item = MenuItemBuilder::new("Quit Commander")
+        .id("quit")
+        .accelerator("CmdOrCtrl+Q")
+        .build(app)?;
+
+    let reload_item = MenuItemBuilder::new("Reload App")
+        .id("reload")
+        .accelerator("CmdOrCtrl+R")
+        .build(app)?;
+
+    let commander_menu = SubmenuBuilder::new(app, "Commander")
+        .text("about", "About Commander")
+        .text("check-updates", "Check for Updates")
+        .separator()
+        .item(&quit_item)
+        .build()?;
+
+    let edit_menu = SubmenuBuilder::new(app, "Edit")
+        .text("copy", "Copy")
+        .text("paste", "Paste")
+        .text("select-all", "Select All")
+        .separator()
+        .build()?;
+
+    let window_menu = SubmenuBuilder::new(app, "Window")
+        .item(&reload_item)
+        .build()?;
+    
+    let menu = MenuBuilder::new(app)
+        .items(&[&commander_menu, &edit_menu, &window_menu])
+        .build()?;
+    Ok(menu)
+}
+
+pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: &tauri::menu::MenuEvent) {
+    match event.id().0.as_str() {
+        "about" => {
+            // TODO: Implement About Commander dialog
+            println!("About Commander clicked");
+        }
+        "check-updates" => {
+            // TODO: Implement Check for Updates functionality
+            println!("Check for Updates clicked");
+        }
+        "quit" => {
+            app.exit(0);
+        }
+        "reload" => {
+            app.get_webview_window("main").unwrap().reload().unwrap();
+        }
+        _ => {}
+    }
+} 

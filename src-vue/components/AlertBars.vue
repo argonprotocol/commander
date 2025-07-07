@@ -17,7 +17,7 @@
   <div
     MaxBudgetTooLow
     v-else-if="maxBudgetIsTooLow"
-    @click="openBiddingRulesOverlay"
+    @click="openConfigureMiningBotOverlay"
     class="group flex flex-row items-center gap-x-3 cursor-pointer bg-argon-error hover:bg-argon-error-darker text-white px-3.5 py-2 border-b border-argon-error-darkest"
     style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
   >
@@ -34,7 +34,7 @@
   <div
     MaxBidTooLow
     v-else-if="maxBidIsTooLow"
-    @click="openBiddingRulesOverlay"
+    @click="openConfigureMiningBotOverlay"
     class="group flex flex-row items-center gap-x-3 cursor-pointer bg-argon-error hover:bg-argon-error-darker text-white px-3.5 py-2 border-b border-argon-error-darkest"
     style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
   >
@@ -64,27 +64,27 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { useConfig } from '../stores/config';
-import { useCurrencyStore } from '../stores/currency';
+import { useWallets } from '../stores/wallets';
 import AlertIcon from '../assets/alert.svg?component';
 import emitter from '../emitters/basic';
 import { useStats } from '../stores/stats';
 
 const stats = useStats();
 const config = useConfig();
-const currencyStore = useCurrencyStore();
+const wallets = useWallets();
 
 const hasLowFunds = Vue.computed(() => {
-  if (!currencyStore.isLoaded) return false;
+  if (!wallets.isLoaded) return false;
 
   if (!config.biddingRules) {
     return false;
   }
 
-  if (currencyStore.mngWallet.argons < config.biddingRules.requiredArgons) {
+  if (wallets.mngWallet.availableMicrogons < config.biddingRules.requiredArgons) {
     return true;
   }
 
-  if (currencyStore.mngWallet.argonots < config.biddingRules.requiredArgonots) {
+  if (wallets.mngWallet.availableMicronots < config.biddingRules.requiredArgonots) {
     return true;
   }
 
@@ -92,18 +92,18 @@ const hasLowFunds = Vue.computed(() => {
 });
 
 const hasInsufficientFunds = Vue.computed(() => {
-  if (!currencyStore.isLoaded) return false;
+  if (!wallets.isLoaded) return false;
   // if server has thrown an insufficient funds error
   return false;
 });
 
 const maxBudgetIsTooLow = Vue.computed(() => {
-  if (!currencyStore.isLoaded) return false;
+  if (!wallets.isLoaded) return false;
   return !stats.maxSeatsPossible && stats.maxSeatsReductionReason === 'MaxBudgetTooLow';
 });
 
 const maxBidIsTooLow = Vue.computed(() => {
-  if (!currencyStore.isLoaded) return false;
+  if (!wallets.isLoaded) return false;
   // if server has thrown a MaxBidTooLow error
   return false;
 });
@@ -112,7 +112,7 @@ function openFundMiningWalletOverlay() {
   emitter.emit('openWalletOverlay', { walletId: 'mng', screen: 'receive' });
 }
 
-function openBiddingRulesOverlay() {
-  emitter.emit('openBiddingRulesOverlay');
+function openConfigureMiningBotOverlay() {
+  emitter.emit('openConfigureMiningBotOverlay');
 }
 </script>

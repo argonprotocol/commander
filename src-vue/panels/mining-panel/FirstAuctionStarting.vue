@@ -2,7 +2,7 @@
   <div class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center m-3 overflow-hidden">
     <ConfettiIcon class="absolute top-[10px] left-[10px]" style="width: calc(100% - 20px)" />
     <div class="relative mx-auto inline-block w-6/10">
-      <h1 class="text-6xl font-bold text-argon-600 text-center mt-32 mb-10 whitespace-nowrap">YOUR BIDDING BOT</h1>
+      <h1 class="text-6xl font-bold text-argon-600 text-center mt-28 mb-10 whitespace-nowrap">YOUR BIDDING BOT</h1>
 
       <div class="text-center mt-6 mb-5 uppercase text-base flex flex-row justify-center items-center">
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
@@ -18,12 +18,12 @@
         Your bidding bot has successfully connected. It's now trying to win
         {{ maxSeatCount }} mining seat{{ maxSeatCount === 1 ? '' : 's' }} with a
         <span @click="openBiddingBudgetOverlay" class="text-argon-600 underline cursor-pointer underline-offset-2">
-          budget cap of {{ currencySymbol }}{{ fmtMoney(currencyStore.argonTo(maxBidPerSeat)) }} per seat
+          budget cap of {{ currency.symbol }}{{ microgonToMoneyNm(maxBidPerSeat).format('0,0.[00000000]') }} per seat
         </span>
         .
         <template v-if="auctionIsClosing && startOfAuctionClosing">
           The currently active auction is in the process of closing. Bids can still be submitted for the next
-          <div class="font-bold py-2">
+          <div class="font-bold py-5 text-2xl opacity-70">
             <CountdownClock
               :time="startOfAuctionClosing"
               @tick="handleAuctionClosingTick"
@@ -37,7 +37,7 @@
         </template>
         <template v-else-if="startOfNextCohort">
           The current auction will begin closing in
-          <div class="font-bold py-2">
+          <div class="font-bold py-5 text-2xl opacity-70">
             <CountdownClock :time="startOfNextCohort" v-slot="{ hours, minutes, seconds }">
               <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},</template>
               <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and</template>
@@ -60,7 +60,6 @@ import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { useConfig } from '../../stores/config';
-import { fmtMoney } from '../../lib/Utils';
 import CountdownClock from '../../components/CountdownClock.vue';
 import ConfettiIcon from '../../assets/confetti.svg?component';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
@@ -68,17 +67,18 @@ import ActiveBidsActivityOverlayButton from '../../overlays/ActiveBidsActivityOv
 import { IBiddingRules, BiddingParamsHelper } from '@argonprotocol/commander-calculator';
 import emitter from '../../emitters/basic';
 import { getMainchain } from '../../stores/mainchain';
-import { useCurrencyStore } from '../../stores/currency';
+import { useCurrency } from '../../stores/currency';
 import { useStats } from '../../stores/stats';
-import { storeToRefs } from 'pinia';
+import { createNumeralHelpers } from '../../lib/numeral';
 
 dayjs.extend(utc);
 
 const mainchain = getMainchain();
 const stats = useStats();
 const config = useConfig();
-const currencyStore = useCurrencyStore();
-const { currencySymbol } = storeToRefs(currencyStore);
+const currency = useCurrency();
+
+const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
 const auctionIsClosing = Vue.ref(false);
 const startOfAuctionClosing: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
@@ -87,7 +87,7 @@ const maxSeatCount = Vue.ref(0);
 
 const biddingParamsHelper = new BiddingParamsHelper(config.biddingRules as IBiddingRules, mainchain);
 
-const maxBidPerSeat = Vue.computed(() => config.biddingRules?.finalAmount || 0);
+const maxBidPerSeat = Vue.computed(() => config.biddingRules?.finalBidAmountAbsolute || 0n);
 
 function handleAuctionClosingTick(totalSecondsRemaining: number) {
   if (totalSecondsRemaining <= 0) {
@@ -96,7 +96,7 @@ function handleAuctionClosingTick(totalSecondsRemaining: number) {
 }
 
 function openBiddingBudgetOverlay() {
-  emitter.emit('openBiddingRulesOverlay');
+  emitter.emit('openConfigureMiningBotOverlay');
 }
 
 Vue.onMounted(async () => {

@@ -4,8 +4,7 @@ import type IBiddingRules from './IBiddingRules.js';
 import BiddingCalculator from './BiddingCalculator.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
 import { Mainchain } from './Mainchain.ts';
-
-const MICROGONS_PER_ARGON = 1_000_000;
+import { BidAmountFormulaType } from './IBiddingRules.js';
 
 export default async function createBidderParams(
   _cohortId: number,
@@ -21,7 +20,7 @@ export default async function createBidderParams(
   const maxSeats = await helper.getMaxSeats();
   const maxBudget = helper.getMaxBalance(maxBid * BigInt(maxSeats));
   const bidDelay = biddingRules.rebiddingDelay || 0;
-  const bidIncrement = convertArgonToMicrogons(biddingRules.incrementAmount || 1);
+  const bidIncrement = biddingRules.incrementAmount || 1n;
   const bidderParams: IBidderParams = {
     minBid,
     maxBid,
@@ -59,7 +58,7 @@ export class Helper {
       maxSeats = this.biddingRules.throttleSeatCount || 0;
     }
 
-    return maxSeats > 0 && this.biddingRules.disableBot === 'AfterFirstSeat' ? 1 : maxSeats;
+    return maxSeats > 0 && this.biddingRules.disableBotType === 'AfterFirstSeat' ? 1 : maxSeats;
   }
 
   public getMaxBalance(defaultMaxBalance: bigint): bigint {
@@ -69,48 +68,44 @@ export class Helper {
   }
 
   public async calculateMinBid(): Promise<bigint> {
-    if (this.biddingRules.startingAmountFormulaType === 'Custom') {
-      return convertArgonToMicrogons(this.biddingRules.startingAmount);
+    if (this.biddingRules.startingBidAmountFormulaType === 'Custom') {
+      return this.biddingRules.startingBidAmountAbsolute;
     }
 
     await this.calculatorData.isInitialized;
-    let formulaAmount = 0;
+    let formulaAmount = 0n;
 
-    if (this.biddingRules.startingAmountFormulaType === 'PreviousLowestBid') {
-      formulaAmount = this.calculatorData.previousLowestBid;
-    } else if (this.biddingRules.startingAmountFormulaType === 'MinimumBreakeven') {
-      formulaAmount = this.startingMinimumCalculator.breakevenBid;
-    } else if (this.biddingRules.startingAmountFormulaType === 'OptimisticBreakeven') {
-      formulaAmount = this.startingOptimisticCalculator.breakevenBid;
+    if (this.biddingRules.startingBidAmountFormulaType === BidAmountFormulaType.PreviousDayLow) {
+      formulaAmount = this.calculatorData.previousDayLowBid;
+    } else if (this.biddingRules.startingBidAmountFormulaType === BidAmountFormulaType.MinimumBreakeven) {
+      formulaAmount = this.startingMinimumCalculator.minimumBreakevenBid;
+    } else if (this.biddingRules.startingBidAmountFormulaType === BidAmountFormulaType.OptimisticBreakeven) {
+      formulaAmount = this.startingOptimisticCalculator.optimisticBreakevenBid;
     }
 
-    const minBid = formulaAmount * (1 + this.biddingRules.startingAmountFormulaIncrease / 100);
+    const minBid = formulaAmount * (1n + this.biddingRules.startingBidAmountAbsolute);
 
-    return convertArgonToMicrogons(minBid);
+    return minBid;
   }
 
   public async calculateMaxBid(): Promise<bigint> {
-    if (this.biddingRules.finalAmountFormulaType === 'Custom') {
-      return convertArgonToMicrogons(this.biddingRules.finalAmount);
+    if (this.biddingRules.finalBidAmountFormulaType === 'Custom') {
+      return this.biddingRules.finalBidAmountAbsolute;
     }
 
     await this.calculatorData.isInitialized;
-    let formulaAmount = 0;
+    let formulaAmount = 0n;
 
-    if (this.biddingRules.finalAmountFormulaType === 'PreviousHighestBid') {
-      formulaAmount = this.calculatorData.previousHighestBid;
-    } else if (this.biddingRules.finalAmountFormulaType === 'MinimumBreakeven') {
-      formulaAmount = this.finalMinimumCalculator.breakevenBid;
-    } else if (this.biddingRules.finalAmountFormulaType === 'OptimisticBreakeven') {
-      formulaAmount = this.finalOptimisticCalculator.breakevenBid;
+    if (this.biddingRules.finalBidAmountFormulaType === BidAmountFormulaType.PreviousDayHigh) {
+      formulaAmount = this.calculatorData.previousDayHighBid;
+    } else if (this.biddingRules.finalBidAmountFormulaType === BidAmountFormulaType.MinimumBreakeven) {
+      formulaAmount = this.finalMinimumCalculator.minimumBreakevenBid;
+    } else if (this.biddingRules.finalBidAmountFormulaType === BidAmountFormulaType.OptimisticBreakeven) {
+      formulaAmount = this.finalOptimisticCalculator.optimisticBreakevenBid;
     }
 
-    const maxBid = formulaAmount * (1 + this.biddingRules.finalAmountFormulaIncrease / 100);
+    const maxBid = formulaAmount * (1n + this.biddingRules.finalBidAmountAbsolute);
 
-    return convertArgonToMicrogons(maxBid);
+    return maxBid;
   }
-}
-
-function convertArgonToMicrogons(amount: number): bigint {
-  return BigInt(Math.round(amount * MICROGONS_PER_ARGON));
 }

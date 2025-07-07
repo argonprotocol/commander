@@ -135,7 +135,6 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { storeToRefs } from 'pinia';
 import { TransitionChild, TransitionRoot } from '@headlessui/vue';
 import emitter from '../emitters/basic';
 import { XMarkIcon } from '@heroicons/vue/24/outline';

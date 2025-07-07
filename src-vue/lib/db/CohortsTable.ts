@@ -1,10 +1,17 @@
-import { MiningFrames } from '@argonprotocol/commander-bot/src/MiningFrames';
 import { ICohortRecord } from '../../interfaces/db/ICohortRecord';
 import { BaseTable } from './BaseTable';
 import camelcaseKeys from 'camelcase-keys';
-import { getMainchainClient } from '../../stores/mainchain';
+import { convertSqliteBigInts, fromSqliteBigInt, toSqliteBigInt } from '../Utils';
 
 export class CohortsTable extends BaseTable {
+  private bigIntFields: string[] = [
+    'transaction_fees',
+    'microgons_bid',
+    'micronots_staked',
+    'microgons_to_be_mined',
+    'micronots_to_be_mined',
+  ];
+
   public async fetchLatestActiveId(): Promise<number | null> {
     const result = await this.db.sql.select<{ id: number }[]>(
       'SELECT id FROM cohorts WHERE seats_won > 0 ORDER BY id DESC LIMIT 1',
@@ -29,7 +36,7 @@ export class CohortsTable extends BaseTable {
       return null;
     }
 
-    const record = camelcaseKeys(rawRecords[0]);
+    const record = camelcaseKeys(convertSqliteBigInts(rawRecords[0], this.bigIntFields));
     const ticksPerDay = 1_440;
     const lastTick = record.firstTick + ticksPerDay * 10;
 
@@ -42,47 +49,78 @@ export class CohortsTable extends BaseTable {
   public async fetchGlobalStats(currentFrameId: number): Promise<{
     totalActiveCohorts: number;
     totalActiveSeats: number;
-    totalTransactionFees: number;
-    totalArgonsBid: number;
+    totalTransactionFees: bigint;
+    totalMicrogonsBid: bigint;
   }> {
-    const [rawTotalStats] = await this.db.sql.select<[any]>(
-      `SELECT 
+    try {
+      const [rawTotalStats] = await this.db.sql.select<[any]>(
+        `SELECT 
         COALESCE(sum(transaction_fees), 0) as total_transaction_fees, 
-        COALESCE(sum(argons_bid), 0) as total_argons_bid
+        COALESCE(sum(microgons_bid), 0) as total_microgons_bid
       FROM cohorts`,
-    );
+      );
 
-    const oldestActiveFrameId = Math.max(1, currentFrameId - 10);
-    const [rawActiveStats] = await this.db.sql.select<[any]>(
-      `SELECT 
+      const oldestActiveFrameId = Math.max(1, currentFrameId - 10);
+      const [rawActiveStats] = await this.db.sql.select<[any]>(
+        `SELECT 
         COALESCE(count(id), 0) as active_cohorts,
         COALESCE(sum(seats_won), 0) as active_seats
       FROM cohorts WHERE id >= ?`,
-      [oldestActiveFrameId],
-    );
+        [oldestActiveFrameId],
+      );
 
-    const totalStats = camelcaseKeys(rawTotalStats);
-    const activeStats = camelcaseKeys(rawActiveStats);
+      const totalStats = camelcaseKeys(rawTotalStats);
+      const activeStats = camelcaseKeys(rawActiveStats);
 
-    return {
-      totalActiveCohorts: activeStats.activeCohorts,
-      totalActiveSeats: activeStats.activeSeats,
-      totalTransactionFees: totalStats.totalTransactionFees,
-      totalArgonsBid: totalStats.totalArgonsBid,
-    };
+      return {
+        totalActiveCohorts: activeStats.activeCohorts,
+        totalActiveSeats: activeStats.activeSeats,
+        totalTransactionFees: fromSqliteBigInt(totalStats.totalTransactionFees),
+        totalMicrogonsBid: fromSqliteBigInt(totalStats.totalMicrogonsBid),
+      };
+    } catch (e) {
+      console.error('Error fetching global stats', e);
+      throw e;
+    }
+  }
+
+  async fetchActiveCohorts(currentFrameId: number): Promise<ICohortRecord[]> {
+    const records = await this.db.sql.select<any[]>('SELECT * FROM cohorts WHERE seats_won > 0 AND id >= ?', [
+      currentFrameId - 10,
+    ]);
+    return camelcaseKeys(convertSqliteBigInts(records, this.bigIntFields)) as ICohortRecord[];
   }
 
   async insertOrUpdate(
     id: number,
     progress: number,
-    transactionFees: number,
-    argonotsStaked: number,
-    argonsBid: number,
+    transactionFees: bigint,
+    micronotsStaked: bigint,
+    microgonsBid: bigint,
     seatsWon: number,
+    microgonsToBeMined: bigint,
+    micronotsToBeMined: bigint,
   ): Promise<void> {
     await this.db.sql.execute(
-      'INSERT OR REPLACE INTO cohorts (id, progress, transaction_fees, argonots_staked, argons_bid, seats_won) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, progress, transactionFees, argonotsStaked, argonsBid, seatsWon],
+      `INSERT OR REPLACE INTO cohorts (
+        id, 
+        progress, 
+        transaction_fees, 
+        micronots_staked, 
+        microgons_bid, 
+        seats_won, 
+        microgons_to_be_mined, 
+        micronots_to_be_mined) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        progress,
+        toSqliteBigInt(transactionFees),
+        toSqliteBigInt(micronotsStaked),
+        toSqliteBigInt(microgonsBid),
+        seatsWon,
+        toSqliteBigInt(microgonsToBeMined),
+        toSqliteBigInt(micronotsToBeMined),
+      ],
     );
   }
 }

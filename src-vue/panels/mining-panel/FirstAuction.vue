@@ -3,7 +3,7 @@
     <AlertBars />
 
     <FirstAuctionFailed v-if="!stats.maxSeatsPossible" />
-    <FirstAuctionWinning v-else-if="stats.hasMiningBids" />
+    <FirstAuctionWinning v-else-if="config.hasMiningBids" />
     <FirstAuctionStarting v-else />
   </div>
 </template>
@@ -15,11 +15,21 @@ import FirstAuctionStarting from './FirstAuctionStarting.vue';
 import FirstAuctionWinning from './FirstAuctionWinning.vue';
 import FirstAuctionFailed from './FirstAuctionFailed.vue';
 import { useStats } from '../../stores/stats';
+import { useConfig } from '../../stores/config';
 
 const stats = useStats();
+const config = useConfig();
+
+Vue.onMounted(() => {
+  stats.start();
+});
+
+Vue.onUnmounted(() => {
+  stats.stop();
+});
 
 Vue.watch(
-  () => stats.hasMiningBids,
+  () => config.hasMiningBids,
   newVal => {
     console.log('hasMiningBids', newVal);
   },

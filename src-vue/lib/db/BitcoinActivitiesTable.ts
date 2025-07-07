@@ -1,11 +1,6 @@
 import { BaseTable } from './BaseTable';
 import camelcaseKeys from 'camelcase-keys';
-
-interface IBitcoinActivityRecord {
-  localNodeBlockNumber: number;
-  mainNodeBlockNumber: number;
-  insertedAt: string;
-}
+import { IBitcoinActivityRecord } from '../../interfaces/db/IBitcoinActivityRecord';
 
 export class BitcoinActivitiesTable extends BaseTable {
   async insert(localNodeBlockNumber: number, mainNodeBlockNumber: number): Promise<IBitcoinActivityRecord> {

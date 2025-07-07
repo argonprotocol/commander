@@ -39,6 +39,7 @@
     "chartjs-adapter-dayjs-4": "^1.0.4",
     "dayjs": "^1.11.13",
     "mitt": "^3.0.1",
+    "numeral": "^2.0.6",
     "ordinal": "^1.0.3",
     "pinia": "^3.0.1",
     "qrcode": "^1.5.4",
@@ -56,6 +57,7 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2",
     "@types/node": "^22.15.17",
+    "@types/numeral": "^2",
     "@types/qrcode": "^1.5.5",
     "@vitejs/plugin-vue": "^5.2.1",
     "clsx": "^2.1.1",

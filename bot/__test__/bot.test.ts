@@ -87,9 +87,9 @@ it('can autobid and store stats', async () => {
   const cohort1Bids = await bot.storage.bidsFile(firstCohort).get();
   expect(cohort1Bids).toBeTruthy();
   console.log(`Cohort 1`, cohort1Bids);
-  expect(cohort1Bids?.argonotsStakedPerSeat).toBeGreaterThanOrEqual(10000);
+  expect(cohort1Bids?.micronotsStakedPerSeat).toBeGreaterThanOrEqual(10000);
   expect(cohort1Bids?.seatsWon).toBe(10);
-  expect(cohort1Bids?.argonsBidTotal).toBe(10_000n * 10n);
+  expect(cohort1Bids?.microgonsBidTotal).toBe(10_000n * 10n);
 
   // wait for sync state to equal latest finalized
   while (true) {
@@ -99,7 +99,7 @@ it('can autobid and store stats', async () => {
   }
 
   const cohortActivatingFrameIds = new Set<number>();
-  let argonsMined = 0n;
+  let microgonsMined = 0n;
   for (const frameId of cohortActivatingFrameIdsWithEarnings) {
     const earningsData = await bot.storage.earningsFile(frameId!).get();
     expect(earningsData).toBeDefined();
@@ -107,11 +107,11 @@ it('can autobid and store stats', async () => {
     for (const [cohortActivatingFrameId, cohortData] of Object.entries(earningsData!.byCohortActivatingFrameId)) {
       cohortActivatingFrameIds.add(Number(cohortActivatingFrameId!));
       expect(Number(cohortActivatingFrameId)).toBeGreaterThan(0);
-      expect(cohortData.argonsMined).toBeGreaterThan(0);
-      argonsMined += cohortData.argonsMined;
+      expect(cohortData.microgonsMined).toBeGreaterThan(0);
+      microgonsMined += cohortData.microgonsMined;
     }
   }
-  expect(argonsMined).toBeGreaterThanOrEqual(375_000 * voteBlocks);
+  expect(microgonsMined).toBeGreaterThanOrEqual(375_000 * voteBlocks);
 
   // wait for a clean stop
   const lastProcessed = bot.blockSync.lastProcessed;

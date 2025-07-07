@@ -48,7 +48,7 @@ export class CohortBidderHistory {
     // number of seats won
     seatsWon: 0,
     // sum of argons bid in successful bids
-    totalArgonsBid: 0n,
+    totalMicrogonsBid: 0n,
     // total number of bids placed (includes 1 per seat)
     bidsAttempted: 0,
     // fees including the tip
@@ -104,7 +104,7 @@ export class CohortBidderHistory {
     isLastEntry = false,
   ): IBidHistoryEntry {
     let winningBids = 0;
-    let totalArgonsBid = 0n;
+    let totalMicrogonsBid = 0n;
     const nextEntrants: { address: string; bid: bigint }[] = [];
     for (const x of next) {
       const bid = x.bid.toBigInt();
@@ -112,11 +112,11 @@ export class CohortBidderHistory {
       nextEntrants.push({ address, bid });
       if (this.myAddresses.has(address)) {
         winningBids++;
-        totalArgonsBid += bid;
+        totalMicrogonsBid += bid;
       }
     }
     this.stats.seatsWon = winningBids;
-    this.stats.totalArgonsBid = totalArgonsBid;
+    this.stats.totalMicrogonsBid = totalMicrogonsBid;
     this.stats.lastBlockNumber = Math.max(blockNumber, this.stats.lastBlockNumber);
 
     const historyEntry: IBidHistoryEntry = {

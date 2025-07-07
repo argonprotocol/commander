@@ -5,26 +5,39 @@ import {
   IBidsFile,
   IBidsHistory,
   IWinningBid,
+  ISyncStateStarting,
+  ISyncStateError,
 } from '@argonprotocol/commander-bot/src/storage';
-import { convertBigIntStringToNumber } from '../Utils';
-import { SSH } from '../SSH.ts';
+import { convertBigIntStringToNumber } from './Utils';
+import { SSH } from './SSH.ts';
+
+export class BotNotReadyError extends Error {
+  constructor(public data: ISyncStateStarting) {
+    super(`Bot is not ready: ${JSON.stringify(data)}`);
+  }
+}
+
+export class BotError extends Error {
+  constructor(public data: ISyncStateError) {
+    super(`Bot blew up: ${JSON.stringify(data)}`);
+  }
+}
 
 export class StatsFetcher {
   public static async fetchSyncState(retries = 0): Promise<ISyncState> {
-    await new Promise(resolve => setTimeout(resolve, 1000));
     console.log('Fetching bot status...', `::remote::/sync-state`);
     try {
-      const response = await SSH.runHttpGet<ISyncState>(`/sync-state`);
-      if (response.status !== 200) {
-        throw new Error(`Failed to fetch bot status: ${response.status}`);
+      const response = await SSH.runHttpGet<ISyncState | ISyncStateStarting | ISyncStateError>(`/sync-state`);
+      if ((response.data as ISyncStateError).serverError) {
+        throw new BotError(response.data as ISyncStateError);
       }
-      const data = response.data;
-      if (!data.isStarted) {
-        console.log('Bot has not started, retrying...');
-        return this.fetchSyncState(retries);
+      if (!response.data.isReady) {
+        throw new BotNotReadyError(response.data);
       }
+      const data = response.data as ISyncState;
       console.log('SyncState fetched:', data);
       return {
+        isReady: data.isReady,
         hasMiningSeats: data.hasMiningSeats,
         hasMiningBids: data.hasMiningBids,
         argonBlockNumbers: {
@@ -41,12 +54,24 @@ export class StatsFetcher {
         lastFinalizedBlockNumber: data.lastFinalizedBlockNumber,
         oldestFrameIdToSync: data.oldestFrameIdToSync,
         currentFrameId: data.currentFrameId,
-        loadProgress: data.loadProgress,
+        syncProgress: data.syncProgress,
         queueDepth: data.queueDepth,
         maxSeatsPossible: data.maxSeatsPossible,
         maxSeatsReductionReason: data.maxSeatsReductionReason,
       };
     } catch (error) {
+      if (error instanceof BotError || error instanceof BotNotReadyError) {
+        throw error;
+      } else if (error === 'ServerUnavailable') {
+        throw new BotNotReadyError({
+          isReady: false,
+          isStarting: true,
+          syncProgress: 0,
+          argonBlockNumbers: { localNode: 0, mainNode: 0 },
+          bitcoinBlockNumbers: { localNode: 0, mainNode: 0 },
+        });
+      }
+
       if (retries > 3) {
         throw error;
       }
@@ -107,9 +132,9 @@ export class StatsFetcher {
       {
         lastBlockMinedAt: value.lastBlockMinedAt,
         blocksMined: value.blocksMined,
-        argonsMined: convertBigIntStringToNumber(value.argonsMined as unknown as string) as bigint,
-        argonsMinted: convertBigIntStringToNumber(value.argonsMinted as unknown as string) as bigint,
-        argonotsMined: convertBigIntStringToNumber(value.argonotsMined as unknown as string) as bigint,
+        microgonsMined: convertBigIntStringToNumber(value.microgonsMined as unknown as string) as bigint,
+        microgonsMinted: convertBigIntStringToNumber(value.microgonsMinted as unknown as string) as bigint,
+        micronotsMined: convertBigIntStringToNumber(value.micronotsMined as unknown as string) as bigint,
       },
     ]);
 
@@ -137,18 +162,20 @@ export class StatsFetcher {
       cohortActivatingFrameId: data.cohortActivatingFrameId,
       frameBiddingProgress: data.frameBiddingProgress,
       lastBlockNumber: data.lastBlockNumber,
-      argonsBidTotal: convertBigIntStringToNumber(data.argonsBidTotal as unknown as string) as bigint,
+      microgonsBidTotal: convertBigIntStringToNumber(data.microgonsBidTotal as unknown as string) as bigint,
       transactionFees: convertBigIntStringToNumber(data.transactionFees as unknown as string) as bigint,
-      argonotsStakedPerSeat: convertBigIntStringToNumber(data.argonotsStakedPerSeat as unknown as string) as bigint,
+      micronotsStakedPerSeat: convertBigIntStringToNumber(data.micronotsStakedPerSeat as unknown as string) as bigint,
       argonotsUsdPrice: data.argonotsUsdPrice,
-      argonsToBeMinedPerBlock: convertBigIntStringToNumber(data.argonsToBeMinedPerBlock as unknown as string) as bigint,
+      microgonsToBeMinedPerBlock: convertBigIntStringToNumber(
+        data.microgonsToBeMinedPerBlock as unknown as string,
+      ) as bigint,
       seatsWon: data.seatsWon,
       winningBids: data.winningBids.map((x: IWinningBid) => ({
         address: x.address,
         subAccountIndex: x.subAccountIndex,
         lastBidAtTick: x.lastBidAtTick,
         bidPosition: x.bidPosition,
-        argonsBid: convertBigIntStringToNumber(x.argonsBid as unknown as string),
+        microgonsBid: convertBigIntStringToNumber(x.microgonsBid as unknown as string),
       })),
     };
   }

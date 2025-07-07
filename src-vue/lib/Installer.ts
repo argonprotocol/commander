@@ -5,7 +5,7 @@ import {
   InstallStepKey,
   type IConfigInstallStep,
 } from '../interfaces/IConfig';
-import { Config, DEPLOY_ENV_FILE, NETWORK_NAME } from './Config';
+import { Config, NETWORK_NAME } from './Config';
 import { app } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
 import { InstallerCheck } from './InstallerCheck';
@@ -39,6 +39,7 @@ export default class Installer {
   public isReadyToRun: boolean = false;
 
   public isRunning = false;
+  public fileUploadProgress: number = 0;
 
   public reasonToSkipInstall: string;
   public reasonToSkipInstallData: any;
@@ -54,7 +55,7 @@ export default class Installer {
     IS_INITIALIZED = true;
 
     this.config = config;
-    this.installerCheck = new InstallerCheck(config);
+    this.installerCheck = new InstallerCheck(this, config);
     this.reasonToSkipInstall = '';
     this.reasonToSkipInstallData = null;
 
@@ -66,42 +67,103 @@ export default class Installer {
   public async load(): Promise<void> {
     await this.config.isLoadedPromise;
 
+    const isRunning = await this.calculateIsRunning();
+    const isReadyToRun = !isRunning && (await this.calculateIsReadyToRun(false));
+    if (isReadyToRun) {
+      await this.run(false);
+    } else {
+      await this.activateInstallerCheck(false);
+    }
+
     this.isLoaded = true;
     this.loadingFns.resolve();
   }
 
-  public async run(): Promise<boolean> {
-    await this.isLoadedPromise;
+  public async run(waitForLoaded: boolean = true): Promise<void> {
+    if (waitForLoaded) {
+      await this.isLoadedPromise;
+    }
 
     if ((this.isRunning ||= await this.calculateIsRunning())) {
       console.log('CANNOT run because Installer is already running');
-      return false;
+      return;
     }
 
-    if (!(this.isReadyToRun ||= await this.calculateIsReadyToRun(false))) {
+    if (!(this.isReadyToRun ||= await this.calculateIsReadyToRun(waitForLoaded))) {
       console.log(
         'CANNOT run because Installer is not runnable',
         this.reasonToSkipInstall,
         this.reasonToSkipInstallData,
       );
       this.isRunning = false;
-      return false;
+      return;
     }
+
+    console.log('RUNNING INSTALLER');
+    this.isRunning = true;
+    this.config.isWaitingForUpgradeApproval = false;
+    this.config.isServerUpToDate = false;
+    await this.config.save();
+
+    if (this.remoteFilesNeedUpdating) {
+      const stepsToClear = [
+        InstallStepErrorType.FileUpload,
+        InstallStepErrorType.BitcoinInstall,
+        InstallStepErrorType.ArgonInstall,
+        InstallStepErrorType.MiningLaunch,
+      ];
+      console.info('Clearing step files');
+      await this.clearStepFiles(stepsToClear);
+    }
+
+    this.fileUploadProgress = 0;
+    this.installerCheck.start();
+
+    let errorMessage = '';
 
     try {
-      this.config.isWaitingForUpgradeApproval = false;
-      this.config.isServerUpToDate = false;
-      await this.config.save();
+      if (this.remoteFilesNeedUpdating) {
+        console.info('Uploading sha256');
+        await this.uploadSha256();
 
-      console.info('Starting install process');
-      await this.startInstallSteps();
-    } catch (e) {
-      console.error(`Installer failed: ${e}`);
+        console.info('Uploading core files');
+        await this.uploadCoreFiles(t => (this.fileUploadProgress += (1 / t) * 49));
+      }
+
+      console.info('Uploading bot config files');
+      await this.uploadBotConfigFiles(t => (this.fileUploadProgress += (1 / t) * 49));
+
+      console.info('Starting remote script');
+      await this.startRemoteScript();
+      this.fileUploadProgress = 99;
+
+      this.installerCheck.bypassCachedFilenames = true;
+
+      console.info('Waiting for install to complete');
+      await this.installerCheck.waitForInstallToComplete();
+
+      console.info('Confirming all install flags');
       this.isRunning = false;
-      throw e;
+      this.isReadyToRun = false;
+      this.remoteFilesNeedUpdating = false;
+      console.info('Installer finished');
+    } catch (e) {
+      console.error(`Installation failed: `, e);
+      errorMessage = `Installation failed: ${e}`;
     }
 
-    return true;
+    if (errorMessage) {
+      try {
+        this.config.installDetails.errorType = InstallStepErrorType.Unknown;
+        this.config.installDetails.errorMessage = errorMessage;
+        await this.config.save();
+      } catch (e) {
+        console.error(`Failed to save install status: ${e}`);
+      }
+    }
+
+    this.isRunning = false;
+    this.isReadyToRun = false;
   }
 
   public async runFailedStep(stepKey: string): Promise<void> {
@@ -143,7 +205,7 @@ export default class Installer {
 
     console.info('Clearing step files');
     const stepsToClear = [
-      InstallStepErrorType.FileCheck,
+      InstallStepErrorType.FileUpload,
       InstallStepErrorType.BitcoinInstall,
       InstallStepErrorType.ArgonInstall,
       InstallStepErrorType.MiningLaunch,
@@ -156,6 +218,7 @@ export default class Installer {
     this.removeReasonsToSkipInstall();
     this.config.resetField('installDetails');
     this.config.isWaitingForUpgradeApproval = false;
+    this.config.isServerUpToDate = false;
     await this.config.save();
 
     this.run();
@@ -174,7 +237,8 @@ export default class Installer {
     try {
       this.config.isServerReadyForBidding = true;
       await this.uploadBotConfigFiles();
-      await this.restartBotDocker();
+      await SSH.stopBotDocker();
+      await SSH.startBotDocker();
     } catch (e) {
       console.error(`Failed to upgrade bidding bot files: ${e}`);
       throw e;
@@ -185,8 +249,10 @@ export default class Installer {
     await this.config.save();
   }
 
-  public async calculateIsReadyToRun(checkIfIsRunning: boolean = true): Promise<boolean> {
-    await this.isLoadedPromise;
+  private async calculateIsReadyToRun(waitForLoaded: boolean = true): Promise<boolean> {
+    if (waitForLoaded) {
+      await this.isLoadedPromise;
+    }
     this.reasonToSkipInstall = '';
     this.reasonToSkipInstallData = {};
 
@@ -202,25 +268,12 @@ export default class Installer {
 
     const localFilesAreValid = await this.doLocalFilesMatchLocalShasums();
     if (!localFilesAreValid) {
-      console.info('Local files are not valid');
+      console.info('Local files are NOT valid');
       this.isReadyToRun = false;
       this.reasonToSkipInstall = ReasonsToSkipInstall.LocalShasumsNotAccurate;
       this.reasonToSkipInstallData = { localFilesAreValid };
       await this.config.save();
       return false;
-    }
-
-    if (checkIfIsRunning) {
-      // If the install process is currently running, we don't need to start it again.
-      const installProcessIsRunning = await this.calculateIsRunning();
-      if (installProcessIsRunning) {
-        this.isReadyToRun = false;
-        this.reasonToSkipInstall = ReasonsToSkipInstall.InstallAlreadyRunning;
-        this.reasonToSkipInstallData = { installProcessIsRunning };
-        this.config.isWaitingForUpgradeApproval = false;
-        await this.config.save();
-        return false;
-      }
     }
 
     // We will begin by running through a series of checks to determine if the install process
@@ -235,6 +288,7 @@ export default class Installer {
     this.remoteFilesNeedUpdating = remoteFilesNeedUpdating;
 
     if (isServerInstallComplete && !remoteFilesNeedUpdating) {
+      console.info('Remote files ARE up to date');
       this.isReadyToRun = false;
       this.reasonToSkipInstall = ReasonsToSkipInstall.ServerUpToDate;
       this.reasonToSkipInstallData = { isServerInstallComplete, remoteFilesNeedUpdating };
@@ -244,11 +298,11 @@ export default class Installer {
       return false;
     }
 
-    const requiresExplicitUpgradeApproval = isServerInstallComplete && !isFreshInstall && !this.config.isServerUpToDate;
+    const requiresExplicitUpgradeApproval = isServerInstallComplete && !isFreshInstall && remoteFilesNeedUpdating;
     console.info('requiresExplicitUpgradeApproval =', requiresExplicitUpgradeApproval, {
       isServerInstallComplete,
       isFreshInstall,
-      isServerUpToDate: this.config.isServerUpToDate,
+      remoteFilesNeedUpdating,
       hasApprovedUpgrade: this.hasApprovedUpgrade,
     });
 
@@ -258,8 +312,9 @@ export default class Installer {
       this.reasonToSkipInstallData = {
         isServerInstallComplete,
         isFreshInstall,
-        isServerUpToDate: this.config.isServerUpToDate,
+        isServerUpToDate: false,
       };
+      this.config.isServerUpToDate = false;
       this.config.isWaitingForUpgradeApproval = true;
       await this.config.save();
       return false;
@@ -295,19 +350,19 @@ export default class Installer {
       return false;
     }
 
+    this.config.isServerUpToDate = remoteFilesNeedUpdating;
     this.isReadyToRun = true;
     return true;
   }
 
-  private removeReasonsToSkipInstall(): void {
-    this.reasonToSkipInstall = '';
-    this.reasonToSkipInstallData = {};
-  }
-
   private async calculateIsRunning(): Promise<boolean> {
     if (this.isRunning) {
-      console.log('Install process IS running 1');
+      console.log('Install process IS running');
       return true;
+    }
+
+    if (!this.config.isServerConnected) {
+      return false;
     }
 
     try {
@@ -322,6 +377,34 @@ export default class Installer {
     }
 
     return this.isRunning;
+  }
+
+  private async activateInstallerCheck(waitForLoaded: boolean = true): Promise<void> {
+    console.log('Activating installer check');
+    if (waitForLoaded) {
+      await this.isLoadedPromise;
+    }
+    const isRunning = await this.calculateIsRunning();
+    if (isRunning) return;
+
+    const hasProgress = this.config.installDetails.ServerConnect.progress > 0.0;
+    const isComplete = this.config.installDetails.MiningLaunch.progress >= 100;
+    if (!hasProgress || isComplete) return;
+
+    this.isRunning = true;
+    this.installerCheck.start();
+    this.installerCheck.bypassCachedFilenames = true;
+
+    console.info('Waiting for install to complete');
+    await this.installerCheck.waitForInstallToComplete();
+
+    this.isRunning = false;
+    this.remoteFilesNeedUpdating = false;
+  }
+
+  private removeReasonsToSkipInstall(): void {
+    this.reasonToSkipInstall = '';
+    this.reasonToSkipInstallData = {};
   }
 
   private async extractTmpInstallChecks(): Promise<TmpInstallChecks> {
@@ -392,64 +475,6 @@ export default class Installer {
     return shasumsMatch;
   }
 
-  private async startInstallSteps(): Promise<void> {
-    this.installerCheck.start();
-
-    let errorMessage = '';
-
-    try {
-      if (this.remoteFilesNeedUpdating) {
-        const stepsToClear = [
-          InstallStepErrorType.FileCheck,
-          InstallStepErrorType.BitcoinInstall,
-          InstallStepErrorType.ArgonInstall,
-          InstallStepErrorType.MiningLaunch,
-        ];
-        console.info('Clearing step files');
-        await this.clearStepFiles(stepsToClear, { setFirstStepToWorking: true });
-
-        console.info('Uploading sha256');
-        await this.uploadSha256();
-
-        console.info('Uploading core files');
-        await this.uploadCoreFiles();
-      }
-
-      console.info('Uploading bot config files');
-      await this.uploadBotConfigFiles();
-
-      console.info('Starting remote script');
-      await this.startRemoteScript();
-
-      this.installerCheck.bypassCachedFilenames = true;
-
-      console.info('Waiting for install to complete');
-      await this.installerCheck.waitForInstallToComplete();
-
-      console.info('Confirming all install flags');
-      this.isRunning = false;
-      this.remoteFilesNeedUpdating = false;
-      this.config.isServerUpToDate = false;
-      await this.config.save();
-      console.info('Installer finished');
-    } catch (e) {
-      console.error(`Installation failed: ${e}`);
-      errorMessage = `Installation failed: ${e}`;
-    }
-
-    if (errorMessage) {
-      try {
-        this.config.installDetails.errorType = InstallStepErrorType.Unknown;
-        this.config.installDetails.errorMessage = errorMessage;
-        await this.config.save();
-      } catch (e) {
-        console.error(`Failed to save install status: ${e}`);
-      }
-    }
-
-    this.isRunning = false;
-  }
-
   private async serverHasSha256File(): Promise<boolean> {
     const [, code] = await SSH.runCommand('test -f ~/SHASUMS256');
     return code === 0;
@@ -461,24 +486,26 @@ export default class Installer {
     await SSH.runCommand('rm ~/SHASUMS256.copied');
   }
 
-  private async uploadCoreFiles(): Promise<void> {
+  private async uploadCoreFiles(progressFn?: (totalCount: number, uploadedCount: number) => void): Promise<void> {
+    let uploadedCount = 0;
     for (const localDir of CORE_DIRS) {
       console.log(`UPLOADING ${localDir}`);
       const remoteDir = `~/${localDir}`;
       await SSH.runCommand(`rm -rf ${remoteDir}`);
       await SSH.uploadDirectory(app, localDir, remoteDir);
+      uploadedCount++;
+      progressFn?.(CORE_DIRS.length, uploadedCount);
     }
-
     await SSH.runCommand('~/scripts/update_shasums.sh SHASUMS256.copied');
   }
 
-  private async uploadBotConfigFiles(): Promise<void> {
+  private async uploadBotConfigFiles(progressFn?: (totalCount: number, uploadedCount: number) => void): Promise<void> {
     const biddingRulesStr = JSON.stringify(this.config.biddingRules);
     if (!biddingRulesStr) return;
 
     const envSecurity = `SESSION_KEYS_MNEMONIC="${this.config.security.sessionMnemonic}"\n` + `KEYPAIR_PASSPHRASE=`;
     const envState =
-      `OLDEST_FRAME_ID_TO_SYNC=${this.config.serverDetails.oldestFrameIdToSync || ''}\n` +
+      `OLDEST_FRAME_ID_TO_SYNC=${this.config.oldestFrameIdToSync || ''}\n` +
       `IS_READY_FOR_BIDDING=${this.config.isServerReadyForBidding}\n`;
 
     const files = [
@@ -490,31 +517,12 @@ export default class Installer {
 
     await SSH.runCommand('mkdir -p config');
 
+    let uploadedCount = 0;
     for (const [content, path] of files) {
       await SSH.uploadFile(content, path);
+      uploadedCount++;
+      progressFn?.(files.length, uploadedCount);
     }
-  }
-
-  private async stopAllDockers(): Promise<void> {
-    await this.stopMiningDockers();
-    await this.stopBotDocker();
-  }
-
-  private async stopMiningDockers(): Promise<void> {
-    await SSH.runCommand('cd deploy && docker compose --profile miners down');
-  }
-
-  private async restartBotDocker(): Promise<void> {
-    await this.stopBotDocker();
-    await this.startBotDocker();
-  }
-
-  private async stopBotDocker(): Promise<void> {
-    await SSH.runCommand('cd deploy && docker compose down bot');
-  }
-
-  private async startBotDocker(): Promise<void> {
-    await SSH.runCommand(`cd deploy && docker compose --env-file=${DEPLOY_ENV_FILE} up bot -d`);
   }
 
   private async clearStepFiles(stepKeys: string[], options: { setFirstStepToWorking?: boolean } = {}): Promise<void> {
@@ -529,21 +537,26 @@ export default class Installer {
 
     installDetails.errorType = null;
     installDetails.errorMessage = null;
-    const defaultStatus: IConfigInstallStep = {
+    const defaultStepObj: IConfigInstallStep = {
       status: InstallStepStatus.Pending,
       progress: 0,
       startDate: null,
     };
 
     for (const stepKey of stepKeys as InstallStepKey[]) {
+      const stepObj = { ...defaultStepObj };
       if (stepKey === stepKeys[0] && options.setFirstStepToWorking) {
-        defaultStatus.status = InstallStepStatus.Working;
-        defaultStatus.startDate = dayjs.utc().toISOString();
+        console.log('SETTING SERVER STEP TO WORKING3', stepKey);
+        stepObj.status = InstallStepStatus.Working;
+        stepObj.startDate = dayjs.utc().toISOString();
+      } else if (stepKey === InstallStepKey.ServerConnect) {
+        console.log('CLEAR STEP', stepKey, installDetails[stepKey]?.progress, ' -> ', stepObj.progress);
       }
-      installDetails[stepKey] = { ...defaultStatus };
+      installDetails[stepKey] = { ...stepObj };
       await SSH.runCommand(`rm -rf ~/install-logs/${stepKey}.*`);
     }
 
+    console.log('clearStepFiles', stepKeys, installDetails);
     this.config.installDetails = installDetails;
     await this.config.save();
   }

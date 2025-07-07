@@ -1,71 +1,90 @@
-import { type ArgonClient, convertFixedU128ToBigNumber, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
-import { formatArgonots } from './utils.js';
+import {
+  type ArgonClient,
+  ArgonPrimitivesBlockSealMiningRegistration,
+  convertFixedU128ToBigNumber,
+  Option,
+} from '@argonprotocol/mainchain';
+import { bigIntMin, calculateCurrentFrameIdFromSystemTime } from './utils';
+import BigNumber from 'bignumber.js';
+
+export const MICROGONS_PER_ARGON = 1_000_000;
 
 export type MainchainClient = ArgonClient;
 
-const BLOCK_REWARD_INCREASE_PER_INTERVAL = 0.001;
-const BLOCK_REWARD_MAX = 5;
-const BLOCK_REWARD_INTERVAL = 118;
+export const BLOCK_REWARD_INCREASE_PER_INTERVAL = BigInt(1_000);
+export const BLOCK_REWARD_MAX = BigInt(5_000_000);
+export const BLOCK_REWARD_INTERVAL = BigInt(118);
 
 export class Mainchain {
   constructor(public client: Promise<MainchainClient>) {}
 
-  public async getOwnershipAmountMinimum(): Promise<number> {
+  public async getMinimumMicronotsForBid(): Promise<bigint> {
     const client = await this.client;
-    const value = await client.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
-    return formatArgonots(value);
+    return await client.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
   }
 
-  public async getCurrentTick(): Promise<bigint> {
+  public async getFrameStartBlockNumbers(): Promise<number[]> {
     const client = await this.client;
-    return (await client.query.ticks.currentTick()).toBigInt();
+    const frameStartBlockNumbers = await client.query.miningSlot.frameStartBlockNumbers();
+    return frameStartBlockNumbers.map(x => x.toNumber());
   }
 
-  public async getTicksSinceGenesis(currentTick: bigint): Promise<number> {
+  public async getLiquidityPoolPayout(): Promise<{ totalBidAmount: number; totalActivatedCapital: number }> {
     const client = await this.client;
-    const genesisTick = (await client.query.ticks.genesisTick()).toNumber();
-    return Number(currentTick) - genesisTick;
+    const frameStartBlockNumbers = await this.getFrameStartBlockNumbers();
+    const blockNumber = frameStartBlockNumbers[0];
+    const blockHash = await client.rpc.chain.getBlockHash(blockNumber);
+    const events = await client.query.system.events.at(blockHash);
+
+    const newMinersEvent = events.filter(({ event }: { event: any }) => {
+      return client.events.miningSlot.NewMiners.is(event);
+    })[0];
+
+    const newMiners = newMinersEvent.event.data[1].toPrimitive() as any[];
+    const totalBidAmount = BigNumber(newMiners.reduce((acc, miner) => acc + miner.bid, 0))
+      .multipliedBy(0.8)
+      .toNumber();
+
+    const liquidityPoolEvent = events.filter(({ event }: { event: any }) => {
+      return client.events.liquidityPools.NextBidPoolCapitalLocked.is(event);
+    })[0];
+
+    const totalActivatedCapital = liquidityPoolEvent.event.data[1].toPrimitive() as number;
+
+    return {
+      totalBidAmount,
+      totalActivatedCapital,
+    };
   }
 
-  public async currentMinimumRewardsAtTick(currentTick: bigint): Promise<number> {
+  public async getCurrentTick(): Promise<number> {
+    const client = await this.client;
+    return (await client.query.ticks.currentTick()).toNumber();
+  }
+
+  private async getTicksSinceGenesis(currentTick: bigint): Promise<bigint> {
+    const client = await this.client;
+    const genesisTick = (await client.query.ticks.genesisTick()).toBigInt();
+    return currentTick - genesisTick;
+  }
+
+  public async minimumBlockRewardsAtTick(currentTick: bigint): Promise<bigint> {
     const blocksSinceGenesis = await this.getTicksSinceGenesis(currentTick);
-    const initialReward = 0.5; // Initial Argon reward per block
+    const initialReward = 500_000n; // Initial microgons reward per block
 
     // Calculate the number of intervals
-    const numIntervals = Math.floor(blocksSinceGenesis / BLOCK_REWARD_INTERVAL);
+    const numIntervals = blocksSinceGenesis / BLOCK_REWARD_INTERVAL;
 
     // Calculate the current reward per block
     const currentReward = initialReward + numIntervals * BLOCK_REWARD_INCREASE_PER_INTERVAL;
-    return Math.min(currentReward, BLOCK_REWARD_MAX);
+    return bigIntMin(currentReward, BLOCK_REWARD_MAX);
   }
 
-  public async argonotBlockRewardsForThisSlot(): Promise<number> {
-    const currentTick = await this.getCurrentTick();
-    const rewardsPerBlock = await this.currentMinimumRewardsAtTick(currentTick);
-    const blocksPerSlot = 1_440;
-    return rewardsPerBlock * blocksPerSlot;
-  }
-
-  public async argonBlockRewardsForFullYear(currentRewardsPerBlock: number): Promise<number> {
-    const intervalsPerYear = (365 * 1440) / BLOCK_REWARD_INTERVAL;
-    const currentTick = await this.getCurrentTick();
-    const startingRewardsPerBlock = await this.currentMinimumRewardsAtTick(currentTick);
-
-    let totalRewards = 0;
-    let minimumRewardsPerBlock = startingRewardsPerBlock;
-    for (let i = 0; i < intervalsPerYear; i++) {
-      minimumRewardsPerBlock += BLOCK_REWARD_INCREASE_PER_INTERVAL;
-      minimumRewardsPerBlock = Math.min(minimumRewardsPerBlock, BLOCK_REWARD_MAX);
-      currentRewardsPerBlock = Math.max(minimumRewardsPerBlock, currentRewardsPerBlock);
-      totalRewards += currentRewardsPerBlock * BLOCK_REWARD_INTERVAL;
-    }
-
-    const intervalsPerYearRemainder = intervalsPerYear % 1;
-    if (intervalsPerYearRemainder > 0) {
-      totalRewards += currentRewardsPerBlock * (BLOCK_REWARD_INTERVAL * intervalsPerYearRemainder);
-    }
-
-    return totalRewards;
+  public async getMinimumBlockRewardsDuringTickRange(tickStart: bigint, tickEnd: bigint): Promise<bigint> {
+    // TODO: this is wrong, we need to increment the block rewards every 118 blocks
+    const rewardsPerBlock = await this.minimumBlockRewardsAtTick(tickStart);
+    const blocksToCalculate = tickEnd - tickStart;
+    return rewardsPerBlock * blocksToCalculate;
   }
 
   public async getCurrentArgonTargetPrice(): Promise<number> {
@@ -80,78 +99,98 @@ export class Mainchain {
     return Math.max(activeMiners, 100);
   }
 
-  public async getAggregateBidCosts(): Promise<number> {
+  public async getAggregateBidCosts(): Promise<bigint> {
     const client = await this.client;
     const bidsPerFrame = await client.query.miningSlot.historicalBidsPerSlot();
 
-    let aggregateBidCosts = 0;
+    let aggregateBidCosts = 0n;
     for (const bids of bidsPerFrame) {
-      aggregateBidCosts += bids.bidAmountSum.toNumber();
+      aggregateBidCosts += bids.bidAmountSum.toBigInt();
     }
 
     return aggregateBidCosts;
   }
 
   public async getAggregateBlockRewards(): Promise<{
-    argons: number;
-    argonots: number;
+    microgons: bigint;
+    micronots: bigint;
   }> {
     const client = await this.client;
     const blockRewards = await client.query.blockRewards.blockRewardsByCohort();
     const nextCohortId = blockRewards.pop()?.[0].toBigInt() ?? 1n;
     const currentCohortId = nextCohortId - 1n;
 
-    const currentTick = await this.getCurrentTick();
+    const currentTick = BigInt(await this.getCurrentTick());
     const tickAtStartOfCurrentSlot = await this.getTickAtStartOfCurrentSlot();
     const ticksElapsedToday = currentTick - tickAtStartOfCurrentSlot;
 
-    const rewards = { argons: 0n, argonots: 0n };
+    const rewards = { microgons: 0n, micronots: 0n };
 
     for (const [cohortId, blockReward] of blockRewards) {
       const fullRotationsSinceCohortStart = currentCohortId - cohortId.toBigInt();
       const ticksSinceCohortStart = fullRotationsSinceCohortStart * 1_440n + ticksElapsedToday;
       // const startingTick = currentTick - ticksSinceCohortStart;
       // const endingTick = currentTick;
-      const argonsMinedInCohort = (blockReward.toBigInt() * ticksSinceCohortStart) / 10n;
-      const argonotsMinedInCohort = 0n; // TODO: this.getArgonotsMinedForRange(startingTick, endingTick);
-      rewards.argons += argonsMinedInCohort;
-      rewards.argonots += argonotsMinedInCohort;
+      const microgonsMinedInCohort = (blockReward.toBigInt() * ticksSinceCohortStart) / 10n;
+      const micronotsMinedInCohort = 0n; // TODO: this.getMicronotsMinedForRange(startingTick, endingTick);
+      rewards.microgons += microgonsMinedInCohort;
+      rewards.micronots += micronotsMinedInCohort;
     }
 
-    return {
-      argons: Number(rewards.argons) / MICROGONS_PER_ARGON,
-      argonots: Number(rewards.argonots) / MICROGONS_PER_ARGON,
-    };
+    return rewards;
   }
 
-  public async fetchArgonsInCirculationMinusBitcoinLocked() {
+  public async fetchMicrogonsInCirculation(): Promise<bigint> {
+    const client = await this.client;
+    return (await client.query.balances.totalIssuance()).toBigInt();
+  }
+
+  private async fetchMicrogonsInCirculationMinusBitcoinLocked(): Promise<bigint> {
     const client = await this.client;
 
-    const argonsInCirculation = (await client.query.balances.totalIssuance()).toNumber();
-    const bitcoinArgons = (await client.query.mint.mintedBitcoinArgons()).toNumber();
+    const argonsInCirculation = await this.fetchMicrogonsInCirculation();
+    const bitcoinArgons = (await client.query.mint.mintedBitcoinArgons()).toBigInt();
 
-    return (argonsInCirculation - bitcoinArgons) / MICROGONS_PER_ARGON;
+    return argonsInCirculation - bitcoinArgons;
   }
 
-  public async fetchCurrentRewardsPerBlock() {
+  public async fetchMicrogonsMinedPerBlockDuringNextCohort(): Promise<bigint> {
     const client = await this.client;
-    return (await client.query.blockRewards.argonsPerBlock()).toNumber() / MICROGONS_PER_ARGON;
+    return await client.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
   }
 
-  public async fetchExchangeRates(): Promise<{
-    USD: number;
-    ARGNOT: number;
-    ARGN: number;
-    BTC: number;
+  public async fetchArgonExchangeRatesTo(): Promise<{
+    USD: BigNumber;
+    ARGNOT: BigNumber;
+    ARGN: BigNumber;
+    BTC: BigNumber;
   }> {
     const client = await this.client;
     const priceIndex = (await client.query.priceIndex.current()).value;
-    const USD = convertFixedU128ToBigNumber(priceIndex.argonUsdPrice.toBigInt()).toNumber();
-    const ARGNOT = convertFixedU128ToBigNumber(priceIndex.argonotUsdPrice.toBigInt()).toNumber() / USD;
-    const BTC = convertFixedU128ToBigNumber(priceIndex.btcUsdPrice.toBigInt()).toNumber() / USD;
-    const ARGN = 1;
+    if (!priceIndex) {
+      return {
+        USD: BigNumber(1),
+        ARGNOT: BigNumber(1),
+        ARGN: BigNumber(1),
+        BTC: BigNumber(1),
+      };
+    }
 
-    return { USD, ARGNOT, ARGN, BTC };
+    const usdForArgon = convertFixedU128ToBigNumber(priceIndex.argonUsdPrice.toBigInt());
+    const usdForArgnot = convertFixedU128ToBigNumber(priceIndex.argonotUsdPrice.toBigInt());
+    const usdForBtc = convertFixedU128ToBigNumber(priceIndex.btcUsdPrice.toBigInt());
+
+    // These exchange rates should be relative to the argon
+    const argonForUsd = usdForArgon.isZero() ? BigNumber(1) : BigNumber(1).dividedBy(usdForArgon);
+    const argonForArgnot = usdForArgnot.isZero() ? BigNumber(1) : usdForArgnot.dividedBy(usdForArgon);
+    const argonForBtc = usdForBtc.isZero() ? BigNumber(1) : usdForBtc.dividedBy(usdForArgon);
+
+    return {
+      ARGN: BigNumber(1),
+      USD: argonForUsd,
+      ARGNOT: argonForArgnot,
+      BTC: argonForBtc,
+    };
   }
 
   public async getNextSlotRange(): Promise<[bigint, bigint]> {
@@ -195,6 +234,18 @@ export class Mainchain {
     }
 
     return vaults;
+  }
+
+  public async fetchPreviousDayWinningBids(): Promise<bigint[]> {
+    const client = await this.client;
+    const currentFrameId = calculateCurrentFrameIdFromSystemTime();
+    const activeMiners = await client.query.miningSlot.activeMinersByIndex.entries();
+    const yesterdayWinningBids = activeMiners.filter(
+      ([_, x]: [any, Option<ArgonPrimitivesBlockSealMiningRegistration>]) => {
+        return x.isSome && x.unwrap().cohortId.toNumber() === currentFrameId;
+      },
+    );
+    return yesterdayWinningBids.map(([_, bid]) => bid.unwrap().bid.toBigInt());
   }
 }
 

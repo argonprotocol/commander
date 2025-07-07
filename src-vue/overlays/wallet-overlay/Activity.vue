@@ -8,8 +8,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { useConfig } from '../../stores/config';
-import { useCurrencyStore, IWallet } from '../../stores/currency';
+import { useWallets } from '../../stores/wallets';
 
 const props = defineProps({
   walletId: {
@@ -18,13 +17,12 @@ const props = defineProps({
   },
 });
 
-const config = useConfig();
-const currencyStore = useCurrencyStore();
+const wallets = useWallets();
 
 const transactions: Vue.Ref<any[]> = Vue.ref([]);
 
 async function fetchTransactions() {
-  const wallet = currencyStore[props.walletId as keyof typeof currencyStore] as IWallet;
+  const wallet = wallets[props.walletId as keyof typeof wallets] as IWallet;
   const accountAddress = wallet.address;
   const response = await fetch(
     `https://argon-api.statescan.io/accounts/${accountAddress}/transfers?page=0&page_size=25`,

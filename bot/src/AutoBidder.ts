@@ -1,14 +1,13 @@
 import { type Accountset, MiningBids } from '@argonprotocol/mainchain';
-import { createBidderParams } from '@argonprotocol/commander-calculator';
+import { createBidderParams, type IBiddingRules } from '@argonprotocol/commander-calculator';
 import { type CohortStorage } from './storage.ts';
 import { CohortBidder } from './CohortBidder.ts';
-import { readJsonFileOrNull } from './utils.ts';
 
 /**
  * Creates a bidding process. Between each cohort, it will ask the callback for parameters for the next cohort.
  * @param accountset
  * @param storage
- * @param biddingRulesPath
+ * @param biddingRules
  */
 export class AutoBidder {
   public readonly miningBids: MiningBids;
@@ -18,7 +17,7 @@ export class AutoBidder {
   constructor(
     readonly accountset: Accountset,
     readonly storage: CohortStorage,
-    private biddingRulesPath: string,
+    private biddingRules: IBiddingRules,
   ) {
     this.miningBids = new MiningBids(accountset.client);
   }
@@ -58,8 +57,7 @@ export class AutoBidder {
 
   private async onBiddingStart(cohortActivatingFrameId: number) {
     if (this.activeBidder?.cohortId === cohortActivatingFrameId) return;
-    const biddingRules = readJsonFileOrNull(this.biddingRulesPath) || {};
-    const params = await createBidderParams(cohortActivatingFrameId, await this.accountset.client, biddingRules);
+    const params = await createBidderParams(cohortActivatingFrameId, await this.accountset.client, this.biddingRules);
     if (params.maxSeats === 0) return;
 
     const bidsFileData = await this.storage.bidsFile(cohortActivatingFrameId).get();

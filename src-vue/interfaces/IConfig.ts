@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { BiddingRulesSchema, IBiddingRules } from './IBiddingRules';
+import { BiddingRulesSchema, IBiddingRules } from '@argonprotocol/commander-calculator/src/IBiddingRules';
 
 export enum InstallStepKey {
   ServerConnect = 'ServerConnect',
-  FileCheck = 'FileCheck',
+  FileUpload = 'FileUpload',
   UbuntuCheck = 'UbuntuCheck',
   DockerInstall = 'DockerInstall',
   BitcoinInstall = 'BitcoinInstall',
@@ -13,7 +13,7 @@ export enum InstallStepKey {
 
 export enum InstallStepErrorType {
   Unknown = 'Unknown',
-  FileCheck = InstallStepKey.FileCheck,
+  FileUpload = InstallStepKey.FileUpload,
   UbuntuCheck = InstallStepKey.UbuntuCheck,
   DockerInstall = InstallStepKey.DockerInstall,
   BitcoinInstall = InstallStepKey.BitcoinInstall,
@@ -41,7 +41,6 @@ export const ConfigServerDetailsSchema = z.object({
   sshPublicKey: z.string(),
   sshPrivateKey: z.string(),
   sshUser: z.string(),
-  oldestFrameIdToSync: z.number().nullable(),
 });
 
 export const ConfigInstallStep = z.object({
@@ -52,7 +51,7 @@ export const ConfigInstallStep = z.object({
 
 export const ConfigInstallDetailsSchema = z.object({
   [InstallStepKey.ServerConnect]: ConfigInstallStep,
-  [InstallStepKey.FileCheck]: ConfigInstallStep,
+  [InstallStepKey.FileUpload]: ConfigInstallStep,
   [InstallStepKey.UbuntuCheck]: ConfigInstallStep,
   [InstallStepKey.DockerInstall]: ConfigInstallStep,
   [InstallStepKey.BitcoinInstall]: ConfigInstallStep,
@@ -79,7 +78,7 @@ export const ConfigSchema = z.object({
   security: ConfigSecuritySchema,
   serverDetails: ConfigServerDetailsSchema,
   installDetails: ConfigInstallDetailsSchema,
-  syncDetails: ConfigSyncDetailsSchema,
+  oldestFrameIdToSync: z.number().nullable(),
 
   isServerConnected: z.boolean(), // isConnected
   isServerInstalled: z.boolean(), // isNewServer
@@ -110,7 +109,7 @@ export interface IConfigDefaults {
   security: () => IConfig['security'];
   serverDetails: () => Promise<IConfig['serverDetails']>;
   installDetails: () => IConfig['installDetails'];
-  syncDetails: () => IConfig['syncDetails'];
+  oldestFrameIdToSync: () => IConfig['oldestFrameIdToSync'];
   isServerConnected: () => IConfig['isServerConnected'];
   isServerInstalled: () => IConfig['isServerInstalled'];
   isServerUpToDate: () => IConfig['isServerUpToDate'];

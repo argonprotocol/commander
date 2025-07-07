@@ -23,9 +23,9 @@
             </tr>
           </thead>
           <tbody class="font-light font-mono">
-            <tr v-for="(bid, index) in networkBids" :key="bid.address">
+            <tr v-for="(bid, index) in winningBids" :key="bid.address">
               <td class="text-left opacity-50">{{ index + 1 }})</td>
-              <td class="text-left">{{ currencySymbol }}{{ formatArgonsBid(bid.argonsBid) }}</td>
+              <td class="text-left">{{ currency.symbol }}{{ formatMicrogonsBid(bid.microgonsBid) }}</td>
               <td class="text-left">{{ lastBidAtTickFromNow(bid.lastBidAtTick) }}</td>
               <td class="text-right relative">
                 {{ bid.address.slice(0, 10) }}...{{ bid.address.slice(-7) }}
@@ -40,8 +40,8 @@
                 </span>
               </td>
             </tr>
-            <tr v-for="i in 10 - networkBids.length" :key="i">
-              <td class="text-left">{{ networkBids.length + i }}</td>
+            <tr v-for="i in 10 - winningBids.length" :key="i">
+              <td class="text-left">{{ winningBids.length + i }}</td>
               <td class="text-left text-gray-400">---</td>
               <td class="text-left text-gray-400">---</td>
               <td class="text-right text-gray-400">-------------</td>
@@ -55,29 +55,28 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { storeToRefs } from 'pinia';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { useCurrencyStore } from '../stores/currency';
-import { fmtMoney } from '../lib/Utils';
+import { useCurrency } from '../stores/currency';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { useStats } from '../stores/stats';
 import { IBidsFile } from '@argonprotocol/commander-bot/src/storage';
+import { createNumeralHelpers } from '../lib/numeral';
 
 dayjs.extend(utc);
 dayjs.extend(relativeTime);
 
 const stats = useStats();
-const currencyStore = useCurrencyStore();
+const currency = useCurrency();
 
-const { currencySymbol } = storeToRefs(currencyStore);
+const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
-const networkBids = Vue.computed<IBidsFile['winningBids']>(() => stats.winningBids);
+const winningBids = Vue.computed<IBidsFile['winningBids']>(() => stats.winningBids);
 
-function formatArgonsBid(argonsBid: bigint | undefined): string {
-  if (!argonsBid) return '---';
-  return fmtMoney(currencyStore.argonTo(Number(argonsBid) / 1_000_000));
+function formatMicrogonsBid(microgonsBid: bigint | undefined): string {
+  if (!microgonsBid) return '---';
+  return microgonToMoneyNm(microgonsBid).format('0,0.00');
 }
 
 function lastBidAtTickFromNow(lastBidAtTick: number | undefined): string {

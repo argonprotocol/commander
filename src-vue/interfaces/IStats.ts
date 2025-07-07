@@ -13,7 +13,7 @@ export interface IBidsFileSubaccount {
   index: number;
   address: string;
   bidPosition: number | null;
-  argonsBid: number | null;
+  microgonsBid: bigint | null;
   isRebid: boolean | null;
   lastBidAtTick: number | null;
 }
@@ -28,11 +28,11 @@ export interface IDashboardGlobalStats {
   activeCohorts: number;
   activeSeats: number;
   totalBlocksMined: number;
-  totalArgonsBid: number;
-  totalTransactionFees: number;
-  totalArgonotsMined: number;
-  totalArgonsMined: number;
-  totalArgonsMinted: number;
+  totalMicrogonsBid: bigint;
+  totalTransactionFees: bigint;
+  totalMicronotsMined: bigint;
+  totalMicrogonsMined: bigint;
+  totalMicrogonsMinted: bigint;
 }
 
 export interface IDashboardCohortStats {
@@ -40,13 +40,13 @@ export interface IDashboardCohortStats {
   firstTick: number;
   lastTick: number;
   lastBlockNumber: number;
-  transactionFees: number;
-  argonotsStaked: number;
-  argonsBid: number;
+  transactionFees: bigint;
+  micronotsStaked: bigint;
+  microgonsBid: bigint;
   seatsWon: number;
   progress: number;
   blocksMined: number;
-  argonotsMined: number;
-  argonsMined: number;
-  argonsMinted: number;
+  micronotsMined: bigint;
+  microgonsMined: bigint;
+  microgonsMinted: bigint;
 }

@@ -2,16 +2,16 @@ export interface ICohortFrameRecord {
   frameId: number;
   cohortId: number;
   blocksMined: number;
-  argonotsMined: number;
-  argonsMined: number;
-  argonsMinted: number;
+  micronotsMined: bigint;
+  microgonsMined: bigint;
+  microgonsMinted: bigint;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface ICohortFrameStats {
   totalBlocksMined: number;
-  totalArgonotsMined: number;
-  totalArgonsMined: number;
-  totalArgonsMinted: number;
+  totalMicronotsMined: bigint;
+  totalMicrogonsMined: bigint;
+  totalMicrogonsMinted: bigint;
 }

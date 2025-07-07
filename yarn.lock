@@ -1857,6 +1857,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/numeral@npm:^2":
+  version: 2.0.5
+  resolution: "@types/numeral@npm:2.0.5"
+  checksum: 10c0/b18766cc97e79b5c59130ce1d5d5ad8b9287e1efd5ecac402e8a64e45c50aea8c8940c9974358983036d1abbed365a08f7f4d11b8af16874a5d4d0edce9aa4d4
+  languageName: node
+  linkType: hard
+
 "@types/qrcode@npm:^1.5.5":
   version: 1.5.5
   resolution: "@types/qrcode@npm:1.5.5"
@@ -2357,6 +2364,7 @@ __metadata:
     "@tauri-apps/plugin-updater": "npm:~2"
     "@tauri-controls/vue": "npm:^0.4.0"
     "@types/node": "npm:^22.15.17"
+    "@types/numeral": "npm:^2"
     "@types/qrcode": "npm:^1.5.5"
     "@vitejs/plugin-vue": "npm:^5.2.1"
     bignumber.js: "npm:^9.1.2"
@@ -2367,6 +2375,7 @@ __metadata:
     dayjs: "npm:^1.11.13"
     husky: "npm:^9.1.7"
     mitt: "npm:^3.0.1"
+    numeral: "npm:^2.0.6"
     ordinal: "npm:^1.0.3"
     pinia: "npm:^3.0.1"
     prettier: "npm:^3.5.3"
@@ -4580,6 +4589,13 @@ __metadata:
   dependencies:
     boolbase: "npm:^1.0.0"
   checksum: 10c0/5fee7ff309727763689cfad844d979aedd2204a817fbaaf0e1603794a7c20db28548d7b024692f953557df6ce4a0ee4ae46cd8ebd9b36cfb300b9226b567c479
+  languageName: node
+  linkType: hard
+
+"numeral@npm:^2.0.6":
+  version: 2.0.6
+  resolution: "numeral@npm:2.0.6"
+  checksum: 10c0/5ed008d3fae05cfa4986b77a85ca10bff29ae6e1fa41a04cce05ea21f08a8a104226f88868930e2a94e3239708d6985d111b5d1291e8b9a3049ffc5365c332d4
   languageName: node
   linkType: hard
 

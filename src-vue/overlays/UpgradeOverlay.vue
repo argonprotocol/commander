@@ -39,8 +39,7 @@
           <div v-else>
             <p>
               You have been upgraded to Commander version {{ config.version }}. This new version requires an upgrade to
-              your cloud machine. Don't worry, we'll take care of all the details. Just click the "Upgrade" button to
-              begin.
+              your cloud machine. Click the "Upgrade" button, and we'll take care of the details.
             </p>
 
             <div class="flex flex-row justify-end gap-4 mt-6 border-t border-slate-300 pt-4">

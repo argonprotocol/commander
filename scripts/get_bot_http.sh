@@ -21,7 +21,7 @@ BODY=$(echo "$RESPONSE" | sed '$d')
 
 # Check if the server is unavailable
 if [ "$STATUS" == "000" ]; then
-    echo "{\"error\":\"Server is unavailable\", \"status_code\": 000}"
+    echo "{\"status\": 000, \"error\":\"ServerUnavailable\"}"
     exit 1
 fi
 

@@ -2,7 +2,7 @@ export interface IBotActivityRecord {
   blockNumber: number;
   tick: number;
   address: string;
-  bidAmount: number;
+  bidAmount: bigint;
   bidPosition: number;
   prevPosition: number;
   insertedAt: string;

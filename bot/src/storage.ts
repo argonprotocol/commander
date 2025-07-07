@@ -2,9 +2,10 @@ import Path from 'node:path';
 import { LRU } from 'tiny-lru';
 import * as fs from 'node:fs';
 import { JsonExt, type ArgonClient } from '@argonprotocol/mainchain';
-import { MiningFrames } from './MiningFrames.ts';
+import { MiningFrames } from '@argonprotocol/commander-calculator';
 import type { IBlockNumbers } from './Dockers.ts';
 import { CohortBidder } from '@argonprotocol/mainchain';
+import BigNumber from 'bignumber.js';
 
 export type IBidsHistory = CohortBidder['bidHistory'];
 
@@ -19,6 +20,9 @@ export interface IEarningsFile extends ILastModifiedAt {
   lastTick: number;
   firstBlockNumber: number;
   lastBlockNumber: number;
+  usdExchangeRates: BigNumber[];
+  btcExchangeRates: BigNumber[];
+  argnotExchangeRates: BigNumber[];
   byCohortActivatingFrameId: {
     [cohortActivatingFrameId: number]: IEarningsFileCohort;
   };
@@ -27,9 +31,9 @@ export interface IEarningsFile extends ILastModifiedAt {
 export interface IEarningsFileCohort {
   lastBlockMinedAt: string;
   blocksMined: number;
-  argonsMined: bigint;
-  argonsMinted: bigint;
-  argonotsMined: bigint;
+  microgonsMined: bigint;
+  microgonsMinted: bigint;
+  micronotsMined: bigint;
 }
 
 export interface IBidsFile extends ILastModifiedAt {
@@ -37,11 +41,11 @@ export interface IBidsFile extends ILastModifiedAt {
   cohortActivatingFrameId: number;
   frameBiddingProgress: number;
   lastBlockNumber: number;
-  argonsBidTotal: bigint;
+  microgonsBidTotal: bigint;
   transactionFees: bigint;
-  argonotsStakedPerSeat: bigint;
+  micronotsStakedPerSeat: bigint;
   argonotsUsdPrice: number;
-  argonsToBeMinedPerBlock: bigint;
+  microgonsToBeMinedPerBlock: bigint;
   seatsWon: number;
   winningBids: Array<IWinningBid>;
 }
@@ -51,13 +55,28 @@ export interface IWinningBid {
   subAccountIndex: number;
   lastBidAtTick?: number;
   bidPosition?: number;
-  argonsBid?: bigint;
+  microgonsBid?: bigint;
+}
+
+export interface ISyncStateStarting {
+  isReady: boolean;
+  isStarting?: boolean;
+  isWaitingForBiddingRules?: boolean;
+  isSyncing?: boolean;
+  syncProgress: number;
+  argonBlockNumbers: IBlockNumbers;
+  bitcoinBlockNumbers: IBlockNumbers;
+}
+
+export interface ISyncStateError extends ISyncStateStarting {
+  serverError: string;
 }
 
 export interface ISyncState extends ILastModifiedAt {
-  isWaitingToStart?: boolean;
+  isReady: boolean;
   isStarting?: boolean;
-  isStarted?: boolean;
+  isWaitingForBiddingRules?: boolean;
+  isSyncing?: boolean;
   hasMiningBids: boolean;
   hasMiningSeats: boolean;
   argonBlockNumbers: IBlockNumbers;
@@ -68,7 +87,7 @@ export interface ISyncState extends ILastModifiedAt {
   lastFinalizedBlockNumber: number;
   oldestFrameIdToSync: number;
   currentFrameId: number;
-  loadProgress: number;
+  syncProgress: number;
   queueDepth: number;
   maxSeatsPossible: number;
   maxSeatsReductionReason: string;
@@ -153,7 +172,7 @@ export class CohortStorage {
     let entry = this.lruCache.get(key);
     if (!entry) {
       entry = new JsonStore<ISyncStateFile>(Path.join(this.basedir, key), () => ({
-        isStarted: false,
+        isReady: false,
         hasMiningBids: false,
         hasMiningSeats: false,
         argonBlockNumbers: { localNode: 0, mainNode: 0 },
@@ -164,7 +183,7 @@ export class CohortStorage {
         lastFinalizedBlockNumber: 0,
         oldestFrameIdToSync: 0,
         currentFrameId: 0,
-        loadProgress: 0,
+        syncProgress: 0,
         queueDepth: 0,
         maxSeatsPossible: 10, // TODO: instead of hardcoded 10, fetch from chain
         maxSeatsReductionReason: '',
@@ -192,8 +211,9 @@ export class CohortStorage {
           lastTick: tickRange[1],
           firstBlockNumber: 0,
           lastBlockNumber: 0,
-          frameTickStart: tickRange[0],
-          frameTickEnd: tickRange[1],
+          usdExchangeRates: [],
+          btcExchangeRates: [],
+          argnotExchangeRates: [],
           byCohortActivatingFrameId: {},
         };
       });
@@ -213,11 +233,11 @@ export class CohortStorage {
         frameBiddingProgress: 0,
         lastBlockNumber: 0,
         seatsWon: 0,
-        argonsBidTotal: 0n,
+        microgonsBidTotal: 0n,
         transactionFees: 0n,
-        argonotsStakedPerSeat: 0n,
+        micronotsStakedPerSeat: 0n,
         argonotsUsdPrice: 0,
-        argonsToBeMinedPerBlock: 0n,
+        microgonsToBeMinedPerBlock: 0n,
         winningBids: [],
       }));
       this.lruCache.set(key, entry);

@@ -1,11 +1,6 @@
 import camelcaseKeys from 'camelcase-keys';
 import { Db } from '../Db';
-
-interface IArgonActivityRecord {
-  localNodeBlockNumber: number;
-  mainNodeBlockNumber: number;
-  insertedAt: string;
-}
+import { IArgonActivityRecord } from '../../interfaces/db/IArgonActivityRecord';
 
 export class ArgonActivitiesTable {
   private db: Db;
