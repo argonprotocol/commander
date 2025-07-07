@@ -12,19 +12,9 @@
       <BgOverlay @close="closeOverlay" />
     </TransitionChild>
 
-    <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">
-      <TransitionChild
-        as="template"
-        enter="ease-out duration-300"
-        enter-from="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-        enter-to="opacity-100 translate-y-0 sm:scale-100"
-        leave="ease-in duration-200"
-        leave-from="opacity-100 translate-y-0 sm:scale-100"
-        leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-      >
-        <div
-          class="bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl relative w-8/12 max-h-10/12 overflow-scroll"
-        >
+    <Dialog @close="closeOverlay">
+      <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">
+        <DialogPanel class="bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl relative w-8/12 max-h-10/12 overflow-scroll">
           <Receive v-if="activeScreen === 'receive'" @navigate="navigate" :walletId="walletId" />
           <div v-else>
             <div
@@ -72,15 +62,15 @@
             <Resources v-if="activeTab === 'tokens'" :walletId="walletId" @navigate="navigate" />
             <Activity v-else-if="activeTab === 'activity'" :walletId="walletId" />
           </div>
-        </div>
-      </TransitionChild>
-    </div>
+        </DialogPanel>
+      </div>
+    </Dialog>
   </TransitionRoot>
 </template>
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { TransitionChild, TransitionRoot } from '@headlessui/vue';
+import { TransitionChild, TransitionRoot, Dialog, DialogPanel } from '@headlessui/vue';
 import emitter from '../emitters/basic';
 import { useCurrency } from '../stores/currency';
 import { useWallets } from '../stores/wallets';
@@ -107,7 +97,7 @@ const { microgonToMoneyNm } = createNumeralHelpers(currency);
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 
-const walletId: Vue.Ref<'mng' | 'llb' | 'vlt'> = Vue.ref('mng');
+const walletId: Vue.Ref<'mng' | 'vlt'> = Vue.ref('mng');
 const walletName = Vue.ref('');
 const wallet = Vue.ref({
   address: '',
@@ -122,9 +112,6 @@ Vue.watch(
     if (walletId.value === 'mng') {
       walletName.value = 'Mining';
       wallet.value = wallets.mngWallet;
-    } else if (walletId.value === 'llb') {
-      walletName.value = 'Liquid Locking';
-      wallet.value = wallets.llbWallet;
     } else if (walletId.value === 'vlt') {
       walletName.value = 'Vaulting';
       wallet.value = wallets.vltWallet;

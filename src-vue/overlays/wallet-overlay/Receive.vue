@@ -20,110 +20,40 @@
             You can use any polkadot/substrate compatible wallet to add funds to your Commander account. Just scan the
             QR code shown on the right, or copy and paste the address that’s printed below it.
           </p>
-          <p class="mt-2 font-light">
-            Based on the rules you configured, your Bidding Bot needs the following tokens in order to optimize its
-            ability to win seats:
+          <p v-if="props.walletId === 'mng'" class="mt-2 font-light">
+            Based on the rules you configured, your Mining Bot needs the following tokens in order to win seats:
+          </p>
+          <p v-else class="mt-2 font-light">
+            Based on the rules configured in your account, your Vault needs the following tokens in order to operate:
           </p>
 
           <table>
             <thead>
               <tr>
-                <td>Optimal Tokens</td>
+                <td>Needed Tokens</td>
                 <td>You Have</td>
-                <td>Still Needed</td>
+                <td class="text-right">Status</td>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>{{ config.biddingRules?.desiredMicrogons }} ARGN</td>
-                <td>{{ wallet.availableMicrogons }} ARGN</td>
-                <td>
-                  {{ microgonToArgonNm(desiredMicrogonsStillNeeded).format('0,0.[00000000]') }} ARGN
-                  <span
-                    tag
-                    :class="
-                      desiredMicrogonsStillNeeded > 0
-                        ? 'bg-green-600/90 border border-green-700'
-                        : 'bg-gray-400/90 border border-gray-500'
-                    "
-                  >
-                    FOR OPTIMAL
-                  </span>
-                </td>
+                <td>{{ microgonToArgonNm(requiredMicrogons).format('0,0.[00000000]') }} ARGN</td>
+                <td>{{ microgonToArgonNm(wallet.availableMicrogons).format('0,0.[00000000]') }} ARGN</td>
+                <td class="text-right">{{ wallet.availableMicrogons == requiredMicrogons ? 'success' : 'waiting' }}</td>
               </tr>
               <tr>
-                <td>{{ config.biddingRules?.desiredMicronots }} ARGNOT</td>
-                <td>{{ wallet.availableMicronots }} ARGNOT</td>
-                <td>
-                  {{ micronotToArgonotNm(desiredMicronotsStillNeeded).format('0,0.[00000000]') }} ARGNOT
-                  <span
-                    tag
-                    :class="
-                      desiredMicronotsStillNeeded > 0
-                        ? 'bg-green-500/90 border border-green-700'
-                        : 'bg-gray-400/90 border border-gray-500'
-                    "
-                  >
-                    FOR OPTIMAL
-                  </span>
-                </td>
+                <td>{{ micronotToArgonotNm(requiredMicronots).format('0,0.[00000000]') }} ARGNOT</td>
+                <td>{{ micronotToArgonotNm(wallet.availableMicronots).format('0,0.[00000000]') }} ARGNOT</td>
+                <td v-if="!requiredMicronots" class="text-right">--</td>
+                <td v-else class="text-right">{{ wallet.availableMicronots == requiredMicronots ? 'success' : 'waiting' }}</td>
               </tr>
             </tbody>
           </table>
 
-          <p class="mt-6">
-            The above table shows the optimal amounts desired. However, your Bot cannot operate if it has anything less
-            than the following:
-          </p>
-
-          <table>
-            <thead>
-              <tr>
-                <td>Minimum Tokens</td>
-                <td>You Have</td>
-                <td>Still Needed</td>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{{ config.biddingRules?.requiredMicrogons }} ARGN</td>
-                <td>{{ wallet.availableMicrogons }} ARGN</td>
-                <td>
-                  {{ microgonToArgonNm(requiredMicrogonsStillNeeded).format('0,0.[00000000]') }} ARGN
-                  <span
-                    tag
-                    :class="
-                      requiredMicrogonsStillNeeded > 0
-                        ? 'bg-red-500 border border-red-700'
-                        : 'bg-gray-400/90 border border-gray-500'
-                    "
-                  >
-                    FOR MINIMUM
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td>{{ config.biddingRules?.requiredMicronots }} ARGNOT</td>
-                <td>{{ wallet.availableMicronots }} ARGNOT</td>
-                <td>
-                  {{ micronotToArgonotNm(requiredMicronotsStillNeeded).format('0,0.[00000000]') }} ARGNOT
-                  <span
-                    tag
-                    :class="
-                      requiredMicronotsStillNeeded > 0
-                        ? 'bg-red-500 border border-red-700'
-                        : 'bg-gray-400/90 border border-gray-500'
-                    "
-                  >
-                    FOR MINIMUM
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
         </div>
-        <div v-else>You haven't set any bidding rules. Please do so.</div>
+        <div v-else>You haven't set any bidding rules. Please do so before adding funds.</div>
       </div>
+      
       <div class="flex flex-col w-full max-w-44 items-end justify-end">
         <img :src="qrCode" width="100%" />
         <CopyToClipboard :content="wallet.address" class="relative mb-3 mr-5 cursor-pointer">
@@ -181,27 +111,27 @@ function stillNeeded(amount: bigint, walletValue: bigint) {
   return stillNeeded > 0n ? stillNeeded : 0n;
 }
 
-const desiredMicrogonsStillNeeded = Vue.computed(() => {
-  return stillNeeded(config.biddingRules?.desiredMicrogons || 0n, wallet.value.availableMicrogons || 0n);
+const requiredMicrogons = Vue.computed(() => {
+  if (props.walletId === 'mng') {
+    return config.biddingRules?.requiredMicrogons || 0n;
+  } else if (props.walletId === 'vlt') {
+    return config.vaultingRules?.requiredMicrogons || 0n;
+  }
+  return 0n;
 });
 
-const desiredMicronotsStillNeeded = Vue.computed(() => {
-  return stillNeeded(config.biddingRules?.desiredMicronots || 0n, wallet.value.availableMicronots || 0n);
-});
-
-const requiredMicrogonsStillNeeded = Vue.computed(() => {
-  return stillNeeded(config.biddingRules?.requiredMicrogons || 0n, wallet.value.availableMicrogons || 0n);
-});
-
-const requiredMicronotsStillNeeded = Vue.computed(() => {
-  return stillNeeded(config.biddingRules?.requiredMicronots || 0n, wallet.value.availableMicronots || 0n);
+const requiredMicronots = Vue.computed(() => {
+  if (props.walletId === 'mng') {
+    return config.biddingRules?.requiredMicronots || 0n;
+  } else if (props.walletId === 'vlt') {
+    return config.vaultingRules?.requiredMicronots || 0n;
+  }
+  return 0n;
 });
 
 const walletName = Vue.computed(() => {
   if (props.walletId === 'mng') {
     return 'Mining';
-  } else if (props.walletId === 'llb') {
-    return 'Liquid Locking';
   } else if (props.walletId === 'vlt') {
     return 'Vaulting';
   }
@@ -210,8 +140,6 @@ const walletName = Vue.computed(() => {
 const wallet = Vue.computed(() => {
   if (props.walletId === 'mng') {
     return wallets.mngWallet;
-  } else if (props.walletId === 'llb') {
-    return wallets.llbWallet;
   } else if (props.walletId === 'vlt') {
     return wallets.vltWallet;
   } else {
@@ -248,12 +176,12 @@ Vue.onMounted(() => {
 @reference "../../main.css";
 
 table {
-  @apply w-full text-md mt-6 font-mono text-md;
+  @apply w-11/12 mt-6 font-mono text-md;
   thead {
     @apply font-bold uppercase;
   }
   td {
-    @apply border-b border-slate-400/30 py-1;
+    @apply border-b border-slate-400/30 py-3;
   }
 }
 

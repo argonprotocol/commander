@@ -30,6 +30,24 @@ export function convertBigIntStringToNumber(bigIntStr: string | undefined): bigi
   return BigInt(bigIntStr.slice(0, -1));
 }
 
+export function jsonStringifyWithBigInts(data: any, replacerFn: null | ((key: string, value: any) => any) = null, space: number | string | undefined = undefined): string {
+  return JSON.stringify(data, (_key, value) => {
+    if (typeof value === 'bigint') {
+      value = value.toString() + 'n';
+    }
+    return replacerFn ? replacerFn(_key, value) : value;
+  }, space);
+}
+
+export function jsonParseWithBigInts(data: string): any {
+  return JSON.parse(data, (_key, value) => {
+    if (typeof value === 'string' && /^\d+n$/.test(value)) {
+      return convertBigIntStringToNumber(value)
+    }
+    return value;
+  });
+}
+
 export function toSqliteBoolean(bool: boolean): number {
   return bool ? 1 : 0;
 }

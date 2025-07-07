@@ -1008,7 +1008,7 @@ async function saveRules() {
     startingBidAmountRelative: startingBidAmountRelative.value,
 
     rebiddingDelay: rebiddingDelay.value,
-    incrementAmount: incrementAmount.value,
+    rebiddingIncrementBy: incrementAmount.value,
 
     finalBidAmountFormulaType: finalBidAmountFormulaType.value,
     finalBidAmountAbsolute: finalBidAmountAbsolute.value,

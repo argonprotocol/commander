@@ -10,6 +10,7 @@ import {
 } from '../interfaces/IConfig';
 import { SSH } from './SSH';
 import { Keyring, type KeyringPair, mnemonicGenerate } from '@argonprotocol/mainchain';
+import { jsonParseWithBigInts, jsonStringifyWithBigInts } from './Utils';
 
 export const env = (import.meta as any).env;
 export const NETWORK_NAME = env.VITE_NETWORK_NAME || 'mainnet';
@@ -71,6 +72,7 @@ export class Config {
       hasMiningSeats: Config.getDefault(dbFields.hasMiningSeats) as boolean,
       hasMiningBids: Config.getDefault(dbFields.hasMiningBids) as boolean,
       biddingRules: Config.getDefault(dbFields.biddingRules) as IConfig['biddingRules'],
+      vaultingRules: Config.getDefault(dbFields.vaultingRules) as IConfig['vaultingRules'],
     };
   }
 
@@ -87,11 +89,11 @@ export class Config {
         const defaultValue = await value();
         configData[key] = defaultValue;
         fieldsToSave.add(key);
-        fieldsSerialized[key as keyof typeof fieldsSerialized] = JSON.stringify(defaultValue, null, 2);
+        fieldsSerialized[key as keyof typeof fieldsSerialized] = jsonStringifyWithBigInts(defaultValue, null, 2);
         continue;
       }
 
-      configData[key] = JSON.parse(rawValue as string);
+      configData[key] = jsonParseWithBigInts(rawValue as string);
       fieldsSerialized[key as keyof typeof fieldsSerialized] = rawValue as string;
     }
 
@@ -274,6 +276,17 @@ export class Config {
     this._unstringified.biddingRules = value;
   }
 
+  get vaultingRules(): IConfig['vaultingRules'] {
+    if (!this.isLoaded) return {} as IConfig['vaultingRules'];
+    return this._unstringified.vaultingRules;
+  }
+
+  set vaultingRules(value: IConfig['vaultingRules']) {
+    this._throwErrorIfNotLoaded();
+    this._tryFieldsToSave(dbFields.vaultingRules, value);
+    this._unstringified.vaultingRules = value;
+  }
+
   public async save() {
     this._throwErrorIfNotLoaded();
     const dataToSave = Config.extractDataToSave(this._fieldsToSave, this._stringified);
@@ -300,7 +313,7 @@ export class Config {
   }
 
   private _tryFieldsToSave(field: keyof typeof dbFields, value: any) {
-    const stringifiedValue = JSON.stringify(value, null, 2);
+    const stringifiedValue = jsonStringifyWithBigInts(value, null, 2);
     if (this._stringified[field] === stringifiedValue) return;
 
     this._stringified[field] = stringifiedValue;
@@ -338,6 +351,7 @@ const dbFields = {
   hasMiningSeats: 'hasMiningSeats',
   hasMiningBids: 'hasMiningBids',
   biddingRules: 'biddingRules',
+  vaultingRules: 'vaultingRules',
 } as const;
 
 const defaults: IConfigDefaults = {
@@ -347,7 +361,7 @@ const defaults: IConfigDefaults = {
     const sessionMnemonic = mnemonicGenerate();
     const seedAccount = new Keyring({ type: 'sr25519' }).createFromUri(walletMnemonic);
     const mngAccount = seedAccount.derive(`//mng`);
-    const walletJson = JSON.stringify(mngAccount.toJson(''), null, 2);
+    const walletJson = jsonStringifyWithBigInts(mngAccount.toJson(''), null, 2);
     return {
       walletMnemonic,
       sessionMnemonic,
@@ -391,4 +405,5 @@ const defaults: IConfigDefaults = {
   hasMiningSeats: () => false,
   hasMiningBids: () => false,
   biddingRules: () => null,
+  vaultingRules: () => null,
 };

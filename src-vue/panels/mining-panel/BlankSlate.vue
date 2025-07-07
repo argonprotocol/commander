@@ -15,7 +15,7 @@
       @click="openConfigureMiningBotOverlay"
       class="bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow text-2xl font-bold text-white px-12 py-2 rounded-md mx-auto block mt-10 cursor-pointer"
     >
-      Configure Mining Bot
+      Create Personal Mining Bot
     </button>
     <div class="flex-grow flex flex-row items-end w-full">
       <div class="flex flex-col w-full px-5 pb-5">

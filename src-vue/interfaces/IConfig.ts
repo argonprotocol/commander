@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { BiddingRulesSchema, IBiddingRules } from '@argonprotocol/commander-calculator/src/IBiddingRules';
+import { BiddingRulesSchema } from '@argonprotocol/commander-calculator/src/IBiddingRules';
+import { VaultingRulesSchema } from './IVaultingRules';
 
 export enum InstallStepKey {
   ServerConnect = 'ServerConnect',
@@ -89,6 +90,7 @@ export const ConfigSchema = z.object({
   hasMiningSeats: z.boolean(), // hasMiningSeats
   hasMiningBids: z.boolean(), // hasMiningBids
   biddingRules: BiddingRulesSchema.nullable(),
+  vaultingRules: VaultingRulesSchema.nullable(),
 });
 
 // ---- Optional Type Inference ---- //
@@ -118,4 +120,5 @@ export interface IConfigDefaults {
   hasMiningSeats: () => IConfig['hasMiningSeats'];
   hasMiningBids: () => IConfig['hasMiningBids'];
   biddingRules: () => IConfig['biddingRules'];
+  vaultingRules: () => IConfig['vaultingRules'];
 }

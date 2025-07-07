@@ -20,16 +20,19 @@ export enum BidAmountAdjustmentType {
   Relative = 'Relative',
 }
 
-export enum DisableBotType {
-  AfterFirstSeat = 'AfterFirstSeat',
-  AfterFirstSlot = 'AfterFirstSlot',
-  Never = 'Never',
-  Now = 'Now',
+export enum SeatGoalType {
+  Max = 'Max',
+  Min = 'Min',
+}
+
+export enum SeatGoalInterval {
+  Frame = 'Frame',
+  Epoch = 'Epoch',
 }
 
 export const BiddingRulesSchema = z.object({
-  calculatedTotalSeats: z.number(),
-  calculatedArgonCirculation: z.number(),
+  argonCirculationGrowthPctMin: z.number(),
+  argonCirculationGrowthPctMax: z.number(),
   micronotPriceChangeType: z.nativeEnum(MicronotPriceChangeType),
   micronotPriceChangePctMin: z.number(),
   micronotPriceChangePctMax: z.number(),
@@ -38,21 +41,18 @@ export const BiddingRulesSchema = z.object({
   startingBidAmountAbsolute: z.bigint(),
   startingBidAmountRelative: z.number(),
   rebiddingDelay: z.number(),
-  incrementAmount: z.bigint(),
+  rebiddingIncrementBy: z.bigint(),
   finalBidAmountFormulaType: z.nativeEnum(BidAmountFormulaType),
   finalBidAmountAdjustmentType: z.nativeEnum(BidAmountAdjustmentType),
   finalBidAmountAbsolute: z.bigint(),
   finalBidAmountRelative: z.number(),
-  throttleSeats: z.boolean(),
-  throttleSeatCount: z.number(),
-  throttleSpending: z.boolean(),
-  throttleSpendingAmount: z.bigint(),
-  throttleDistributeEvenly: z.boolean(),
-  disableBotType: z.nativeEnum(DisableBotType),
+
+  seatGoalType: z.nativeEnum(SeatGoalType),
+  seatGoalCount: z.number(),
+  seatGoalInterval: z.nativeEnum(SeatGoalInterval),
+  
   requiredMicrogons: z.bigint(),
   requiredMicronots: z.bigint(),
-  desiredMicrogons: z.bigint(),
-  desiredMicronots: z.bigint(),
 });
 
 export type IBiddingRules = z.infer<typeof BiddingRulesSchema>;

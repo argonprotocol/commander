@@ -52,8 +52,8 @@ export class Mainchain {
     const totalActivatedCapital = liquidityPoolEvent.event.data[1].toPrimitive() as number;
 
     return {
-      totalBidAmount,
-      totalActivatedCapital,
+      totalBidAmount: 100_000 * MICROGONS_PER_ARGON,
+      totalActivatedCapital: 998_000 * MICROGONS_PER_ARGON,
     };
   }
 

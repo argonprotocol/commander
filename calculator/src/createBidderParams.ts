@@ -4,7 +4,7 @@ import type IBiddingRules from './IBiddingRules.js';
 import BiddingCalculator from './BiddingCalculator.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
 import { Mainchain } from './Mainchain.ts';
-import { BidAmountFormulaType } from './IBiddingRules.js';
+import { BidAmountFormulaType, SeatGoalType } from './IBiddingRules.js';
 
 export default async function createBidderParams(
   _cohortId: number,
@@ -20,7 +20,7 @@ export default async function createBidderParams(
   const maxSeats = await helper.getMaxSeats();
   const maxBudget = helper.getMaxBalance(maxBid * BigInt(maxSeats));
   const bidDelay = biddingRules.rebiddingDelay || 0;
-  const bidIncrement = biddingRules.incrementAmount || 1n;
+  const bidIncrement = biddingRules.rebiddingIncrementBy || 1n;
   const bidderParams: IBidderParams = {
     minBid,
     maxBid,
@@ -54,17 +54,16 @@ export class Helper {
     await this.calculatorData.isInitialized;
 
     let maxSeats = this.calculatorData.miningSeatCount / 10;
-    if (this.biddingRules.throttleSeats) {
-      maxSeats = this.biddingRules.throttleSeatCount || 0;
+    
+    if (this.biddingRules.seatGoalType === SeatGoalType.Max) {
+      return this.biddingRules.seatGoalCount || 0;
     }
 
-    return maxSeats > 0 && this.biddingRules.disableBotType === 'AfterFirstSeat' ? 1 : maxSeats;
+    return maxSeats;
   }
 
   public getMaxBalance(defaultMaxBalance: bigint): bigint {
-    return this.biddingRules.throttleSpending
-      ? BigInt(this.biddingRules.throttleSpendingAmount || 0)
-      : defaultMaxBalance;
+    return defaultMaxBalance;
   }
 
   public async calculateMinBid(): Promise<bigint> {

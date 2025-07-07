@@ -1,17 +1,11 @@
 <template>
-  <TransitionRoot
-    :show="isOpen"
-    as="template"
-    enter="duration-300 ease-out"
-    enter-from="opacity-0"
-    enter-to="opacity-100"
-    leave="duration-200 ease-in"
-    leave-from="opacity-100"
-    leave-to="opacity-0"
-  >
-    <Dialog @close="maybeCloseOverlay" :initialFocus="dialogPanel">
+  <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
+    <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
+      <BgOverlay @close="closeOverlay" />
+    </TransitionChild>
+    <Dialog @close="closeOverlay" :initialFocus="dialogPanel">
       <DialogPanel class="absolute top-0 left-0 right-0 bottom-0 z-10">
-        <BgOverlay @close="maybeCloseOverlay" />
+        <BgOverlay @close="closeOverlay" />
         <div
           ref="dialogPanel"
           class="absolute top-[40px] left-3 right-3 bottom-3 flex flex-col overflow-hidden rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all"
@@ -268,8 +262,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import dayjs from 'dayjs';
-import { TransitionRoot, Dialog, DialogPanel } from '@headlessui/vue';
+import { TransitionRoot, Dialog, DialogPanel, TransitionChild } from '@headlessui/vue';
 import emitter from '../emitters/basic';
 import { useConfig } from '../stores/config';
 import { useInstaller } from '../stores/installer';
@@ -288,8 +281,6 @@ const serverDetails = Vue.computed(() => config.serverDetails);
 
 const scrollContainer = Vue.ref<HTMLDivElement>();
 
-let openedAt = dayjs();
-
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
@@ -305,13 +296,6 @@ emitter.on('openServerConnectOverlay', async () => {
   isOpen.value = true;
   isLoaded.value = true;
 });
-
-function maybeCloseOverlay() {
-  const secondsSinceOpened = dayjs().diff(openedAt, 'seconds');
-  if (secondsSinceOpened < 2) {
-    closeOverlay();
-  }
-}
 
 const closeOverlay = () => {
   isOpen.value = false;

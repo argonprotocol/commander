@@ -1,10 +1,10 @@
 <template>
-  <BlankSlate v-if="!config.isServerConnected" />
+  <BlankSlate v-if="!config.biddingRules" />
+  <FinalSetupChecklist v-else-if="!config.isServerConnected" />
   <CloudMachineIsInstalling v-else-if="!config.isServerInstalled" />
   <Dashboard v-else-if="config.hasMiningSeats" />
   <StartingBot v-else-if="!stats.isReady && !stats.isBotWaitingForBiddingRules" />
   <FirstAuction v-else-if="config.isServerReadyForBidding" />
-  <FinalSetupChecklist v-else />
 </template>
 
 <script setup lang="ts">

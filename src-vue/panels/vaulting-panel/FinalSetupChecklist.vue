@@ -2,22 +2,22 @@
   <div class="flex flex-col h-full w-full p-3">
     <div class="grow relative bg-[#FCF9FD] rounded border border-[#CCCEDA] shadow">
       <div class="relative px-[15%]">
-        <div :class="[isLaunchingMiningBot ? 'opacity-30 pointer-events-none' : '']">
+        <div :class="[isLaunchingVault ? 'opacity-30 pointer-events-none' : '']">
           <h1 class="text-[40px] font-bold text-left mt-20 mb-4 whitespace-nowrap">
-            You're Almost Ready to Start Mining!
+            You're Almost Ready to Start Vaulting!
           </h1>
 
           <p class="mb-4">
-            Your personal bidding bot is setup and waiting. You only need to fund your account and connect a cloud machine. Click below to complete the steps.
+            Your vault is almost ready to start earning income. All that remains is funding the capital needed for operations. Click below to complete.
           </p>
 
           <section
-            @click="openConfigureMiningBotOverlay"
+            @click="openConfigureStabilizationVaultOverlay"
             class="flex flex-row cursor-pointer mt-8 border-t border-[#CCCEDA] py-6 hover:bg-argon-menu-hover"
           >
             <Checkbox :isChecked="true" />
             <div class="px-4">
-              <h2 class="text-2xl text-[#A600D4] font-bold">Configure Mining Bot</h2>
+              <h2 class="text-2xl text-[#A600D4] font-bold">Configure Vault Settings</h2>
               <p>
                 You need to set a few basic rules like your starting bid amount, the maximum price you're willing to
                 invest, and other basic settings.
@@ -36,45 +36,29 @@
                 Your Wallet
               </h2>
               <p>
-                Your acccount needs a minimum of
-                {{ microgonToArgonNm(config.biddingRules?.requiredMicrogons || 0n).format('0,0.[00000000]') }} argon{{
-                  microgonToArgonNm(config.biddingRules?.requiredMicrogons || 0n).format('0') === '1' ? '' : 's'
+                Your account needs a minimum of
+                {{ microgonToArgonNm(config.vaultingRules?.requiredMicrogons || 0n).format('0,0.[00000000]') }} argon{{
+                  microgonToArgonNm(config.vaultingRules?.requiredMicrogons || 0n).format('0') === '1' ? '' : 's'
                 }}
-                and {{ micronotToArgonotNm(config.biddingRules?.requiredMicronots || 0n).format('0,0.[00000000]') }} argonot{{
-                  micronotToArgonotNm(config.biddingRules?.requiredMicronots || 0n).format('0') === '1' ? '' : 's'
+                and {{ micronotToArgonotNm(config.vaultingRules?.requiredMicronots || 0n).format('0,0.[00000000]') }} argonot{{
+                  micronotToArgonotNm(config.vaultingRules?.requiredMicronots || 0n).format('0') === '1' ? '' : 's'
                 }}
-                to submit auction bids. A secure wallet is already attached to your account. All
+                to operate your vault. A secure wallet is already attached to your account. All
                 you need to do is move some tokens.
-              </p>
-            </div>
-          </section>
-
-          <section
-            @click="openServerConnectOverlay"
-            class="flex flex-row cursor-pointer border-t border-b border-[#CCCEDA] py-6"
-          >
-            <Checkbox :isChecked="!!config.serverDetails.ipAddress" />
-            <div class="px-4">
-              <h2 class="text-2xl text-[#A600D4] font-bold">
-                Connect Mining Machine
-              </h2>
-              <p>
-                Argon's mining software is runnable on cheap virtual cloud machines. We will guide you step-by-step through the
-                process of spinning up a new server and installing the software.
               </p>
             </div>
           </section>
         </div>
 
         <button
-          @click="launchMiningBot"
+          @click="createVault"
           :class="[
             walletIsFullyFunded && config.serverDetails.ipAddress ? 'text-white' : 'text-white/70 pointer-events-none opacity-30',
-            isLaunchingMiningBot ? 'opacity-30 pointer-events-none' : '',
+            isLaunchingVault ? 'opacity-30 pointer-events-none' : '',
           ]"
           class="bg-argon-button border border-argon-button-hover mt-8 text-2xl font-bold px-4 py-4 rounded-md w-full cursor-pointer hover:bg-argon-button-hover hover:inner-button-shadow"
         >
-          {{ isLaunchingMiningBot ? 'Launching Mining Bot...' : 'Launch Mining Bot' }}
+          {{ isLaunchingVault ? 'Launching Stabilization Vault...' : 'Launch Stabilization Vault' }}
         </button>
       </div>
     </div>
@@ -102,7 +86,7 @@ const currency = useCurrency();
 
 const { microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
 
-const isLaunchingMiningBot = Vue.ref(false);
+const isLaunchingVault = Vue.ref(false);
 
 const walletIsPartiallyFunded = Vue.computed(() => {
   return (wallets.mngWallet.availableMicrogons || wallets.mngWallet.availableMicronots) > 0;
@@ -113,37 +97,32 @@ const walletIsFullyFunded = Vue.computed(() => {
     return false;
   }
 
-  if (wallets.mngWallet.availableMicrogons < (config.biddingRules?.requiredMicrogons || 0n)) {
+  if (wallets.mngWallet.availableMicrogons < (config.vaultingRules?.requiredMicrogons || 0n)) {
     return false;
   }
 
-  if (wallets.mngWallet.availableMicronots < (config.biddingRules?.requiredMicronots || 0n)) {
+  if (wallets.mngWallet.availableMicronots < (config.vaultingRules?.requiredMicronots || 0n)) {
     return false;
   }
 
   return true;
 });
 
-function openConfigureMiningBotOverlay() {
-  emitter.emit('openConfigureMiningBotOverlay');
+function openConfigureStabilizationVaultOverlay() {
+  emitter.emit('openConfigureStabilizationVaultOverlay');
 }
 
 function openFundMiningAccountOverlay() {
-  emitter.emit('openWalletOverlay', { walletId: 'mng', screen: 'receive' });
+  emitter.emit('openWalletOverlay', { walletId: 'vlt', screen: 'receive' });
 }
 
-function openServerConnectOverlay() {
-  emitter.emit('openServerConnectOverlay');
-}
-
-async function launchMiningBot() {
-  if (isLaunchingMiningBot.value) {
+async function createVault() {
+  if (isLaunchingVault.value) {
     return;
   }
-  isLaunchingMiningBot.value = true;
+  isLaunchingVault.value = true;
 
-  await installer.upgradeBiddingBotFiles();
-  isLaunchingMiningBot.value = false;
+  isLaunchingVault.value = false;
 }
 </script>
 

@@ -29,9 +29,9 @@ const emit = defineEmits<{
 
 export type IEditBoxOverlayTypeForMining =
   | 'startingBidAmount'
-  | 'rebidStrategy'
+  | 'rebiddingStrategy'
   | 'maximumBid'
-  | 'throttleStrategy'
+  | 'seatGoals'
   | 'operationalLongevity'
   | 'cloudMachine';
 export type IEditBoxOverlayTypeForVault =
@@ -45,9 +45,9 @@ export type IEditBoxOverlayType = IEditBoxOverlayTypeForMining | IEditBoxOverlay
 
 const titles = {
   startingBidAmount: 'Starting Bid',
-  rebidStrategy: 'Rebid Strategy',
+  rebiddingStrategy: 'Rebidding Strategy',
   maximumBid: 'Maximum Bid',
-  throttleStrategy: 'Throttle Strategy',
+  seatGoals: 'Seat Goals',
   operationalLongevity: 'Operational Longevity',
   cloudMachine: 'Cloud Machine',
 };

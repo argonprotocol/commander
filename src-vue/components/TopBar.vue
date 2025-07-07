@@ -264,7 +264,7 @@
               <ul AccountMenu>
                 <li @click="() => openConfigureMiningBotOverlay(close)" class="pt-3 pb-3">
                   <template v-if="!config.isServerConnected">
-                    <header>Configure Mining Bot</header>
+                    <header>Create Personal Mining Bot</header>
                     <p>
                       Set bid pricing and other required
                       <br />
@@ -338,8 +338,8 @@ const walletControlPopoverElem = Vue.ref<{ el: HTMLElement | null }>({ el: null 
 const mngWalletIsFullyFunded = Vue.computed(() => {
   if (!config.biddingRules) return false;
   return (
-    wallets.mngWallet.availableMicrogons >= config.biddingRules.desiredMicrogons &&
-    wallets.mngWallet.availableMicronots >= config.biddingRules.desiredMicronots
+    wallets.mngWallet.availableMicrogons >= config.biddingRules.requiredMicrogons &&
+    wallets.mngWallet.availableMicronots >= config.biddingRules.requiredMicronots
   );
 });
 
@@ -351,13 +351,6 @@ function openWalletOverlay(walletId: 'mng' | 'llb' | 'vlt', closeFn: () => void)
   emitter.emit('openWalletOverlay', { walletId, screen: 'main' });
   if (closeFn) {
     closeFn();
-  }
-}
-
-function openFundMiningWalletOverlay(close: () => void) {
-  emitter.emit('openWalletOverlay', { walletId: 'mng', screen: 'receive' });
-  if (close) {
-    close();
   }
 }
 
