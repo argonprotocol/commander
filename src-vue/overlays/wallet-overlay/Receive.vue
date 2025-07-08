@@ -19,7 +19,7 @@
         <div v-if="config.biddingRules">
           <p class="font-light">
             You can use any polkadot/substrate compatible wallet to add funds to your Commander account. Just scan the
-            QR code shown on the right, or copy and paste the address that’s printed below it.
+            QR code shown on the right, or copy and paste the address that's printed below it.
           </p>
           <p v-if="props.walletId === 'mng'" class="mt-2 font-light">
             Based on the rules you configured, your Mining Bot needs the following tokens in order to win seats:
@@ -31,7 +31,7 @@
           <table>
             <thead>
               <tr>
-                <td>Needed Tokens</td>
+                <td>Tokens Needed</td>
                 <td>You Have</td>
                 <td class="text-right">Status</td>
               </tr>

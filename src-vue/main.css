@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 
 @theme {
+  --color-argon-20: oklch(0.98 0.02 320);
   --color-argon-50: oklch(0.95 0.05 320);
   --color-argon-100: oklch(0.88 0.09 320);
   --color-argon-200: oklch(0.81 0.14 320);

@@ -6,6 +6,7 @@ import {
 } from '@argonprotocol/mainchain';
 import { bigIntMin, calculateCurrentFrameIdFromSystemTime } from './utils';
 import BigNumber from 'bignumber.js';
+import { IBidsFile, IWinningBid } from '@argonprotocol/commander-bot/src/storage';
 
 export const MICROGONS_PER_ARGON = 1_000_000;
 
@@ -40,7 +41,7 @@ export class Mainchain {
       return client.events.miningSlot.NewMiners.is(event);
     })[0];
 
-    const newMiners = newMinersEvent.event.data[1].toPrimitive() as any[];
+    const newMiners = newMinersEvent.event.data[0].toPrimitive() as any[];
     const totalBidAmount = BigNumber(newMiners.reduce((acc, miner) => acc + miner.bid, 0))
       .multipliedBy(0.8)
       .toNumber();
@@ -52,8 +53,8 @@ export class Mainchain {
     const totalActivatedCapital = liquidityPoolEvent.event.data[1].toPrimitive() as number;
 
     return {
-      totalBidAmount: 100_000 * MICROGONS_PER_ARGON,
-      totalActivatedCapital: 998_000 * MICROGONS_PER_ARGON,
+      totalBidAmount, //: 100_000 * MICROGONS_PER_ARGON,
+      totalActivatedCapital, //: 998_000 * MICROGONS_PER_ARGON,
     };
   }
 
@@ -235,6 +236,19 @@ export class Mainchain {
     }
 
     return vaults;
+  }
+
+  public async fetchWinningBids(): Promise<IWinningBid[]> {
+    const client = await this.client;
+    const nextCohort = await client.query.miningSlot.bidsForNextSlotCohort();
+    return nextCohort.map((c, i): IWinningBid => {
+      const address = c.accountId.toHuman();
+      const subAccountIndex = undefined;
+      const lastBidAtTick = c.bidAtTick.toNumber();
+      const bidPosition = i;
+      const microgonsBid = c.bid.toBigInt();
+      return { address, subAccountIndex, lastBidAtTick, bidPosition, microgonsBid };
+    });
   }
 
   public async fetchPreviousDayWinningBids(): Promise<bigint[]> {

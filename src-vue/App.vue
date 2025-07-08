@@ -12,17 +12,20 @@
         <div class="text-2xl font-bold text-slate-600/40 uppercase">Loading...</div>
       </div>
     </div>
-    <ServerBrokenOverlay v-if="stats.isBotBroken" />
-    <UpgradeOverlay v-if="isNeedingUpgradeApproval" />
-    <ServerConnectOverlay />
-    <WalletOverlay />
-    <ServerRemoveOverlay />
-    <ServerConfigureOverlay />
-    <SecuritySettingsOverlay />
-    <ConfigureMiningBotOverlay />
-    <ConfigureStabilizationVaultOverlay />
-    <!-- <ProvisioningCompleteOverlay /> -->
-    <SyncingOverlay v-if="stats.isBotSyncing" />
+    <template v-if="config.isLoaded">
+      <ServerBrokenOverlay v-if="stats.isBotBroken" />
+      <UpgradeOverlay v-if="isNeedingUpgradeApproval" />
+      <ServerConnectOverlay />
+      <WalletOverlay />
+      <ServerRemoveOverlay />
+      <ServerConfigureOverlay />
+      <SecuritySettingsOverlay />
+      <ConfigureMiningBotOverlay />
+      <ConfigureStabilizationVaultOverlay />
+      <!-- <ProvisioningCompleteOverlay /> -->
+      <SyncingOverlay v-if="stats.isBotSyncing" />
+      <TooltipOverlay />
+    </template>
   </div>
 </template>
 
@@ -47,8 +50,9 @@ import { useController } from './stores/controller';
 import { useConfig } from './stores/config';
 import { useStats } from './stores/stats';
 import { checkForUpdates } from './tauri-controls/utils/checkForUpdates.ts';
-import { onBeforeMount, onBeforeUnmount, onMounted } from 'vue';
 import { waitForLoad } from '@argonprotocol/mainchain';
+import TooltipOverlay from './overlays/TooltipOverlay.vue';
+import { hideTooltip } from './lib/TooltipUtils';
 
 const controller = useController();
 const config = useConfig();
@@ -60,17 +64,26 @@ const isNeedingUpgradeApproval = Vue.computed(() => {
   return config.isWaitingForUpgradeApproval || (config.isServerInstalled && !config.isServerUpToDate);
 });
 
-onBeforeMount(async () => {
+function clickHandler() {
+  console.log('click');
+  hideTooltip();
+}
+
+Vue.onBeforeMount(async () => {
   await waitForLoad();
 });
 
-onMounted(async () => {
+Vue.onMounted(async () => {
   timeout = setInterval(() => checkForUpdates(), 60e3) as unknown as number;
+  // Use capture phase to ensure this handler runs before other handlers
+  document.addEventListener('click', clickHandler, true);
+  hideTooltip();
 });
 
-onBeforeUnmount(() => {
+Vue.onBeforeUnmount(() => {
   if (timeout) {
     clearInterval(timeout);
   }
+  document.removeEventListener('click', clickHandler, true);
 });
 </script>

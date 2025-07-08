@@ -1,7 +1,6 @@
 <!-- prettier-ignore -->
 <template>
   <p>
-    Of the $10,000 you're allocating to this vault, what percentage should be applied towards the securitization of
-    bitcoin versus liquidity pool funding?
+    This is the first bid price your bot will place. Don't start too low or you'll be forced to pay unneeded transaction fees in order to submit a rebid.
   </p>
 </template>

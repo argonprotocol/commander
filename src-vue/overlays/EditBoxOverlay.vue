@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <div class="absolute w-[120%] bg-white border border-slate-400 rounded shadow-md z-50">
+  <div class="absolute w-[120%] bg-white border border-slate-400/50 rounded shadow-lg z-50">
     <div class="flex flex-col">
       <div class="text-xl font-bold text-slate-800/70 pt-4 pb-2 text-center">{{ titles[id] }}</div>
 

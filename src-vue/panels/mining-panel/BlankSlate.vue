@@ -36,11 +36,11 @@
                 <span :class="[currency.symbol === '₳' ? 'font-semibold' : 'font-bold']">
                   {{ currency.symbol }}
                 </span>
-                {{ microgonToMoneyNm(blockchainStore.aggregatedBidCosts).formatIfElse('< 1_000', '0,0.00', '0,0') }}
+                <span>{{ microgonToMoneyNm(blockchainStore.aggregatedBidCosts).formatIfElse('< 1_000', '0,0.00', '0,0') }}</span>
               </template>
               <template v-else>---</template>
             </div>
-            <div>Active Pending Bids</div>
+            <div>Pending Bids</div>
           </li>
           <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">
@@ -49,11 +49,11 @@
                 <span :class="[currency.symbol === '₳' ? 'font-semibold' : 'font-bold']">
                   {{ currency.symbol }}
                 </span>
-                {{ microgonToMoneyNm(aggregatedBlockRewards).formatIfElse('< 1_000', '0,0.00', '0,0') }}
+                <span>{{ microgonToMoneyNm(aggregatedBlockRewards).formatIfElse('< 1_000', '0,0.00', '0,0') }}</span>
               </template>
               <template v-else>---</template>
             </div>
-            <div>Mimimum Pending Rewards</div>
+            <div>Pending Rewards</div>
           </li>
           <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">

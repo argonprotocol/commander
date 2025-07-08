@@ -51,7 +51,7 @@ export interface IBidsFile extends ILastModifiedAt {
 
 export interface IWinningBid {
   address: string;
-  subAccountIndex: number;
+  subAccountIndex?: number;
   lastBidAtTick?: number;
   bidPosition?: number;
   microgonsBid?: bigint;
