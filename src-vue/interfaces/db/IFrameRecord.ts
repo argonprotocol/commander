@@ -5,9 +5,9 @@ export interface IFrameRecord {
   progress: number;
   firstTick: number;
   lastTick: number;
-  usdExchangeRates: BigNumber[];
-  btcExchangeRates: BigNumber[];
-  argnotExchangeRates: BigNumber[];
+  microgonToUsd: bigint[];
+  microgonToBtc: bigint[];
+  microgonToArgonot: bigint[];
   isProcessed: boolean;
   createdAt: string;
   updatedAt: string;

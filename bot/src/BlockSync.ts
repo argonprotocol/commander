@@ -284,10 +284,10 @@ export class BlockSync {
       if (!checkedExchangeRateThisFrame || !checkedExchangeRateThisHour) {
         this.lastExchangeRateDate = new Date();
         this.lastExchangeRateFrameId = currentFrameId;
-        const argonExchangeRateTo = await this.mainchain.fetchArgonExchangeRatesTo();
-        x.usdExchangeRates.push(argonExchangeRateTo.USD);
-        x.btcExchangeRates.push(argonExchangeRateTo.BTC);
-        x.argnotExchangeRates.push(argonExchangeRateTo.ARGNOT);
+        const microgonExchangeRateTo = await this.mainchain.fetchMicrogonExchangeRatesTo();
+        x.microgonToUsd.push(microgonExchangeRateTo.USD);
+        x.microgonToBtc.push(microgonExchangeRateTo.BTC);
+        x.microgonToArgonot.push(microgonExchangeRateTo.ARGNOT);
       }
 
       for (const [cohortActivatingFrameIdStr, earnings] of Object.entries(cohortEarningsAtFrameId)) {

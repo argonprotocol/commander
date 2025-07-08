@@ -5,7 +5,6 @@ import { JsonExt, type ArgonClient } from '@argonprotocol/mainchain';
 import { MiningFrames } from '@argonprotocol/commander-calculator';
 import type { IBlockNumbers } from './Dockers.ts';
 import { CohortBidder } from '@argonprotocol/mainchain';
-import BigNumber from 'bignumber.js';
 
 export type IBidsHistory = CohortBidder['bidHistory'];
 
@@ -20,9 +19,9 @@ export interface IEarningsFile extends ILastModifiedAt {
   lastTick: number;
   firstBlockNumber: number;
   lastBlockNumber: number;
-  usdExchangeRates: BigNumber[];
-  btcExchangeRates: BigNumber[];
-  argnotExchangeRates: BigNumber[];
+  microgonToUsd: bigint[];
+  microgonToBtc: bigint[];
+  microgonToArgonot: bigint[];
   byCohortActivatingFrameId: {
     [cohortActivatingFrameId: number]: IEarningsFileCohort;
   };
@@ -211,9 +210,9 @@ export class CohortStorage {
           lastTick: tickRange[1],
           firstBlockNumber: 0,
           lastBlockNumber: 0,
-          usdExchangeRates: [],
-          btcExchangeRates: [],
-          argnotExchangeRates: [],
+          microgonToUsd: [],
+          microgonToBtc: [],
+          microgonToArgonot: [],
           byCohortActivatingFrameId: {},
         };
       });

@@ -11,7 +11,7 @@ export interface ICurrencyRecord {
   name: string;
 }
 
-export type IExchangeRates = Record<ICurrencyKey | 'ARGNOT' | 'BTC', BigNumber>;
+export type IExchangeRates = Record<ICurrencyKey | 'ARGNOT' | 'BTC', bigint>;
 
 export enum CurrencyKey {
   ARGN = 'ARGN',
@@ -25,14 +25,14 @@ export type ICurrencyKey = CurrencyKey.ARGN | CurrencyKey.USD | CurrencyKey.EUR 
 
 export class Currency {
   // These exchange rates are relative to the argon, which means the ARGN is always 1
-  public argonExchangeRateTo: IExchangeRates = {
-    ARGN: BigNumber(1),
-    ARGNOT: BigNumber(1),
-    USD: BigNumber(1),
-    EUR: BigNumber(1),
-    GBP: BigNumber(1),
-    INR: BigNumber(1),
-    BTC: BigNumber(1),
+  public microgonExchangeRateTo: IExchangeRates = {
+    ARGN: BigInt(1 * MICROGONS_PER_ARGON),
+    ARGNOT: BigInt(1 * MICROGONS_PER_ARGON),
+    USD: BigInt(1 * MICROGONS_PER_ARGON),
+    EUR: BigInt(1 * MICROGONS_PER_ARGON),
+    GBP: BigInt(1 * MICROGONS_PER_ARGON),
+    INR: BigInt(1 * MICROGONS_PER_ARGON),
+    BTC: BigInt(1 * MICROGONS_PER_ARGON),
   };
 
   public records: Record<ICurrencyKey, ICurrencyRecord> = {
@@ -56,21 +56,21 @@ export class Currency {
   }
 
   async load() {
-    const [otherResponse, argonExchangeRateTo] = await Promise.all([
+    const [otherResponse, microgonExchangeRateTo] = await Promise.all([
       fetch('https://open.er-api.com/v6/latest/USD'),
-      getMainchain().fetchArgonExchangeRatesTo(),
+      getMainchain().fetchMicrogonExchangeRatesTo(),
     ]);
 
-    this.argonExchangeRateTo.USD = argonExchangeRateTo.USD;
-    this.argonExchangeRateTo.ARGNOT = argonExchangeRateTo.ARGNOT;
-    this.argonExchangeRateTo.BTC = argonExchangeRateTo.BTC;
+    this.microgonExchangeRateTo.USD = microgonExchangeRateTo.USD;
+    this.microgonExchangeRateTo.ARGNOT = microgonExchangeRateTo.ARGNOT;
+    this.microgonExchangeRateTo.BTC = microgonExchangeRateTo.BTC;
 
-    const otherData = await otherResponse.json();
-    if (!otherData.rates) return;
+    const usdExchangeRateTo = (await otherResponse.json()).rates;
+    if (!usdExchangeRateTo) return;
 
-    this.argonExchangeRateTo.EUR = BigNumber(otherData.rates.EUR).multipliedBy(this.argonExchangeRateTo.USD);
-    this.argonExchangeRateTo.GBP = BigNumber(otherData.rates.GBP).multipliedBy(this.argonExchangeRateTo.USD);
-    this.argonExchangeRateTo.INR = BigNumber(otherData.rates.INR).multipliedBy(this.argonExchangeRateTo.USD);
+    this.microgonExchangeRateTo.EUR = this.otherExchangeRateToMicrogons(usdExchangeRateTo.EUR);
+    this.microgonExchangeRateTo.GBP = this.otherExchangeRateToMicrogons(usdExchangeRateTo.GBP);
+    this.microgonExchangeRateTo.INR = this.otherExchangeRateToMicrogons(usdExchangeRateTo.INR);
   }
 
   public microgonToArgon(microgons: bigint): number {
@@ -79,43 +79,47 @@ export class Currency {
   }
 
   public microgonTo(microgons: bigint): number {
-    const argons = this.microgonToArgon(microgons);
-    return this.argonTo(argons);
+    if (this.record.key === CurrencyKey.USD) {
+      return BigNumber(microgons).dividedBy(this.microgonExchangeRateTo.USD).toNumber();
+    } else if (this.record.key === CurrencyKey.EUR) {
+      return BigNumber(microgons).dividedBy(this.microgonExchangeRateTo.EUR).toNumber();
+    } else if (this.record.key === CurrencyKey.GBP) {
+      return BigNumber(microgons).dividedBy(this.microgonExchangeRateTo.GBP).toNumber();
+    } else if (this.record.key === CurrencyKey.INR) {
+      return BigNumber(microgons).dividedBy(this.microgonExchangeRateTo.INR).toNumber();
+    } else {
+      return this.microgonToArgon(microgons);
+    }
   }
 
   public argonTo(argons: number): number {
-    if (this.record.key === CurrencyKey.USD) {
-      return BigNumber(argons).dividedBy(this.argonExchangeRateTo.USD).toNumber();
-    } else if (this.record.key === CurrencyKey.EUR) {
-      return BigNumber(argons).dividedBy(this.argonExchangeRateTo.EUR).toNumber();
-    } else if (this.record.key === CurrencyKey.GBP) {
-      return BigNumber(argons).dividedBy(this.argonExchangeRateTo.GBP).toNumber();
-    } else if (this.record.key === CurrencyKey.INR) {
-      return BigNumber(argons).dividedBy(this.argonExchangeRateTo.INR).toNumber();
-    } else {
-      return argons;
-    }
+    const microgons = this.argonToMicrogon(argons);
+    return this.microgonTo(microgons);
+  }
+
+  public argonToMicrogon(argons: number): bigint {
+    return BigInt(Math.round(argons * MICROGONS_PER_ARGON));
   }
 
   public toMicrogon(value: number): bigint {
-    let exchangeRate = BigNumber(1);
+    let exchangeRate = BigInt(1 * MICROGONS_PER_ARGON);
     if (this.record.key === CurrencyKey.USD) {
-      exchangeRate = this.argonExchangeRateTo.USD;
+      exchangeRate = this.microgonExchangeRateTo.USD;
     } else if (this.record.key === CurrencyKey.EUR) {
-      exchangeRate = this.argonExchangeRateTo.EUR;
+      exchangeRate = this.microgonExchangeRateTo.EUR;
     } else if (this.record.key === CurrencyKey.GBP) {
-      exchangeRate = this.argonExchangeRateTo.GBP;
+      exchangeRate = this.microgonExchangeRateTo.GBP;
     } else if (this.record.key === CurrencyKey.INR) {
-      exchangeRate = this.argonExchangeRateTo.INR;
+      exchangeRate = this.microgonExchangeRateTo.INR;
     } else {
       throw new Error(`Invalid currency key: ${this.record.key}`);
     }
-    return BigInt(BigNumber(value).multipliedBy(exchangeRate).multipliedBy(MICROGONS_PER_ARGON).toNumber());
+    return BigInt(BigNumber(value).multipliedBy(exchangeRate).integerValue().toString());
   }
 
   public micronotToMicrogon(micronots: bigint): bigint {
     if (!micronots) return 0n;
-    const microgonsBn = BigNumber(micronots.toString()).multipliedBy(this.argonExchangeRateTo.ARGNOT);
+    const microgonsBn = BigNumber(micronots.toString()).multipliedBy(this.microgonExchangeRateTo.ARGNOT);
     return BigInt(Math.round(microgonsBn.toNumber()));
   }
 
@@ -140,11 +144,17 @@ export class Currency {
   }
 
   public btcToMicrogon(bitcoins: number): bigint {
-    const satoshis = Math.floor(bitcoins * SATOSHIS_PER_BITCOIN);
-    const microgons = BigNumber(satoshis)
-      .multipliedBy(this.argonExchangeRateTo.BTC)
-      .multipliedBy(MICROGONS_PER_ARGON)
-      .dividedBy(SATOSHIS_PER_BITCOIN);
-    return BigInt(Math.floor(microgons.toNumber()));
+    const microgonsBn = BigNumber(bitcoins).multipliedBy(this.microgonExchangeRateTo.BTC);
+    return BigInt(Math.floor(microgonsBn.toNumber()));
+  }
+
+  public microgonToBtc(microgons: bigint): number {
+    const bitcoinsBn = BigNumber(microgons).dividedBy(this.microgonExchangeRateTo.BTC);
+    return bitcoinsBn.toNumber();
+  }
+
+  private otherExchangeRateToMicrogons(otherExchangeRate: number): bigint {
+    const bigNumber = BigNumber(otherExchangeRate).multipliedBy(this.microgonExchangeRateTo.USD);
+    return BigInt(bigNumber.integerValue().toString());
   }
 }

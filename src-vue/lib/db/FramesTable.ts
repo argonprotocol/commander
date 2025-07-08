@@ -1,12 +1,11 @@
 import { IFrameRecord } from '../../interfaces/db/IFrameRecord';
 import { BaseTable } from './BaseTable';
 import camelcaseKeys from 'camelcase-keys';
-import { toSqliteBnJson, toSqliteBoolean, convertSqliteFields } from '../Utils';
-import BigNumber from 'bignumber.js';
+import { toSqliteBoolean, convertSqliteFields, jsonStringifyWithBigInts } from '../Utils';
 
 export class FramesTable extends BaseTable {
   private booleanFields: string[] = ['is_processed'];
-  private bnJsonFields: string[] = ['usd_exchange_rates', 'btc_exchange_rates', 'argnot_exchange_rates'];
+  private bigintJsonFields: string[] = ['microgon_to_usd', 'microgon_to_btc', 'microgon_to_argonot'];
 
   async insertOrUpdate(
     id: number,
@@ -14,27 +13,27 @@ export class FramesTable extends BaseTable {
     lastTick: number,
     firstBlockNumber: number,
     lastBlockNumber: number,
-    usdExchangeRates: BigNumber[],
-    btcExchangeRates: BigNumber[],
-    argnotExchangeRates: BigNumber[],
+    microgonToUsd: bigint[],
+    microgonToBtc: bigint[],
+    microgonToArgonot: bigint[],
     progress: number,
     isProcessed: boolean,
   ): Promise<void> {
-    const argnotExchangeRatesStr = toSqliteBnJson(argnotExchangeRates);
-    const usdExchangeRatesStr = toSqliteBnJson(usdExchangeRates);
-    const btcExchangeRatesStr = toSqliteBnJson(btcExchangeRates);
+    const microgonToUsdStr = jsonStringifyWithBigInts(microgonToUsd);
+    const microgonToBtcStr = jsonStringifyWithBigInts(microgonToBtc);
+    const microgonToArgonotStr = jsonStringifyWithBigInts(microgonToArgonot);
 
     await this.db.sql.execute(
-      'INSERT OR REPLACE INTO frames (id, first_tick, last_tick, first_block_number, last_block_number, usd_exchange_rates, btc_exchange_rates, argnot_exchange_rates, progress, is_processed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT OR REPLACE INTO frames (id, first_tick, last_tick, first_block_number, last_block_number, microgon_to_usd, microgon_to_btc, microgon_to_argonot, progress, is_processed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         id,
         firstTick,
         lastTick,
         firstBlockNumber,
         lastBlockNumber,
-        usdExchangeRatesStr,
-        btcExchangeRatesStr,
-        argnotExchangeRatesStr,
+        microgonToUsdStr,
+        microgonToBtcStr,
+        microgonToArgonotStr,
         progress,
         toSqliteBoolean(isProcessed),
       ],
@@ -47,26 +46,26 @@ export class FramesTable extends BaseTable {
     lastTick: number,
     firstBlockNumber: number,
     lastBlockNumber: number,
-    usdExchangeRates: BigNumber[],
-    btcExchangeRates: BigNumber[],
-    argnotExchangeRates: BigNumber[],
+    microgonToUsd: bigint[],
+    microgonToBtc: bigint[],
+    microgonToArgonot: bigint[],
     progress: number,
     isProcessed: boolean,
   ): Promise<void> {
-    const usdExchangeRatesStr = toSqliteBnJson(usdExchangeRates);
-    const btcExchangeRatesStr = toSqliteBnJson(btcExchangeRates);
-    const argnotExchangeRatesStr = toSqliteBnJson(argnotExchangeRates);
+    const microgonToUsdStr = jsonStringifyWithBigInts(microgonToUsd);
+    const microgonToBtcStr = jsonStringifyWithBigInts(microgonToBtc);
+    const microgonToArgonotStr = jsonStringifyWithBigInts(microgonToArgonot);
 
     await this.db.sql.execute(
-      'UPDATE frames SET first_tick = ?, last_tick = ?, first_block_number = ?, last_block_number = ?, usd_exchange_rates = ?, btc_exchange_rates = ?, argnot_exchange_rates = ?, progress = ?, is_processed = ? WHERE id = ?',
+      'UPDATE frames SET first_tick = ?, last_tick = ?, first_block_number = ?, last_block_number = ?, microgon_to_usd = ?, microgon_to_btc = ?, microgon_to_argonot = ?, progress = ?, is_processed = ? WHERE id = ?',
       [
         firstTick,
         lastTick,
         firstBlockNumber,
         lastBlockNumber,
-        usdExchangeRatesStr,
-        btcExchangeRatesStr,
-        argnotExchangeRatesStr,
+        microgonToUsdStr,
+        microgonToBtcStr,
+        microgonToArgonotStr,
         progress,
         toSqliteBoolean(isProcessed),
         id,
@@ -81,7 +80,7 @@ export class FramesTable extends BaseTable {
     return camelcaseKeys(
       convertSqliteFields(rawRecord, {
         boolean: this.booleanFields,
-        bnJson: this.bnJsonFields,
+        bigintJson: this.bigintJsonFields,
       }),
     ) as IFrameRecord;
   }

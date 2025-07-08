@@ -62,7 +62,7 @@ export default class BiddingCalculatorData {
       );
       this.micronotsToMineThisSeat = micronotsMinedDuringNextCohort / BigInt(miningSeatCount);
 
-      this.argonExchangeRateTo = await mainchain.fetchArgonExchangeRatesTo();
+      this.argonExchangeRateTo = await mainchain.fetchMicrogonExchangeRatesTo();
       this.miningSeatCount = await mainchain.getMiningSeatCount();
     } catch (e) {
       console.error('Error initializing BiddingCalculatorData', e);

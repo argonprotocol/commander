@@ -30,6 +30,10 @@ export function convertBigIntStringToNumber(bigIntStr: string | undefined): bigi
   return BigInt(bigIntStr.slice(0, -1));
 }
 
+export function isBigIntString(value: any): boolean {
+  return typeof value === 'string' && /^\d+n$/.test(value);
+}
+
 export function jsonStringifyWithBigInts(
   data: any,
   replacerFn: null | ((key: string, value: any) => any) = null,
@@ -49,7 +53,7 @@ export function jsonStringifyWithBigInts(
 
 export function jsonParseWithBigInts(data: string): any {
   return JSON.parse(data, (_key, value) => {
-    if (typeof value === 'string' && /^\d+n$/.test(value)) {
+    if (isBigIntString(value)) {
       return convertBigIntStringToNumber(value);
     }
     return value;
@@ -76,28 +80,6 @@ export function fromSqliteBigInt(num: number): bigint {
     console.error('Error converting sqlite bigint', e);
     throw e;
   }
-}
-
-export function toSqliteBnJson(data: any): string {
-  return JSON.stringify(
-    data,
-    (_key, value) => {
-      if (value instanceof BigNumber) {
-        return value.toString();
-      }
-      return value;
-    },
-    2,
-  );
-}
-
-export function fromSqliteBnJson(data: any): any {
-  return JSON.parse(data, (_key, value) => {
-    if (typeof value === 'string' && /^\d+$/.test(value)) {
-      return BigNumber(value);
-    }
-    return value;
-  });
 }
 
 export function convertSqliteBooleans(obj: any, booleanFields: string[]): any {
@@ -142,8 +124,8 @@ export function convertSqliteFields(obj: any, fields: { [type: string]: string[]
         obj[fieldName] = fromSqliteBigInt(obj[fieldName]);
       } else if (type === 'boolean') {
         obj[fieldName] = fromSqliteBoolean(obj[fieldName]);
-      } else if (type === 'bnJson') {
-        obj[fieldName] = fromSqliteBnJson(obj[fieldName]);
+      } else if (type === 'bigintJson') {
+        obj[fieldName] = jsonParseWithBigInts(obj[fieldName]);
       } else {
         throw new Error(`${fieldName} has unknown type: ${type}`);
       }

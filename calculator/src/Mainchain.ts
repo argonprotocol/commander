@@ -159,20 +159,21 @@ export class Mainchain {
     return await client.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
   }
 
-  public async fetchArgonExchangeRatesTo(): Promise<{
-    USD: BigNumber;
-    ARGNOT: BigNumber;
-    ARGN: BigNumber;
-    BTC: BigNumber;
+  public async fetchMicrogonExchangeRatesTo(): Promise<{
+    USD: bigint;
+    ARGNOT: bigint;
+    ARGN: bigint;
+    BTC: bigint;
   }> {
     const client = await this.client;
+    const microgonsForArgon = BigInt(1 * MICROGONS_PER_ARGON);
     const priceIndex = (await client.query.priceIndex.current()).value;
     if (!priceIndex) {
       return {
-        USD: BigNumber(1),
-        ARGNOT: BigNumber(1),
-        ARGN: BigNumber(1),
-        BTC: BigNumber(1),
+        USD: microgonsForArgon,
+        ARGNOT: microgonsForArgon,
+        ARGN: microgonsForArgon,
+        BTC: microgonsForArgon,
       };
     }
 
@@ -181,15 +182,15 @@ export class Mainchain {
     const usdForBtc = convertFixedU128ToBigNumber(priceIndex.btcUsdPrice.toBigInt());
 
     // These exchange rates should be relative to the argon
-    const argonForUsd = usdForArgon.isZero() ? BigNumber(1) : BigNumber(1).dividedBy(usdForArgon);
-    const argonForArgnot = usdForArgnot.isZero() ? BigNumber(1) : usdForArgnot.dividedBy(usdForArgon);
-    const argonForBtc = usdForBtc.isZero() ? BigNumber(1) : usdForBtc.dividedBy(usdForArgon);
+    const microgonsForUsd = this.calculateExchangeRateInMicrogons(BigNumber(microgonsForArgon), usdForArgon);
+    const microgonsForArgnot = this.calculateExchangeRateInMicrogons(usdForArgnot, usdForArgon);
+    const microgonsForBtc = this.calculateExchangeRateInMicrogons(usdForBtc, usdForArgon);
 
     return {
-      ARGN: BigNumber(1),
-      USD: argonForUsd,
-      ARGNOT: argonForArgnot,
-      BTC: argonForBtc,
+      ARGN: microgonsForArgon,
+      USD: microgonsForUsd,
+      ARGNOT: microgonsForArgnot,
+      BTC: microgonsForBtc,
     };
   }
 
@@ -241,6 +242,14 @@ export class Mainchain {
     const currentFrameId = calculateCurrentFrameIdFromSystemTime();
     const yesterdayWinningBids = await client.query.miningSlot.minersByCohort(currentFrameId);
     return yesterdayWinningBids.map(bid => bid.bid.toBigInt());
+  }
+
+  private calculateExchangeRateInMicrogons(usdAmount: BigNumber, usdForArgon: BigNumber): bigint {
+    const defaultValue = BigInt(1 * MICROGONS_PER_ARGON);
+    if (usdAmount.isZero() || usdForArgon.isZero()) return defaultValue;
+
+    const argons = usdAmount.dividedBy(usdForArgon);
+    return BigInt(argons.multipliedBy(MICROGONS_PER_ARGON).integerValue().toString());
   }
 }
 
