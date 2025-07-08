@@ -3,6 +3,7 @@ import { bigIntMax, bigIntMultiplyNumber } from './utils.js';
 import BigNumber from 'bignumber.js';
 import { MICROGONS_PER_ARGON } from './Mainchain.ts';
 import { BidAmountAdjustmentType, BidAmountFormulaType } from './IBiddingRules.ts';
+import { MICRONOTS_PER_ARGONOT } from '../../src-vue/lib/Currency.ts';
 
 export interface IBidAmount {
   formulaType: BidAmountFormulaType;
@@ -221,7 +222,8 @@ export default class BiddingCalculator {
 
   private micronotToMicrogon(micronots: bigint): bigint {
     if (!micronots) return 0n;
-    const microgonsBn = BigNumber(micronots.toString()).multipliedBy(this.data.argonExchangeRateTo.ARGNOT);
+    const argonotsBn = BigNumber(micronots).dividedBy(MICRONOTS_PER_ARGONOT);
+    const microgonsBn = argonotsBn.multipliedBy(this.data.microgonExchangeRateTo.ARGNOT);
     return BigInt(Math.round(microgonsBn.toNumber()));
   }
 }

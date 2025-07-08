@@ -24,8 +24,7 @@
 
             <div class="flex flex-col grow relative w-full">
               <p class="opacity-80 font-light py-6 pl-10 pr-[6%]">
-                Commander has a built-in bidding bot that helps maximize your chance of winning seats. This page allows
-                you to configure the rules for how this bot should make decisions and place bids.
+                Vaults are special holding mechanisms within Argon that helps stabilize its stablecoin and provide liquidity to the network. 
               </p>
 
               <section class="flex flex-row border-t border-b border-slate-300 text-center space-x-10 pt-10 pb-12 px-5 mx-5">

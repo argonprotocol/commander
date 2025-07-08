@@ -25,7 +25,7 @@ export default class BiddingCalculatorData {
 
   public estimatedTransactionFee: bigint = BigInt(0.1 * MICROGONS_PER_ARGON);
 
-  public argonExchangeRateTo: { USD: BigNumber; ARGNOT: BigNumber } = { USD: BigNumber(0), ARGNOT: BigNumber(0) };
+  public microgonExchangeRateTo: { USD: bigint; ARGNOT: bigint } = { USD: BigInt(0), ARGNOT: BigInt(0) };
 
   public miningSeatCount: number = 0;
 
@@ -62,7 +62,7 @@ export default class BiddingCalculatorData {
       );
       this.micronotsToMineThisSeat = micronotsMinedDuringNextCohort / BigInt(miningSeatCount);
 
-      this.argonExchangeRateTo = await mainchain.fetchMicrogonExchangeRatesTo();
+      this.microgonExchangeRateTo = await mainchain.fetchMicrogonExchangeRatesTo();
       this.miningSeatCount = await mainchain.getMiningSeatCount();
     } catch (e) {
       console.error('Error initializing BiddingCalculatorData', e);

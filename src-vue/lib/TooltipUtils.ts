@@ -1,6 +1,11 @@
+import { type ComputedRef } from 'vue';
 import emitter from '../emitters/basic';
 
-export function showTooltip(event: MouseEvent, label: string, flags: { width?: 'parent'; widthPlus?: number } = {}) {
+export function showTooltip(
+  event: MouseEvent,
+  label: string | ComputedRef<string>,
+  flags: { width?: 'parent'; widthPlus?: number } = {},
+) {
   event.stopPropagation();
   event.preventDefault();
   const targetElem = event.currentTarget as HTMLElement;
