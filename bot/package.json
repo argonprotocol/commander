@@ -11,14 +11,14 @@
   "main": "src/index.ts",
   "dependencies": {
     "@argonprotocol/commander-calculator": "workspace:*",
-    "@argonprotocol/mainchain": "1.1.0",
+    "@argonprotocol/mainchain": "1.3.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "tiny-lru": "^11.2.11",
     "tsx": "^4.19.3"
   },
   "devDependencies": {
-    "@argonprotocol/testing": "1.1.0",
+    "@argonprotocol/testing": "1.3.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
     "typescript": "^5.8.3",

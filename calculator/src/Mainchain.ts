@@ -239,13 +239,8 @@ export class Mainchain {
   public async fetchPreviousDayWinningBids(): Promise<bigint[]> {
     const client = await this.client;
     const currentFrameId = calculateCurrentFrameIdFromSystemTime();
-    const activeMiners = await client.query.miningSlot.activeMinersByIndex.entries();
-    const yesterdayWinningBids = activeMiners.filter(
-      ([_, x]: [any, Option<ArgonPrimitivesBlockSealMiningRegistration>]) => {
-        return x.isSome && x.unwrap().cohortId.toNumber() === currentFrameId;
-      },
-    );
-    return yesterdayWinningBids.map(([_, bid]) => bid.unwrap().bid.toBigInt());
+    const yesterdayWinningBids = await client.query.miningSlot.minersByCohort(currentFrameId);
+    return yesterdayWinningBids.map(bid => bid.bid.toBigInt());
   }
 }
 

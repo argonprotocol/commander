@@ -7,7 +7,7 @@ import {
   getAuthorFromHeader,
   getTickFromHeader,
   type Header,
-  MiningRotations,
+  FrameCalculator,
   type SpRuntimeDispatchError,
   type Vec,
 } from '@argonprotocol/mainchain';
@@ -132,7 +132,7 @@ export class BlockSync {
 
     this.accountMiners = new AccountMiners(
       this.accountset,
-      startingMinerState.filter(x => x.cohortId !== undefined) as any,
+      startingMinerState.filter(x => x.seat !== undefined) as any,
     );
 
     // catchup now
@@ -250,7 +250,7 @@ export class BlockSync {
     const client = this.getRpcClient(header);
     const api = await client.at(header.hash);
     const events = await api.query.system.events();
-    const { rotation: _r, ...cohortEarningsAtFrameId } = await this.accountMiners.onBlock(
+    const { duringFrameId: _r, ...cohortEarningsAtFrameId } = await this.accountMiners.onBlock(
       header,
       { tick, author },
       events.map(x => x.event),
@@ -365,7 +365,7 @@ export class BlockSync {
   }
 
   private async getFrameIdFromHeader(header: Header): Promise<number> {
-    const currentFrameId = await new MiningRotations().getForHeader(this.localClient, header);
+    const currentFrameId = await new FrameCalculator().getForHeader(this.localClient, header);
     if (currentFrameId === undefined) {
       throw new Error(`Error getting frame id for header ${header.number.toNumber()}`);
     }
@@ -378,9 +378,9 @@ export class BlockSync {
     const headerTick = getTickFromHeader(client, header);
 
     const blockNumber = header.number.toNumber();
-    const cohortActivatingFrameId = await api.query.miningSlot.nextCohortId().then(x => x.toNumber());
+    const cohortActivatingFrameId = await api.query.miningSlot.nextFrameId().then(x => x.toNumber());
     const bidsFile = this.storage.bidsFile(cohortActivatingFrameId);
-    const nextCohort = await api.query.miningSlot.nextSlotCohort();
+    const nextCohort = await api.query.miningSlot.bidsForNextSlotCohort();
 
     let didChangeBiddings = false;
     if (this.previousNextCohortJson !== nextCohort.toJSON()) {
@@ -451,8 +451,8 @@ export class BlockSync {
       if (phase.isFinalization && client.events.miningSlot.NewMiners.is(event)) {
         console.log('New miners event', event.data.toJSON());
         let hasMiningSeats = false;
-        const [_startIndex, newMiners, _released, cohortActivatingFrameId] = event.data;
-        await this.storage.bidsFile(cohortActivatingFrameId.toNumber()).mutate(x => {
+        const { frameId, newMiners } = event.data;
+        await this.storage.bidsFile(frameId.toNumber()).mutate(x => {
           x.seatsWon = 0;
           x.microgonsBidTotal = 0n;
           x.winningBids = [];

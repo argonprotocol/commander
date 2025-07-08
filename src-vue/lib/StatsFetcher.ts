@@ -97,7 +97,7 @@ export class StatsFetcher {
     const { data } = await SSH.runHttpGet<IBidsHistory>(`/bid-history`);
 
     return data.map(x => ({
-      cohortId: x.cohortId,
+      cohortStartingFrameId: x.cohortStartingFrameId,
       blockNumber: x.blockNumber,
       tick: x.tick,
       bidChanges: x.bidChanges.map(y => ({
