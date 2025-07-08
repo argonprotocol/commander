@@ -53,7 +53,7 @@
                 <span :class="[currency.symbol === '₳' ? 'font-semibold' : 'font-bold']">
                   {{ currency.symbol }}
                 </span>
-                {{ microgonToMoneyNm(microgonValueInVaults).formatIfElse('< 1_000', '0,0.00', '0,0') }}
+                <span>{{ microgonToMoneyNm(microgonValueInVaults).formatIfElse('< 1_000', '0,0.00', '0,0') }}</span>
               </template>
               <template v-else>---</template>
             </div>

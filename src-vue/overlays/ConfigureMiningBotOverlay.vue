@@ -172,7 +172,7 @@
                         {{ seatGoalType }} {{ seatGoalCount }} Per {{ seatGoalInterval }}
                       </div>
                       <div class="text-gray-500/60 text-md">
-                        Persue First Available
+                        Pursue First Available
                       </div>
                     </div>
                   </div>
