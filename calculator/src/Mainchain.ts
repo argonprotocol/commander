@@ -30,30 +30,32 @@ export class Mainchain {
     return frameStartBlockNumbers.map(x => x.toNumber());
   }
 
-  public async getLiquidityPoolPayout(): Promise<{ totalBidAmount: number; totalActivatedCapital: number }> {
+  public async getLiquidityPoolPayout(): Promise<{ totalPoolRewards: bigint; totalActivatedCapital: bigint }> {
     const client = await this.client;
     const frameStartBlockNumbers = await this.getFrameStartBlockNumbers();
     const blockNumber = frameStartBlockNumbers[0];
     const blockHash = await client.rpc.chain.getBlockHash(blockNumber);
-    const events = await client.query.system.events.at(blockHash);
+    const clientAt = await client.at(blockHash);
+    const events = await clientAt.query.system.events();
 
-    const newMinersEvent = events.filter(({ event }: { event: any }) => {
-      return client.events.miningSlot.NewMiners.is(event);
-    })[0];
+    let totalMicrogonsBid = 0n;
+    let totalActivatedCapital = 0n;
+    for (const { event } of events) {
+      if (client.events.miningSlot.NewMiners.is(event)) {
+        for (const miner of event.data.newMiners) {
+          totalMicrogonsBid += miner.bid.toBigInt();
+        }
+      }
+      if (client.events.liquidityPools.NextBidPoolCapitalLocked.is(event)) {
+        totalActivatedCapital = event.data.totalActivatedCapital.toBigInt();
+      }
+    }
 
-    const newMiners = newMinersEvent.event.data[0].toPrimitive() as any[];
-    const totalBidAmount = BigNumber(newMiners.reduce((acc, miner) => acc + miner.bid, 0))
-      .multipliedBy(0.8)
-      .toNumber();
-
-    const liquidityPoolEvent = events.filter(({ event }: { event: any }) => {
-      return client.events.liquidityPools.NextBidPoolCapitalLocked.is(event);
-    })[0];
-
-    const totalActivatedCapital = liquidityPoolEvent.event.data[1].toPrimitive() as number;
+    const totalPoolRewardsBn = BigNumber(totalMicrogonsBid).multipliedBy(0.8);
+    const totalPoolRewards = BigInt(totalPoolRewardsBn.integerValue().toString());
 
     return {
-      totalBidAmount, //: 100_000 * MICROGONS_PER_ARGON,
+      totalPoolRewards, //: 100_000 * MICROGONS_PER_ARGON,
       totalActivatedCapital, //: 998_000 * MICROGONS_PER_ARGON,
     };
   }
@@ -251,11 +253,23 @@ export class Mainchain {
     });
   }
 
-  public async fetchPreviousDayWinningBids(): Promise<bigint[]> {
+  public async fetchWinningBidAmountsForFrame(frameId: number): Promise<bigint[]> {
     const client = await this.client;
-    const currentFrameId = calculateCurrentFrameIdFromSystemTime();
-    const yesterdayWinningBids = await client.query.miningSlot.minersByCohort(currentFrameId);
-    return yesterdayWinningBids.map(bid => bid.bid.toBigInt());
+    const winningBids = await client.query.miningSlot.minersByCohort(frameId);
+    return winningBids.map(bid => bid.bid.toBigInt());
+  }
+
+  public async fetchPreviousDayWinningBidAmounts(): Promise<bigint[]> {
+    const client = await this.client;
+    let frameId = calculateCurrentFrameIdFromSystemTime() - 1;
+    while (true) {
+      // We must loop backwards until we find a frame with winning bids
+      const winningBids = await this.fetchWinningBidAmountsForFrame(frameId);
+      if (winningBids.length > 0) {
+        return winningBids;
+      }
+      frameId--;
+    }
   }
 
   private calculateExchangeRateInMicrogons(usdAmount: BigNumber, usdForArgon: BigNumber): bigint {

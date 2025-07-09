@@ -41,7 +41,7 @@ export default class BiddingCalculatorData {
 
       const miningSeatCount = await mainchain.getMiningSeatCount();
 
-      const previousDayWinningBids = await mainchain.fetchPreviousDayWinningBids();
+      const previousDayWinningBids = await mainchain.fetchPreviousDayWinningBidAmounts();
       this.previousDayHighBid = bigIntMax(...previousDayWinningBids);
       this.previousDayLowBid = bigIntMin(...previousDayWinningBids);
       this.previousDayMidBid = BigInt(

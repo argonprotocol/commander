@@ -104,7 +104,7 @@ const auctionIsClosing = Vue.ref(false);
 const totalBiddingBudget = Vue.ref(0n);
 const seatCount = Vue.ref(100);
 
-const currentBidPrice = Vue.computed(async () => {
+const currentBidPrice = Vue.computed(() => {
   const myBids = stats.winningBids.filter((bid: IWinningBid) => bid.subAccountIndex !== undefined);
   const total = myBids.reduce((acc: bigint, bid: IWinningBid) => acc + (bid.microgonsBid ?? 0n), 0n);
   return total / BigInt(seatCount.value);

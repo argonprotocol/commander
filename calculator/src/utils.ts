@@ -26,7 +26,7 @@ export function bigIntMin(...args: bigint[]): bigint {
 }
 
 export function bigIntMax(...args: bigint[]): bigint {
-  if (args.length === 0) throw new Error('maxBigInt requires at least one argument');
+  if (args.length === 0) throw new Error('bigIntMax requires at least one argument');
   return args.reduce((max, current) => (current > max ? current : max));
 }
 

@@ -1,5 +1,5 @@
 import BiddingCalculatorData from './BiddingCalculatorData.js';
-import { bigIntMax, bigIntMultiplyNumber } from './utils.js';
+import { bigIntMax, bigIntMin, bigIntMultiplyNumber } from './utils.js';
 import BigNumber from 'bignumber.js';
 import { MICROGONS_PER_ARGON } from './Mainchain.ts';
 import { BidAmountAdjustmentType, BidAmountFormulaType } from './IBiddingRules.ts';
@@ -8,6 +8,7 @@ import { MICRONOTS_PER_ARGONOT } from '../../src-vue/lib/Currency.ts';
 export interface IBidAmount {
   formulaType: BidAmountFormulaType;
   adjustmentType: BidAmountAdjustmentType;
+  custom: bigint;
   absolute: bigint;
   relative: number;
 }
@@ -16,7 +17,7 @@ export default class BiddingCalculator {
   public microgonBidPremium: bigint = 0n;
   public microgonsToMintThisSeat: bigint = 0n;
 
-  private data: BiddingCalculatorData;
+  public data: BiddingCalculatorData;
 
   public argonCirculationGrowthPctMin: number = 0;
   public argonCirculationGrowthPctMax: number = 0;
@@ -27,18 +28,24 @@ export default class BiddingCalculator {
   public startingBidAmount: IBidAmount = {
     formulaType: BidAmountFormulaType.MinimumBreakeven,
     adjustmentType: BidAmountAdjustmentType.Absolute,
+    custom: 0n,
     absolute: 0n,
     relative: 0,
   };
   public finalBidAmount: IBidAmount = {
     formulaType: BidAmountFormulaType.MinimumBreakeven,
     adjustmentType: BidAmountAdjustmentType.Absolute,
+    custom: 0n,
     absolute: 0n,
     relative: 0,
   };
 
   constructor(calculatorData: BiddingCalculatorData) {
     this.data = calculatorData;
+  }
+
+  public get isInitialized(): Promise<void> {
+    return this.data.isInitialized;
   }
 
   public async setConfig(config: {
@@ -58,26 +65,12 @@ export default class BiddingCalculator {
   }
 
   public get startingBid(): bigint {
-    let startingBid = 0n;
-    const formulaPrice = this.calculateFormulaPrice(this.startingBidAmount);
-    if (this.startingBidAmount.formulaType === BidAmountFormulaType.Custom) {
-      startingBid = formulaPrice;
-    } else if (this.startingBidAmount.adjustmentType === BidAmountAdjustmentType.Absolute) {
-      startingBid = formulaPrice + this.startingBidAmount.absolute;
-    } else if (this.startingBidAmount.adjustmentType === BidAmountAdjustmentType.Relative) {
-      startingBid = bigIntMultiplyNumber(formulaPrice, 1 + this.startingBidAmount.relative / 100);
-    }
-    return startingBid;
+    const startingBid = this.calculateFormulaPrice(this.startingBidAmount);
+    return bigIntMin(startingBid, this.finalBid);
   }
 
   public get finalBid(): bigint {
-    let finalBid = 0n;
-    const formulaPrice = this.calculateFormulaPrice(this.finalBidAmount);
-    if (this.finalBidAmount.adjustmentType === BidAmountAdjustmentType.Absolute) {
-      finalBid = formulaPrice + this.finalBidAmount.absolute;
-    } else if (this.finalBidAmount.adjustmentType === BidAmountAdjustmentType.Relative) {
-      finalBid = bigIntMultiplyNumber(formulaPrice, 1 + this.finalBidAmount.relative / 100);
-    }
+    const finalBid = this.calculateFormulaPrice(this.finalBidAmount);
     return finalBid;
   }
 
@@ -118,23 +111,33 @@ export default class BiddingCalculator {
   }
 
   private calculateFormulaPrice(bidAmount: IBidAmount): bigint {
+    let price = 0n;
+
     if (bidAmount.formulaType === BidAmountFormulaType.PreviousDayHigh) {
-      return this.data.previousDayHighBid;
+      price = this.data.previousDayHighBid;
     } else if (bidAmount.formulaType === BidAmountFormulaType.PreviousDayLow) {
-      return this.data.previousDayLowBid;
+      price = this.data.previousDayLowBid;
     } else if (bidAmount.formulaType === BidAmountFormulaType.PreviousDayMid) {
-      return this.data.previousDayMidBid;
+      price = this.data.previousDayMidBid;
     } else if (bidAmount.formulaType === BidAmountFormulaType.MinimumBreakeven) {
-      return this.minimumBreakevenBid;
+      price = this.minimumBreakevenBid;
     } else if (bidAmount.formulaType === BidAmountFormulaType.OptimisticBreakeven) {
-      return this.optimisticBreakevenBid;
+      price = this.optimisticBreakevenBid;
     } else if (bidAmount.formulaType === BidAmountFormulaType.RelativeBreakeven) {
-      return (this.optimisticBreakevenBid + this.minimumBreakevenBid) / 2n;
-    } else if (bidAmount.formulaType === BidAmountFormulaType.Custom) {
-      return bidAmount.absolute;
-    } else {
+      price = (this.optimisticBreakevenBid + this.minimumBreakevenBid) / 2n;
+    } else if (bidAmount.formulaType !== BidAmountFormulaType.Custom) {
       throw new Error(`Invalid price formula type: ${bidAmount.formulaType}`);
     }
+
+    if (bidAmount.formulaType === BidAmountFormulaType.Custom) {
+      price = bidAmount.custom;
+    } else if (bidAmount.adjustmentType === BidAmountAdjustmentType.Absolute) {
+      price += bidAmount.absolute;
+    } else if (bidAmount.adjustmentType === BidAmountAdjustmentType.Relative) {
+      price += bigIntMultiplyNumber(price, bidAmount.relative / 100);
+    }
+
+    return price;
   }
 
   private calculateCostOfArgonotLossInMicrogons(argonotPriceChangePct: number): bigint {
@@ -213,10 +216,15 @@ export default class BiddingCalculator {
     if (!argonCirculationGrowthPct) return 0n;
 
     const microgonsInCirculation = this.data.microgonsInCirculation;
-    const growthPctDuringSeat = BigNumber(argonCirculationGrowthPct).dividedBy(36.5);
-    const microgonsToMint = BigInt(
-      BigNumber(microgonsInCirculation).multipliedBy(growthPctDuringSeat).integerValue().toString(),
-    );
+    // Convert annual growth rate to 10-day growth rate by taking the 36.5th root
+    // Use Math.pow for decimal exponents since BigNumber.pow only accepts integers
+    const annualMultiplier = 1 + argonCirculationGrowthPct / 100;
+    const dailyMultiplier = Math.pow(annualMultiplier, 1 / 36.5);
+    const growthPctDuringSeat = BigNumber(dailyMultiplier - 1).multipliedBy(100);
+
+    const microgonsToMintBn = BigNumber(microgonsInCirculation).multipliedBy(growthPctDuringSeat).dividedBy(100);
+    const microgonsToMint = BigInt(microgonsToMintBn.integerValue().toString());
+
     return microgonsToMint;
   }
 

@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <BlankSlate v-if="!config.vaultingRules" />
+  <BlankSlate v-if="!config.hasSavedVaultingRules" />
   <FinalSetupChecklist v-else-if="!config.isServerConnected" />
 </template>
 

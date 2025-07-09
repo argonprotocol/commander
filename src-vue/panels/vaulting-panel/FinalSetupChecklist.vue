@@ -21,8 +21,8 @@
             <div class="px-4">
               <h2 class="text-2xl text-[#A600D4] font-bold">Configure Vault Settings</h2>
               <p>
-                You need to set a few basic rules like your starting bid amount, the maximum price you're willing to
-                invest, and other basic settings.
+                You need to set a few basic rules like how much capital you want to commit, how you want to distribute it
+                between securitization and liquidity, and other basic settings.
               </p>
             </div>
           </section>
@@ -42,13 +42,15 @@
                 {{ microgonToArgonNm(config.vaultingRules?.requiredMicrogons || 0n).format('0,0.[00000000]') }} argon{{
                   microgonToArgonNm(config.vaultingRules?.requiredMicrogons || 0n).format('0') === '1' ? '' : 's'
                 }}
-                and
-                {{
-                  micronotToArgonotNm(config.vaultingRules?.requiredMicronots || 0n).format('0,0.[00000000]')
-                }}
-                argonot{{
-                  micronotToArgonotNm(config.vaultingRules?.requiredMicronots || 0n).format('0') === '1' ? '' : 's'
-                }}
+                <template v-if="config.vaultingRules?.requiredMicronots">
+                  and
+                  {{
+                    micronotToArgonotNm(config.vaultingRules?.requiredMicronots || 0n).format('0,0.[00000000]')
+                  }}
+                  argonot{{
+                    micronotToArgonotNm(config.vaultingRules?.requiredMicronots || 0n).format('0') === '1' ? '' : 's'
+                  }}
+                </template>
                 to operate your vault. A secure wallet is already attached to your account. All you need to do is move
                 some tokens.
               </p>

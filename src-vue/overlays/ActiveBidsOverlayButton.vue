@@ -68,9 +68,14 @@ import { createNumeralHelpers } from '../lib/numeral';
 dayjs.extend(utc);
 dayjs.extend(relativeTime);
 
-const props = defineProps<{
-  loadFromMainchain: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    loadFromMainchain?: boolean;
+  }>(),
+  {
+    loadFromMainchain: false,
+  },
+);
 
 const stats = useStats();
 const currency = useCurrency();

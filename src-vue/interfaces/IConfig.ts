@@ -79,7 +79,7 @@ export const ConfigSchema = z.object({
   security: ConfigSecuritySchema,
   serverDetails: ConfigServerDetailsSchema,
   installDetails: ConfigInstallDetailsSchema,
-  oldestFrameIdToSync: z.number().nullable(),
+  oldestFrameIdToSync: z.number(),
 
   isServerConnected: z.boolean(), // isConnected
   isServerInstalled: z.boolean(), // isNewServer
@@ -89,8 +89,8 @@ export const ConfigSchema = z.object({
 
   hasMiningSeats: z.boolean(), // hasMiningSeats
   hasMiningBids: z.boolean(), // hasMiningBids
-  biddingRules: BiddingRulesSchema.nullable(),
-  vaultingRules: VaultingRulesSchema.nullable(),
+  biddingRules: BiddingRulesSchema,
+  vaultingRules: VaultingRulesSchema,
 });
 
 // ---- Optional Type Inference ---- //

@@ -141,9 +141,9 @@ const currency = useCurrency();
 
 const props = withDefaults(
   defineProps<{
-    modelValue: number | bigint;
-    max?: number | bigint;
-    min?: number | bigint;
+    modelValue: number;
+    max?: number;
+    min?: number;
     options?: any[];
     dragBy?: number;
     dragByMin?: number;
@@ -161,15 +161,14 @@ const props = withDefaults(
   },
 );
 
-const isBigInt = typeof props.modelValue === 'bigint';
-const minValue: number | bigint = props.min || 0;
-const maxValue: number | bigint = props.max || 0;
+const minValue: number = props.min || 0;
+const maxValue: number = props.max || 0;
 
 let loginValueOriginal = props.modelValue;
 let loginValueConverted = originalToConverted(props.modelValue);
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: number | bigint): void;
+  (e: 'update:modelValue', value: number): void;
 }>();
 
 const showMenu = Vue.ref(false);
@@ -197,12 +196,12 @@ const suffix = Vue.computed(() => {
   }
 });
 
-function originalToConverted(valueOriginal: number | bigint): number {
-  return props.format === 'argons' ? currency.microgonTo(valueOriginal as bigint) : Number(valueOriginal);
+function originalToConverted(valueOriginal: number): number {
+  return Number(valueOriginal);
 }
 
-function convertedToOriginal(convertedValue: number): number | bigint {
-  return props.format === 'argons' ? currency.toMicrogon(convertedValue) : convertedValue;
+function convertedToOriginal(convertedValue: number): number {
+  return convertedValue;
 }
 
 function updateInputValue(valueConverted: number) {
@@ -220,7 +219,7 @@ function updateInputValue(valueConverted: number) {
   loginValueOriginal = valueOriginal;
   loginValueConverted = valueConverted;
 
-  emit('update:modelValue', isBigInt ? BigInt(valueOriginal) : valueOriginal);
+  emit('update:modelValue', valueOriginal);
   insertIntoInputElem(valueConverted);
 }
 
@@ -615,7 +614,7 @@ Vue.watch(
 Vue.watch(
   () => props.min,
   newMin => {
-    const newMinValue = typeof newMin === 'bigint' ? Number(newMin) : newMin;
+    const newMinValue = Number(newMin);
     if (newMinValue !== undefined && loginValueConverted < newMinValue) {
       updateInputValue(newMinValue);
     }

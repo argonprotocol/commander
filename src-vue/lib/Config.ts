@@ -9,8 +9,15 @@ import {
   InstallStepKey,
 } from '../interfaces/IConfig';
 import { SSH } from './SSH';
-import { Keyring, type KeyringPair, mnemonicGenerate } from '@argonprotocol/mainchain';
+import { Keyring, type KeyringPair, MICROGONS_PER_ARGON, mnemonicGenerate } from '@argonprotocol/mainchain';
 import { jsonParseWithBigInts, jsonStringifyWithBigInts } from './Utils';
+import {
+  BidAmountAdjustmentType,
+  BidAmountFormulaType,
+  MicronotPriceChangeType,
+  SeatGoalInterval,
+  SeatGoalType,
+} from '@argonprotocol/commander-calculator/src/IBiddingRules';
 
 export const env = (import.meta as any).env;
 export const NETWORK_NAME = env.VITE_NETWORK_NAME || 'mainnet';
@@ -23,6 +30,9 @@ export class Config {
 
   public isLoaded: boolean;
   public isLoadedPromise: Promise<void>;
+
+  public hasSavedBiddingRules: boolean;
+  public hasSavedVaultingRules: boolean;
 
   private _loadingFns!: { resolve: () => void; reject: (error: Error) => void };
 
@@ -46,6 +56,9 @@ export class Config {
       this._loadingFns = { resolve, reject };
     });
     this.isLoaded = false;
+
+    this.hasSavedBiddingRules = false;
+    this.hasSavedVaultingRules = false;
 
     this._dbPromise = dbPromise;
     this._unstringified = {
@@ -88,13 +101,17 @@ export class Config {
       if (rawValue === undefined || rawValue === '') {
         const defaultValue = await value();
         configData[key] = defaultValue;
-        fieldsToSave.add(key);
+        if (key !== dbFields.biddingRules && key !== dbFields.vaultingRules) {
+          fieldsToSave.add(key);
+        }
         fieldsSerialized[key as keyof typeof fieldsSerialized] = jsonStringifyWithBigInts(defaultValue, null, 2);
         continue;
       }
 
       configData[key] = jsonParseWithBigInts(rawValue as string);
       fieldsSerialized[key as keyof typeof fieldsSerialized] = rawValue as string;
+      if (key === dbFields.biddingRules) this.hasSavedBiddingRules = true;
+      if (key === dbFields.vaultingRules) this.hasSavedVaultingRules = true;
     }
 
     const dataToSave = Config.extractDataToSave(fieldsToSave, fieldsSerialized);
@@ -108,29 +125,29 @@ export class Config {
   }
 
   get seedAccount(): KeyringPair {
-    if (!this.isLoaded) return {} as KeyringPair;
+    this._throwErrorIfNotLoaded();
     return (this._seedAccount ||= new Keyring({ type: 'sr25519' }).createFromUri(this.security.walletMnemonic));
   }
 
   get mngAccount(): KeyringPair {
-    if (!this.isLoaded) return {} as KeyringPair;
+    this._throwErrorIfNotLoaded();
     return (this._mngAccount ||= this.seedAccount.derive(`//mng`));
   }
 
   get llbAccount(): KeyringPair {
-    if (!this.isLoaded) return {} as KeyringPair;
+    this._throwErrorIfNotLoaded();
     return (this._llbAccount ||= this.seedAccount.derive(`//llb`));
   }
 
   get vltAccount(): KeyringPair {
-    if (!this.isLoaded) return {} as KeyringPair;
+    this._throwErrorIfNotLoaded();
     return (this._vltAccount ||= this.seedAccount.derive(`//vlt`));
   }
 
   //////////////////////////////
 
   get requiresPassword(): boolean {
-    if (!this.isLoaded) return false;
+    this._throwErrorIfNotLoaded();
     return this._unstringified.requiresPassword;
   }
 
@@ -141,7 +158,7 @@ export class Config {
   }
 
   get security(): IConfig['security'] {
-    if (!this.isLoaded) return {} as IConfig['security'];
+    this._throwErrorIfNotLoaded();
     return this._unstringified.security;
   }
 
@@ -152,7 +169,7 @@ export class Config {
   }
 
   get serverDetails(): IConfig['serverDetails'] {
-    if (!this.isLoaded) return {} as IConfig['serverDetails'];
+    this._throwErrorIfNotLoaded();
     return this._unstringified.serverDetails;
   }
 
@@ -163,7 +180,7 @@ export class Config {
   }
 
   get installDetails(): IConfig['installDetails'] {
-    if (!this.isLoaded) return {} as IConfig['installDetails'];
+    this._throwErrorIfNotLoaded();
     return this._unstringified.installDetails;
   }
 
@@ -178,7 +195,7 @@ export class Config {
   }
 
   get oldestFrameIdToSync(): number {
-    if (!this.isLoaded) return 0;
+    this._throwErrorIfNotLoaded();
     return this._unstringified.oldestFrameIdToSync;
   }
 
@@ -189,7 +206,7 @@ export class Config {
   }
 
   get isServerConnected(): boolean {
-    if (!this.isLoaded) return false;
+    this._throwErrorIfNotLoaded();
     return this._unstringified.isServerConnected;
   }
 
@@ -200,7 +217,7 @@ export class Config {
   }
 
   get isServerUpToDate(): boolean {
-    if (!this.isLoaded) return false;
+    this._throwErrorIfNotLoaded();
     return this._unstringified.isServerUpToDate;
   }
 
@@ -211,7 +228,7 @@ export class Config {
   }
 
   get isServerInstalled(): boolean {
-    if (!this.isLoaded) return false;
+    this._throwErrorIfNotLoaded();
     return this._unstringified.isServerInstalled;
   }
 
@@ -222,7 +239,7 @@ export class Config {
   }
 
   get isServerReadyForBidding(): boolean {
-    if (!this.isLoaded) return false;
+    this._throwErrorIfNotLoaded();
     return this._unstringified.isServerReadyForBidding;
   }
 
@@ -233,7 +250,7 @@ export class Config {
   }
 
   get isWaitingForUpgradeApproval(): boolean {
-    if (!this.isLoaded) return false;
+    this._throwErrorIfNotLoaded();
     return this._unstringified.isWaitingForUpgradeApproval;
   }
 
@@ -244,7 +261,7 @@ export class Config {
   }
 
   get hasMiningSeats(): boolean {
-    if (!this.isLoaded) return false;
+    this._throwErrorIfNotLoaded();
     return this._unstringified.hasMiningSeats;
   }
 
@@ -255,7 +272,7 @@ export class Config {
   }
 
   get hasMiningBids(): boolean {
-    if (!this.isLoaded) return false;
+    this._throwErrorIfNotLoaded();
     return this._unstringified.hasMiningBids;
   }
 
@@ -266,25 +283,37 @@ export class Config {
   }
 
   get biddingRules(): IConfig['biddingRules'] {
-    if (!this.isLoaded) return {} as IConfig['biddingRules'];
+    this._throwErrorIfNotLoaded();
     return this._unstringified.biddingRules;
   }
 
   set biddingRules(value: IConfig['biddingRules']) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.biddingRules, value);
     this._unstringified.biddingRules = value;
   }
 
   get vaultingRules(): IConfig['vaultingRules'] {
-    if (!this.isLoaded) return {} as IConfig['vaultingRules'];
+    this._throwErrorIfNotLoaded();
     return this._unstringified.vaultingRules;
   }
 
   set vaultingRules(value: IConfig['vaultingRules']) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.vaultingRules, value);
     this._unstringified.vaultingRules = value;
+  }
+
+  public async saveBiddingRules() {
+    this._throwErrorIfNotLoaded();
+    this._tryFieldsToSave(dbFields.biddingRules, this.biddingRules);
+    this.hasSavedBiddingRules = true;
+    await this.save();
+  }
+
+  public async saveVaultingRules() {
+    this._throwErrorIfNotLoaded();
+    this._tryFieldsToSave(dbFields.vaultingRules, this.vaultingRules);
+    this.hasSavedVaultingRules = true;
+    await this.save();
   }
 
   public async save() {
@@ -404,6 +433,49 @@ const defaults: IConfigDefaults = {
   isWaitingForUpgradeApproval: () => false,
   hasMiningSeats: () => false,
   hasMiningBids: () => false,
-  biddingRules: () => null,
-  vaultingRules: () => null,
+  biddingRules: () => {
+    return {
+      argonCirculationGrowthPctMin: 0,
+      argonCirculationGrowthPctMax: 50,
+
+      micronotPriceChangeType: MicronotPriceChangeType.Between,
+      micronotPriceChangePctMin: 0,
+      micronotPriceChangePctMax: 0,
+
+      startingBidAmountFormulaType: BidAmountFormulaType.Custom,
+      startingBidAmountAdjustmentType: BidAmountAdjustmentType.Absolute,
+      startingBidAmountCustom: 500n * BigInt(MICROGONS_PER_ARGON),
+      startingBidAmountAbsolute: 10n * BigInt(MICROGONS_PER_ARGON),
+      startingBidAmountRelative: 0,
+
+      rebiddingDelay: 1,
+      rebiddingIncrementBy: 1n * BigInt(MICROGONS_PER_ARGON),
+
+      finalBidAmountFormulaType: BidAmountFormulaType.MinimumBreakeven,
+      finalBidAmountAdjustmentType: BidAmountAdjustmentType.Relative,
+      finalBidAmountCustom: 0n,
+      finalBidAmountAbsolute: 0n,
+      finalBidAmountRelative: -1,
+
+      seatGoalType: SeatGoalType.Min,
+      seatGoalCount: 3,
+      seatGoalInterval: SeatGoalInterval.Epoch,
+
+      requiredMicrogons: 1_000n * BigInt(MICROGONS_PER_ARGON),
+      requiredMicronots: 0n,
+    };
+  },
+  vaultingRules: () => {
+    return {
+      capitalForSecuritizationPct: 50,
+      capitalForLiquidityPct: 50,
+      securitizationRatio: 1,
+      profitSharingPct: 10,
+      btcFlatFee: 2n * BigInt(MICROGONS_PER_ARGON),
+      btcPctFee: 10,
+      personalBtcValue: 500n * BigInt(MICROGONS_PER_ARGON),
+      requiredMicrogons: 2_000n * BigInt(MICROGONS_PER_ARGON),
+      requiredMicronots: 0n,
+    };
+  },
 };
