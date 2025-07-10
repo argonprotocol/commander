@@ -395,7 +395,7 @@ export class BlockSync {
           return false;
         }
         if (!x.microgonsToBeMinedPerBlock) {
-          const data = await CohortBidderHistory.getStartingData(api);
+          const data = await CohortBidderHistory.getStartingData(api as any);
           x.micronotsStakedPerSeat = data.argonotsPerSeat;
           x.argonotsUsdPrice = data.argonotUsdPrice;
           x.microgonsToBeMinedPerBlock = data.cohortArgonsPerBlock;

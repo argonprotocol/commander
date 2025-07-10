@@ -1,9 +1,10 @@
 import { getMainchain } from '../stores/mainchain';
+import { MICROGONS_PER_ARGON, SATS_PER_BTC } from '@argonprotocol/mainchain';
 import BigNumber from 'bignumber.js';
 
-export const MICROGONS_PER_ARGON = 1_000_000;
+export const SATOSHIS_PER_BITCOIN = SATS_PER_BTC;
+export { MICROGONS_PER_ARGON };
 export const MICRONOTS_PER_ARGONOT = 1_000_000;
-export const SATOSHIS_PER_BITCOIN = 100_000_000;
 
 export interface ICurrencyRecord {
   key: ICurrencyKey;
@@ -142,6 +143,11 @@ export class Currency {
   public btcTo(bitcoins: number) {
     const microgons = this.btcToMicrogon(bitcoins);
     return this.microgonTo(microgons);
+  }
+
+  public satsToBtc(satoshis: bigint): number {
+    if (!satoshis) return 0;
+    return Number(satoshis) / Number(SATOSHIS_PER_BITCOIN);
   }
 
   public btcToMicrogon(bitcoins: number): bigint {

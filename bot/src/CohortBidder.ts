@@ -2,10 +2,12 @@ import type { Accountset } from '@argonprotocol/mainchain';
 import {
   type ArgonClient,
   type ArgonPrimitivesBlockSealMiningRegistration,
+  Bool,
   ExtrinsicError,
+  formatArgons,
+  u64,
+  Vec,
 } from '@argonprotocol/mainchain';
-import { formatArgons } from '@argonprotocol/mainchain';
-import { Bool, u64, Vec } from '@polkadot/types-codec';
 import { CohortBidderHistory, type IBidHistoryEntry, SeatReductionReason } from './CohortBidderHistory.ts';
 
 export class CohortBidder {

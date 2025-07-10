@@ -50,5 +50,5 @@ export function readJsonFileOrNull(path: string) {
 
 export async function getClient(host: string): Promise<ArgonClient> {
   const provider = new WsProvider(host);
-  return await ApiPromise.create({ provider, noInitWarn: true, throwOnConnect: true });
+  return await ApiPromise.create({ provider, noInitWarn: true, throwOnConnect: true }) as any;
 }

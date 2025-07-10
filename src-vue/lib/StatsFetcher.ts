@@ -140,12 +140,7 @@ export class StatsFetcher {
 
     console.log('By cohort activating frame id:', byCohortActivatingFrameId);
     return {
-      frameId: data.frameId,
-      frameProgress: data.frameProgress,
-      firstTick: data.firstTick,
-      lastTick: data.lastTick,
-      firstBlockNumber: data.firstBlockNumber,
-      lastBlockNumber: data.lastBlockNumber,
+      ...data,
       byCohortActivatingFrameId: Object.fromEntries(byCohortActivatingFrameId),
     };
   }

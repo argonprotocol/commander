@@ -1,17 +1,15 @@
 import {
   type ArgonClient,
-  ArgonPrimitivesBlockSealMiningRegistration,
   convertFixedU128ToBigNumber,
-  Option,
+  convertPermillToBigNumber,
+  MICROGONS_PER_ARGON,
 } from '@argonprotocol/mainchain';
 import { bigIntMin, calculateCurrentFrameIdFromSystemTime } from './utils';
 import BigNumber from 'bignumber.js';
-import { IBidsFile, IWinningBid } from '@argonprotocol/commander-bot/src/storage';
-
-export const MICROGONS_PER_ARGON = 1_000_000;
+import { IWinningBid } from '@argonprotocol/commander-bot/src/storage';
 
 export type MainchainClient = ArgonClient;
-
+export { MICROGONS_PER_ARGON };
 export const BLOCK_REWARD_INCREASE_PER_INTERVAL = BigInt(1_000);
 export const BLOCK_REWARD_MAX = BigInt(5_000_000);
 export const BLOCK_REWARD_INTERVAL = BigInt(118);

@@ -15,6 +15,9 @@ interface IFnByKey {
   updateStats?: () => void;
   updateWinningBids?: (winningBids: IBidsFile['winningBids']) => void;
   refreshCohortData?: (cohortId: number) => void;
+  updateArgonActivity?: () => void | Promise<void>;
+  updateBitcoinActivity?: () => void | Promise<void>;
+  updateBotActivity?: () => void | Promise<void>;
 }
 
 export class StatsSyncer {
@@ -71,7 +74,7 @@ export class StatsSyncer {
   public async reload() {
     this.isLoading = false;
     this.isSyncingThePast = false;
-    this.syncProgress = 0;
+    this.stats.syncProgress = 0;
     this.maxSeatsPossible = 10;
     this.maxSeatsReductionReason = '';
     await this.load();
@@ -351,6 +354,7 @@ export class StatsSyncer {
     if (!localhostMatches || !mainchainMatches) {
       await this.db.argonActivitiesTable.insert(latestBlockNumbers.localNode, latestBlockNumbers.mainNode);
     }
+    this.fnByKey.updateArgonActivity?.();
   }
 
   private async updateBitcoinActivity(): Promise<void> {
@@ -363,11 +367,13 @@ export class StatsSyncer {
     if (!localhostMatches || !mainchainMatches) {
       await this.db.bitcoinActivitiesTable.insert(latestBlockNumbers.localNode, latestBlockNumbers.mainNode);
     }
+    this.fnByKey.updateBitcoinActivity?.();
   }
 
   private async updateBotActivity(): Promise<void> {
     const botHistory = await StatsFetcher.fetchBotHistory();
     // TODO: Implement bot activity update logic
+    this.fnByKey.updateBotActivity?.();
   }
 
   private async calculateSyncProgress(syncState: ISyncState | ISyncStateStarting): Promise<number> {

@@ -1,6 +1,6 @@
 import * as Vue from 'vue';
 import numeralOriginal, { Numeral } from 'numeral';
-import { Currency } from './Currency';
+import { Currency, MICROGONS_PER_ARGON } from './Currency';
 
 // Extend the Numeral interface to include our custom method
 declare module 'numeral' {
@@ -18,7 +18,7 @@ type ICondition = string | ((value: number) => boolean);
 
 export default function numeral(input?: any): Numeral {
   if (typeof input === 'bigint') {
-    input = Number(input) / 1_000_000;
+    input = Number(input) / MICROGONS_PER_ARGON;
   }
   return numeralOriginal(input);
 }

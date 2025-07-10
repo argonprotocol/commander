@@ -1,8 +1,12 @@
-import { convertFixedU128ToBigNumber, ExtrinsicError, JsonExt } from '@argonprotocol/mainchain';
-import { type AccountId } from '@polkadot/types/interfaces/runtime';
-import { Compact, u128 } from '@polkadot/types-codec';
-import { type ArgonClient } from '@argonprotocol/mainchain';
-import { type ApiDecoration } from '@polkadot/api/types';
+import {
+  type AccountId,
+  type ArgonClient,
+  Compact,
+  convertFixedU128ToBigNumber,
+  ExtrinsicError,
+  JsonExt,
+  u128,
+} from '@argonprotocol/mainchain';
 
 export enum SeatReductionReason {
   InsufficientFunds = 'InsufficientFunds',
@@ -193,7 +197,7 @@ export class CohortBidderHistory {
   }
 
   public static async getStartingData(
-    api: ApiDecoration<'promise'>,
+    api: ArgonClient,
   ): Promise<Pick<CohortBidderHistory['stats'], 'argonotUsdPrice' | 'argonotsPerSeat' | 'cohortArgonsPerBlock'>> {
     const argonotPrice = await api.query.priceIndex.current();
     let argonotUsdPrice = 0;
