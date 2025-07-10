@@ -154,7 +154,7 @@ export default class BiddingCalculator {
     const costOfArgonotLossInMicrogons = this.calculateCostOfArgonotLossInMicrogons(
       isMinimum ? this.micronotPriceChangePctMin : this.micronotPriceChangePctMax,
     );
-    const totalCost = BigNumber(microgonsBid + transactionFee + costOfArgonotLossInMicrogons);
+    const totalCostBn = BigNumber(microgonsBid + transactionFee + costOfArgonotLossInMicrogons);
 
     const microgonsToMine = this.data.microgonsToMineThisSeat;
     const microgonsToMint = this.calculateMicrogonsToMintThisSeat(
@@ -163,9 +163,9 @@ export default class BiddingCalculator {
     const micronotsMinedAsMicrogons = this.micronotMinedAsMicrogonValue(
       isMinimum ? this.micronotPriceChangePctMin : this.micronotPriceChangePctMax,
     );
-    const totalRewards = BigNumber(microgonsToMine + micronotsMinedAsMicrogons + microgonsToMint);
+    const totalRewardsBn = BigNumber(microgonsToMine + micronotsMinedAsMicrogons + microgonsToMint);
 
-    let tdpr = totalRewards.minus(totalCost).dividedBy(totalCost).multipliedBy(100).toNumber();
+    let tdpr = totalRewardsBn.minus(totalCostBn).dividedBy(totalCostBn).multipliedBy(100).toNumber();
 
     if (tdpr < 1000) {
       tdpr = Math.round(tdpr * 100) / 100;

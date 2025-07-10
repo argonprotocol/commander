@@ -7,7 +7,7 @@
     class="absolute inset-0 rounded-lg bg-black/20 transition-opacity"
     data-tauri-drag-region
   >
-    <div @click.stop class="absolute top-[22px] left-0">
+    <div v-if="showWindowControls" @click.stop class="absolute top-[22px] left-0">
       <WindowControls />
     </div>
   </div>
@@ -15,6 +15,15 @@
 
 <script setup lang="ts">
 import WindowControls from '../tauri-controls/WindowControls.vue';
+
+const props = withDefaults(
+  defineProps<{
+    showWindowControls?: boolean;
+  }>(),
+  {
+    showWindowControls: true,
+  },
+);
 
 const emit = defineEmits(['close']);
 const DRAG_THRESHOLD = 5;

@@ -49,8 +49,6 @@ numeralOriginal.fn.formatIfElseCapped = function (
 ) {
   let format = chooseIfElseFormat(condition, ifFormat, elseFormat, this._value);
 
-  console.log('MORE THAN MAX: ', this._value, max, this._value > max);
-
   if (this._value > max) {
     this._value = max;
     format += '+';

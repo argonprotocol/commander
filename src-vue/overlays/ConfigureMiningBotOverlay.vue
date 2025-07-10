@@ -1,16 +1,16 @@
 <!-- prettier-ignore -->
 <template>
   <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
-    <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
-      <BgOverlay @close="cancelOverlay" />
-    </TransitionChild>
     <Dialog @close="cancelOverlay" :initialFocus="dialogPanel">
       <DialogPanel class="absolute top-0 left-0 right-0 bottom-0 z-10">
+        <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
+          <BgOverlay @close="cancelOverlay" />
+        </TransitionChild>
         <div
           ref="dialogPanel"
           class="absolute top-[40px] left-3 right-3 bottom-3 flex flex-col rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all"
           style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255, 255, 255, 1);">
-          <div v-if="showEditBoxOverlay" @click="showEditBoxOverlay = null" class="absolute top-0 left-0 w-full h-full z-40 bg-black/10"></div>
+          <BgOverlay v-if="showEditBoxOverlay" @close="showEditBoxOverlay = null" :showWindowControls="false" class="z-40 rounded-md" />
           <div v-if="isLoaded" class="flex flex-col h-full w-full">
             <h2
               class="relative text-3xl font-bold text-left border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 text-[#672D73]"
@@ -30,9 +30,15 @@
 
               <section class="flex flex-row border-t border-b border-slate-300 text-center space-x-10 pt-12 pb-12 px-5 mx-5">
                 <div class="w-1/2">
-                  <div @mouseenter="showTooltip($event, tooltip.capitalToCommit, { width: 'parent' })" @mouseleave="hideTooltip" class="flex flex-col group cursor-pointer">
+                  <div @click="openEditBoxOverlay('capitalToCommit')" @mouseenter="showTooltip($event, tooltip.capitalToCommit, { width: 'parent' })" @mouseleave="hideTooltip" class="flex flex-col group cursor-pointer">
                     <header StatHeader class="group-hover:text-argon-600/70 relative z-10">Capital to Commit</header>
-                    <div PrimaryStat class="border border-slate-500/30 rounded-lg -mt-7 pb-10 pt-12 group-hover:bg-argon-20 text-4xl font-bold font-mono text-argon-600 shadow-sm">
+                    <div PrimaryStat class="relative border border-slate-500/30 rounded-lg -mt-7 pb-10 pt-12 group-hover:bg-argon-20 text-4xl font-bold font-mono text-argon-600 shadow-sm">
+                      <EditBoxOverlay
+                        id="capitalToCommit"
+                        v-if="showEditBoxOverlay === 'capitalToCommit'"
+                        @close="showEditBoxOverlay = null"
+                        class="top-[-20%] left-[-3%] !w-[106%] h-[135%] !rounded-lg"
+                      />
                       {{ currency.symbol }}{{ microgonToMoneyNm(rules.requiredMicrogons).format('0,0.[00]') }}
                     </div>
                   </div>
@@ -94,12 +100,12 @@
 
                   <div class="flex flex-col items-center justify-center relative w-1/3">
                     <EditBoxOverlay
-                      id="startingBidAmount"
-                      v-if="showEditBoxOverlay === 'startingBidAmount'"
+                      id="startingBid"
+                      v-if="showEditBoxOverlay === 'startingBid'"
                       @close="showEditBoxOverlay = null"
                       class="-top-5 left-1/2 -translate-x-1/2"
                     />
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.startingBidAmount, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('startingBidAmount')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.startingBid, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('startingBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
                       <div StatHeader>Starting Bid</div>
                       <div MainRule class="w-full">
                         {{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}
@@ -118,7 +124,7 @@
                             }}
                           </span>
                           <span v-else-if="rules.startingBidAmountRelative">
-                            {{ rules.startingBidAmountAbsolute > 0 ? '+' : '-' 
+                            &nbsp;{{ rules.startingBidAmountRelative > 0 ? '+' : '-' 
                             }}{{ numeral(Math.abs(rules.startingBidAmountRelative)).format('0.[00]') }}%
                           </span>
                         </template>
@@ -170,10 +176,10 @@
                         Disabled
                       </div>
                       <div MainRule v-else class="w-full">
-                        {{ rules.seatGoalType }} {{ rules.seatGoalCount }} Per {{ rules.seatGoalInterval }}
+                        {{ rules.seatGoalCount }} Per {{ rules.seatGoalInterval }}
                       </div>
                       <div class="text-gray-500/60 text-md">
-                        Pursue First Available
+                        {{ rules.seatGoalType === SeatGoalType.Max ? 'Stop After Goal Reached' : 'Get As Many As Possible' }}
                       </div>
                     </div>
                   </div>
@@ -191,15 +197,15 @@
                       <div StatHeader>Expected Growth</div>
                       <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
                         <div MainRule class="flex flex-row items-center justify-center w-5/12">
-                          <span>{{ numeral(rules.argonCirculationGrowthPctMin).formatIfElse('0', '0', '+0.[00]') }}%</span>
+                          <span>{{ numeral(rules.argonCirculationGrowthPctMin).formatIfElse('0', '0', '+0.[0]') }}%</span>
                           <span class="text-md px-1.5 text-gray-500/60">to</span>
-                          <span>{{ numeral(rules.argonCirculationGrowthPctMax).formatIfElse('0', '0', '+0.[00]')}}%</span>
+                          <span>{{ numeral(rules.argonCirculationGrowthPctMax).formatIfElse('0', '0', '+0.[0]')}}%</span>
                         </div>
                         <span class="text-md w-2/12 text-gray-500/60">&nbsp;and&nbsp;</span>
                         <div MainRule class="flex flex-row items-center justify-center w-5/12">
-                          <span>{{ numeral(rules.micronotPriceChangePctMin).formatIfElse('0', '0', '+0.[00]') }}%</span>
+                          <span>{{ numeral(rules.micronotPriceChangePctMin).formatIfElse('0', '0', '+0.[0]') }}%</span>
                           <span class="text-md px-1.5 text-gray-500/60">to</span>
-                          <span>{{ numeral(rules.micronotPriceChangePctMax).formatIfElse('0', '0', '+0.[00]')}}%</span>
+                          <span>{{ numeral(rules.micronotPriceChangePctMax).formatIfElse('0', '0', '+0.[0]')}}%</span>
                         </div>
                       </div>
                       <div class="flex flex-row items-center justify-center px-10 w-full text-center font-mono ">
@@ -220,6 +226,7 @@
                     <EditBoxOverlay
                       id="cloudMachine"
                       v-if="showEditBoxOverlay === 'cloudMachine'"
+                      :hideSaveButton="true"
                       @close="showEditBoxOverlay = null"
                       class="bottom-[-10px] right-0"
                     />
@@ -268,7 +275,7 @@ import { useCurrency } from '../stores/currency';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
 import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
-import { showTooltip, hideTooltip } from '../lib/TooltipUtils';
+import { showTooltip as showTooltipOriginal, hideTooltip } from '../lib/TooltipUtils';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForMining } from './EditBoxOverlay.vue';
 import { type IBiddingRules } from '@argonprotocol/commander-calculator';
 import { getCalculator, getCalculatorData } from '../stores/mainchain';
@@ -316,7 +323,7 @@ const tooltip = {
     'The more capital you put in, the more seats you have a chance to win and therefore the higher your earning potential.',
   estimatedAPYRange:
     'These estimates are based on the guaranteed block rewards locked on-chain combined with the bidding variables shown on this page.',
-  startingBidAmount: `This is your starting bid price. Don't put it too low or you'll be forced to pay unneeded transaction fees in order to submit a rebid.`,
+  startingBid: `This is your starting bid price. Don't put it too low or you'll be forced to pay unneeded transaction fees in order to submit a rebid.`,
   rebiddingStrategy: Vue.computed(
     () =>
       `If your bids get knocked out of contention, your bot will wait ${rules.value.rebiddingDelay} minute${rules.value.rebiddingDelay === 1 ? '' : 's'} before submitting a new bid at ${currency.symbol}${microgonToMoneyNm(rules.value.rebiddingIncrementBy).format('0.00')} above the current winning bid.`,
@@ -339,6 +346,7 @@ function openEditBoxOverlay(type: IEditBoxOverlayTypeForMining) {
 }
 
 function cancelOverlay() {
+  if (showEditBoxOverlay.value) return;
   isOpen.value = false;
   hideTooltip();
 
@@ -373,6 +381,15 @@ async function saveRules() {
   isSaving.value = false;
   isOpen.value = false;
   hideTooltip();
+}
+
+function showTooltip(
+  event: MouseEvent,
+  label: string | Vue.ComputedRef<string>,
+  flags: { width?: 'parent'; widthPlus?: number } = {},
+) {
+  if (showEditBoxOverlay.value) return;
+  showTooltipOriginal(event, label, flags);
 }
 
 function updateAPYs() {

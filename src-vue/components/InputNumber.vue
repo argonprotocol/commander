@@ -1,13 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <div
-    ref="$el"
-    :class="[hasFocus ? 'z-90' : '']"
-    class="relative focus-within:relative"
-    tabindex="0"
-    @focus="handleFocus"
-    @blur="handleBlur"
-  >
+  <div @focus="handleFocus" @blur="handleBlur" ref="$el" :class="[hasFocus ? 'z-90' : '']" class="relative focus-within:relative" tabindex="0">
     <div v-if="!props.disabled">
       <div
         @pointerdown="handlePointerDown"
@@ -25,6 +18,7 @@
       />
     </div>
     <div
+      InputField
       :class="[
         props.disabled ? 'border-dashed cursor-default' : '',
         hasFocus ? 'bg-slate-500/5 inner-input-shadow outline-2 -outline-offset-2 outline-argon-button' : '',
@@ -45,16 +39,9 @@
         :class="[props.disabled ? 'opacity-70' : '']"
         class="inline-block w-auto focus:outline-none py-[1px]"
       ></div>
-      <span
-        :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']"
-        class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-default py-[1px]"
-      >
+      <span :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']" class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-default py-[1px]">
         {{ suffix }}
-        <span
-          @click="moveCursorToEnd"
-          @dblclick="selectAllText"
-          class="absolute top-0 left-0 w-full h-full cursor-text"
-        />
+        <span @click="moveCursorToEnd" @dblclick="selectAllText" class="absolute top-0 left-0 w-full h-full cursor-text" />
       </span>
 
       <Menu v-if="props.options.length > 0">
@@ -89,10 +76,7 @@
                 :class="option.description ? 'border-b border-gray-500/20 last:border-b-0' : ''"
                 class="text-md font-mono text-left font-bold text-gray-800 py-1 first:rounded-t last:rounded-b"
               >
-                <div
-                  :class="[isActive ? 'bg-argon-button text-white' : '']"
-                  class="flex flex-col pr-3 pl-2 py-0 cursor-pointer"
-                >
+                <div :class="[isActive ? 'bg-argon-button text-white' : '']" class="flex flex-col pr-3 pl-2 py-0 cursor-pointer">
                   <div class="flex flex-row justify-between items-center">
                     <div class="whitespace-nowrap grow pr-3">
                       {{ option.title || numeral(option.value).format('0,0') }}
@@ -149,20 +133,20 @@ const props = withDefaults(
     dragByMin?: number;
     disabled?: boolean;
     prefix?: string;
-    format?: 'argons' | 'percent' | 'integer' | 'minutes';
+    suffix?: string;
+    alwaysShowDecimals?: boolean;
+    format?: 'percent' | 'integer' | 'minutes';
   }>(),
   {
     options: () => [],
     dragBy: 1,
     dragByMin: 0.01,
     prefix: '',
+    suffix: '',
     disabled: false,
     format: 'integer',
   },
 );
-
-const minValue: number = props.min || 0;
-const maxValue: number = props.max || 0;
 
 let loginValueOriginal = props.modelValue;
 let loginValueConverted = originalToConverted(props.modelValue);
@@ -182,17 +166,13 @@ const decrementTimer = Vue.ref<number | null>(null);
 const initialDelay = 500; // Initial delay before starting continuous updates
 const updateInterval = 50; // Interval between updates once continuous mode starts
 
-const prefix = Vue.computed(() => {
-  return props.prefix + (props.format === 'argons' ? currency.symbol : '');
-});
-
 const suffix = Vue.computed(() => {
   if (props.format === 'percent') {
     return '%';
   } else if (props.format === 'minutes') {
     return loginValueConverted === 1 ? ' minute' : ' minutes';
   } else {
-    return '';
+    return props.suffix || '';
   }
 });
 
@@ -207,12 +187,12 @@ function convertedToOriginal(convertedValue: number): number {
 function updateInputValue(valueConverted: number) {
   let valueOriginal = convertedToOriginal(valueConverted);
 
-  if (maxValue !== undefined && valueOriginal > maxValue) {
-    valueOriginal = maxValue;
+  if (props.max !== undefined && valueOriginal > props.max) {
+    valueOriginal = props.max;
     valueConverted = originalToConverted(valueOriginal);
   }
-  if (minValue !== undefined && valueOriginal < minValue) {
-    valueOriginal = minValue;
+  if (props.min !== undefined && valueOriginal < props.min) {
+    valueOriginal = props.min;
     valueConverted = originalToConverted(valueOriginal);
   }
 
@@ -235,7 +215,8 @@ function insertIntoInputElem(convertedValue: number) {
 }
 
 function formatFn(value: number) {
-  return numeral(value).formatIfElse(x => x.toString().split('.')[1]?.length > 0, '0,0.00', '0,0');
+  const hasDecimals = value.toString().split('.')[1]?.length > 0;
+  return numeral(value).formatIfElse(x => hasDecimals || props.alwaysShowDecimals, '0,0.00', '0,0');
 }
 
 function moveCursorToEnd() {
@@ -356,11 +337,11 @@ function emitDrag(event: PointerEvent) {
   }
 
   // Apply min/max constraints
-  if (minValue !== undefined && newValue < minValue) {
-    newValue = minValue;
+  if (props.min !== undefined && newValue < props.min) {
+    newValue = props.min;
   }
-  if (maxValue !== undefined && newValue > maxValue) {
-    newValue = maxValue;
+  if (props.max !== undefined && newValue > props.max) {
+    newValue = props.max;
   }
 
   // Update visual feedback

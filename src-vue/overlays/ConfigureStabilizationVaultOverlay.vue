@@ -1,11 +1,11 @@
 <!-- prettier-ignore -->
 <template>
   <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
-    <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
-      <BgOverlay @close="cancelOverlay" />
-    </TransitionChild>
     <Dialog @close="cancelOverlay" :initialFocus="dialogPanel">
       <DialogPanel class="absolute top-0 left-0 right-0 bottom-0 z-10">
+        <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
+          <BgOverlay @close="cancelOverlay" />
+        </TransitionChild>
         <div
           ref="dialogPanel"
           class="absolute top-[40px] left-3 right-3 bottom-3 flex flex-col overflow-hidden rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all"
