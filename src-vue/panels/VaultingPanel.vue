@@ -1,7 +1,7 @@
 <!-- prettier-ignore -->
 <template>
   <BlankSlate v-if="!config.hasSavedVaultingRules" />
-  <FinalSetupChecklist v-else-if="!config.isServerConnected" />
+  <FinalSetupChecklist v-else-if="!config.isVaultReadyToCreate" />
 </template>
 
 <script setup lang="ts">

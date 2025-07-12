@@ -208,7 +208,7 @@ export class Stats {
 
   public get isRunnable(): boolean {
     return (
-      this.config.isServerConnected &&
+      this.config.isServerReadyToInstall &&
       this.config.isServerUpToDate &&
       this.config.isServerInstalled &&
       !this.config.isWaitingForUpgradeApproval

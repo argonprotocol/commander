@@ -77,7 +77,8 @@ export class Config {
       },
       installDetails: Config.getDefault(dbFields.installDetails) as IConfig['installDetails'],
       oldestFrameIdToSync: Config.getDefault(dbFields.oldestFrameIdToSync) as number,
-      isServerConnected: Config.getDefault(dbFields.isServerConnected) as boolean,
+      isVaultReadyToCreate: Config.getDefault(dbFields.isVaultReadyToCreate) as boolean,
+      isServerReadyToInstall: Config.getDefault(dbFields.isServerReadyToInstall) as boolean,
       isServerInstalled: Config.getDefault(dbFields.isServerInstalled) as boolean,
       isServerUpToDate: Config.getDefault(dbFields.isServerUpToDate) as boolean,
       isServerReadyForBidding: Config.getDefault(dbFields.isServerReadyForBidding) as boolean,
@@ -187,10 +188,6 @@ export class Config {
   set installDetails(value: IConfig['installDetails']) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.installDetails, value);
-    console.log(
-      'ServerConnect INSTALL DETAILS SET',
-      value.ServerConnect.progress === 0 ? new Error('PROGRESS IS 0') : value.ServerConnect.progress,
-    );
     this._unstringified.installDetails = value;
   }
 
@@ -205,15 +202,26 @@ export class Config {
     this._unstringified.oldestFrameIdToSync = value;
   }
 
-  get isServerConnected(): boolean {
+  get isVaultReadyToCreate(): boolean {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.isServerConnected;
+    return this._unstringified.isVaultReadyToCreate;
   }
 
-  set isServerConnected(value: boolean) {
+  set isVaultReadyToCreate(value: boolean) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.isServerConnected, value);
-    this._unstringified.isServerConnected = value;
+    this._tryFieldsToSave(dbFields.isVaultReadyToCreate, value);
+    this._unstringified.isVaultReadyToCreate = value;
+  }
+
+  get isServerReadyToInstall(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._unstringified.isServerReadyToInstall;
+  }
+
+  set isServerReadyToInstall(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._tryFieldsToSave(dbFields.isServerReadyToInstall, value);
+    this._unstringified.isServerReadyToInstall = value;
   }
 
   get isServerUpToDate(): boolean {
@@ -372,7 +380,8 @@ const dbFields = {
   serverDetails: 'serverDetails',
   installDetails: 'installDetails',
   oldestFrameIdToSync: 'oldestFrameIdToSync',
-  isServerConnected: 'isServerConnected',
+  isVaultReadyToCreate: 'isVaultReadyToCreate',
+  isServerReadyToInstall: 'isServerReadyToInstall',
   isServerInstalled: 'isServerInstalled',
   isServerUpToDate: 'isServerUpToDate',
   isServerReadyForBidding: 'isServerReadyForBidding',
@@ -426,7 +435,8 @@ const defaults: IConfigDefaults = {
     };
   },
   oldestFrameIdToSync: () => 0,
-  isServerConnected: () => false,
+  isVaultReadyToCreate: () => false,
+  isServerReadyToInstall: () => false,
   isServerInstalled: () => false,
   isServerUpToDate: () => false,
   isServerReadyForBidding: () => false,
@@ -438,24 +448,24 @@ const defaults: IConfigDefaults = {
       argonCirculationGrowthPctMin: 0,
       argonCirculationGrowthPctMax: 50,
 
-      micronotPriceChangeType: MicronotPriceChangeType.Between,
-      micronotPriceChangePctMin: 0,
-      micronotPriceChangePctMax: 0,
+      argonotPriceChangeType: MicronotPriceChangeType.Between,
+      argonotPriceChangePctMin: 0,
+      argonotPriceChangePctMax: 0,
 
-      startingBidAmountFormulaType: BidAmountFormulaType.Custom,
-      startingBidAmountAdjustmentType: BidAmountAdjustmentType.Absolute,
-      startingBidAmountCustom: 500n * BigInt(MICROGONS_PER_ARGON),
-      startingBidAmountAbsolute: 10n * BigInt(MICROGONS_PER_ARGON),
-      startingBidAmountRelative: 0,
+      minimumBidFormulaType: BidAmountFormulaType.Custom,
+      minimumBidAdjustmentType: BidAmountAdjustmentType.Absolute,
+      minimumBidCustom: 500n * BigInt(MICROGONS_PER_ARGON),
+      minimumBidAdjustAbsolute: 10n * BigInt(MICROGONS_PER_ARGON),
+      minimumBidAdjustRelative: 0,
 
       rebiddingDelay: 1,
       rebiddingIncrementBy: 1n * BigInt(MICROGONS_PER_ARGON),
 
-      finalBidAmountFormulaType: BidAmountFormulaType.MinimumBreakeven,
-      finalBidAmountAdjustmentType: BidAmountAdjustmentType.Relative,
-      finalBidAmountCustom: 0n,
-      finalBidAmountAbsolute: 0n,
-      finalBidAmountRelative: -1,
+      maximumBidFormulaType: BidAmountFormulaType.BreakevenAtSlowGrowth,
+      maximumBidAdjustmentType: BidAmountAdjustmentType.Relative,
+      maximumBidCustom: 0n,
+      maximumBidAdjustAbsolute: 0n,
+      maximumBidAdjustRelative: -1,
 
       seatGoalType: SeatGoalType.Min,
       seatGoalCount: 3,

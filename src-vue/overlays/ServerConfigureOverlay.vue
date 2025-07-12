@@ -198,7 +198,7 @@ async function updateServer() {
     };
     await SSH.tryConnection(newServerDetails);
 
-    config.isServerConnected = true;
+    config.isServerReadyToInstall = true;
     config.isServerUpToDate = false;
     config.serverDetails = newServerDetails;
     await config.save();

@@ -148,9 +148,9 @@
                       class="bottom-[-10px] left-0"
                     />
                     <div MainWrapper @mouseenter="showTooltip($event, tooltip.btcFlatFee, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('btcFlatFee')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
-                      <div StatHeader>BTC Flat Fee</div>
+                      <div StatHeader>BTC Locking Fee</div>
                       <div MainRule class="w-full">
-                        {{ currency.symbol }}{{ microgonToMoneyNm(rules.btcFlatFee).format('0,0.00') }}
+                        {{ currency.symbol }}{{ microgonToMoneyNm(rules.btcFlatFee).format('0,0.00') }} + {{ numeral(rules.btcPctFee).format('0.[00]') }}%
                       </div>
                       <div class="text-gray-500/60 text-md font-mono">
                         Per Transaction
@@ -168,9 +168,9 @@
                       class="bottom-[-10px] left-1/2 -translate-x-1/2"
                     />
                     <div MainWrapper @mouseenter="showTooltip($event, tooltip.btcVariableFee, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('btcVariableFee')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
-                      <div StatHeader>BTC Variable Fee</div>
+                      <div StatHeader>Ecosystem Growth</div>
                       <div MainRule class="w-full">
-                        {{ numeral(rules.btcPctFee).format('0.[00]') }}%
+                        
                       </div>
                       <div class="text-gray-500/60 text-md font-mono">
                         Of Value Locked

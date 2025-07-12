@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Desktop management app for Argon"
 authors = ["Caleb Clark", "Blake Byrnes"]
 edition = "2024"
+build = "build.rs"
 
 [workspace.package]
 version = "1.1.0"
@@ -57,6 +58,7 @@ dotenv = "0.15"
 sha2 = "0.10"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-http = { version = "2", features = ["unsafe-headers"] }
+tauri-plugin-clipboard-manager = "2.3.0"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"

@@ -81,7 +81,9 @@ export const ConfigSchema = z.object({
   installDetails: ConfigInstallDetailsSchema,
   oldestFrameIdToSync: z.number(),
 
-  isServerConnected: z.boolean(), // isConnected
+  isVaultReadyToCreate: z.boolean(),
+
+  isServerReadyToInstall: z.boolean(), // isConnected
   isServerInstalled: z.boolean(), // isNewServer
   isServerUpToDate: z.boolean(), // isInstalling
   isServerReadyForBidding: z.boolean(), // isReadyForMining
@@ -112,7 +114,8 @@ export interface IConfigDefaults {
   serverDetails: () => Promise<IConfig['serverDetails']>;
   installDetails: () => IConfig['installDetails'];
   oldestFrameIdToSync: () => IConfig['oldestFrameIdToSync'];
-  isServerConnected: () => IConfig['isServerConnected'];
+  isVaultReadyToCreate: () => IConfig['isVaultReadyToCreate'];
+  isServerReadyToInstall: () => IConfig['isServerReadyToInstall'];
   isServerInstalled: () => IConfig['isServerInstalled'];
   isServerUpToDate: () => IConfig['isServerUpToDate'];
   isServerReadyForBidding: () => IConfig['isServerReadyForBidding'];

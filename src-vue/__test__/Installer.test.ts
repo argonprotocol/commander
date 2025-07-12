@@ -15,7 +15,7 @@ beforeEach(() => {
 });
 
 it('should skip install if server is not connected', async () => {
-  const dbPromise = createMockedDbPromise({ isServerConnected: 'false' });
+  const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'false' });
   const config = new Config(dbPromise);
   await config.load();
 
@@ -28,7 +28,7 @@ it('should skip install if server is not connected', async () => {
 });
 
 it('should skip install if local files are invalid', async () => {
-  const dbPromise = createMockedDbPromise({ isServerConnected: 'true' });
+  const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'true' });
   const config = new Config(dbPromise);
   await config.load();
 
@@ -43,7 +43,7 @@ it('should skip install if local files are invalid', async () => {
 });
 
 it('should skip install if install is already running', async () => {
-  const dbPromise = createMockedDbPromise({ isServerConnected: 'true' });
+  const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'true' });
   const config = new Config(dbPromise);
   await config.load();
 
@@ -63,7 +63,7 @@ it('should install if all conditions are met', async () => {
   const installer = new Installer(config);
   await installer.load();
 
-  config.isServerConnected = true;
+  config.isServerReadyToInstall = true;
   config.isServerInstalled = false;
   config.isServerUpToDate = false;
   config.serverDetails = {
@@ -89,7 +89,7 @@ it('should install if all conditions are met', async () => {
 });
 
 it.only('should run through entire install process', async () => {
-  const dbPromise = createMockedDbPromise({ isServerConnected: 'true' });
+  const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'true' });
   const config = Vue.reactive(new Config(dbPromise)) as Config;
   await config.load();
 

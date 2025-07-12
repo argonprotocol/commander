@@ -1,12 +1,6 @@
-import {
-  type AccountId,
-  type ArgonClient,
-  Compact,
-  convertFixedU128ToBigNumber,
-  ExtrinsicError,
-  JsonExt,
-  u128,
-} from '@argonprotocol/mainchain';
+import { type ArgonClient, convertFixedU128ToBigNumber, ExtrinsicError, JsonExt } from '@argonprotocol/mainchain';
+import { type AccountId } from '@polkadot/types/interfaces/runtime';
+import { Compact, u128 } from '@polkadot/types-codec';
 
 export enum SeatReductionReason {
   InsufficientFunds = 'InsufficientFunds',
@@ -15,7 +9,7 @@ export enum SeatReductionReason {
 }
 
 export interface IBidHistoryEntry {
-  cohortId: number;
+  cohortStartingFrameId: number;
   blockNumber: number;
   tick: number;
   // changes to the bid list
@@ -73,7 +67,7 @@ export class CohortBidderHistory {
   private maxSeatsInPlay: number = 0;
 
   constructor(
-    readonly cohortId: number,
+    readonly cohortStartingFrameId: number,
     readonly subaccounts: {
       index: number;
       isRebid: boolean;
@@ -124,7 +118,7 @@ export class CohortBidderHistory {
     this.stats.lastBlockNumber = Math.max(blockNumber, this.stats.lastBlockNumber);
 
     const historyEntry: IBidHistoryEntry = {
-      cohortId: this.cohortId,
+      cohortStartingFrameId: this.cohortStartingFrameId,
       blockNumber,
       tick,
       bidChanges: [],
@@ -191,9 +185,12 @@ export class CohortBidderHistory {
     if (blockNumber !== undefined) {
       this.stats.lastBlockNumber = Math.max(blockNumber, this.stats.lastBlockNumber);
     }
-    historyEntry.myBidsPlaced!.failureReason = bidError;
-    historyEntry.myBidsPlaced!.successfulBids = successfulBids;
-    historyEntry.myBidsPlaced!.txFeePlusTip = txFeePlusTip;
+
+    if (historyEntry.myBidsPlaced) {
+      historyEntry.myBidsPlaced!.failureReason = bidError;
+      historyEntry.myBidsPlaced!.successfulBids = successfulBids;
+      historyEntry.myBidsPlaced!.txFeePlusTip = txFeePlusTip;
+    }
   }
 
   public static async getStartingData(

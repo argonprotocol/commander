@@ -5,6 +5,8 @@ import BiddingCalculator, {
 } from '@argonprotocol/commander-calculator';
 import { getClient } from '@argonprotocol/mainchain';
 import { NETWORK_URL } from '../lib/Config';
+import { useConfig } from './config';
+import { IBiddingRules } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
 
 let client: Promise<MainchainClient>;
 let mainchain: Mainchain;
@@ -24,7 +26,13 @@ export function getMainchain(): Mainchain {
 }
 
 export function getCalculator(): BiddingCalculator {
-  calculator ??= new BiddingCalculator(getCalculatorData());
+  if (!calculator) {
+    const config = useConfig();
+    if (!config.isLoaded) {
+      throw new Error('Config must be loaded before BiddingCalculator can be initialized');
+    }
+    calculator = new BiddingCalculator(getCalculatorData(), config.biddingRules as IBiddingRules);
+  }
   return calculator;
 }
 

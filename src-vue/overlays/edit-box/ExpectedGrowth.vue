@@ -18,9 +18,9 @@
     Growth In Argonot Price
   </label>
   <div class="flex flex-row items-center gap-2 w-full">
-    <InputNumber v-model="config.biddingRules.micronotPriceChangePctMin" :min="0" :dragBy="1" format="percent" class="w-1/2" />
+    <InputNumber v-model="config.biddingRules.argonotPriceChangePctMin" :min="0" :dragBy="1" format="percent" class="w-1/2" />
     <span>to</span>
-    <InputNumber v-model="config.biddingRules.micronotPriceChangePctMax" :min="config.biddingRules.micronotPriceChangePctMin" :dragBy="1" format="percent" class="w-1/2" />
+    <InputNumber v-model="config.biddingRules.argonotPriceChangePctMax" :min="config.biddingRules.argonotPriceChangePctMin" :dragBy="1" format="percent" class="w-1/2" />
   </div>
 </template>
 

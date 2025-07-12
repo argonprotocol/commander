@@ -1,140 +1,113 @@
 import BiddingCalculatorData from './BiddingCalculatorData.js';
 import { bigIntMax, bigIntMin, bigIntMultiplyNumber } from './utils.js';
 import BigNumber from 'bignumber.js';
-import { MICROGONS_PER_ARGON } from './Mainchain.ts';
-import { BidAmountAdjustmentType, BidAmountFormulaType } from './IBiddingRules.ts';
-import { MICRONOTS_PER_ARGONOT } from '../../src-vue/lib/Currency.ts';
+import { BidAmountAdjustmentType, BidAmountFormulaType, IBiddingRules } from './IBiddingRules.ts';
+import { MICROGONS_PER_ARGON } from '@argonprotocol/commander-calculator/src/Mainchain';
 
-export interface IBidAmount {
+const MICRONOTS_PER_ARGONOT = MICROGONS_PER_ARGON;
+
+interface IBidDetails {
   formulaType: BidAmountFormulaType;
   adjustmentType: BidAmountAdjustmentType;
+  adjustAbsolute: bigint;
+  adjustRelative: number;
   custom: bigint;
-  absolute: bigint;
-  relative: number;
 }
 
-export default class BiddingCalculator {
-  public microgonBidPremium: bigint = 0n;
-  public microgonsToMintThisSeat: bigint = 0n;
+type IBidType = 'minimum' | 'maximum';
+type IGrowthType = 'slow' | 'medium' | 'fast';
 
+export default class BiddingCalculator {
   public data: BiddingCalculatorData;
 
-  public argonCirculationGrowthPctMin: number = 0;
-  public argonCirculationGrowthPctMax: number = 0;
+  public biddingRules: IBiddingRules;
 
-  public micronotPriceChangePctMin: number = 0;
-  public micronotPriceChangePctMax: number = 0;
-
-  public startingBidAmount: IBidAmount = {
-    formulaType: BidAmountFormulaType.MinimumBreakeven,
-    adjustmentType: BidAmountAdjustmentType.Absolute,
-    custom: 0n,
-    absolute: 0n,
-    relative: 0,
-  };
-  public finalBidAmount: IBidAmount = {
-    formulaType: BidAmountFormulaType.MinimumBreakeven,
-    adjustmentType: BidAmountAdjustmentType.Absolute,
-    custom: 0n,
-    absolute: 0n,
-    relative: 0,
-  };
-
-  constructor(calculatorData: BiddingCalculatorData) {
+  constructor(calculatorData: BiddingCalculatorData, biddingRules: IBiddingRules) {
     this.data = calculatorData;
+    this.biddingRules = biddingRules;
   }
 
   public get isInitialized(): Promise<void> {
     return this.data.isInitialized;
   }
 
-  public async setConfig(config: {
-    argonCirculationGrowthPctMin: number;
-    argonCirculationGrowthPctMax: number;
-    micronotPriceChangePctMin: number;
-    micronotPriceChangePctMax: number;
-    startingBidAmount: IBidAmount;
-    finalBidAmount: IBidAmount;
-  }) {
-    this.argonCirculationGrowthPctMin = config.argonCirculationGrowthPctMin;
-    this.argonCirculationGrowthPctMax = config.argonCirculationGrowthPctMax;
-    this.micronotPriceChangePctMin = config.micronotPriceChangePctMin;
-    this.micronotPriceChangePctMax = config.micronotPriceChangePctMax;
-    this.startingBidAmount = config.startingBidAmount;
-    this.finalBidAmount = config.finalBidAmount;
+  public async updateBiddingRules(biddingRules: IBiddingRules) {
+    this.biddingRules = biddingRules;
   }
 
-  public get startingBid(): bigint {
-    const startingBid = this.calculateFormulaPrice(this.startingBidAmount);
-    return bigIntMin(startingBid, this.finalBid);
+  public get minimumBidAmount(): bigint {
+    const minimumBidDetails = this.extractBidDetails('minimum');
+    const minimumBidAmount = this.calculateFormulaPrice(minimumBidDetails);
+    return bigIntMin(minimumBidAmount, this.maximumBidAmount);
   }
 
-  public get finalBid(): bigint {
-    const finalBid = this.calculateFormulaPrice(this.finalBidAmount);
-    return finalBid;
+  public get maximumBidAmount(): bigint {
+    const maximumBidDetails = this.extractBidDetails('maximum');
+    return this.calculateFormulaPrice(maximumBidDetails);
   }
 
-  public get minimumTDPR(): number {
-    return this.calculateTDPR('minimum');
+  public get minimumBidAtSlowGrowthAPY(): number {
+    return this.calculateAPY('minimum', 'slow');
   }
 
-  public get optimisticTDPR(): number {
-    return this.calculateTDPR('optimistic');
+  public get minimumBidAtFastGrowthAPY(): number {
+    return this.calculateAPY('minimum', 'fast');
   }
 
-  public get minimumAPR(): number {
-    return this.calculateAPR('minimum');
+  public get maximumBidAtSlowGrowthAPY(): number {
+    return this.calculateAPY('maximum', 'slow');
   }
 
-  public get optimisticAPR(): number {
-    return this.calculateAPR('optimistic');
+  public get maximumBidAtFastGrowthAPY(): number {
+    const apy = this.calculateAPY('maximum', 'fast');
+    return apy;
   }
 
-  public get minimumAPY(): number {
-    return this.calculateAPY('minimum');
-  }
-
-  public get optimisticAPY(): number {
-    return this.calculateAPY('optimistic');
-  }
-
-  public get minimumBreakevenBid(): bigint {
+  public get breakevenBidAtSlowGrowth(): bigint {
     const totalRewards = this.calculateMinRewardsThisSeat();
-    const costOfArgonotLossInMicrogons = this.calculateCostOfArgonotLossInMicrogons(this.micronotPriceChangePctMin);
+    const costOfArgonotLossInMicrogons = this.calculateCostOfArgonotLossInMicrogons(
+      this.biddingRules.argonotPriceChangePctMin,
+    );
     return totalRewards - (this.data.estimatedTransactionFee + costOfArgonotLossInMicrogons);
   }
 
-  public get optimisticBreakevenBid(): bigint {
+  public get breakevenBidAtFastGrowth(): bigint {
     const optimisticRewards = this.calculateOptimisticRewardsThisSeat();
-    const costOfArgonotLossInMicrogons = this.calculateCostOfArgonotLossInMicrogons(this.micronotPriceChangePctMax);
+    const costOfArgonotLossInMicrogons = this.calculateCostOfArgonotLossInMicrogons(
+      this.biddingRules.argonotPriceChangePctMax,
+    );
     return optimisticRewards - (this.data.estimatedTransactionFee + costOfArgonotLossInMicrogons);
   }
 
-  private calculateFormulaPrice(bidAmount: IBidAmount): bigint {
+  public get breakevenBidAtMediumGrowth(): bigint {
+    return (this.breakevenBidAtFastGrowth + this.breakevenBidAtSlowGrowth) / 2n;
+  }
+
+  private calculateFormulaPrice(bidDetails: IBidDetails): bigint {
     let price = 0n;
 
-    if (bidAmount.formulaType === BidAmountFormulaType.PreviousDayHigh) {
+    if (bidDetails.formulaType === BidAmountFormulaType.PreviousDayHigh) {
       price = this.data.previousDayHighBid;
-    } else if (bidAmount.formulaType === BidAmountFormulaType.PreviousDayLow) {
+    } else if (bidDetails.formulaType === BidAmountFormulaType.PreviousDayLow) {
       price = this.data.previousDayLowBid;
-    } else if (bidAmount.formulaType === BidAmountFormulaType.PreviousDayMid) {
+    } else if (bidDetails.formulaType === BidAmountFormulaType.PreviousDayMid) {
       price = this.data.previousDayMidBid;
-    } else if (bidAmount.formulaType === BidAmountFormulaType.MinimumBreakeven) {
-      price = this.minimumBreakevenBid;
-    } else if (bidAmount.formulaType === BidAmountFormulaType.OptimisticBreakeven) {
-      price = this.optimisticBreakevenBid;
-    } else if (bidAmount.formulaType === BidAmountFormulaType.RelativeBreakeven) {
-      price = (this.optimisticBreakevenBid + this.minimumBreakevenBid) / 2n;
-    } else if (bidAmount.formulaType !== BidAmountFormulaType.Custom) {
-      throw new Error(`Invalid price formula type: ${bidAmount.formulaType}`);
+    } else if (bidDetails.formulaType === BidAmountFormulaType.BreakevenAtSlowGrowth) {
+      price = this.breakevenBidAtSlowGrowth;
+    } else if (bidDetails.formulaType === BidAmountFormulaType.BreakevenAtFastGrowth) {
+      price = this.breakevenBidAtFastGrowth;
+    } else if (bidDetails.formulaType === BidAmountFormulaType.BreakevenAtMediumGrowth) {
+      price = this.breakevenBidAtMediumGrowth;
+    } else if (bidDetails.formulaType !== BidAmountFormulaType.Custom) {
+      throw new Error(`Invalid price formula type: ${bidDetails.formulaType}`);
     }
 
-    if (bidAmount.formulaType === BidAmountFormulaType.Custom) {
-      price = bidAmount.custom;
-    } else if (bidAmount.adjustmentType === BidAmountAdjustmentType.Absolute) {
-      price += bidAmount.absolute;
-    } else if (bidAmount.adjustmentType === BidAmountAdjustmentType.Relative) {
-      price += bigIntMultiplyNumber(price, bidAmount.relative / 100);
+    if (bidDetails.formulaType === BidAmountFormulaType.Custom) {
+      price = bidDetails.custom;
+    } else if (bidDetails.adjustmentType === BidAmountAdjustmentType.Absolute) {
+      price += bidDetails.adjustAbsolute;
+    } else if (bidDetails.adjustmentType === BidAmountAdjustmentType.Relative) {
+      price += bigIntMultiplyNumber(price, bidDetails.adjustRelative / 100);
     }
 
     return price;
@@ -147,22 +120,20 @@ export default class BiddingCalculator {
     return bigIntMax(0n, lossInMicrogons);
   }
 
-  private calculateTDPR(type: 'minimum' | 'optimistic') {
-    const isMinimum = type === 'minimum';
-    const microgonsBid = isMinimum ? this.finalBid : this.startingBid;
+  private calculateAPY(bidType: IBidType, growthType: IGrowthType): number {
+    const microgonsBid = bidType === 'minimum' ? this.minimumBidAmount : this.maximumBidAmount;
     const transactionFee = this.data.estimatedTransactionFee;
-    const costOfArgonotLossInMicrogons = this.calculateCostOfArgonotLossInMicrogons(
-      isMinimum ? this.micronotPriceChangePctMin : this.micronotPriceChangePctMax,
-    );
+
+    const argonotPriceChangePct = this.extractArgonotPriceChangePct(growthType);
+    const argonCirculationGrowthPct = this.extractArgonCirculationGrowthPct(growthType);
+
+    const costOfArgonotLossInMicrogons = this.calculateCostOfArgonotLossInMicrogons(argonotPriceChangePct);
     const totalCostBn = BigNumber(microgonsBid + transactionFee + costOfArgonotLossInMicrogons);
 
     const microgonsToMine = this.data.microgonsToMineThisSeat;
-    const microgonsToMint = this.calculateMicrogonsToMintThisSeat(
-      isMinimum ? this.argonCirculationGrowthPctMin : this.argonCirculationGrowthPctMax,
-    );
-    const micronotsMinedAsMicrogons = this.micronotMinedAsMicrogonValue(
-      isMinimum ? this.micronotPriceChangePctMin : this.micronotPriceChangePctMax,
-    );
+    const microgonsToMint = this.calculateMicrogonsToMintThisSeat(argonCirculationGrowthPct);
+
+    const micronotsMinedAsMicrogons = this.micronotMinedAsMicrogonValue(argonotPriceChangePct);
     const totalRewardsBn = BigNumber(microgonsToMine + micronotsMinedAsMicrogons + microgonsToMint);
 
     let tdpr = totalRewardsBn.minus(totalCostBn).dividedBy(totalCostBn).multipliedBy(100).toNumber();
@@ -172,43 +143,32 @@ export default class BiddingCalculator {
     } else {
       tdpr = Math.round(tdpr);
     }
-    return Math.max(tdpr, -100);
-  }
+    tdpr = Math.max(tdpr, -100);
 
-  private calculateAPR(type: 'minimum' | 'optimistic') {
-    let apr = this.calculateTDPR(type) * 36.5;
-    if (apr < 1000) {
-      apr = Math.round(apr * 100) / 100;
-    } else {
-      apr = Math.round(apr);
-    }
-    return Math.max(apr, -100);
-  }
+    const apy = Math.pow(1 + tdpr / 100, 36.5) * 100 - 100;
 
-  private calculateAPY(type: 'minimum' | 'optimistic') {
-    const apy = Math.pow(1 + this.calculateTDPR(type) / 100, 36.5) * 100 - 100;
     return Math.max(apy, -100);
   }
 
   private calculateMinRewardsThisSeat(): bigint {
     const microgonsToMine = this.data.microgonsToMineThisSeat;
-    const microgonsToMint = this.calculateMicrogonsToMintThisSeat(this.argonCirculationGrowthPctMin);
-    const micronotsMinedAsMicrogons = this.micronotMinedAsMicrogonValue(this.micronotPriceChangePctMin);
+    const microgonsToMint = this.calculateMicrogonsToMintThisSeat(this.biddingRules.argonCirculationGrowthPctMin);
+    const micronotsMinedAsMicrogons = this.micronotMinedAsMicrogonValue(this.biddingRules.argonotPriceChangePctMin);
 
     return microgonsToMine + microgonsToMint + micronotsMinedAsMicrogons;
   }
 
   private calculateOptimisticRewardsThisSeat(): bigint {
-    const micronotsMinedAsMicrogons = this.micronotMinedAsMicrogonValue(this.micronotPriceChangePctMax);
+    const micronotsMinedAsMicrogons = this.micronotMinedAsMicrogonValue(this.biddingRules.argonotPriceChangePctMax);
     const microgonsToMine = this.data.microgonsToMineThisSeat;
-    const microgonsToMint = this.calculateMicrogonsToMintThisSeat(this.argonCirculationGrowthPctMax);
+    const microgonsToMint = this.calculateMicrogonsToMintThisSeat(this.biddingRules.argonCirculationGrowthPctMax);
     return microgonsToMine + micronotsMinedAsMicrogons + microgonsToMint;
   }
 
-  private micronotMinedAsMicrogonValue(micronotPriceChangePct: number): bigint {
+  private micronotMinedAsMicrogonValue(argonotPriceChangePct: number): bigint {
     const micronots = this.data.micronotsToMineThisSeat;
     const asMicrogons = this.micronotToMicrogon(micronots);
-    const priceChangeMultiplier = 1 + micronotPriceChangePct / 100;
+    const priceChangeMultiplier = 1 + argonotPriceChangePct / 100;
     return bigIntMultiplyNumber(asMicrogons, priceChangeMultiplier);
   }
 
@@ -219,13 +179,13 @@ export default class BiddingCalculator {
     // Convert annual growth rate to 10-day growth rate by taking the 36.5th root
     // Use Math.pow for decimal exponents since BigNumber.pow only accepts integers
     const annualMultiplier = 1 + argonCirculationGrowthPct / 100;
-    const dailyMultiplier = Math.pow(annualMultiplier, 1 / 36.5);
-    const growthPctDuringSeat = BigNumber(dailyMultiplier - 1).multipliedBy(100);
+    const epochMultiplier = Math.pow(annualMultiplier, 1 / 36.5);
 
-    const microgonsToMintBn = BigNumber(microgonsInCirculation).multipliedBy(growthPctDuringSeat).dividedBy(100);
-    const microgonsToMint = BigInt(microgonsToMintBn.integerValue().toString());
+    const microgonsToMintThisEpochBn = BigNumber(microgonsInCirculation).multipliedBy(epochMultiplier - 1);
+    const microgonsToMintThisSeatBn = microgonsToMintThisEpochBn.dividedBy(this.data.miningSeatCount);
+    const microgonsToMintThisSeat = BigInt(microgonsToMintThisSeatBn.integerValue().toString());
 
-    return microgonsToMint;
+    return microgonsToMintThisSeat;
   }
 
   private micronotToMicrogon(micronots: bigint): bigint {
@@ -233,5 +193,57 @@ export default class BiddingCalculator {
     const argonotsBn = BigNumber(micronots).dividedBy(MICRONOTS_PER_ARGONOT);
     const microgonsBn = argonotsBn.multipliedBy(this.data.microgonExchangeRateTo.ARGNOT);
     return BigInt(Math.round(microgonsBn.toNumber()));
+  }
+
+  private extractBidDetails(bidType: IBidType): IBidDetails {
+    if (bidType === 'minimum') {
+      return {
+        formulaType: this.biddingRules.minimumBidFormulaType,
+        adjustmentType: this.biddingRules.minimumBidAdjustmentType,
+        adjustAbsolute: this.biddingRules.minimumBidAdjustAbsolute,
+        adjustRelative: this.biddingRules.minimumBidAdjustRelative,
+        custom: this.biddingRules.minimumBidCustom,
+      };
+    } else if (bidType === 'maximum') {
+      return {
+        formulaType: this.biddingRules.maximumBidFormulaType,
+        adjustmentType: this.biddingRules.maximumBidAdjustmentType,
+        adjustAbsolute: this.biddingRules.maximumBidAdjustAbsolute,
+        adjustRelative: this.biddingRules.maximumBidAdjustRelative,
+        custom: this.biddingRules.maximumBidCustom,
+      };
+    } else {
+      throw new Error(`Invalid bid type: ${bidType}`);
+    }
+  }
+
+  private extractArgonotPriceChangePct(growthType: IGrowthType): number {
+    if (growthType === 'slow') {
+      return this.biddingRules.argonotPriceChangePctMin;
+    } else if (growthType === 'fast') {
+      return this.biddingRules.argonotPriceChangePctMax;
+    } else if (growthType === 'medium') {
+      return BigNumber(this.biddingRules.argonotPriceChangePctMin)
+        .plus(this.biddingRules.argonotPriceChangePctMax)
+        .dividedBy(2)
+        .toNumber();
+    } else {
+      throw new Error(`Invalid growth type: ${growthType}`);
+    }
+  }
+
+  private extractArgonCirculationGrowthPct(growthType: IGrowthType): number {
+    if (growthType === 'slow') {
+      return this.biddingRules.argonCirculationGrowthPctMin;
+    } else if (growthType === 'fast') {
+      return this.biddingRules.argonCirculationGrowthPctMax;
+    } else if (growthType === 'medium') {
+      return BigNumber(this.biddingRules.argonCirculationGrowthPctMin)
+        .plus(this.biddingRules.argonCirculationGrowthPctMax)
+        .dividedBy(2)
+        .toNumber();
+    } else {
+      throw new Error(`Invalid growth type: ${growthType}`);
+    }
   }
 }

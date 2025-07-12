@@ -16,7 +16,7 @@ import { InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
 import Installer from '../lib/Installer';
 
 it.only('jump through the install steps rapidly when time has expired', async () => {
-  const dbPromise = createMockedDbPromise({ isServerConnected: 'false' });
+  const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'false' });
   const config = new Config(dbPromise);
   await config.load();
 

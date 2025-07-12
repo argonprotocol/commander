@@ -31,6 +31,7 @@ it('can autobid and store stats', async () => {
     biddingRulesPath: Path.resolve(path, 'rules.json'),
     datadir: path,
     keysMnemonic: mnemonicGenerate(),
+    shouldSkipDockerSync: true,
   });
 
   vi.spyOn(BiddingCalculator, 'createBidderParams').mockImplementation(async () => {
@@ -44,13 +45,16 @@ it('can autobid and store stats', async () => {
     };
   });
 
-  await expect(bot.start()).resolves.toBeTruthy();
+  await expect(bot.start()).resolves.toBeUndefined();
   const status = await bot.blockSync.state();
   expect(status.lastBlockNumber).toBeGreaterThanOrEqual(status.lastFinalizedBlockNumber);
   console.log(status);
   let firstCohort = 1;
+
+  console.log('Waiting for first rotation');
   // wait for the first rotation
   await new Promise(async resolve => {
+    console.log('Waiting for activeMinersCount');
     const unsubscribe = await client.query.miningSlot.activeMinersCount(async x => {
       if (x.toNumber() > 0) {
         unsubscribe();
@@ -58,7 +62,11 @@ it('can autobid and store stats', async () => {
         resolve(x);
       }
     });
+    console.log('Set up activeMinersCount');
   });
+
+  console.log('First rotation found', firstCohort);
+
   let voteBlocks = 0;
   let lastFinalizedBlockNumber = 0;
   const cohortActivatingFrameIdsWithEarnings = new Set<number>();
@@ -140,6 +148,7 @@ it('can autobid and store stats', async () => {
     datadir: path2,
     keysMnemonic: mnemonicGenerate(),
     oldestFrameIdToSync: Math.min(...cohortActivatingFrameIds) - 1,
+    shouldSkipDockerSync: true,
   });
   console.log('Starting bot 2');
   await expect(botRestart.start()).resolves.toBeTruthy();

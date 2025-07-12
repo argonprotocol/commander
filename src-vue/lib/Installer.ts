@@ -11,6 +11,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { InstallerCheck } from './InstallerCheck';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { jsonStringifyWithBigInts } from './Utils';
 
 dayjs.extend(utc);
 
@@ -116,6 +117,7 @@ export default class Installer {
       await this.clearStepFiles(stepsToClear);
     }
 
+    this.installerCheck.shouldUseCachedFilenames = true;
     this.fileUploadProgress = 0;
     this.installerCheck.start();
 
@@ -137,7 +139,7 @@ export default class Installer {
       await this.startRemoteScript();
       this.fileUploadProgress = 99;
 
-      this.installerCheck.bypassCachedFilenames = true;
+      this.installerCheck.shouldUseCachedFilenames = false;
 
       console.info('Waiting for install to complete');
       await this.installerCheck.waitForInstallToComplete();
@@ -187,7 +189,7 @@ export default class Installer {
     await this.config.save();
 
     this.installerCheck.clearCachedFilenames();
-    this.installerCheck.bypassCachedFilenames = false;
+    this.installerCheck.shouldUseCachedFilenames = true;
 
     this.removeReasonsToSkipInstall();
     this.run();
@@ -213,7 +215,7 @@ export default class Installer {
     await this.clearStepFiles(stepsToClear, { setFirstStepToWorking: true });
 
     this.installerCheck.clearCachedFilenames();
-    this.installerCheck.bypassCachedFilenames = false;
+    this.installerCheck.shouldUseCachedFilenames = true;
 
     this.removeReasonsToSkipInstall();
     this.config.resetField('installDetails');
@@ -256,10 +258,10 @@ export default class Installer {
     this.reasonToSkipInstall = '';
     this.reasonToSkipInstallData = {};
 
-    if (!this.config.isServerConnected) {
+    if (!this.config.isServerReadyToInstall) {
       this.isReadyToRun = false;
       this.reasonToSkipInstall = ReasonsToSkipInstall.ServerNotConnected;
-      this.reasonToSkipInstallData = { isServerConnected: this.config.isServerConnected };
+      this.reasonToSkipInstallData = { isServerReadyToInstall: this.config.isServerReadyToInstall };
       this.config.isServerUpToDate = false;
       this.config.isWaitingForUpgradeApproval = false;
       await this.config.save();
@@ -361,7 +363,7 @@ export default class Installer {
       return true;
     }
 
-    if (!this.config.isServerConnected) {
+    if (!this.config.isServerReadyToInstall) {
       return false;
     }
 
@@ -393,7 +395,7 @@ export default class Installer {
 
     this.isRunning = true;
     this.installerCheck.start();
-    this.installerCheck.bypassCachedFilenames = true;
+    this.installerCheck.shouldUseCachedFilenames = false;
 
     console.info('Waiting for install to complete');
     await this.installerCheck.waitForInstallToComplete();
@@ -491,8 +493,21 @@ export default class Installer {
     for (const localDir of CORE_DIRS) {
       console.log(`UPLOADING ${localDir}`);
       const remoteDir = `~/${localDir}`;
-      await SSH.runCommand(`rm -rf ${remoteDir}`);
-      await SSH.uploadDirectory(app, localDir, remoteDir);
+      try {
+        console.log(`Removing ${remoteDir}`);
+        await SSH.runCommand(`rm -rf ${remoteDir}`);
+      } catch (e) {
+        console.error(`Failed to remove remote directory ${remoteDir}: ${e}`);
+        throw e;
+      }
+      try {
+        console.log(`Uploading Directory ${localDir} to ${remoteDir}`);
+        await SSH.uploadDirectory(app, localDir, remoteDir);
+        console.log(`FINISHED Uploading Directory ${localDir} to ${remoteDir}`);
+      } catch (e) {
+        console.error(`Failed to upload directory ${localDir} to ${remoteDir}: ${e}`);
+        throw e;
+      }
       uploadedCount++;
       progressFn?.(CORE_DIRS.length, uploadedCount);
     }
@@ -500,7 +515,7 @@ export default class Installer {
   }
 
   private async uploadBotConfigFiles(progressFn?: (totalCount: number, uploadedCount: number) => void): Promise<void> {
-    const biddingRulesStr = JSON.stringify(this.config.biddingRules);
+    const biddingRulesStr = jsonStringifyWithBigInts(this.config.biddingRules);
     if (!biddingRulesStr) return;
 
     const envSecurity = `SESSION_KEYS_MNEMONIC="${this.config.security.sessionMnemonic}"\n` + `KEYPAIR_PASSPHRASE=`;

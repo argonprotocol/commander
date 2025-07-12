@@ -146,8 +146,9 @@ async function launchMiningBot() {
     return;
   }
   isLaunchingMiningBot.value = true;
-
-  await installer.upgradeBiddingBotFiles();
+  config.isServerReadyToInstall = true;
+  await config.save();
+  await installer.run();
   isLaunchingMiningBot.value = false;
 }
 </script>

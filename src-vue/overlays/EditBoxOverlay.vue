@@ -8,7 +8,7 @@
 
       <div class="flex flex-col grow text-md px-5 mt-4">
         <CapitalToCommit v-if="id === 'capitalToCommit'" />
-        <StartingBid v-if="id === 'startingBid'" />
+        <StartingBid v-if="id === 'minimumBid'" />
         <MaximumBid v-if="id === 'maximumBid'" />
         <RebiddingStrategy v-if="id === 'rebiddingStrategy'" />
         <SeatingGoal v-if="id === 'seatGoals'" />
@@ -52,7 +52,7 @@ const emit = defineEmits<{
 export type IEditBoxOverlayTypeForMining =
   | 'capitalToCommit'
   | 'maximumBid'
-  | 'startingBid'
+  | 'minimumBid'
   | 'rebiddingStrategy'
   | 'seatGoals'
   | 'expectedGrowth'
@@ -73,7 +73,7 @@ let previousBiddingRules = jsonStringifyWithBigInts(config.biddingRules);
 const titles = {
   capitalToCommit: 'Capital to Commit',
   maximumBid: 'Maximum Bid',
-  startingBid: 'Starting Bid',
+  minimumBid: 'Minimum Bid',
   rebiddingStrategy: 'Rebidding Strategy',
   seatGoals: 'Seat Goals',
   expectedGrowth: 'Expected Growth',

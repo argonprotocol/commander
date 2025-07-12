@@ -88,7 +88,7 @@ const maxSeatCount = Vue.ref(0);
 
 const biddingParamsHelper = new BiddingParamsHelper(config.biddingRules as IBiddingRules, mainchain);
 
-const maxBidPerSeat = Vue.computed(() => config.biddingRules?.finalBidAmountAbsolute || 0n);
+const maxBidPerSeat = Vue.computed(() => config.biddingRules?.maximumBidAdjustAbsolute || 0n);
 
 function handleAuctionClosingTick(totalSecondsRemaining: number) {
   if (totalSecondsRemaining <= 0) {

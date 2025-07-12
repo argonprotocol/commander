@@ -14,7 +14,8 @@ import Installer from './Installer';
 dayjs.extend(utc);
 
 export class InstallerCheck {
-  public bypassCachedFilenames = false;
+  public shouldUseCachedFilenames = false;
+  private hasCachedFilenames = false;
 
   private installer: Installer;
   private config: Config;
@@ -67,7 +68,6 @@ export class InstallerCheck {
   public async updateInstallStatus(): Promise<void> {
     const filenames = await this.fetchLogFilenames();
     const installDetailsPending = Config.getDefault('installDetails') as IConfigInstallDetails;
-    console.log('updateInstallStatus', this.installer.isRunning, filenames);
 
     const stepsToProcess: Record<InstallStepKey, number> = {
       [InstallStepKey.ServerConnect]: 0.2,
@@ -116,10 +116,6 @@ export class InstallerCheck {
       } else {
         stepNewData.status = InstallStepStatus.Pending;
         stepNewData.progress = 0;
-      }
-
-      if (stepKey === InstallStepKey.ServerConnect) {
-        console.log('PROGRESS UPDATED', stepOldData.progress, ' -> ', stepNewData.progress);
       }
 
       if (stepNewData.progress >= 100 && stepNewData.status !== InstallStepStatus.Completed) {
@@ -216,13 +212,18 @@ export class InstallerCheck {
   }
 
   private async fetchLogFilenames(): Promise<string[]> {
-    if (this.cachedFilenames.length && !this.bypassCachedFilenames) {
+    if (this.hasCachedFilenames && this.shouldUseCachedFilenames) {
       return this.cachedFilenames;
     }
 
     try {
-      const [output] = await SSH.runCommand('ls ~/install-logs');
-      this.cachedFilenames = output.split('\n').filter(s => s);
+      const [output, code] = await SSH.runCommand('ls ~/install-logs');
+      if (code === 0) {
+        this.cachedFilenames = output.split('\n').filter(s => s);
+      } else {
+        console.error('Failed to fetch log filenames', output);
+      }
+      this.hasCachedFilenames = true;
       return this.cachedFilenames;
     } catch {
       return [];

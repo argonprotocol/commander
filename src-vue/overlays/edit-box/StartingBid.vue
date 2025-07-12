@@ -8,26 +8,26 @@
     Formula Type
   </label>
   <div v-if="options.length" class="flex flex-row items-center justify-between">
-    <InputMenu v-model="config.biddingRules.startingBidAmountFormulaType" :options="options" />
+    <InputMenu v-model="config.biddingRules.minimumBidFormulaType" :options="options" />
   </div>
 
-  <template v-if="config.biddingRules.startingBidAmountFormulaType === BidAmountFormulaType.Custom">
+  <template v-if="config.biddingRules.minimumBidFormulaType === BidAmountFormulaType.Custom">
     <label class="mt-3 font-bold opacity-60 mb-0.5">
       Value
     </label>
-    <InputArgon v-model="config.biddingRules.startingBidAmountCustom" :min="0" class="min-w-60" />
+    <InputArgon v-model="config.biddingRules.minimumBidCustom" :min="0" class="min-w-60" />
   </template>
   <template v-else>
     <label class="mt-3 font-bold opacity-60 mb-0.5">
       Additional Adjustment
     </label>
     <div v-if="options.length" class="flex flex-row items-center justify-between space-x-3">
-      <InputMenu v-model="config.biddingRules.startingBidAmountAdjustmentType" :options="[
+      <InputMenu v-model="config.biddingRules.minimumBidAdjustmentType" :options="[
         { name: BidAmountAdjustmentType.Absolute, value: BidAmountAdjustmentType.Absolute }, 
         { name: BidAmountAdjustmentType.Relative, value: BidAmountAdjustmentType.Relative }
       ]" class="w-1/2" />
-      <InputArgon v-if="isAbsoluteType" v-model="config.biddingRules.startingBidAmountAbsolute" class="min-w-60 w-1/2" />
-      <InputNumber v-else v-model="config.biddingRules.startingBidAmountRelative" :min="-100" :dragBy="0.01" format="percent" class="w-1/2" />
+      <InputArgon v-if="isAbsoluteType" v-model="config.biddingRules.minimumBidAdjustAbsolute" class="min-w-60 w-1/2" />
+      <InputNumber v-else v-model="config.biddingRules.minimumBidAdjustRelative" :min="-100" :dragBy="0.01" format="percent" class="w-1/2" />
     </div>
   </template>
 </template>
@@ -49,7 +49,7 @@ const bidAmount = Vue.ref<bigint>(0n);
 const options = Vue.ref<IOption[]>([]);
 
 const isAbsoluteType = Vue.computed(
-  () => config.biddingRules.startingBidAmountAdjustmentType === BidAmountAdjustmentType.Absolute,
+  () => config.biddingRules.minimumBidAdjustmentType === BidAmountAdjustmentType.Absolute,
 );
 
 Vue.onBeforeMount(async () => {
@@ -72,14 +72,19 @@ Vue.onBeforeMount(async () => {
       microgons: calculator.data.previousDayLowBid,
     },
     {
-      name: 'Minimum Breakeven',
-      value: BidAmountFormulaType.MinimumBreakeven,
-      microgons: calculator.minimumBreakevenBid,
+      name: 'Breakeven at Slow Growth',
+      value: BidAmountFormulaType.BreakevenAtSlowGrowth,
+      microgons: calculator.breakevenBidAtSlowGrowth,
     },
     {
-      name: 'Optimistic Breakeven',
-      value: BidAmountFormulaType.OptimisticBreakeven,
-      microgons: calculator.optimisticBreakevenBid,
+      name: 'Breakeven at Medium Growth',
+      value: BidAmountFormulaType.BreakevenAtSlowGrowth,
+      microgons: calculator.breakevenBidAtSlowGrowth,
+    },
+    {
+      name: 'Breakeven at Fast Growth',
+      value: BidAmountFormulaType.BreakevenAtFastGrowth,
+      microgons: calculator.breakevenBidAtFastGrowth,
     },
     { name: 'Custom Amount', value: BidAmountFormulaType.Custom },
   ];

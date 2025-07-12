@@ -6,6 +6,8 @@
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
-    "@argonprotocol/mainchain": "1.3.2"
+    "@argonprotocol/mainchain": "1.3.2",
+    "dayjs": "^1.11.13",
+    "zod": "^3.25.55"
   }
 }

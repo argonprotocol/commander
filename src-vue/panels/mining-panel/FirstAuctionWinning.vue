@@ -140,7 +140,7 @@ Vue.onMounted(async () => {
   }
 
   seatCount.value = await biddingParamsHelper.getMaxSeats();
-  totalBiddingBudget.value = config.biddingRules.finalBidAmountAbsolute * BigInt(seatCount.value);
+  totalBiddingBudget.value = config.biddingRules.maximumBidAdjustAbsolute * BigInt(seatCount.value);
 });
 </script>
 

@@ -93,7 +93,7 @@ async function removeServer() {
   if (isRemoving.value) return;
   isRemoving.value = true;
 
-  config.isServerConnected = false;
+  config.isServerReadyToInstall = false;
   config.isServerInstalled = false;
   config.isServerUpToDate = false;
   config.serverDetails = { ...config.serverDetails, ipAddress: '' };

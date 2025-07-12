@@ -15,6 +15,7 @@ interface IBotOptions {
   biddingRulesPath: string;
   keysMnemonic: string;
   oldestFrameIdToSync?: number;
+  shouldSkipDockerSync?: boolean;
 }
 
 export default class Bot {
@@ -42,11 +43,11 @@ export default class Bot {
     return state?.currentFrameId ?? 0;
   }
 
-  public async start() {
+  public async start(): Promise<void> {
     if (this.isStarting || this.isReady) return;
     this.isStarting = true;
 
-    await this.waitForDockersToSync();
+    this.options.shouldSkipDockerSync || (await this.waitForDockersToSync());
 
     const clientPromise = getClient(this.options.localRpcUrl);
     try {
@@ -106,16 +107,6 @@ export default class Bot {
 
     this.isReady = true;
     this.isStarting = false;
-
-    try {
-      const state = await this.blockSync.state();
-      console.log('Block sync updated', state);
-
-      return state;
-    } catch (error) {
-      console.error('Error getting block sync state', error);
-      throw error;
-    }
   }
 
   public async stop() {

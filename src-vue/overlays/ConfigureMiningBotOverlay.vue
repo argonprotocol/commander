@@ -28,11 +28,11 @@
                 configure the rules for how your bot should make decisions and place bids.
               </p>
 
-              <section class="flex flex-row border-t border-b border-slate-300 text-center space-x-10 pt-12 pb-12 px-5 mx-5">
+              <section class="flex flex-row border-t border-b border-slate-300 text-center pt-8 pb-8 px-5 mx-5">
                 <div class="w-1/2">
-                  <div @click="openEditBoxOverlay('capitalToCommit')" @mouseenter="showTooltip($event, tooltip.capitalToCommit, { width: 'parent' })" @mouseleave="hideTooltip" class="flex flex-col group cursor-pointer">
+                  <div @mouseenter="showTooltip($event, tooltip.capitalToCommit, { width: 'parent' })" @mouseleave="hideTooltip" class="flex flex-col group cursor-pointer">
                     <header StatHeader class="group-hover:text-argon-600/70 relative z-10">Capital to Commit</header>
-                    <div PrimaryStat class="relative border border-slate-500/30 rounded-lg -mt-7 pb-10 pt-12 group-hover:bg-argon-20 text-4xl font-bold font-mono text-argon-600 shadow-sm">
+                    <div PrimaryStat class="relative border border-slate-500/30 rounded-lg -mt-7 pb-14 pt-16 text-5xl font-bold font-mono text-argon-600 shadow-sm">
                       <EditBoxOverlay
                         id="capitalToCommit"
                         v-if="showEditBoxOverlay === 'capitalToCommit'"
@@ -43,23 +43,31 @@
                     </div>
                   </div>
                   <div class="pt-3 text-argon-600/70 cursor-pointer text-md">
-                    View Seat Probabilities ({{ currency.symbol
-                    }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}
-                    to
-                    {{ currency.symbol }}{{ microgonToMoneyNm(finalBidAmount).format('0,0.00') }}
-                    per seat)
+                    View Seat Probabilities (between {{ probableMinSeats }} and {{ probableMaxSeats }} seats)
                   </div>
+                </div>
+                <div class="flex flex-col items-center justify-center text-3xl mx-2 text-center">
+                  <span class="relative -top-5 opacity-50">
+                    =
+                  </span>
                 </div>
                 <div class="w-1/2">
                   <div @mouseenter="showTooltip($event, tooltip.estimatedAPYRange, { width: 'parent' })" @mouseleave="hideTooltip" class="flex flex-col group cursor-pointer">
-                    <header StatHeader class="group-hover:text-argon-600/70 relative z-10">Estimated APY Range</header>
-                    <div PrimaryStat class="border border-slate-500/30 rounded-lg -mt-7 pb-10 pt-12 group-hover:bg-argon-20 text-4xl font-bold font-mono text-argon-600 shadow-sm">
-                      {{ numeral(minimumAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%
-                      <span class="text-slate-500/80 font-normal text-xl relative -top-1 -mx-2">to</span>
-                      {{ numeral(optimisticAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%
+                    <header StatHeader class="group-hover:text-argon-600/70 relative z-10 border-b border-dashed border-slate-500/30 pb-2 mx-4">Estimated APY Ranges</header>
+                    <div PrimaryStat class="flex flex-col border border-slate-500/30 rounded-lg -mt-7 pb-5 pt-5 group-hover:bg-argon-20 text-3xl font-bold font-mono text-argon-600 shadow-sm w-full">
+                      <div class="flex flex-row items-center justify-center w-full border-b border-dashed border-slate-500/30 mx-4 pb-3 pt-4">
+                        <span class="w-1/2">{{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</span>
+                        <div class="w-[1px] h-full bg-slate-300/80 mx-2">&nbsp;</div>
+                        <span class="w-1/2">{{ numeral(maximumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</span>
+                      </div>
+                      <div class="flex flex-row items-center justify-center w-full mt-3 mx-4">
+                        <span class="w-1/2">{{ numeral(minimumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</span>
+                        <div class="w-[1px] h-full bg-slate-300/80 mx-2">&nbsp;</div>
+                        <span class="w-1/2">{{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</span>
+                      </div>
                     </div>
                   </div>
-                  <div class="pt-3 text-argon-600/70 cursor-pointer text-md">View Risk Analysis (99% from server ops)</div>
+                  <div class="pt-3 text-argon-600/70 cursor-pointer text-md">View Risk Analysis (it's 99% from server ops)</div>
                 </div>
               </section>
 
@@ -68,70 +76,70 @@
 
                   <div class="flex flex-col items-center justify-center relative w-1/3">
                     <EditBoxOverlay
-                      id="maximumBid"
-                      v-if="showEditBoxOverlay === 'maximumBid'"
+                      id="minimumBid"
+                      v-if="showEditBoxOverlay === 'minimumBid'"
                       @close="showEditBoxOverlay = null"
                       class="-top-5 left-0"
                     />
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.maximumBid, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('maximumBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
-                      <div StatHeader>Maximum Bid</div>
-                      <div MainRule class="w-full">
-                        {{ currency.symbol }}{{ microgonToMoneyNm(finalBidAmount).format('0,0.00') }}
-                      </div>
-                      <div class="text-gray-500/60 text-md">
-                        <span v-if="rules.finalBidAmountFormulaType === BidAmountFormulaType.Custom">Custom Value</span>
-                        <template v-else>
-                          <span>{{ rules.finalBidAmountFormulaType }}</span>                        
-                          <span v-if="rules.finalBidAmountAdjustmentType === BidAmountAdjustmentType.Absolute && rules.finalBidAmountAbsolute">
-                            {{ rules.finalBidAmountAbsolute > 0 ? '+' : '-' 
-                            }}{{ currency.symbol
-                            }}{{ microgonToMoneyNm(bigIntAbs(rules.finalBidAmountAbsolute)).format('0.00') }}
-                          </span>
-                          <span v-else-if="rules.finalBidAmountRelative">
-                            &nbsp;{{ rules.finalBidAmountRelative > 0 ? '+' : '-' 
-                            }}{{ numeral(Math.abs(rules.finalBidAmountRelative)).format('0.[00]') }}%
-                          </span>
-                        </template>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="w-[1px] bg-slate-300/80 mx-2"></div>
-
-                  <div class="flex flex-col items-center justify-center relative w-1/3">
-                    <EditBoxOverlay
-                      id="startingBid"
-                      v-if="showEditBoxOverlay === 'startingBid'"
-                      @close="showEditBoxOverlay = null"
-                      class="-top-5 left-1/2 -translate-x-1/2"
-                    />
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.startingBid, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('startingBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.minimumBid, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('minimumBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
                       <div StatHeader>Starting Bid</div>
                       <div MainRule class="w-full">
-                        {{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}
+                        {{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }}
                       </div>
                       <div class="text-gray-500/60 text-md">
-                        <span v-if="rules.startingBidAmountFormulaType === BidAmountFormulaType.Custom">Custom Value</span>
+                        <span v-if="rules.minimumBidFormulaType === BidAmountFormulaType.Custom">Custom Value</span>
                         <template v-else>
-                          <span>{{ rules.startingBidAmountFormulaType }}</span>
-                          <span v-if="rules.startingBidAmountAdjustmentType === BidAmountAdjustmentType.Absolute && rules.startingBidAmountAbsolute">
-                            {{ rules.startingBidAmountAbsolute > 0 ? '+' : '-' 
+                          <span>{{ rules.minimumBidFormulaType }}</span>
+                          <span v-if="rules.minimumBidAdjustmentType === BidAmountAdjustmentType.Absolute && rules.minimumBidAdjustAbsolute">
+                            {{ rules.minimumBidAdjustAbsolute > 0 ? '+' : '-' 
                             }}{{ currency.symbol
                             }}{{
                               microgonToMoneyNm(
-                                rules.startingBidAmountAbsolute < 0n ? -rules.startingBidAmountAbsolute : rules.startingBidAmountAbsolute,
+                                rules.minimumBidAdjustAbsolute < 0n ? -rules.minimumBidAdjustAbsolute : rules.minimumBidAdjustAbsolute,
                               ).format('0.00')
                             }}
                           </span>
-                          <span v-else-if="rules.startingBidAmountRelative">
-                            &nbsp;{{ rules.startingBidAmountRelative > 0 ? '+' : '-' 
-                            }}{{ numeral(Math.abs(rules.startingBidAmountRelative)).format('0.[00]') }}%
+                          <span v-else-if="rules.minimumBidAdjustRelative">
+                            &nbsp;{{ rules.minimumBidAdjustRelative > 0 ? '+' : '-' 
+                            }}{{ numeral(Math.abs(rules.minimumBidAdjustRelative)).format('0.[00]') }}%
                           </span>
                         </template>
                       </div>
                     </div>
                   </div>
                   
+                  <div class="w-[1px] bg-slate-300/80 mx-2"></div>
+
+                  <div class="flex flex-col items-center justify-center relative w-1/3">
+                    <EditBoxOverlay
+                      id="maximumBid"
+                      v-if="showEditBoxOverlay === 'maximumBid'"
+                      @close="showEditBoxOverlay = null"
+                      class="-top-5 left-1/2 -translate-x-1/2"
+                    />
+                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.maximumBid, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('maximumBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                      <div StatHeader>Maximum Bid</div>
+                      <div MainRule class="w-full">
+                        {{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}
+                      </div>
+                      <div class="text-gray-500/60 text-md">
+                        <span v-if="rules.maximumBidFormulaType === BidAmountFormulaType.Custom">Custom Value</span>
+                        <template v-else>
+                          <span>{{ rules.maximumBidFormulaType }}</span>                        
+                          <span v-if="rules.maximumBidAdjustmentType === BidAmountAdjustmentType.Absolute && rules.maximumBidAdjustAbsolute">
+                            {{ rules.maximumBidAdjustAbsolute > 0 ? '+' : '-' 
+                            }}{{ currency.symbol
+                            }}{{ microgonToMoneyNm(bigIntAbs(rules.maximumBidAdjustAbsolute)).format('0.00') }}
+                          </span>
+                          <span v-else-if="rules.maximumBidAdjustRelative">
+                            &nbsp;{{ rules.maximumBidAdjustRelative > 0 ? '+' : '-' 
+                            }}{{ numeral(Math.abs(rules.maximumBidAdjustRelative)).format('0.[00]') }}%
+                          </span>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
                   <div class="flex flex-col items-center justify-center relative w-1/3">
@@ -147,7 +155,7 @@
                         +{{ currency.symbol }}{{ microgonToMoneyNm(rules.rebiddingIncrementBy).format('0.00') }}
                       </div>
                       <div class="text-gray-500/60 text-md">
-                        {{ rules.rebiddingDelay }} Minute After Loss
+                        Delay By {{ rules.rebiddingDelay }} Minute{{ rules.rebiddingDelay === 1 ? '' : 's' }}
                       </div>
                     </div>
                   </div>
@@ -194,7 +202,7 @@
                       class="bottom-[-10px] left-1/2 -translate-x-1/2"
                     />
                     <div MainWrapper @mouseenter="showTooltip($event, tooltip.expectedGrowth, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('expectedGrowth')" class="flex flex-col w-full h-full items-center justify-center">
-                      <div StatHeader>Expected Growth</div>
+                      <div StatHeader>Ecosystem Growth</div>
                       <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
                         <div MainRule class="flex flex-row items-center justify-center w-5/12">
                           <span>{{ numeral(rules.argonCirculationGrowthPctMin).formatIfElse('0', '0', '+0.[0]') }}%</span>
@@ -203,9 +211,9 @@
                         </div>
                         <span class="text-md w-2/12 text-gray-500/60">&nbsp;and&nbsp;</span>
                         <div MainRule class="flex flex-row items-center justify-center w-5/12">
-                          <span>{{ numeral(rules.micronotPriceChangePctMin).formatIfElse('0', '0', '+0.[0]') }}%</span>
+                          <span>{{ numeral(rules.argonotPriceChangePctMin).formatIfElse('0', '0', '+0.[0]') }}%</span>
                           <span class="text-md px-1.5 text-gray-500/60">to</span>
-                          <span>{{ numeral(rules.micronotPriceChangePctMax).formatIfElse('0', '0', '+0.[0]')}}%</span>
+                          <span>{{ numeral(rules.argonotPriceChangePctMax).formatIfElse('0', '0', '+0.[0]')}}%</span>
                         </div>
                       </div>
                       <div class="flex flex-row items-center justify-center px-10 w-full text-center font-mono ">
@@ -253,8 +261,8 @@
                   <span>Cancel</span>
                 </button>
                 <button @click="saveRules" @mouseenter="showTooltip($event, tooltip.saveRules, { width: 'parent' })" @mouseleave="hideTooltip" class="bg-argon-button text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
-                  <span v-if="!isSaving">{{ isBrandNew ? 'Create' : 'Update' }} Mining Bot</span>
-                  <span v-else>{{ isBrandNew ? 'Creating' : 'Updating' }} Mining Bot...</span>
+                  <span v-if="!isSaving">{{ isBrandNew ? 'Create Mining Bot' : 'Update Settings' }}</span>
+                  <span v-else>{{ isBrandNew ? 'Creating Mining Bot...' : 'Updating Settings...' }}</span>
                 </button>
               </div>
             </div>
@@ -312,18 +320,23 @@ const showEditBoxOverlay = Vue.ref<IEditBoxOverlayTypeForMining | null>(null);
 
 const dialogPanel = Vue.ref(null);
 
-const minimumAPY = Vue.ref(0);
-const optimisticAPY = Vue.ref(0);
+const probableMinSeats = Vue.ref(0);
+const probableMaxSeats = Vue.ref(0);
 
-const startingBidAmount = Vue.ref(0n);
-const finalBidAmount = Vue.ref(0n);
+const minimumBidAmount = Vue.ref(0n);
+const maximumBidAmount = Vue.ref(0n);
+
+const minimumBidAtSlowGrowthAPY = Vue.ref(0);
+const minimumBidAtFastGrowthAPY = Vue.ref(0);
+const maximumBidAtSlowGrowthAPY = Vue.ref(0);
+const maximumBidAtFastGrowthAPY = Vue.ref(0);
 
 const tooltip = {
   capitalToCommit:
     'The more capital you put in, the more seats you have a chance to win and therefore the higher your earning potential.',
   estimatedAPYRange:
     'These estimates are based on the guaranteed block rewards locked on-chain combined with the bidding variables shown on this page.',
-  startingBid: `This is your starting bid price. Don't put it too low or you'll be forced to pay unneeded transaction fees in order to submit a rebid.`,
+  minimumBid: `This is your starting bid price. Don't put it too low or you'll be forced to pay unneeded transaction fees in order to submit a rebid.`,
   rebiddingStrategy: Vue.computed(
     () =>
       `If your bids get knocked out of contention, your bot will wait ${rules.value.rebiddingDelay} minute${rules.value.rebiddingDelay === 1 ? '' : 's'} before submitting a new bid at ${currency.symbol}${microgonToMoneyNm(rules.value.rebiddingIncrementBy).format('0.00')} above the current winning bid.`,
@@ -393,34 +406,27 @@ function showTooltip(
 }
 
 function updateAPYs() {
-  calculator.setConfig({
-    argonCirculationGrowthPctMin: rules.value.argonCirculationGrowthPctMin,
-    argonCirculationGrowthPctMax: rules.value.argonCirculationGrowthPctMax,
-    micronotPriceChangePctMin: rules.value.micronotPriceChangePctMin,
-    micronotPriceChangePctMax: rules.value.micronotPriceChangePctMax,
-    startingBidAmount: {
-      formulaType: rules.value.startingBidAmountFormulaType,
-      adjustmentType: rules.value.startingBidAmountAdjustmentType,
-      custom: rules.value.startingBidAmountCustom,
-      absolute: rules.value.startingBidAmountAbsolute,
-      relative: rules.value.startingBidAmountRelative,
-    },
-    finalBidAmount: {
-      formulaType: rules.value.finalBidAmountFormulaType,
-      adjustmentType: rules.value.finalBidAmountAdjustmentType,
-      custom: rules.value.finalBidAmountCustom,
-      absolute: rules.value.finalBidAmountAbsolute,
-      relative: rules.value.finalBidAmountRelative,
-    },
-  });
-  optimisticAPY.value = calculator.optimisticAPY;
-  minimumAPY.value = calculator.minimumAPY;
+  calculator.updateBiddingRules(rules.value);
 
-  startingBidAmount.value = calculator.startingBid;
-  finalBidAmount.value = calculator.finalBid;
+  minimumBidAmount.value = calculator.minimumBidAmount;
+  maximumBidAmount.value = calculator.maximumBidAmount;
+
+  minimumBidAtSlowGrowthAPY.value = calculator.minimumBidAtSlowGrowthAPY;
+  minimumBidAtFastGrowthAPY.value = calculator.minimumBidAtFastGrowthAPY;
+  maximumBidAtSlowGrowthAPY.value = calculator.maximumBidAtSlowGrowthAPY;
+  maximumBidAtFastGrowthAPY.value = calculator.maximumBidAtFastGrowthAPY;
+
+  probableMinSeats.value = BigNumber(rules.value.requiredMicrogons)
+    .dividedBy(calculator.maximumBidAmount)
+    .integerValue()
+    .toNumber();
+  probableMaxSeats.value = BigNumber(rules.value.requiredMicrogons)
+    .dividedBy(calculator.minimumBidAmount)
+    .integerValue()
+    .toNumber();
 }
 
-Vue.watch(rules, updateAPYs, { deep: true, immediate: true });
+Vue.watch(rules, updateAPYs, { deep: true });
 
 emitter.on('openConfigureMiningBotOverlay', async () => {
   if (isOpen.value) return;

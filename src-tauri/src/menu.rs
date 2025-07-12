@@ -1,15 +1,11 @@
 use tauri::{App, AppHandle, Manager, Runtime};
-use tauri::menu::{MenuBuilder, SubmenuBuilder, MenuItemBuilder};
+use tauri::menu::{MenuBuilder, SubmenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 
 pub fn create_menu<R: Runtime>(app: &App<R>) -> Result<tauri::menu::Menu<R>, tauri::Error> {
+    
     let quit_item = MenuItemBuilder::new("Quit Commander")
         .id("quit")
         .accelerator("CmdOrCtrl+Q")
-        .build(app)?;
-
-    let reload_item = MenuItemBuilder::new("Reload App")
-        .id("reload")
-        .accelerator("CmdOrCtrl+R")
         .build(app)?;
 
     let commander_menu = SubmenuBuilder::new(app, "Commander")
@@ -20,11 +16,20 @@ pub fn create_menu<R: Runtime>(app: &App<R>) -> Result<tauri::menu::Menu<R>, tau
         .build()?;
 
     let edit_menu = SubmenuBuilder::new(app, "Edit")
-        .text("copy", "Copy")
-        .text("paste", "Paste")
-        .text("select-all", "Select All")
+        .undo()
+        .redo()
+        .separator()
+        .cut()
+        .copy()
+        .paste()
+        .select_all()
         .separator()
         .build()?;
+
+    let reload_item = MenuItemBuilder::new("Reload App")
+        .id("reload")
+        .accelerator("CmdOrCtrl+R")
+        .build(app)?;
 
     let window_menu = SubmenuBuilder::new(app, "Window")
         .item(&reload_item)
@@ -33,6 +38,7 @@ pub fn create_menu<R: Runtime>(app: &App<R>) -> Result<tauri::menu::Menu<R>, tau
     let menu = MenuBuilder::new(app)
         .items(&[&commander_menu, &edit_menu, &window_menu])
         .build()?;
+
     Ok(menu)
 }
 
