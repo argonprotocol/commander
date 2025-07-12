@@ -168,8 +168,8 @@ export class Mainchain {
   }> {
     const client = await this.client;
     const microgonsForArgon = BigInt(1 * MICROGONS_PER_ARGON);
-    const priceIndex = (await client.query.priceIndex.current()).value;
-    if (!priceIndex) {
+    const priceIndexRaw = await client.query.priceIndex.current();
+    if (priceIndexRaw.isNone) {
       return {
         USD: microgonsForArgon,
         ARGNOT: microgonsForArgon,
@@ -178,6 +178,7 @@ export class Mainchain {
       };
     }
 
+    const priceIndex = priceIndexRaw.value;
     const usdForArgon = convertFixedU128ToBigNumber(priceIndex.argonUsdPrice.toBigInt());
     const usdForArgnot = convertFixedU128ToBigNumber(priceIndex.argonotUsdPrice.toBigInt());
     const usdForBtc = convertFixedU128ToBigNumber(priceIndex.btcUsdPrice.toBigInt());

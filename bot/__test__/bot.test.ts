@@ -21,18 +21,9 @@ it('can autobid and store stats', async () => {
   const client = await clientPromise;
   await activateNotary(sudo(), client, notary);
 
-  const path = fs.mkdtempSync('/tmp/bot-');
-  runOnTeardown(() => fs.promises.rm(path, { recursive: true, force: true }));
+  const botDataDir = fs.mkdtempSync('/tmp/bot-');
 
-  const bot = new Bot({
-    pair: sudo(),
-    archiveRpcUrl: chain.address,
-    localRpcUrl: chain.address,
-    biddingRulesPath: Path.resolve(path, 'rules.json'),
-    datadir: path,
-    keysMnemonic: mnemonicGenerate(),
-    shouldSkipDockerSync: true,
-  });
+  runOnTeardown(() => fs.promises.rm(botDataDir, { recursive: true, force: true }));
 
   vi.spyOn(BiddingCalculator, 'createBidderParams').mockImplementation(async () => {
     return {
@@ -43,6 +34,21 @@ it('can autobid and store stats', async () => {
       minBid: 10_000n,
       bidIncrement: 10_000n,
     };
+  });
+
+  vi.spyOn(Bot.prototype as any, 'loadBiddingRules').mockImplementation(() => {
+    /* return an empty object so it's not undefined */
+    return {};
+  });
+
+  const bot = new Bot({
+    pair: sudo(),
+    archiveRpcUrl: chain.address,
+    localRpcUrl: chain.address,
+    biddingRulesPath: Path.resolve(botDataDir, 'rules.json'),
+    datadir: botDataDir,
+    keysMnemonic: mnemonicGenerate(),
+    shouldSkipDockerSync: true,
   });
 
   await expect(bot.start()).resolves.toBeUndefined();
@@ -144,14 +150,14 @@ it('can autobid and store stats', async () => {
     pair: sudo(),
     archiveRpcUrl: chain.address,
     localRpcUrl: chain.address,
-    biddingRulesPath: Path.resolve(path, 'rules.json'),
+    biddingRulesPath: Path.resolve(botDataDir, 'rules.json'),
     datadir: path2,
     keysMnemonic: mnemonicGenerate(),
     oldestFrameIdToSync: Math.min(...cohortActivatingFrameIds) - 1,
     shouldSkipDockerSync: true,
   });
   console.log('Starting bot 2');
-  await expect(botRestart.start()).resolves.toBeTruthy();
+  await expect(botRestart.start()).resolves.toBeUndefined();
   console.log('Stopping bot 2');
   await botRestart.stop();
 

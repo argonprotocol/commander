@@ -44,6 +44,7 @@ export default class Bot {
   }
 
   public async start(): Promise<void> {
+    console.log('STARTING BOT');
     if (this.isStarting || this.isReady) return;
     this.isStarting = true;
 
@@ -57,7 +58,7 @@ export default class Bot {
       throw error;
     }
 
-    this.biddingRules = readJsonFileOrNull(this.options.biddingRulesPath);
+    this.biddingRules = this.loadBiddingRules();
     this.storage = new CohortStorage(this.options.datadir, clientPromise);
     this.accountset = new Accountset({
       client: clientPromise,
@@ -75,8 +76,6 @@ export default class Bot {
       this.options.oldestFrameIdToSync,
     );
 
-    console.log('Initializing block sync');
-
     try {
       this.isSyncing = true;
       await this.blockSync.load();
@@ -87,9 +86,12 @@ export default class Bot {
     }
 
     if (!this.biddingRules) {
+      console.log('No bidding rules were found, cannot finish loading');
       this.isWaitingForBiddingRules = true;
       return;
     }
+
+    console.log('Starting block sync');
 
     try {
       await this.blockSync.start();
@@ -97,6 +99,8 @@ export default class Bot {
       console.error('Error starting block sync', error);
       throw error;
     }
+
+    console.log('Starting autobidder');
 
     try {
       await this.autobidder.start(this.options.localRpcUrl);
@@ -113,6 +117,10 @@ export default class Bot {
     await this.blockSync.stop();
     await this.autobidder.stop();
     await this.accountset.client.then(x => x.disconnect());
+  }
+
+  private loadBiddingRules() {
+    return readJsonFileOrNull(this.options.biddingRulesPath);
   }
 
   private async waitForDockersToSync() {
