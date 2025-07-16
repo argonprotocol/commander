@@ -1,11 +1,12 @@
 import { IFrameRecord } from '../../interfaces/db/IFrameRecord';
-import { BaseTable } from './BaseTable';
-import camelcaseKeys from 'camelcase-keys';
-import { toSqliteBoolean, convertSqliteFields, jsonStringifyWithBigInts } from '../Utils';
+import { BaseTable, IFieldTypes } from './BaseTable';
+import { convertSqliteFields, toSqlParams } from '../Utils';
 
 export class FramesTable extends BaseTable {
-  private booleanFields: string[] = ['is_processed'];
-  private bigintJsonFields: string[] = ['microgon_to_usd', 'microgon_to_btc', 'microgon_to_argonot'];
+  private fields: IFieldTypes = {
+    booleanFields: ['isProcessed'],
+    bigintJsonFields: ['microgonToUsd', 'microgonToBtc', 'microgonToArgonot'],
+  };
 
   async insertOrUpdate(
     id: number,
@@ -19,24 +20,20 @@ export class FramesTable extends BaseTable {
     progress: number,
     isProcessed: boolean,
   ): Promise<void> {
-    const microgonToUsdStr = jsonStringifyWithBigInts(microgonToUsd);
-    const microgonToBtcStr = jsonStringifyWithBigInts(microgonToBtc);
-    const microgonToArgonotStr = jsonStringifyWithBigInts(microgonToArgonot);
-
     await this.db.sql.execute(
-      'INSERT OR REPLACE INTO frames (id, first_tick, last_tick, first_block_number, last_block_number, microgon_to_usd, microgon_to_btc, microgon_to_argonot, progress, is_processed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [
+      'INSERT OR REPLACE INTO frames (id, firstTick, lastTick, firstBlockNumber, lastBlockNumber, microgonToUsd, microgonToBtc, microgonToArgonot, progress, isProcessed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      toSqlParams([
         id,
         firstTick,
         lastTick,
         firstBlockNumber,
         lastBlockNumber,
-        microgonToUsdStr,
-        microgonToBtcStr,
-        microgonToArgonotStr,
+        microgonToUsd,
+        microgonToBtc,
+        microgonToArgonot,
         progress,
-        toSqliteBoolean(isProcessed),
-      ],
+        isProcessed,
+      ]),
     );
   }
 
@@ -52,24 +49,20 @@ export class FramesTable extends BaseTable {
     progress: number,
     isProcessed: boolean,
   ): Promise<void> {
-    const microgonToUsdStr = jsonStringifyWithBigInts(microgonToUsd);
-    const microgonToBtcStr = jsonStringifyWithBigInts(microgonToBtc);
-    const microgonToArgonotStr = jsonStringifyWithBigInts(microgonToArgonot);
-
     await this.db.sql.execute(
-      'UPDATE frames SET first_tick = ?, last_tick = ?, first_block_number = ?, last_block_number = ?, microgon_to_usd = ?, microgon_to_btc = ?, microgon_to_argonot = ?, progress = ?, is_processed = ? WHERE id = ?',
-      [
+      'UPDATE frames SET firstTick = ?, lastTick = ?, firstBlockNumber = ?, lastBlockNumber = ?, microgonToUsd = ?, microgonToBtc = ?, microgonToArgonot = ?, progress = ?, isProcessed = ? WHERE id = ?',
+      toSqlParams([
         firstTick,
         lastTick,
         firstBlockNumber,
         lastBlockNumber,
-        microgonToUsdStr,
-        microgonToBtcStr,
-        microgonToArgonotStr,
+        microgonToUsd,
+        microgonToBtc,
+        microgonToArgonot,
         progress,
-        toSqliteBoolean(isProcessed),
+        isProcessed,
         id,
-      ],
+      ]),
     );
   }
 
@@ -77,25 +70,20 @@ export class FramesTable extends BaseTable {
     const [rawRecord] = await this.db.sql.select<[any]>('SELECT * FROM frames WHERE id = ?', [id]);
     if (!rawRecord) throw new Error(`Frame ${id} not found`);
 
-    return camelcaseKeys(
-      convertSqliteFields(rawRecord, {
-        boolean: this.booleanFields,
-        bigintJson: this.bigintJsonFields,
-      }),
-    ) as IFrameRecord;
+    return convertSqliteFields(rawRecord, this.fields) as IFrameRecord;
   }
 
   async fetchProcessedCount(): Promise<number> {
     const [result] = await this.db.sql.select<[{ count: number }]>(
-      'SELECT COUNT(*) as count FROM frames WHERE is_processed = 1',
+      'SELECT COUNT(*) as count FROM frames WHERE isProcessed = 1',
     );
     return result.count;
   }
 
   async latestId(): Promise<number> {
-    const [rawRecord] = await this.db.sql.select<[{ max_id: number }]>(
-      'SELECT COALESCE(MAX(id), 0) as max_id FROM frames',
+    const [rawRecord] = await this.db.sql.select<[{ maxId: number }]>(
+      'SELECT COALESCE(MAX(id), 0) as maxId FROM frames',
     );
-    return rawRecord.max_id;
+    return rawRecord.maxId;
   }
 }

@@ -1,10 +1,9 @@
-import { ICohortFrameStats, ICohortFrameRecord } from '../../interfaces/db/ICohortFrameRecord';
+import { ICohortFrameRecord, ICohortFrameStats } from '../../interfaces/db/ICohortFrameRecord';
 import { BaseTable } from './BaseTable';
-import camelcaseKeys from 'camelcase-keys';
-import { fromSqliteBigInt, toSqliteBigInt, convertSqliteBigInts } from '../Utils';
+import { convertSqliteBigInts, fromSqliteBigInt, toSqliteBigInt } from '../Utils';
 
 export class CohortFramesTable extends BaseTable {
-  private bigIntFields: string[] = ['micronots_mined', 'microgons_mined', 'microgons_minted'];
+  private bigIntFields: string[] = ['micronotsMined', 'microgonsMined', 'microgonsMinted'];
 
   async insertOrUpdate(
     frameId: number,
@@ -15,7 +14,7 @@ export class CohortFramesTable extends BaseTable {
     microgonsMinted: bigint,
   ): Promise<void> {
     await this.db.sql.execute(
-      'INSERT OR REPLACE INTO cohort_frames (frame_id, cohort_id, blocks_mined, micronots_mined, microgons_mined, microgons_minted) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT OR REPLACE INTO cohort_frames (frameId, cohortId, blocksMined, micronotsMined, microgonsMined, microgonsMinted) VALUES (?, ?, ?, ?, ?, ?)',
       [
         frameId,
         cohortId,
@@ -28,23 +27,23 @@ export class CohortFramesTable extends BaseTable {
   }
 
   async fetchActiveCohortFrames(currentFrameId: number): Promise<ICohortFrameRecord[]> {
-    const records = await this.db.sql.select<any[]>('SELECT * FROM cohort_frames WHERE frame_id >= ?', [
+    const records = await this.db.sql.select<ICohortFrameRecord[]>('SELECT * FROM cohort_frames WHERE frameId >= ?', [
       currentFrameId - 10,
     ]);
-    return camelcaseKeys(convertSqliteBigInts(records, this.bigIntFields)) as ICohortFrameRecord[];
+    return convertSqliteBigInts(records, this.bigIntFields);
   }
 
   public async fetchGlobalStats(): Promise<ICohortFrameStats> {
     const [rawResults] = await this.db.sql.select<[any]>(
       `SELECT 
-        COALESCE(sum(blocks_mined), 0) as total_blocks_mined,
-        COALESCE(sum(micronots_mined), 0) as total_micronots_mined,
-        COALESCE(sum(microgons_mined), 0) as total_microgons_mined,
-        COALESCE(sum(microgons_minted), 0) as total_microgons_minted
+        COALESCE(sum(blocksMined), 0) as totalBlocksMined,
+        COALESCE(sum(micronotsMined), 0) as totalMicronotsMined,
+        COALESCE(sum(microgonsMined), 0) as totalMicrogonsMined,
+        COALESCE(sum(microgonsMinted), 0) as totalMicrogonsMinted
       FROM cohort_frames`,
     );
 
-    const results = camelcaseKeys(rawResults);
+    const results = rawResults;
     return {
       totalBlocksMined: results.totalBlocksMined,
       totalMicronotsMined: fromSqliteBigInt(results.totalMicronotsMined),
@@ -56,15 +55,15 @@ export class CohortFramesTable extends BaseTable {
   public async fetchCohortStats(cohortId: number): Promise<ICohortFrameStats> {
     const [rawResults] = await this.db.sql.select<[any]>(
       `SELECT 
-        COALESCE(sum(blocks_mined), 0) as total_blocks_mined,
-        COALESCE(sum(micronots_mined), 0) as total_micronots_mined,
-        COALESCE(sum(microgons_mined), 0) as total_microgons_mined,
-        COALESCE(sum(microgons_minted), 0) as total_microgons_minted
-      FROM cohort_frames WHERE cohort_id = ?`,
+        COALESCE(sum(blocksMined), 0) as totalBlocksMined,
+        COALESCE(sum(micronotsMined), 0) as totalMicronotsMined,
+        COALESCE(sum(microgonsMined), 0) as totalMicrogonsMined,
+        COALESCE(sum(microgonsMinted), 0) as totalMicrogonsMinted
+      FROM cohort_frames WHERE cohortId = ?`,
       [cohortId],
     );
 
-    const results = camelcaseKeys(rawResults);
+    const results = rawResults;
     return {
       totalBlocksMined: results.totalBlocksMined,
       totalMicronotsMined: fromSqliteBigInt(results.totalMicronotsMined),

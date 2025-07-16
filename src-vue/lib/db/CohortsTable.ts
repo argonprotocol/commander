@@ -1,20 +1,19 @@
 import { ICohortRecord } from '../../interfaces/db/ICohortRecord';
 import { BaseTable } from './BaseTable';
-import camelcaseKeys from 'camelcase-keys';
-import { convertSqliteBigInts, fromSqliteBigInt, toSqliteBigInt } from '../Utils';
+import { convertSqliteBigInts, fromSqliteBigInt, toSqlParams } from '../Utils';
 
 export class CohortsTable extends BaseTable {
   private bigIntFields: string[] = [
-    'transaction_fees',
-    'microgons_bid',
-    'micronots_staked',
-    'microgons_to_be_mined',
-    'micronots_to_be_mined',
+    'transactionFees',
+    'microgonsBid',
+    'micronotsStaked',
+    'microgonsToBeMined',
+    'micronotsToBeMined',
   ];
 
   public async fetchLatestActiveId(): Promise<number | null> {
     const result = await this.db.sql.select<{ id: number }[]>(
-      'SELECT id FROM cohorts WHERE seats_won > 0 ORDER BY id DESC LIMIT 1',
+      'SELECT id FROM cohorts WHERE seatsWon > 0 ORDER BY id DESC LIMIT 1',
     );
     return result.length > 0 ? result[0].id : null;
   }
@@ -23,9 +22,9 @@ export class CohortsTable extends BaseTable {
     id: number,
   ): Promise<(ICohortRecord & { firstTick: number; lastTick: number; lastBlockNumber: number }) | null> {
     const rawRecords = await this.db.sql.select<any[]>(
-      `SELECT cohorts.*, frames.first_tick as first_tick, frames.last_block_number as last_block_number FROM cohorts
+      `SELECT cohorts.*, frames.firstTick as firstTick, frames.lastBlockNumber as lastBlockNumber FROM cohorts
       LEFT JOIN frames ON cohorts.id = frames.id
-      WHERE seats_won > 0
+      WHERE seatsWon > 0
       AND cohorts.id = ?
       ORDER BY cohorts.id
       DESC LIMIT 1`,
@@ -36,7 +35,7 @@ export class CohortsTable extends BaseTable {
       return null;
     }
 
-    const record = camelcaseKeys(convertSqliteBigInts(rawRecords[0], this.bigIntFields));
+    const record = convertSqliteBigInts(rawRecords[0], this.bigIntFields);
     const ticksPerDay = 1_440;
     const lastTick = record.firstTick + ticksPerDay * 10;
 
@@ -55,22 +54,22 @@ export class CohortsTable extends BaseTable {
     try {
       const [rawTotalStats] = await this.db.sql.select<[any]>(
         `SELECT 
-        COALESCE(sum(transaction_fees), 0) as total_transaction_fees, 
-        COALESCE(sum(microgons_bid), 0) as total_microgons_bid
+        COALESCE(sum(transactionFees), 0) as totalTransactionFees, 
+        COALESCE(sum(microgonsBid), 0) as totalMicrogonsBid
       FROM cohorts`,
       );
 
       const oldestActiveFrameId = Math.max(1, currentFrameId - 10);
       const [rawActiveStats] = await this.db.sql.select<[any]>(
         `SELECT 
-        COALESCE(count(id), 0) as active_cohorts,
-        COALESCE(sum(seats_won), 0) as active_seats
+        COALESCE(count(id), 0) as activeCohorts,
+        COALESCE(sum(seatsWon), 0) as activeSeats
       FROM cohorts WHERE id >= ?`,
         [oldestActiveFrameId],
       );
 
-      const totalStats = camelcaseKeys(rawTotalStats);
-      const activeStats = camelcaseKeys(rawActiveStats);
+      const totalStats = rawTotalStats;
+      const activeStats = rawActiveStats;
 
       return {
         totalActiveCohorts: activeStats.activeCohorts,
@@ -85,10 +84,10 @@ export class CohortsTable extends BaseTable {
   }
 
   async fetchActiveCohorts(currentFrameId: number): Promise<ICohortRecord[]> {
-    const records = await this.db.sql.select<any[]>('SELECT * FROM cohorts WHERE seats_won > 0 AND id >= ?', [
+    const records = await this.db.sql.select<any[]>('SELECT * FROM cohorts WHERE seatsWon > 0 AND id >= ?', [
       currentFrameId - 10,
     ]);
-    return camelcaseKeys(convertSqliteBigInts(records, this.bigIntFields)) as ICohortRecord[];
+    return convertSqliteBigInts(records, this.bigIntFields) as ICohortRecord[];
   }
 
   async insertOrUpdate(
@@ -105,22 +104,22 @@ export class CohortsTable extends BaseTable {
       `INSERT OR REPLACE INTO cohorts (
         id, 
         progress, 
-        transaction_fees, 
-        micronots_staked, 
-        microgons_bid, 
-        seats_won, 
-        microgons_to_be_mined, 
-        micronots_to_be_mined) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
+        transactionFees, 
+        micronotsStaked, 
+        microgonsBid, 
+        seatsWon, 
+        microgonsToBeMined, 
+        micronotsToBeMined) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      toSqlParams([
         id,
         progress,
-        toSqliteBigInt(transactionFees),
-        toSqliteBigInt(micronotsStaked),
-        toSqliteBigInt(microgonsBid),
+        transactionFees,
+        micronotsStaked,
+        microgonsBid,
         seatsWon,
-        toSqliteBigInt(microgonsToBeMined),
-        toSqliteBigInt(micronotsToBeMined),
-      ],
+        microgonsToBeMined,
+        micronotsToBeMined,
+      ]),
     );
   }
 }

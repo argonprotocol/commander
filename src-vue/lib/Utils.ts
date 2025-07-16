@@ -1,4 +1,5 @@
-import BigNumber from 'bignumber.js';
+import { JsonExt } from '@argonprotocol/mainchain';
+import { IFieldTypes } from './db/BaseTable.ts';
 
 export function isInt(n: any) {
   if (typeof n === 'string') return !n.includes('.');
@@ -34,6 +35,21 @@ export function isBigIntString(value: any): boolean {
   return typeof value === 'string' && /^\d+n$/.test(value);
 }
 
+export function toSqlParams(
+  params: (bigint | number | string | Uint8Array | boolean | object | undefined)[],
+): (string | number | Uint8Array | undefined)[] {
+  return params.map(param => {
+    if (typeof param === 'boolean') {
+      return toSqliteBoolean(param);
+    } else if (typeof param === 'bigint') {
+      return toSqliteBigInt(param);
+    } else if (typeof param === 'object') {
+      return jsonStringifyWithBigInts(param);
+    }
+    return param;
+  });
+}
+
 export function jsonStringifyWithBigInts(
   data: any,
   replacerFn: null | ((key: string, value: any) => any) = null,
@@ -45,6 +61,12 @@ export function jsonStringifyWithBigInts(
       if (typeof value === 'bigint') {
         value = value.toString() + 'n';
       }
+      if (value instanceof Uint8Array) {
+        return {
+          type: 'Buffer',
+          data: Array.from(value), // Convert Uint8Array to an array of numbers
+        };
+      }
       return replacerFn ? replacerFn(_key, value) : value;
     },
     space,
@@ -55,6 +77,9 @@ export function jsonParseWithBigInts(data: string): any {
   return JSON.parse(data, (_key, value) => {
     if (isBigIntString(value)) {
       return convertBigIntStringToNumber(value);
+    }
+    if (value && typeof value === 'object' && value.type === 'Buffer' && Array.isArray(value.data)) {
+      return Uint8Array.from(value.data); // Convert array of numbers back to Uint8Array
     }
     return value;
   });
@@ -110,7 +135,7 @@ export function convertSqliteBigInts(obj: any, bigIntFields: string[]): any {
   }, obj);
 }
 
-export function convertSqliteFields(obj: any, fields: { [type: string]: string[] }): any {
+export function convertSqliteFields(obj: any, fields: Partial<Record<keyof IFieldTypes, string[]>>): any {
   // Handle array of objects
   if (Array.isArray(obj)) {
     return obj.map(item => convertSqliteFields(item, fields));
@@ -125,7 +150,13 @@ export function convertSqliteFields(obj: any, fields: { [type: string]: string[]
       } else if (type === 'boolean') {
         obj[fieldName] = fromSqliteBoolean(obj[fieldName]);
       } else if (type === 'bigintJson') {
+        obj[fieldName] = BigInt(obj[fieldName]);
+      } else if (type === 'bigintJson') {
         obj[fieldName] = jsonParseWithBigInts(obj[fieldName]);
+      } else if (type === 'json') {
+        obj[fieldName] = JsonExt.parse(obj[fieldName]);
+      } else if (type === 'date') {
+        obj[fieldName] = new Date(obj[fieldName]);
       } else {
         throw new Error(`${fieldName} has unknown type: ${type}`);
       }
@@ -133,3 +164,39 @@ export function convertSqliteFields(obj: any, fields: { [type: string]: string[]
   }
   return obj;
 }
+
+export function deferred<T = void>(): IDeferred<T> {
+  let resolve!: (value: T) => void;
+  let reject!: (error: Error) => void;
+  let resolved = false;
+  let rejected = false;
+
+  const promise = new Promise<T>((res, rej) => {
+    resolve = (value: T) => {
+      resolved = true;
+      res(value);
+    };
+    reject = (err: Error) => {
+      rejected = true;
+      rej(err);
+    };
+  });
+
+  return Object.assign(promise, {
+    resolve,
+    reject,
+    get resolved() {
+      return resolved;
+    },
+    get rejected() {
+      return rejected;
+    },
+  });
+}
+
+export type IDeferred<T = void> = Promise<T> & {
+  resolve(value: T): void;
+  reject(reason?: unknown): void;
+  readonly resolved: boolean;
+  readonly rejected: boolean;
+};

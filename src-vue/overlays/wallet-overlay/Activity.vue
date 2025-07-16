@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { useWallets } from '../../stores/wallets';
+import { IWallet, useWallets } from '../../stores/wallets';
 
 const props = defineProps({
   walletId: {

@@ -1,4 +1,3 @@
-import camelcaseKeys from 'camelcase-keys';
 import { Db } from '../Db';
 import { IArgonActivityRecord } from '../../interfaces/db/IArgonActivityRecord';
 
@@ -10,26 +9,25 @@ export class ArgonActivitiesTable {
   }
 
   async insert(localhostBlock: number, mainchainBlock: number): Promise<IArgonActivityRecord> {
-    const [rawRecord] = await this.db.sql.select<[any]>(
-      'INSERT INTO argon_activities (local_node_block_number, main_node_block_number) VALUES (?1, ?2) RETURNING *',
+    const [rawRecord] = await this.db.sql.select<IArgonActivityRecord[]>(
+      'INSERT INTO argon_activities (localNodeBlockNumber, mainNodeBlockNumber) VALUES (?1, ?2) RETURNING *',
       [localhostBlock, mainchainBlock],
     );
-    return camelcaseKeys(rawRecord) as IArgonActivityRecord;
+    return rawRecord;
   }
 
   async latest(): Promise<IArgonActivityRecord | null> {
-    const rawRecords = await this.db.sql.select<any[]>(
-      'SELECT * FROM argon_activities ORDER BY inserted_at DESC LIMIT 1',
+    const rawRecords = await this.db.sql.select<IArgonActivityRecord[]>(
+      'SELECT * FROM argon_activities ORDER BY insertedAt DESC LIMIT 1',
       [],
     );
-    return rawRecords[0] ? (camelcaseKeys(rawRecords[0]) as IArgonActivityRecord) : null;
+    return rawRecords[0];
   }
 
   async fetchLastFiveRecords(): Promise<IArgonActivityRecord[]> {
-    const rawRecords = await this.db.sql.select<any[]>(
-      'SELECT * FROM argon_activities ORDER BY inserted_at DESC LIMIT 5',
+    return await this.db.sql.select<IArgonActivityRecord[]>(
+      'SELECT * FROM argon_activities ORDER BY insertedAt DESC LIMIT 5',
       [],
     );
-    return camelcaseKeys(rawRecords) as IArgonActivityRecord[];
   }
 }
