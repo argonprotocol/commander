@@ -5,9 +5,17 @@
   "description": "An api for integration with commander",
   "type": "module",
   "main": "src/index.ts",
+  "scripts": {
+    "test:local": "ARGON_PROJECT_ROOT=../../mainchain vitest --run"
+  },
   "dependencies": {
     "@argonprotocol/mainchain": "1.3.2",
     "dayjs": "^1.11.13",
     "zod": "^3.25.55"
+  },
+  "devDependencies": {
+    "@argonprotocol/testing": "1.3.2",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
   }
 }

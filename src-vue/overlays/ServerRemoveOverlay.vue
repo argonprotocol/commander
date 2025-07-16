@@ -64,7 +64,7 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { TransitionChild, TransitionRoot } from '@headlessui/vue';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import BgOverlay from '../components/BgOverlay.vue';
 import { useConfig } from '../stores/config';
@@ -78,7 +78,7 @@ const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isRemoving = Vue.ref(false);
 
-emitter.on('openServerRemoveOverlay', async (data: any) => {
+basicEmitter.on('openServerRemoveOverlay', async (data: any) => {
   isOpen.value = true;
   isLoaded.value = true;
 });

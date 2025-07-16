@@ -32,11 +32,7 @@
 
           <p>
             We verified your server configurations, installed all required software, and double-checked that everything
-            is in working order.
-            <template v-if="config.isServerReadyForBidding">Click the Let's Go button to get started.</template>
-            <template v-else>
-              Only two items remain. Click the Let's Go button and we'll guide you through the final steps.
-            </template>
+            is in working order. Click the Let's Go button to get started.
           </p>
 
           <div class="flex flex-row justify-end gap-4 mt-6 border-t border-slate-300 pt-4">
@@ -56,14 +52,14 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { TransitionChild, TransitionRoot } from '@headlessui/vue';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import BgOverlay from '../components/BgOverlay.vue';
 import { useConfig } from '../stores/config';
 
 const isOpen = Vue.ref(false);
 const config = useConfig();
 
-emitter.on('openProvisioningCompleteOverlay', () => {
+basicEmitter.on('openProvisioningCompleteOverlay', () => {
   isOpen.value = true;
 });
 

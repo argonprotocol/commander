@@ -1,11 +1,9 @@
 <!-- prettier-ignore -->
 <template>
-  <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
+  <TransitionRoot as="template" :show="isOpen" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100">
     <Dialog @close="cancelOverlay" :initialFocus="dialogPanel">
       <DialogPanel class="absolute top-0 left-0 right-0 bottom-0 z-10">
-        <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
-          <BgOverlay @close="cancelOverlay" />
-        </TransitionChild>
+        <BgOverlay @close="cancelOverlay" />
         <div
           ref="dialogPanel"
           class="absolute top-[40px] left-3 right-3 bottom-3 flex flex-col overflow-hidden rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all"
@@ -223,7 +221,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import { Dialog, DialogPanel, TransitionRoot, TransitionChild } from '@headlessui/vue';
 import { useConfig } from '../stores/config';
 import { getMainchain } from '../stores/mainchain';
@@ -235,7 +233,7 @@ import { showTooltip, hideTooltip } from '../lib/TooltipUtils';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForVault } from './EditBoxOverlay.vue';
 import BigNumber from 'bignumber.js';
 import IVaultingRules from '../interfaces/IVaultingRules';
-import { jsonParseWithBigInts } from '../lib/Utils';
+import { jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
 
 const mainchain = getMainchain();
 const config = useConfig();
@@ -322,7 +320,7 @@ function updateAPYs() {
   // Placeholder for future APY calculation logic if needed
 }
 
-emitter.on('openConfigureStabilizationVaultOverlay', async () => {
+basicEmitter.on('openConfigureStabilizationVaultOverlay', async () => {
   if (isOpen.value) return;
   isLoaded.value = false;
 

@@ -90,7 +90,7 @@
 import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import emitter from '../../emitters/basic';
+import basicEmitter from '../../emitters/basicEmitter';
 import { useConfig } from '../../stores/config';
 import { useWallets } from '../../stores/wallets';
 import { useCurrency } from '../../stores/currency';
@@ -110,7 +110,7 @@ const { microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency
 const isLaunchingMiningBot = Vue.ref(false);
 
 const walletIsPartiallyFunded = Vue.computed(() => {
-  return (wallets.mngWallet.availableMicrogons || wallets.mngWallet.availableMicronots) > 0;
+  return (wallets.miningWallet.availableMicrogons || wallets.miningWallet.availableMicronots) > 0;
 });
 
 const walletIsFullyFunded = Vue.computed(() => {
@@ -118,11 +118,11 @@ const walletIsFullyFunded = Vue.computed(() => {
     return false;
   }
 
-  if (wallets.mngWallet.availableMicrogons < (config.biddingRules?.requiredMicrogons || 0n)) {
+  if (wallets.miningWallet.availableMicrogons < (config.biddingRules?.requiredMicrogons || 0n)) {
     return false;
   }
 
-  if (wallets.mngWallet.availableMicronots < (config.biddingRules?.requiredMicronots || 0n)) {
+  if (wallets.miningWallet.availableMicronots < (config.biddingRules?.requiredMicronots || 0n)) {
     return false;
   }
 
@@ -130,15 +130,15 @@ const walletIsFullyFunded = Vue.computed(() => {
 });
 
 function openConfigureMiningBotOverlay() {
-  emitter.emit('openConfigureMiningBotOverlay');
+  basicEmitter.emit('openConfigureMiningBotOverlay');
 }
 
 function openFundMiningAccountOverlay() {
-  emitter.emit('openWalletOverlay', { walletId: 'mng', screen: 'receive' });
+  basicEmitter.emit('openWalletOverlay', { walletId: 'mining', screen: 'receive' });
 }
 
 function openServerConnectOverlay() {
-  emitter.emit('openServerConnectOverlay');
+  basicEmitter.emit('openServerConnectOverlay');
 }
 
 async function launchMiningBot() {

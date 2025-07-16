@@ -37,13 +37,11 @@ export default class BiddingCalculatorData {
     try {
       const tickAtStartOfNextCohort = await mainchain.getTickAtStartOfNextCohort();
       const tickAtEndOfNextCohort = tickAtStartOfNextCohort + BigInt(TICKS_PER_COHORT);
-      const tickAtEndOfYear = tickAtStartOfNextCohort + BigInt(365 * 1_440);
 
       const miningSeatCount = await mainchain.getMiningSeatCount();
-
       const previousDayWinningBids = await mainchain.fetchPreviousDayWinningBidAmounts();
-      this.previousDayHighBid = bigIntMax(...previousDayWinningBids);
-      this.previousDayLowBid = bigIntMin(...previousDayWinningBids);
+      this.previousDayHighBid = previousDayWinningBids.length > 0 ? bigIntMax(...previousDayWinningBids) : 0n;
+      this.previousDayLowBid = previousDayWinningBids.length > 0 ? bigIntMin(...previousDayWinningBids) : 0n;
       this.previousDayMidBid = BigInt(
         BigNumber(this.previousDayHighBid).plus(this.previousDayLowBid).dividedBy(2).integerValue().toString(),
       );

@@ -1,11 +1,11 @@
+import * as Fs from 'node:fs';
 import { Accountset, getClient, type KeyringPair } from '@argonprotocol/mainchain';
 import { CohortStorage } from './storage.ts';
 import { AutoBidder } from './AutoBidder.ts';
 import { BlockSync } from './BlockSync.ts';
 import { Dockers } from './Dockers.ts';
 import { type IBidHistoryItem } from './interfaces/IBidHistoryItem.ts';
-import { readJsonFileOrNull } from './utils.ts';
-import type { IBiddingRules } from '@argonprotocol/commander-calculator';
+import { type IBiddingRules, jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
 
 interface IBotOptions {
   datadir: string;
@@ -39,7 +39,7 @@ export default class Bot {
   }
 
   public async currentFrameId() {
-    const state = await this.storage.syncStateFile().get();
+    const state = await this.storage.botStateFile().get();
     return state?.currentFrameId ?? 0;
   }
 
@@ -120,7 +120,8 @@ export default class Bot {
   }
 
   private loadBiddingRules() {
-    return readJsonFileOrNull(this.options.biddingRulesPath);
+    const rawJsonString = Fs.readFileSync(this.options.biddingRulesPath, 'utf8');
+    return jsonParseWithBigInts(rawJsonString);
   }
 
   private async waitForDockersToSync() {

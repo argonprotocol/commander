@@ -1,6 +1,6 @@
 import { type ArgonClient } from '@argonprotocol/mainchain';
 import { type IBidderParams } from './IBidderParams.js';
-import type IBiddingRules from './IBiddingRules.js';
+import { type IBiddingRules } from './IBiddingRules.js';
 import { SeatGoalType } from './IBiddingRules.js';
 import BiddingCalculator from './BiddingCalculator.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
@@ -17,7 +17,7 @@ export default async function createBidderParams(
   const calculator = new BiddingCalculator(calculatorData, biddingRules);
   await calculator.isInitialized;
 
-  const helper = new Helper(biddingRules, mainchain, calculator);
+  const helper = new Helper(biddingRules, calculator);
 
   const minBid = await calculator.minimumBidAmount;
   const maxBid = await calculator.maximumBidAmount;
@@ -42,7 +42,7 @@ export class Helper {
   private readonly biddingRules: IBiddingRules;
   private readonly calculator: BiddingCalculator;
 
-  constructor(biddingRules: IBiddingRules, mainchain: Mainchain, calculator: BiddingCalculator) {
+  constructor(biddingRules: IBiddingRules, calculator: BiddingCalculator) {
     this.biddingRules = biddingRules;
     this.calculator = calculator;
   }

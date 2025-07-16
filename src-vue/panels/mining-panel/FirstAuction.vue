@@ -3,7 +3,7 @@
   <div class="flex flex-col h-full w-full cursor-default">
     <AlertBars />
 
-    <FirstAuctionFailed v-if="!stats.maxSeatsPossible" />
+    <FirstAuctionFailed v-if="!bot.maxSeatsPossible" />
     <FirstAuctionWinning v-else-if="config.hasMiningBids" />
     <FirstAuctionStarting v-else />
   </div>
@@ -17,22 +17,12 @@ import FirstAuctionWinning from './FirstAuctionWinning.vue';
 import FirstAuctionFailed from './FirstAuctionFailed.vue';
 import { useStats } from '../../stores/stats';
 import { useConfig } from '../../stores/config';
+import { useBot } from '../../stores/bot';
 
 const stats = useStats();
+const bot = useBot();
 const config = useConfig();
 
-Vue.onMounted(() => {
-  stats.start();
-});
-
-Vue.onUnmounted(() => {
-  stats.stop();
-});
-
-Vue.watch(
-  () => config.hasMiningBids,
-  newVal => {
-    console.log('hasMiningBids', newVal);
-  },
-);
+Vue.onMounted(() => stats.start());
+Vue.onUnmounted(() => stats.stop());
 </script>

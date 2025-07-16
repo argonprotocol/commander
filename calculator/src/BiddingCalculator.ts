@@ -1,8 +1,8 @@
 import BiddingCalculatorData from './BiddingCalculatorData.js';
 import { bigIntMax, bigIntMin, bigIntMultiplyNumber } from './utils.js';
 import BigNumber from 'bignumber.js';
-import { BidAmountAdjustmentType, BidAmountFormulaType, IBiddingRules } from './IBiddingRules.ts';
-import { MICROGONS_PER_ARGON } from '@argonprotocol/commander-calculator/src/Mainchain';
+import { BidAmountAdjustmentType, BidAmountFormulaType, type IBiddingRules } from './IBiddingRules.ts';
+import { MICROGONS_PER_ARGON } from '@argonprotocol/commander-calculator/src/Mainchain.ts';
 
 const MICRONOTS_PER_ARGONOT = MICROGONS_PER_ARGON;
 

@@ -41,6 +41,43 @@ export function bigIntMultiplyNumber(x: bigint, y: number): bigint {
   return (x * BigInt(Math.round(y * precision))) / BigInt(precision);
 }
 
+export function convertBigIntStringToNumber(bigIntStr: string | undefined): bigint | undefined {
+  if (bigIntStr === undefined) return undefined;
+  if (!bigIntStr) return 0n;
+  // The string is formatted as "1234567890n"
+  return BigInt(bigIntStr.slice(0, -1));
+}
+
+export function isBigIntString(value: any): boolean {
+  return typeof value === 'string' && /^\d+n$/.test(value);
+}
+
+export function jsonStringifyWithBigInts(
+  data: any,
+  replacerFn: null | ((key: string, value: any) => any) = null,
+  space: number | string | undefined = undefined,
+): string {
+  return JSON.stringify(
+    data,
+    (_key, value) => {
+      if (typeof value === 'bigint') {
+        value = value.toString() + 'n';
+      }
+      return replacerFn ? replacerFn(_key, value) : value;
+    },
+    space,
+  );
+}
+
+export function jsonParseWithBigInts(data: string): any {
+  return JSON.parse(data, (_key, value) => {
+    if (isBigIntString(value)) {
+      return convertBigIntStringToNumber(value);
+    }
+    return value;
+  });
+}
+
 export function calculateCurrentTickFromSystemTime(): number {
   return Math.floor(dayjs().utc().unix() / 60);
 }

@@ -104,7 +104,7 @@ import * as Vue from 'vue';
 import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { storeToRefs } from 'pinia';
-import emitter from '../../emitters/basic';
+import basicEmitter from '../../emitters/basicEmitter';
 import { useBlockchainStore, type IBlock } from '../../stores/blockchain';
 import { useCurrency } from '../../stores/currency';
 import { calculateAPY } from '../../lib/Utils';
@@ -165,7 +165,7 @@ function updateTimeSinceBlock() {
 }
 
 function openConfigureMiningBotOverlay() {
-  emitter.emit('openConfigureMiningBotOverlay');
+  basicEmitter.emit('openConfigureMiningBotOverlay');
 }
 
 Vue.onMounted(async () => {

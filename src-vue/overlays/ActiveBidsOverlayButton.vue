@@ -23,7 +23,7 @@
             </tr>
           </thead>
           <tbody class="font-light font-mono">
-            <tr v-for="(bid, index) in winningBids" :key="bid.address">
+            <tr v-for="(bid, index) in allWinningBids" :key="bid.address">
               <td class="text-left opacity-50">{{ index + 1 }})</td>
               <td class="text-left">{{ currency.symbol }}{{ formatMicrogonsBid(bid.microgonsBid) }}</td>
               <td class="text-left">{{ lastBidAtTickFromNow(bid.lastBidAtTick) }}</td>
@@ -40,8 +40,8 @@
                 </span>
               </td>
             </tr>
-            <tr v-for="i in 10 - winningBids.length" :key="i">
-              <td class="text-left">{{ winningBids.length + i }}</td>
+            <tr v-for="i in 10 - allWinningBids.length" :key="i">
+              <td class="text-left">{{ allWinningBids.length + i }}</td>
               <td class="text-left text-gray-400">---</td>
               <td class="text-left text-gray-400">---</td>
               <td class="text-right text-gray-400">-------------</td>
@@ -83,7 +83,7 @@ const mainchain = getMainchain();
 
 const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
-const winningBids = Vue.computed<IBidsFile['winningBids']>(() => stats.winningBids);
+const allWinningBids = Vue.computed<IBidsFile['winningBids']>(() => stats.allWinningBids);
 
 function formatMicrogonsBid(microgonsBid: bigint | undefined): string {
   if (!microgonsBid) return '---';
@@ -97,8 +97,8 @@ function lastBidAtTickFromNow(lastBidAtTick: number | undefined): string {
 
 Vue.onMounted(async () => {
   if (props.loadFromMainchain) {
-    const winningBids = await mainchain.fetchWinningBids();
-    stats.winningBids = winningBids;
+    const allWinningBids = await mainchain.fetchWinningBids();
+    stats.allWinningBids = allWinningBids;
   }
 });
 </script>

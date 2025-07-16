@@ -137,7 +137,7 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { TransitionChild, TransitionRoot } from '@headlessui/vue';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import BgOverlay from '../components/BgOverlay.vue';
 import { useConfig } from '../stores/config';
@@ -161,7 +161,7 @@ const hasServerDetailsError = Vue.ref(false);
 
 const copyToClipboard = Vue.ref<typeof CopyToClipboard>();
 
-emitter.on('openServerConfigureOverlay', async (data: any) => {
+basicEmitter.on('openServerConfigureOverlay', async () => {
   isOpen.value = true;
   ipAddress.value = config.serverDetails.ipAddress;
   isLoaded.value = true;

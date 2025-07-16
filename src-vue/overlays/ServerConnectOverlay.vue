@@ -1,9 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
-    <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
-      <BgOverlay @close="closeOverlay" />
-    </TransitionChild>
+  <TransitionRoot as="template" :show="isOpen" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100">
     <Dialog @close="closeOverlay" :initialFocus="dialogPanel">
       <DialogPanel class="absolute top-0 left-0 right-0 bottom-0 z-10">
         <BgOverlay @close="closeOverlay" />
@@ -257,7 +254,7 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { TransitionRoot, Dialog, DialogPanel, TransitionChild } from '@headlessui/vue';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import { useConfig } from '../stores/config';
 import { useInstaller } from '../stores/installer';
 import BgOverlay from '../components/BgOverlay.vue';
@@ -286,7 +283,7 @@ const hasServerDetailsError = Vue.ref(false);
 const dialogPanel = Vue.ref(null);
 const copyToClipboard = Vue.ref<typeof CopyToClipboard>();
 
-emitter.on('openServerConnectOverlay', async () => {
+basicEmitter.on('openServerConnectOverlay', async () => {
   isOpen.value = true;
   isLoaded.value = true;
 });

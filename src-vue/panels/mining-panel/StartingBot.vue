@@ -3,7 +3,7 @@
   <div class="flex flex-col h-full w-full cursor-default">
     <div class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center m-3 overflow-hidden">
       <div
-        v-if="!stats.isBotBroken && !config.isWaitingForUpgradeApproval"
+        v-if="!bot.isBroken && !config.isWaitingForUpgradeApproval"
         class="relative mx-auto inline-block w-6/10 h-full"
       >
         <div class="fade-in-out text-5xl font-bold text-gray-300 text-center mt-32 mb-4 whitespace-nowrap pt-16">
@@ -19,17 +19,14 @@
 import * as Vue from 'vue';
 import { useStats } from '../../stores/stats';
 import { useConfig } from '../../stores/config';
+import { useBot } from '../../stores/bot';
 
 const stats = useStats();
 const config = useConfig();
+const bot = useBot();
 
-Vue.onMounted(() => {
-  stats.start();
-});
-
-Vue.onUnmounted(() => {
-  stats.stop();
-});
+Vue.onMounted(() => stats.start());
+Vue.onUnmounted(() => stats.stop());
 </script>
 
 <style scoped>

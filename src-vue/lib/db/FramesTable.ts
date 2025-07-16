@@ -1,6 +1,7 @@
 import { IFrameRecord } from '../../interfaces/db/IFrameRecord';
 import { BaseTable, IFieldTypes } from './BaseTable';
 import { convertSqliteFields, toSqlParams } from '../Utils';
+import { jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
 
 export class FramesTable extends BaseTable {
   private fields: IFieldTypes = {

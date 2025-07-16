@@ -135,7 +135,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import emitter from '../../emitters/basic';
+import basicEmitter from '../../emitters/basicEmitter';
 import { useCurrency } from '../../stores/currency';
 import { IVault } from '@argonprotocol/commander-calculator/src/Mainchain';
 import VaultImage from '../../assets/vault.svg?component';
@@ -163,7 +163,7 @@ const annualVaultAPY = Vue.ref(350);
 const annualPoolAPY = Vue.ref(72);
 
 function openConfigureStabilizationVaultOverlay() {
-  emitter.emit('openConfigureStabilizationVaultOverlay');
+  basicEmitter.emit('openConfigureStabilizationVaultOverlay');
 }
 
 Vue.onMounted(async () => {

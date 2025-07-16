@@ -28,6 +28,11 @@ __metadata:
   resolution: "@argonprotocol/commander-calculator@workspace:calculator"
   dependencies:
     "@argonprotocol/mainchain": "npm:1.3.2"
+    "@argonprotocol/testing": "npm:1.3.2"
+    dayjs: "npm:^1.11.13"
+    typescript: "npm:^5.8.3"
+    vitest: "npm:^3.1.2"
+    zod: "npm:^3.25.55"
   languageName: unknown
   linkType: soft
 

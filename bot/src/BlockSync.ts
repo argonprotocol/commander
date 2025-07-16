@@ -12,7 +12,7 @@ import {
   type Vec,
 } from '@argonprotocol/mainchain';
 import { CohortBidderHistory } from './CohortBidderHistory.ts';
-import { type CohortStorage, type IWinningBid, type ISyncState, type ISyncStateFile, JsonStore } from './storage.ts';
+import { type CohortStorage, type IWinningBid, type IBotState, type IBotStateFile, JsonStore } from './storage.ts';
 import { MiningFrames, Mainchain } from '@argonprotocol/commander-calculator';
 import { Dockers } from './Dockers.ts';
 import type Bot from './Bot.ts';
@@ -47,7 +47,7 @@ export class BlockSync {
   localClient!: ArgonClient;
   latestFinalizedHeader!: Header;
   scheduleTimer?: NodeJS.Timeout;
-  syncStateFile: JsonStore<ISyncStateFile>;
+  botStateFile: JsonStore<IBotStateFile>;
 
   currentFrameTickRange: [number, number] = [0, 0];
 
@@ -75,7 +75,7 @@ export class BlockSync {
     private oldestFrameIdToSync?: number,
   ) {
     this.scheduleNext = this.scheduleNext.bind(this);
-    this.syncStateFile = this.storage.syncStateFile();
+    this.botStateFile = this.storage.botStateFile();
     this.miningFrames = new MiningFrames();
   }
 
@@ -97,10 +97,10 @@ export class BlockSync {
     this.earliestQueuedTick = this.latestTick;
     await this.setOldestFrameIdIfNeeded();
 
-    const syncStateData = (await this.syncStateFile.get())!;
+    const botStateData = (await this.botStateFile.get())!;
     const oldestTickRange = await this.miningFrames.getTickRangeForFrame(
       this.localClient,
-      syncStateData.oldestFrameIdToSync,
+      botStateData.oldestFrameIdToSync,
     );
     this.oldestTick = oldestTickRange[0];
 
@@ -109,10 +109,7 @@ export class BlockSync {
     let headerBlockNumber = header.number.toNumber();
     let headerFrameId = await this.getFrameIdFromHeader(header);
 
-    while (
-      headerBlockNumber > syncStateData.lastBlockNumber + 1 &&
-      headerFrameId >= syncStateData.oldestFrameIdToSync
-    ) {
+    while (headerBlockNumber > botStateData.lastBlockNumber + 1 && headerFrameId >= botStateData.oldestFrameIdToSync) {
       console.log(`Queuing frame ${headerFrameId} block ${headerBlockNumber}`);
       this.queue.unshift(header);
       this.earliestQueuedTick = getTickFromHeader(this.localClient, header) ?? this.earliestQueuedTick;
@@ -122,7 +119,7 @@ export class BlockSync {
     }
 
     console.log('Sync starting', {
-      ...syncStateData,
+      ...botStateData,
       queue: `${this.queue.at(0)?.number.toNumber()}..${this.queue.at(-1)?.number.toNumber()}`,
     });
 
@@ -155,8 +152,8 @@ export class BlockSync {
     await this.scheduleNext();
   }
 
-  async state(): Promise<ISyncState> {
-    const syncStateData = (await this.syncStateFile.get())!;
+  async state(): Promise<IBotState> {
+    const botStateData = (await this.botStateFile.get())!;
     const latestBidHistory = this.autobidder.bidHistory[0];
     const [argonBlockNumbers, bitcoinBlockNumbers] = await Promise.all([
       Dockers.getArgonBlockNumbers(),
@@ -166,16 +163,17 @@ export class BlockSync {
       isReady: this.bot.isReady || false,
       isStarting: this.bot.isStarting || undefined,
       isSyncing: this.bot.isSyncing || undefined,
-      hasMiningBids: syncStateData.hasMiningBids ?? false,
-      hasMiningSeats: syncStateData.hasMiningSeats ?? false,
+      hasMiningBids: botStateData.hasMiningBids ?? false,
+      hasMiningSeats: botStateData.hasMiningSeats ?? false,
       argonBlockNumbers,
       bitcoinBlockNumbers,
-      bidsLastModifiedAt: syncStateData.bidsLastModifiedAt,
-      earningsLastModifiedAt: syncStateData.earningsLastModifiedAt,
-      lastBlockNumber: syncStateData.lastBlockNumber ?? 0,
+      bidsLastModifiedAt: botStateData.bidsLastModifiedAt,
+      earningsLastModifiedAt: botStateData.earningsLastModifiedAt,
+      lastBlockNumber: botStateData.lastBlockNumber ?? 0,
       lastFinalizedBlockNumber: this.latestFinalizedHeader?.number.toNumber() ?? 0,
-      oldestFrameIdToSync: syncStateData.oldestFrameIdToSync ?? 0,
-      currentFrameId: syncStateData.currentFrameId ?? 0,
+      oldestFrameIdToSync: botStateData.oldestFrameIdToSync ?? 0,
+      currentFrameId: botStateData.currentFrameId ?? 0,
+      currentFrameProgress: this.calculateProgress(this.currentTick, this.currentFrameTickRange),
       syncProgress: await this.calculateSyncProgress(),
       queueDepth: this.queue.length,
       maxSeatsPossible: latestBidHistory?.maxSeatsInPlay ?? 10, // TODO: instead of hardcoded 10, fetch from chain
@@ -216,9 +214,9 @@ export class BlockSync {
     let waitTime = 500;
     if (this.queue.length) {
       // plug any gaps in the sync state
-      const syncStateData = (await this.syncStateFile.get())!;
+      const botStateData = (await this.botStateFile.get())!;
       let first = this.queue.at(0)!;
-      while (first.number.toNumber() > syncStateData.lastBlockNumber + 1) {
+      while (first.number.toNumber() > botStateData.lastBlockNumber + 1) {
         first = await this.getParentHeader(first);
         this.queue.unshift(first);
       }
@@ -319,7 +317,7 @@ export class BlockSync {
       blockNumber: header.number.toNumber(),
     };
 
-    await this.syncStateFile.mutate(x => {
+    await this.botStateFile.mutate(x => {
       if (x.lastBlockNumber >= header.number.toNumber()) {
         return false;
       }
@@ -327,6 +325,7 @@ export class BlockSync {
       x.earningsLastModifiedAt = new Date();
       x.lastBlockNumber = header.number.toNumber();
       x.currentFrameId = currentFrameId;
+      x.currentFrameProgress = this.calculateProgress(this.currentTick, this.currentFrameTickRange);
       x.syncProgress = this.calculateProgress(this.currentTick, [this.oldestTick, this.latestTick]);
       x.queueDepth = this.queue.length;
       x.lastBlockNumberByFrameId[currentFrameId] = header.number.toNumber();
@@ -350,11 +349,11 @@ export class BlockSync {
   }
 
   private async setOldestFrameIdIfNeeded() {
-    const syncStateData = await this.syncStateFile.get();
-    if (syncStateData && syncStateData.oldestFrameIdToSync > 0) return;
+    const botStateData = await this.botStateFile.get();
+    if (botStateData && botStateData.oldestFrameIdToSync > 0) return;
     const oldestFrameIdToSync =
       this.oldestFrameIdToSync ?? (await this.getFrameIdFromHeader(this.latestFinalizedHeader));
-    await this.syncStateFile.mutate(x => {
+    await this.botStateFile.mutate(x => {
       x.oldestFrameIdToSync = oldestFrameIdToSync;
       x.syncProgress = this.calculateProgress(this.currentTick, [this.oldestTick, this.latestTick]);
     });
@@ -419,7 +418,7 @@ export class BlockSync {
         });
       });
       if (hasMiningBids) {
-        await this.syncStateFile.mutate(x => {
+        await this.botStateFile.mutate(x => {
           x.bidsLastModifiedAt = new Date();
           x.hasMiningBids = true;
         });
@@ -478,7 +477,7 @@ export class BlockSync {
             bidPosition++;
           }
         });
-        await this.syncStateFile.mutate(x => {
+        await this.botStateFile.mutate(x => {
           x.bidsLastModifiedAt = new Date();
           x.syncProgress = this.calculateProgress(this.currentTick, [this.oldestTick, this.latestTick]);
           if (hasMiningSeats) {

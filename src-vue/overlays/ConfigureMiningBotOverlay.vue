@@ -1,11 +1,9 @@
 <!-- prettier-ignore -->
 <template>
-  <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
+  <TransitionRoot as="template" :show="isOpen" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100">
     <Dialog @close="cancelOverlay" :initialFocus="dialogPanel">
-      <DialogPanel class="absolute top-0 left-0 right-0 bottom-0 z-10">
-        <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
-          <BgOverlay @close="cancelOverlay" />
-        </TransitionChild>
+      <DialogPanel class="ConfigureMiningBotOverlay absolute top-0 left-0 right-0 bottom-0 z-10 cursor-default">
+        <BgOverlay @close="cancelOverlay" />
         <div
           ref="dialogPanel"
           class="absolute top-[40px] left-3 right-3 bottom-3 flex flex-col rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all"
@@ -28,18 +26,12 @@
                 configure the rules for how your bot should make decisions and place bids.
               </p>
 
-              <section class="flex flex-row border-t border-b border-slate-300 text-center pt-8 pb-8 px-5 mx-5">
-                <div class="w-1/2">
-                  <div @mouseenter="showTooltip($event, tooltip.capitalToCommit, { width: 'parent' })" @mouseleave="hideTooltip" class="flex flex-col group cursor-pointer">
-                    <header StatHeader class="group-hover:text-argon-600/70 relative z-10">Capital to Commit</header>
-                    <div PrimaryStat class="relative border border-slate-500/30 rounded-lg -mt-7 pb-14 pt-16 text-5xl font-bold font-mono text-argon-600 shadow-sm">
-                      <EditBoxOverlay
-                        id="capitalToCommit"
-                        v-if="showEditBoxOverlay === 'capitalToCommit'"
-                        @close="showEditBoxOverlay = null"
-                        class="top-[-20%] left-[-3%] !w-[106%] h-[135%] !rounded-lg"
-                      />
-                      {{ currency.symbol }}{{ microgonToMoneyNm(rules.requiredMicrogons).format('0,0.[00]') }}
+              <section class="flex flex-row border-t border-b border-slate-300 text-center pt-8 pb-8 px-5 mx-5 justify-stretch">
+                <div class="w-1/2 flex flex-col grow">
+                  <div @mouseenter="showTooltip($event, tooltip.capitalToCommit, { width: 'parent' })" @mouseleave="hideTooltip" class="flex flex-col grow group">
+                    <header StatHeader class="bg-[#FAF9FA] border border-[#DDDCDD] rounded-t-lg group-hover:text-argon-600/70 relative z-10">Capital to Commit</header>
+                    <div PrimaryStat class="grow relative border border-slate-500/30 rounded-lg mt-2 pb-12 pt-10 text-5xl font-bold font-mono text-argon-600 shadow-sm">
+                      <InputArgon v-model="rules.requiredMicrogons" :min="10_000_000n" :alwaysShowDecimals="false" />
                     </div>
                   </div>
                   <div class="pt-3 text-argon-600/70 cursor-pointer text-md">
@@ -51,20 +43,31 @@
                     =
                   </span>
                 </div>
-                <div class="w-1/2">
-                  <div @mouseenter="showTooltip($event, tooltip.estimatedAPYRange, { width: 'parent' })" @mouseleave="hideTooltip" class="flex flex-col group cursor-pointer">
-                    <header StatHeader class="group-hover:text-argon-600/70 relative z-10 border-b border-dashed border-slate-500/30 pb-2 mx-4">Estimated APY Ranges</header>
-                    <div PrimaryStat class="flex flex-col border border-slate-500/30 rounded-lg -mt-7 pb-5 pt-5 group-hover:bg-argon-20 text-3xl font-bold font-mono text-argon-600 shadow-sm w-full">
-                      <div class="flex flex-row items-center justify-center w-full border-b border-dashed border-slate-500/30 mx-4 pb-3 pt-4">
-                        <span class="w-1/2">{{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</span>
-                        <div class="w-[1px] h-full bg-slate-300/80 mx-2">&nbsp;</div>
-                        <span class="w-1/2">{{ numeral(maximumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</span>
-                      </div>
-                      <div class="flex flex-row items-center justify-center w-full mt-3 mx-4">
-                        <span class="w-1/2">{{ numeral(minimumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</span>
-                        <div class="w-[1px] h-full bg-slate-300/80 mx-2">&nbsp;</div>
-                        <span class="w-1/2">{{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</span>
-                      </div>
+                <div class="w-1/2 flex flex-col grow">
+                  <div @mouseenter="showTooltip($event, tooltip.estimatedAPYRange, { width: 'parent' })" @mouseleave="hideTooltip" class="flex flex-col grow group">
+                    <header StatHeader class="bg-[#FAF9FA] border border-[#DDDCDD] rounded-t-lg relative z-10">Estimated APYs</header>
+                    <div PrimaryStat class="grow flex flex-col border border-slate-500/30 rounded-lg mt-2 shadow-sm w-full">
+                      <table class="w-full h-full relative z-50">
+                        <thead>
+                          <tr class="h-1/3">
+                            <th></th>
+                            <th class="font-light font-sans">Slow Growth</th>
+                            <th class="font-light font-sans">Fast Growth</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr class="font-bold font-mono text-argon-600 h-1/3">
+                            <td class="font-light font-sans">Maximum Bid</td>
+                            <td>{{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</td>
+                            <td>{{ numeral(maximumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</td>
+                          </tr>
+                          <tr class="font-bold font-mono text-argon-600 h-1/3">
+                            <td class="font-light font-sans">Minimum Bid</td>
+                            <td>{{ numeral(minimumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</td>
+                            <td>{{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                   <div class="pt-3 text-argon-600/70 cursor-pointer text-md">View Risk Analysis (it's 99% from server ops)</div>
@@ -276,7 +279,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import { Dialog, DialogPanel, TransitionRoot, TransitionChild } from '@headlessui/vue';
 import { useConfig } from '../stores/config';
 import { useCurrency } from '../stores/currency';
@@ -296,7 +299,8 @@ import {
 } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
 import { bigIntAbs } from '@argonprotocol/commander-calculator/src/utils';
 import BigNumber from 'bignumber.js';
-import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '../lib/Utils';
+import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
+import InputArgon from '../components/InputArgon.vue';
 
 const calculator = getCalculator();
 const calculatorData = getCalculatorData();
@@ -362,6 +366,7 @@ function cancelOverlay() {
   if (showEditBoxOverlay.value) return;
   isOpen.value = false;
   hideTooltip();
+  console.log('SHOW OVERLAY', isOpen.value);
 
   if (previousBiddingRules) {
     config.biddingRules = jsonParseWithBigInts(previousBiddingRules) as IBiddingRules;
@@ -416,19 +421,16 @@ function updateAPYs() {
   maximumBidAtSlowGrowthAPY.value = calculator.maximumBidAtSlowGrowthAPY;
   maximumBidAtFastGrowthAPY.value = calculator.maximumBidAtFastGrowthAPY;
 
-  probableMinSeats.value = BigNumber(rules.value.requiredMicrogons)
-    .dividedBy(calculator.maximumBidAmount)
-    .integerValue()
-    .toNumber();
-  probableMaxSeats.value = BigNumber(rules.value.requiredMicrogons)
-    .dividedBy(calculator.minimumBidAmount)
-    .integerValue()
-    .toNumber();
+  const probableMinSeatsBn = BigNumber(rules.value.requiredMicrogons).dividedBy(calculator.maximumBidAmount);
+  probableMinSeats.value = Math.max(probableMinSeatsBn.integerValue().toNumber(), 0);
+
+  const probableMaxSeatsBn = BigNumber(rules.value.requiredMicrogons).dividedBy(calculator.minimumBidAmount);
+  probableMaxSeats.value = Math.min(probableMaxSeatsBn.integerValue().toNumber(), calculatorData.miningSeatCount);
 }
 
 Vue.watch(rules, updateAPYs, { deep: true });
 
-emitter.on('openConfigureMiningBotOverlay', async () => {
+basicEmitter.on('openConfigureMiningBotOverlay', async () => {
   if (isOpen.value) return;
   isLoaded.value = false;
   isOpen.value = true;
@@ -442,95 +444,117 @@ emitter.on('openConfigureMiningBotOverlay', async () => {
 });
 </script>
 
-<style scoped>
+<style>
 @reference "../main.css";
 
-h2 {
-  position: relative;
-  &:before {
-    @apply bg-gradient-to-r from-argon-menu-bg to-transparent;
-    content: '';
-    display: block;
-    width: 30px;
-    position: absolute;
-    z-index: 1;
-    left: -5px;
-    top: 0;
-    bottom: -5px;
-  }
-  &:after {
-    @apply bg-gradient-to-l from-argon-menu-bg to-transparent;
-    content: '';
-    display: block;
-    width: 30px;
-    position: absolute;
-    z-index: 1;
-    right: -5px;
-    top: 0;
-    bottom: -5px;
-  }
-}
-
-[StatHeader] {
-  @apply text-[#a08fb7] font-bold text-lg group-hover:text-argon-600/70;
-}
-
-[PrimaryStat] {
-  @apply relative;
-  &::before {
-    @apply bg-gradient-to-b from-argon-menu-bg to-transparent;
-    content: '';
-    display: block;
-    width: calc(100% + 10px);
-    height: 30%;
-    position: absolute;
-    top: -5px;
-    left: -5px;
-  }
-}
-
-section div[StatHeader] {
-  @apply pt-1;
-}
-
-section div[MainWrapper] {
-  @apply cursor-pointer;
-
-  &:hover {
-    @apply bg-argon-20;
-    [MainRule]::before {
-      background: linear-gradient(to right, var(--color-argon-20) 0%, transparent 100%);
+.ConfigureMiningBotOverlay {
+  h2 {
+    position: relative;
+    &:before {
+      @apply bg-gradient-to-r from-argon-menu-bg to-transparent;
+      content: '';
+      display: block;
+      width: 30px;
+      position: absolute;
+      z-index: 1;
+      left: -5px;
+      top: 0;
+      bottom: -5px;
     }
-    [MainRule]::after {
-      background: linear-gradient(to left, var(--color-argon-20) 0%, transparent 100%);
-    }
-    [StatHeader] {
-      @apply text-argon-600/70;
+    &:after {
+      @apply bg-gradient-to-l from-argon-menu-bg to-transparent;
+      content: '';
+      display: block;
+      width: 30px;
+      position: absolute;
+      z-index: 1;
+      right: -5px;
+      top: 0;
+      bottom: -5px;
     }
   }
 
-  [MainRule] {
-    @apply text-argon-700/80 font-mono font-bold border-t border-b border-slate-500/30 border-dashed py-1 mt-1 mb-1 text-center relative;
+  [StatHeader] {
+    @apply text-[#a08fb7] font-bold text-lg group-hover:text-argon-600/70;
+  }
+
+  [PrimaryStat] {
+    @apply relative;
     &::before {
+      @apply bg-gradient-to-b from-[5px] from-argon-menu-bg to-transparent;
       content: '';
       display: block;
-      width: 10%;
-      height: calc(100% + 4px);
-      background: linear-gradient(to right, var(--color-argon-menu-bg) 0%, transparent 100%);
+      width: calc(100% + 10px);
+      height: 30%;
       position: absolute;
-      top: -2px;
-      left: 0;
+      top: -5px;
+      left: -5px;
     }
-    &::after {
-      content: '';
-      display: block;
-      width: 10%;
-      height: calc(100% + 4px);
-      background: linear-gradient(to left, var(--color-argon-menu-bg) 0%, transparent 100%);
-      position: absolute;
-      top: -2px;
-      right: 0;
+  }
+
+  section div[StatHeader] {
+    @apply pt-1;
+  }
+
+  section div[MainWrapper] {
+    @apply cursor-pointer;
+
+    &:hover {
+      @apply bg-argon-20;
+      [MainRule]::before {
+        background: linear-gradient(to right, var(--color-argon-20) 0%, transparent 100%);
+      }
+      [MainRule]::after {
+        background: linear-gradient(to left, var(--color-argon-20) 0%, transparent 100%);
+      }
+      [StatHeader] {
+        @apply text-argon-600/70;
+      }
     }
+
+    [MainRule] {
+      @apply text-argon-700/80 font-mono font-bold border-t border-b border-slate-500/30 border-dashed py-1 mt-1 mb-1 text-center relative;
+      &::before {
+        content: '';
+        display: block;
+        width: 10%;
+        height: calc(100% + 4px);
+        background: linear-gradient(to right, var(--color-argon-menu-bg) 0%, transparent 100%);
+        position: absolute;
+        top: -2px;
+        left: 0;
+      }
+      &::after {
+        content: '';
+        display: block;
+        width: 10%;
+        height: calc(100% + 4px);
+        background: linear-gradient(to left, var(--color-argon-menu-bg) 0%, transparent 100%);
+        position: absolute;
+        top: -2px;
+        right: 0;
+      }
+    }
+  }
+
+  [PrimaryStat] {
+    div {
+      @apply inline-block;
+    }
+    div[InputFieldWrapper] {
+      @apply outline-none border-none text-6xl font-bold font-mono text-argon-600 hover:bg-transparent;
+      box-shadow: none;
+    }
+    div[NumArrows] {
+      @apply relative top-1;
+    }
+    svg[NumArrowUp],
+    svg[NumArrowDown] {
+      @apply size-[24px];
+    }
+    /* span[Suffix] {
+      @apply min-w-1;
+    } */
   }
 }
 </style>

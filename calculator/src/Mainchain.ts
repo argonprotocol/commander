@@ -1,12 +1,7 @@
-import {
-  type ArgonClient,
-  convertFixedU128ToBigNumber,
-  convertPermillToBigNumber,
-  MICROGONS_PER_ARGON,
-} from '@argonprotocol/mainchain';
-import { bigIntMin, calculateCurrentFrameIdFromSystemTime } from './utils';
+import { type ArgonClient, convertFixedU128ToBigNumber, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
 import BigNumber from 'bignumber.js';
-import { IWinningBid } from '@argonprotocol/commander-bot/src/storage';
+import { bigIntMin, calculateCurrentFrameIdFromSystemTime } from './utils.ts';
+import { type IWinningBid } from '@argonprotocol/commander-bot/src/storage.ts';
 
 export type MainchainClient = ArgonClient;
 export { MICROGONS_PER_ARGON };
@@ -259,15 +254,19 @@ export class Mainchain {
   }
 
   public async fetchPreviousDayWinningBidAmounts(): Promise<bigint[]> {
-    const client = await this.client;
-    let frameId = calculateCurrentFrameIdFromSystemTime() - 1;
+    const startingFrameId = calculateCurrentFrameIdFromSystemTime();
+    let frameIdToCheck = startingFrameId;
     while (true) {
       // We must loop backwards until we find a frame with winning bids
-      const winningBids = await this.fetchWinningBidAmountsForFrame(frameId);
+      frameIdToCheck--;
+      if (frameIdToCheck < startingFrameId - 10) {
+        // We've checked the last 10 frames and found no winning bids, so we're done
+        return [];
+      }
+      const winningBids = await this.fetchWinningBidAmountsForFrame(frameIdToCheck);
       if (winningBids.length > 0) {
         return winningBids;
       }
-      frameId--;
     }
   }
 

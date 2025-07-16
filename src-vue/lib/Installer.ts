@@ -11,14 +11,14 @@ import { invoke } from '@tauri-apps/api/core';
 import { InstallerCheck } from './InstallerCheck';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { jsonStringifyWithBigInts } from './Utils';
+import { jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
+import { createPromiser, ensureOnlyOneInstance, resetOnlyOneInstance } from './Utils';
+import ICreatePromiser from '../interfaces/ICreatePromiser';
 
 dayjs.extend(utc);
 
-let IS_INITIALIZED = false;
-
 export function resetInstaller(): void {
-  IS_INITIALIZED = false;
+  resetOnlyOneInstance(Installer);
 }
 
 export enum ReasonsToSkipInstall {
@@ -47,22 +47,20 @@ export default class Installer {
 
   private hasApprovedUpgrade = false;
 
-  private loadingFns!: { resolve: () => void; reject: (error: Error) => void };
+  private loadingPromiser!: ICreatePromiser<void>;
   private config: Config;
   private installerCheck: InstallerCheck;
 
   constructor(config: Config) {
-    if (IS_INITIALIZED) throw new Error('Installer already initialized');
-    IS_INITIALIZED = true;
+    ensureOnlyOneInstance(this.constructor);
 
     this.config = config;
     this.installerCheck = new InstallerCheck(this, config);
     this.reasonToSkipInstall = '';
     this.reasonToSkipInstallData = null;
 
-    this.isLoadedPromise = new Promise((resolve, reject) => {
-      this.loadingFns = { resolve, reject };
-    });
+    this.loadingPromiser = createPromiser<void>();
+    this.isLoadedPromise = this.loadingPromiser.promise;
   }
 
   public async load(): Promise<void> {
@@ -77,7 +75,7 @@ export default class Installer {
     }
 
     this.isLoaded = true;
-    this.loadingFns.resolve();
+    this.loadingPromiser.resolve();
   }
 
   public async run(waitForLoaded: boolean = true): Promise<void> {
@@ -237,7 +235,6 @@ export default class Installer {
 
     this.isRunning = true;
     try {
-      this.config.isServerReadyForBidding = true;
       await this.uploadBotConfigFiles();
       await SSH.stopBotDocker();
       await SSH.startBotDocker();
@@ -519,9 +516,7 @@ export default class Installer {
     if (!biddingRulesStr) return;
 
     const envSecurity = `SESSION_KEYS_MNEMONIC="${this.config.security.sessionMnemonic}"\n` + `KEYPAIR_PASSPHRASE=`;
-    const envState =
-      `OLDEST_FRAME_ID_TO_SYNC=${this.config.oldestFrameIdToSync || ''}\n` +
-      `IS_READY_FOR_BIDDING=${this.config.isServerReadyForBidding}\n`;
+    const envState = `OLDEST_FRAME_ID_TO_SYNC=${this.config.oldestFrameIdToSync || ''}\n`;
 
     const files = [
       [this.config.security.walletJson, '~/config/wallet.json'],

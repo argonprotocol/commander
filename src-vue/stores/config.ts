@@ -15,7 +15,6 @@ export function useConfig(): Vue.Reactive<Config> {
     const dbPromise = getDbPromise();
     config = Vue.reactive(new Config(dbPromise));
     config.load().catch(handleUnknownFatalError);
-    console.log('Setting config');
     SSH.setConfig(config as Config);
   }
 

@@ -77,7 +77,7 @@ import { InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
 import ProgressBar from '../components/ProgressBar.vue';
 import CheckboxGray from '../components/CheckboxGray.vue';
 import AlertIcon from '../assets/alert.svg?component';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import { useInstaller } from '../stores/installer';
 
 const props = defineProps<{
@@ -154,7 +154,7 @@ async function retryFailedStep(step: IStepLabel) {
 }
 
 function openServerRemoveOverlay() {
-  emitter.emit('openServerRemoveOverlay');
+  basicEmitter.emit('openServerRemoveOverlay');
 }
 </script>
 

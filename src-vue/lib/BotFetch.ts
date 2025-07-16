@@ -1,41 +1,32 @@
-import { IBlockNumbers } from '@argonprotocol/commander-bot/src/Dockers';
+import { type IBlockNumbers } from '@argonprotocol/commander-bot/src/Dockers.ts';
 import {
-  ISyncState,
-  IEarningsFile,
-  IBidsFile,
-  IBidsHistory,
-  IWinningBid,
-  ISyncStateStarting,
-  ISyncStateError,
-} from '@argonprotocol/commander-bot/src/storage';
-import { convertBigIntStringToNumber } from './Utils';
+  type IBotState,
+  type IEarningsFile,
+  type IBidsFile,
+  type IBidsHistory,
+  type IWinningBid,
+  type IBotStateStarting,
+  type IBotStateError,
+} from '@argonprotocol/commander-bot/src/storage.ts';
+import { convertBigIntStringToNumber } from '@argonprotocol/commander-calculator';
 import { SSH } from './SSH.ts';
+import { BotServerError, BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors.ts';
 
-export class BotNotReadyError extends Error {
-  constructor(public data: ISyncStateStarting) {
-    super(`Bot is not ready: ${JSON.stringify(data)}`);
-  }
-}
-
-export class BotError extends Error {
-  constructor(public data: ISyncStateError) {
-    super(`Bot blew up: ${JSON.stringify(data)}`);
-  }
-}
-
-export class StatsFetcher {
-  public static async fetchSyncState(retries = 0): Promise<ISyncState> {
-    console.log('Fetching bot status...', `::remote::/sync-state`);
+export class BotFetch {
+  public static async fetchBotState(retries = 0): Promise<IBotState> {
     try {
-      const response = await SSH.runHttpGet<ISyncState | ISyncStateStarting | ISyncStateError>(`/sync-state`);
-      if ((response.data as ISyncStateError).serverError) {
-        throw new BotError(response.data as ISyncStateError);
+      const response = await SSH.runHttpGet<IBotState | IBotStateStarting | IBotStateError>(`/bot-state`);
+
+      if ((response.data as IBotStateError).serverError) {
+        throw new BotServerError(response.data as IBotStateError);
+      } else if (response.data.isSyncing) {
+        throw new BotServerIsSyncing(response.data.syncProgress);
+      } else if (!response.data.isReady) {
+        throw new BotServerIsLoading(response.data);
       }
-      if (!response.data.isReady) {
-        throw new BotNotReadyError(response.data);
-      }
-      const data = response.data as ISyncState;
-      console.log('SyncState fetched:', data);
+
+      const data = response.data as IBotState;
+
       return {
         isReady: data.isReady,
         hasMiningSeats: data.hasMiningSeats,
@@ -54,16 +45,21 @@ export class StatsFetcher {
         lastFinalizedBlockNumber: data.lastFinalizedBlockNumber,
         oldestFrameIdToSync: data.oldestFrameIdToSync,
         currentFrameId: data.currentFrameId,
+        currentFrameProgress: data.currentFrameProgress,
         syncProgress: data.syncProgress,
         queueDepth: data.queueDepth,
         maxSeatsPossible: data.maxSeatsPossible,
         maxSeatsReductionReason: data.maxSeatsReductionReason,
       };
     } catch (error) {
-      if (error instanceof BotError || error instanceof BotNotReadyError) {
+      if (
+        error instanceof BotServerError ||
+        error instanceof BotServerIsLoading ||
+        error instanceof BotServerIsSyncing
+      ) {
         throw error;
       } else if (error === 'ServerUnavailable') {
-        throw new BotNotReadyError({
+        throw new BotServerIsLoading({
           isReady: false,
           isStarting: true,
           syncProgress: 0,
@@ -79,7 +75,7 @@ export class StatsFetcher {
       const retryIn = Math.pow(2, retries) * 1000;
       console.log(`Error fetching bot status, retrying in ${retryIn / 1000}s...`, error);
       await new Promise(resolve => setTimeout(resolve, retryIn));
-      return this.fetchSyncState(retries);
+      return this.fetchBotState(retries);
     }
   }
 
@@ -151,7 +147,6 @@ export class StatsFetcher {
       url += `/${frameId}`;
     }
     const { data } = await SSH.runHttpGet<IBidsFile>(url);
-    console.log('Bids file fetched:', data);
     return {
       cohortBiddingFrameId: data.cohortBiddingFrameId,
       cohortActivatingFrameId: data.cohortActivatingFrameId,

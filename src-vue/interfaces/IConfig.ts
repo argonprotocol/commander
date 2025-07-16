@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BiddingRulesSchema } from '@argonprotocol/commander-calculator/src/IBiddingRules';
+import { BiddingRulesSchema } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
 import { VaultingRulesSchema } from './IVaultingRules';
 
 export enum InstallStepKey {
@@ -86,7 +86,6 @@ export const ConfigSchema = z.object({
   isServerReadyToInstall: z.boolean(), // isConnected
   isServerInstalled: z.boolean(), // isNewServer
   isServerUpToDate: z.boolean(), // isInstalling
-  isServerReadyForBidding: z.boolean(), // isReadyForMining
   isWaitingForUpgradeApproval: z.boolean(), // isRequiringUpgrade
 
   hasMiningSeats: z.boolean(), // hasMiningSeats
@@ -118,7 +117,6 @@ export interface IConfigDefaults {
   isServerReadyToInstall: () => IConfig['isServerReadyToInstall'];
   isServerInstalled: () => IConfig['isServerInstalled'];
   isServerUpToDate: () => IConfig['isServerUpToDate'];
-  isServerReadyForBidding: () => IConfig['isServerReadyForBidding'];
   isWaitingForUpgradeApproval: () => IConfig['isWaitingForUpgradeApproval'];
   hasMiningSeats: () => IConfig['hasMiningSeats'];
   hasMiningBids: () => IConfig['hasMiningBids'];

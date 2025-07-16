@@ -3,7 +3,7 @@
   <div class="h-screen w-screen flex flex-col overflow-hidden">
     <TopBar />
     <main v-if="config.isLoaded" class="flex-grow relative">
-      <MiningPanel v-if="controller.panel === 'mining'" />
+      <MiningPanel v-if="showMiningPanel" />
       <VaultingPanel v-else-if="controller.panel === 'vaulting'" />
       <LiquidLockingPanel v-else-if="controller.panel === 'liquid-locking'" />
     </main>
@@ -13,8 +13,11 @@
       </div>
     </div>
     <template v-if="config.isLoaded">
-      <ServerBrokenOverlay v-if="stats.isBotBroken" />
-      <UpgradeOverlay v-if="isNeedingUpgradeApproval" />
+      <template v-if="showMiningPanel">
+        <UpgradeOverlay v-if="isNeedingUpgrade" />
+        <ServerBrokenOverlay v-else-if="bot.isBroken" />
+        <SyncingOverlay v-else-if="bot.isSyncing" />
+      </template>
       <ServerConnectOverlay />
       <WalletOverlay />
       <ServerRemoveOverlay />
@@ -23,7 +26,6 @@
       <ConfigureMiningBotOverlay />
       <ConfigureStabilizationVaultOverlay />
       <!-- <ProvisioningCompleteOverlay /> -->
-      <SyncingOverlay v-if="stats.isBotSyncing" />
       <TooltipOverlay />
     </template>
   </div>
@@ -48,7 +50,7 @@ import ServerBrokenOverlay from './overlays/ServerBrokenOverlay.vue';
 import TopBar from './components/TopBar.vue';
 import { useController } from './stores/controller';
 import { useConfig } from './stores/config';
-import { useStats } from './stores/stats';
+import { useBot } from './stores/bot';
 import { checkForUpdates } from './tauri-controls/utils/checkForUpdates.ts';
 import { waitForLoad } from '@argonprotocol/mainchain';
 import TooltipOverlay from './overlays/TooltipOverlay.vue';
@@ -56,12 +58,16 @@ import { hideTooltip } from './lib/TooltipUtils';
 
 const controller = useController();
 const config = useConfig();
-const stats = useStats();
+const bot = useBot();
 
 let timeout: number | undefined;
 
-const isNeedingUpgradeApproval = Vue.computed(() => {
+const isNeedingUpgrade = Vue.computed(() => {
   return config.isWaitingForUpgradeApproval || (config.isServerInstalled && !config.isServerUpToDate);
+});
+
+const showMiningPanel = Vue.computed(() => {
+  return controller.panel === 'mining';
 });
 
 function clickHandler() {

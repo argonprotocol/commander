@@ -20,7 +20,6 @@ export function calculateAPY(costs: bigint, rewards: bigint): number {
   if (apy > 9_999) {
     return 9_999;
   }
-  console.log('apy', apy);
   return apy;
 }
 
@@ -200,3 +199,34 @@ export type IDeferred<T = void> = Promise<T> & {
   readonly resolved: boolean;
   readonly rejected: boolean;
 };
+
+export function ensureOnlyOneInstance(constructor: any) {
+  if (constructor.isInitialized) {
+    console.log(new Error().stack);
+    throw new Error(`${constructor.name} already initialized`);
+  }
+  constructor.isInitialized = true;
+}
+
+export function resetOnlyOneInstance(constructor: any) {
+  constructor.isInitialized = false;
+}
+
+export function createPromiser<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason?: any) => void;
+} {
+  let promiseResolve!: (value: T) => void;
+  let promiseReject!: (reason?: any) => void;
+  let promise: Promise<T> = new Promise((resolve, reject) => {
+    promiseResolve = resolve;
+    promiseReject = reject;
+  });
+
+  return {
+    promise,
+    resolve: promiseResolve,
+    reject: promiseReject,
+  };
+}

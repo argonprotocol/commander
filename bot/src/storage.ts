@@ -57,7 +57,7 @@ export interface IWinningBid {
   microgonsBid?: bigint;
 }
 
-export interface ISyncStateStarting {
+export interface IBotStateStarting {
   isReady: boolean;
   isStarting?: boolean;
   isWaitingForBiddingRules?: boolean;
@@ -67,11 +67,11 @@ export interface ISyncStateStarting {
   bitcoinBlockNumbers: IBlockNumbers;
 }
 
-export interface ISyncStateError extends ISyncStateStarting {
+export interface IBotStateError extends IBotStateStarting {
   serverError: string;
 }
 
-export interface ISyncState extends ILastModifiedAt {
+export interface IBotState extends ILastModifiedAt {
   isReady: boolean;
   isStarting?: boolean;
   isWaitingForBiddingRules?: boolean;
@@ -86,13 +86,14 @@ export interface ISyncState extends ILastModifiedAt {
   lastFinalizedBlockNumber: number;
   oldestFrameIdToSync: number;
   currentFrameId: number;
+  currentFrameProgress: number;
   syncProgress: number;
   queueDepth: number;
   maxSeatsPossible: number;
   maxSeatsReductionReason: string;
 }
 
-export interface ISyncStateFile extends ISyncState {
+export interface IBotStateFile extends IBotState {
   lastBlockNumberByFrameId: {
     [frameId: number]: number;
   };
@@ -166,11 +167,11 @@ export class CohortStorage {
   }
   private lruCache = new LRU<JsonStore<any>>(100);
 
-  public syncStateFile(): JsonStore<ISyncStateFile> {
-    const key = `sync-state.json`;
+  public botStateFile(): JsonStore<IBotStateFile> {
+    const key = `bot-state.json`;
     let entry = this.lruCache.get(key);
     if (!entry) {
-      entry = new JsonStore<ISyncStateFile>(Path.join(this.basedir, key), () => ({
+      entry = new JsonStore<IBotStateFile>(Path.join(this.basedir, key), () => ({
         isReady: false,
         hasMiningBids: false,
         hasMiningSeats: false,
@@ -182,6 +183,7 @@ export class CohortStorage {
         lastFinalizedBlockNumber: 0,
         oldestFrameIdToSync: 0,
         currentFrameId: 0,
+        currentFrameProgress: 0,
         syncProgress: 0,
         queueDepth: 0,
         maxSeatsPossible: 10, // TODO: instead of hardcoded 10, fetch from chain

@@ -1,4 +1,3 @@
-import * as Fs from 'node:fs';
 import express from 'express';
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import type { ArgonClient } from '@argonprotocol/mainchain';
@@ -38,14 +37,6 @@ export function jsonExt(data: any, response: express.Response) {
     2,
   );
   response.status(200).type('application/json').send(json);
-}
-
-export function readJsonFileOrNull(path: string) {
-  try {
-    return JSON.parse(Fs.readFileSync(path, 'utf8'));
-  } catch (error) {
-    return null;
-  }
 }
 
 export async function getClient(host: string): Promise<ArgonClient> {

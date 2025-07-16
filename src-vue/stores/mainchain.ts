@@ -6,7 +6,7 @@ import BiddingCalculator, {
 import { getClient } from '@argonprotocol/mainchain';
 import { NETWORK_URL } from '../lib/Config';
 import { useConfig } from './config';
-import { IBiddingRules } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
+import { type IBiddingRules } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
 
 let client: Promise<MainchainClient>;
 let mainchain: Mainchain;

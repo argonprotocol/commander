@@ -38,7 +38,7 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { TransitionChild, TransitionRoot } from '@headlessui/vue';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import BgOverlay from '../components/BgOverlay.vue';
 import SecuritySettingsOverview from './security-settings/Overview.vue';
 import SecuritySettingsEncrypt from './security-settings/Encrypt.vue';
@@ -47,7 +47,7 @@ import SecuritySettingsMnemonics from './security-settings/Mnemonics.vue';
 const isOpen = Vue.ref(false);
 const currentScreen = Vue.ref<'overview' | 'encrypt' | 'mnemonics'>('overview');
 
-emitter.on('openSecuritySettingsOverlay', async (data: any) => {
+basicEmitter.on('openSecuritySettingsOverlay', async (data: any) => {
   isOpen.value = true;
   currentScreen.value = 'overview';
 });

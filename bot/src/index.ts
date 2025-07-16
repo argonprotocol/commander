@@ -5,7 +5,7 @@ import Bot from './Bot.ts';
 import express from 'express';
 import cors from 'cors';
 import { Dockers, type IBlockNumbers } from './Dockers.ts';
-import type { ISyncStateError, ISyncStateStarting } from './storage.ts';
+import type { IBotStateError, IBotStateStarting } from './storage.ts';
 
 // wait for crypto wasm to be loaded
 await waitForLoad();
@@ -34,7 +34,7 @@ const bot = new Bot({
   }),
 });
 
-async function createStartingPayload(): Promise<ISyncStateStarting> {
+async function createStartingPayload(): Promise<IBotStateStarting> {
   let syncProgress = 0;
   let argonBlockNumbers: IBlockNumbers = {
     localNode: 0,
@@ -66,7 +66,7 @@ async function createStartingPayload(): Promise<ISyncStateStarting> {
     bitcoinBlockNumbers: bitcoinBlockNumbers,
   };
 
-  const payload: ISyncStateStarting = {
+  const payload: IBotStateStarting = {
     isReady: bot.isReady,
     isStarting: bot.isStarting || undefined,
     isSyncing: bot.isSyncing || undefined,
@@ -89,7 +89,7 @@ async function isStarting(res: express.Response): Promise<boolean> {
 async function hasError(res: express.Response): Promise<boolean> {
   if (!errorMessage) return false;
 
-  const payload: ISyncStateError = {
+  const payload: IBotStateError = {
     ...(await createStartingPayload()),
     serverError: errorMessage,
   };
@@ -107,11 +107,11 @@ app.use(
   }),
 );
 
-app.get('/sync-state', async (_req, res) => {
+app.get('/bot-state', async (_req, res) => {
   if (await hasError(res)) return;
   if (await isStarting(res)) return;
-  const syncState = await bot.blockSync.state();
-  jsonExt(syncState, res);
+  const botState = await bot.blockSync.state();
+  jsonExt(botState, res);
 });
 
 app.get('/argon-blockchain-status', async (_req, res) => {

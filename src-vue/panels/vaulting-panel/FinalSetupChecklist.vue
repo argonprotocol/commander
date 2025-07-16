@@ -79,7 +79,7 @@
 import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import emitter from '../../emitters/basic';
+import basicEmitter from '../../emitters/basicEmitter';
 import { useConfig } from '../../stores/config';
 import { useWallets } from '../../stores/wallets';
 import { useCurrency } from '../../stores/currency';
@@ -90,7 +90,6 @@ import { createNumeralHelpers } from '../../lib/numeral';
 dayjs.extend(utc);
 
 const config = useConfig();
-const installer = useInstaller();
 const wallets = useWallets();
 const currency = useCurrency();
 
@@ -99,7 +98,7 @@ const { microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency
 const isLaunchingVault = Vue.ref(false);
 
 const walletIsPartiallyFunded = Vue.computed(() => {
-  return (wallets.mngWallet.availableMicrogons || wallets.mngWallet.availableMicronots) > 0;
+  return (wallets.miningWallet.availableMicrogons || wallets.miningWallet.availableMicronots) > 0;
 });
 
 const walletIsFullyFunded = Vue.computed(() => {
@@ -107,11 +106,11 @@ const walletIsFullyFunded = Vue.computed(() => {
     return false;
   }
 
-  if (wallets.mngWallet.availableMicrogons < (config.vaultingRules?.requiredMicrogons || 0n)) {
+  if (wallets.miningWallet.availableMicrogons < (config.vaultingRules?.requiredMicrogons || 0n)) {
     return false;
   }
 
-  if (wallets.mngWallet.availableMicronots < (config.vaultingRules?.requiredMicronots || 0n)) {
+  if (wallets.miningWallet.availableMicronots < (config.vaultingRules?.requiredMicronots || 0n)) {
     return false;
   }
 
@@ -119,11 +118,11 @@ const walletIsFullyFunded = Vue.computed(() => {
 });
 
 function openConfigureStabilizationVaultOverlay() {
-  emitter.emit('openConfigureStabilizationVaultOverlay');
+  basicEmitter.emit('openConfigureStabilizationVaultOverlay');
 }
 
 function openFundMiningAccountOverlay() {
-  emitter.emit('openWalletOverlay', { walletId: 'vlt', screen: 'receive' });
+  basicEmitter.emit('openWalletOverlay', { walletId: 'vaulting', screen: 'receive' });
 }
 
 async function createVault() {

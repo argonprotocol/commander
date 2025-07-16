@@ -1,21 +1,10 @@
 <!-- prettier-ignore -->
 <template>
-  <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
-    <TransitionChild
-      as="template"
-      enter="ease-out duration-300"
-      enter-from="opacity-0"
-      enter-to="opacity-100"
-      leave="ease-in duration-200"
-      leave-from="opacity-100"
-      leave-to="opacity-0"
-    >
-      <BgOverlay @close="closeOverlay" />
-    </TransitionChild>
-
+  <TransitionRoot as="template" :show="isOpen" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100">
     <Dialog @close="closeOverlay">
-      <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">
-        <DialogPanel class="bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl relative w-8/12 max-h-10/12 overflow-scroll">
+      <DialogPanel class="flex items-center justify-center absolute top-0 left-0 right-0 bottom-0 z-10 pointer-events-none">
+        <BgOverlay @close="closeOverlay" />
+        <div class="bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl relative w-8/12 max-h-10/12 overflow-scroll">
           <Receive v-if="activeScreen === 'receive'" @navigate="navigate" :walletId="walletId" />
           <div v-else>
             <div
@@ -41,7 +30,7 @@
                 <XMarkIcon class="w-5 h-5 text-[#B74CBA] stroke-4" />
               </div>
             </div>
-            <div class="w-full flex flex-col items-center py-14 border-b border-black/20">
+            <div class="w-full flex flex-col items-center py-10 border-b border-black/20">
               <div class="w-full text-center text-5xl font-bold">
                 <span>{{ currency.symbol }}{{ microgonToMoneyNm(totalValue).format('0,0.00').split('.')[0] }}</span>
                 <span class="opacity-50">.{{ microgonToMoneyNm(totalValue).format('0.00').split('.')[1] }}</span>
@@ -63,8 +52,8 @@
             <Resources v-if="activeTab === 'tokens'" :walletId="walletId" @navigate="navigate" />
             <Activity v-else-if="activeTab === 'activity'" :walletId="walletId" />
           </div>
-        </DialogPanel>
-      </div>
+        </div>
+      </DialogPanel>
     </Dialog>
   </TransitionRoot>
 </template>
@@ -72,7 +61,7 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { TransitionChild, TransitionRoot, Dialog, DialogPanel } from '@headlessui/vue';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import { useCurrency } from '../stores/currency';
 import { useWallets } from '../stores/wallets';
 import { useController } from '../stores/controller';
@@ -98,7 +87,7 @@ const { microgonToMoneyNm } = createNumeralHelpers(currency);
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 
-const walletId: Vue.Ref<'mng' | 'vlt'> = Vue.ref('mng');
+const walletId: Vue.Ref<'mining' | 'vaulting'> = Vue.ref('mining');
 const walletName = Vue.ref('');
 const wallet = Vue.ref({
   address: '',
@@ -110,12 +99,12 @@ const wallet = Vue.ref({
 Vue.watch(
   walletId,
   () => {
-    if (walletId.value === 'mng') {
+    if (walletId.value === 'mining') {
       walletName.value = 'Mining';
-      wallet.value = wallets.mngWallet;
-    } else if (walletId.value === 'vlt') {
+      wallet.value = wallets.miningWallet;
+    } else if (walletId.value === 'vaulting') {
       walletName.value = 'Vaulting';
-      wallet.value = wallets.vltWallet;
+      wallet.value = wallets.vaultingWallet;
     }
   },
   { immediate: true },
@@ -125,9 +114,9 @@ const activeScreen = Vue.ref('main');
 const activeTab = Vue.ref('tokens');
 
 const totalValue = Vue.computed(() => {
-  if (walletId.value === 'mng') {
+  if (walletId.value === 'mining') {
     return controller.totalMiningResources;
-  } else if (walletId.value === 'vlt') {
+  } else if (walletId.value === 'vaulting') {
     return 0n;
   }
   return 0n;
@@ -146,7 +135,7 @@ function navigate($event: any) {
   }
 }
 
-emitter.on('openWalletOverlay', async (data: any) => {
+basicEmitter.on('openWalletOverlay', async (data: any) => {
   walletId.value = data.walletId;
   isOpen.value = true;
   isLoaded.value = true;

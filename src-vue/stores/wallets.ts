@@ -4,7 +4,9 @@ import { ask } from '@tauri-apps/plugin-dialog';
 import { getMainchainClient } from '../stores/mainchain.ts';
 import handleUnknownFatalError from './helpers/handleUnknownFatalError.ts';
 import { useConfig } from './config.ts';
-import createPromise from './helpers/createPromise.ts';
+import { createPromiser } from '../lib/Utils.ts';
+import { useStats } from './stats.ts';
+import { useCurrency } from './currency.ts';
 
 const config = useConfig();
 
@@ -17,10 +19,13 @@ export interface IWallet {
 }
 
 export const useWallets = defineStore('wallets', () => {
-  const isLoaded = Vue.ref(false);
-  const { promise: isLoading, resolve: isLoadingResolve, reject: isLoadingReject } = createPromise<void>();
+  const stats = useStats();
+  const currency = useCurrency();
 
-  const mngWallet = Vue.reactive<IWallet>({
+  const isLoaded = Vue.ref(false);
+  const { promise: isLoadedPromise, resolve: isLoadedResolve, reject: isLoadedReject } = createPromiser<void>();
+
+  const miningWallet = Vue.reactive<IWallet>({
     name: 'Mining Wallet',
     address: '',
     availableMicrogons: 0n,
@@ -28,20 +33,22 @@ export const useWallets = defineStore('wallets', () => {
     reservedMicronots: 0n,
   });
 
-  const llbWallet = Vue.reactive<IWallet>({
-    name: 'Liquid Locking Wallet',
+  const vaultingWallet = Vue.reactive<IWallet>({
+    name: 'Volatility Wallet',
     address: '',
     availableMicrogons: 0n,
     availableMicronots: 0n,
     reservedMicronots: 0n,
   });
 
-  const vltWallet = Vue.reactive<IWallet>({
-    name: 'Volatility Wallet',
-    address: '',
-    availableMicrogons: 0n,
-    availableMicronots: 0n,
-    reservedMicronots: 0n,
+  const miningSeatValue = Vue.computed(() => {
+    return (
+      stats.myMiningSeats.microgonsToBeMined +
+      currency.micronotToMicrogon(stats.myMiningSeats.micronotsToBeMined) +
+      currency.micronotToMicrogon(stats.myMiningSeats.micronotsMined) +
+      (stats.myMiningSeats.microgonsMinted || 0n) +
+      (stats.myMiningSeats.microgonsMined || 0n)
+    );
   });
 
   const totalWalletMicrogons = Vue.ref(0n);
@@ -81,11 +88,10 @@ export const useWallets = defineStore('wallets', () => {
 
   async function loadBalances() {
     await config.isLoadedPromise;
-    mngWallet.address = config.mngAccount.address;
-    llbWallet.address = config.llbAccount.address;
-    vltWallet.address = config.vltAccount.address;
+    miningWallet.address = config.miningAccount.address;
+    vaultingWallet.address = config.vaultingAccount.address;
 
-    for (const wallet of [mngWallet, llbWallet, vltWallet]) {
+    for (const wallet of [miningWallet, vaultingWallet]) {
       await Promise.all([loadArgonBalance(wallet), loadArgonotBalance(wallet)]);
     }
   }
@@ -96,7 +102,8 @@ export const useWallets = defineStore('wallets', () => {
     while (!isLoaded.value) {
       try {
         await loadBalances();
-        isLoadingResolve();
+        await Promise.all([stats.isLoadedPromise, currency.isLoadedPromise]);
+        isLoadedResolve();
       } catch (error) {
         await ask('Wallets failed to load correctly. Click Ok to try again.', {
           title: 'Argon Commander',
@@ -111,16 +118,16 @@ export const useWallets = defineStore('wallets', () => {
   load().catch(error => {
     console.log('Error loading wallets:', error);
     handleUnknownFatalError();
-    isLoadingReject();
+    isLoadedReject();
   });
 
   return {
     isLoaded,
-    isLoading,
-    mngWallet,
-    llbWallet,
-    vltWallet,
+    isLoadedPromise,
+    miningWallet,
+    vaultingWallet,
     totalWalletMicrogons,
     totalWalletMicronots,
+    miningSeatValue,
   };
 });

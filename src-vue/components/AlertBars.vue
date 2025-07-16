@@ -67,7 +67,7 @@ import * as Vue from 'vue';
 import { useConfig } from '../stores/config';
 import { useWallets } from '../stores/wallets';
 import AlertIcon from '../assets/alert.svg?component';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import { useStats } from '../stores/stats';
 
 const stats = useStats();
@@ -81,11 +81,11 @@ const hasLowFunds = Vue.computed(() => {
     return false;
   }
 
-  if (wallets.mngWallet.availableMicrogons < config.biddingRules.requiredArgons) {
+  if (wallets.miningWallet.availableMicrogons < config.biddingRules.requiredArgons) {
     return true;
   }
 
-  if (wallets.mngWallet.availableMicronots < config.biddingRules.requiredArgonots) {
+  if (wallets.miningWallet.availableMicronots < config.biddingRules.requiredArgonots) {
     return true;
   }
 
@@ -110,10 +110,10 @@ const maxBidIsTooLow = Vue.computed(() => {
 });
 
 function openFundMiningWalletOverlay() {
-  emitter.emit('openWalletOverlay', { walletId: 'mng', screen: 'receive' });
+  basicEmitter.emit('openWalletOverlay', { walletId: 'mining', screen: 'receive' });
 }
 
 function openConfigureMiningBotOverlay() {
-  emitter.emit('openConfigureMiningBotOverlay');
+  basicEmitter.emit('openConfigureMiningBotOverlay');
 }
 </script>

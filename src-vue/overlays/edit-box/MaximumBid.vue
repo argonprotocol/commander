@@ -34,7 +34,10 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { BidAmountAdjustmentType, BidAmountFormulaType } from '@argonprotocol/commander-calculator/src/IBiddingRules';
+import {
+  BidAmountAdjustmentType,
+  BidAmountFormulaType,
+} from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
 import InputMenu, { type IOption } from '../../components/InputMenu.vue';
 import InputNumber from '../../components/InputNumber.vue';
 import InputArgon from '../../components/InputArgon.vue';

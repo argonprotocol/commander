@@ -10,14 +10,16 @@ import {
 } from '../interfaces/IConfig';
 import { SSH } from './SSH';
 import { Keyring, type KeyringPair, MICROGONS_PER_ARGON, mnemonicGenerate } from '@argonprotocol/mainchain';
-import { jsonParseWithBigInts, jsonStringifyWithBigInts } from './Utils';
+import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
 import {
   BidAmountAdjustmentType,
   BidAmountFormulaType,
   MicronotPriceChangeType,
   SeatGoalInterval,
   SeatGoalType,
-} from '@argonprotocol/commander-calculator/src/IBiddingRules';
+} from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
+import { createPromiser, ensureOnlyOneInstance } from './Utils';
+import ICreatePromiser from '../interfaces/ICreatePromiser';
 
 export const env = (import.meta as any).env;
 export const NETWORK_NAME = env.VITE_NETWORK_NAME || 'mainnet';
@@ -34,7 +36,7 @@ export class Config {
   public hasSavedBiddingRules: boolean;
   public hasSavedVaultingRules: boolean;
 
-  private _loadingFns!: { resolve: () => void; reject: (error: Error) => void };
+  private _loadingPromiser!: ICreatePromiser<void>;
 
   private _db!: Db;
   private _fieldsToSave: Set<string> = new Set();
@@ -42,19 +44,19 @@ export class Config {
   private _unstringified!: IConfig;
   private _stringified = {} as IConfigStringified;
   private _seedAccount!: KeyringPair;
-  private _mngAccount!: KeyringPair;
-  private _llbAccount!: KeyringPair;
-  private _vltAccount!: KeyringPair;
+  private _miningAccount!: KeyringPair;
+  private _vaultingAccount!: KeyringPair;
 
   constructor(dbPromise: Promise<Db>) {
+    ensureOnlyOneInstance(this.constructor);
+
     const installDetailsStep: IConfigInstallStep = {
       status: InstallStepStatus.Pending,
       progress: 0,
       startDate: null,
     };
-    this.isLoadedPromise = new Promise((resolve, reject) => {
-      this._loadingFns = { resolve, reject };
-    });
+    this._loadingPromiser = createPromiser<void>();
+    this.isLoadedPromise = this._loadingPromiser.promise;
     this.isLoaded = false;
 
     this.hasSavedBiddingRules = false;
@@ -81,7 +83,6 @@ export class Config {
       isServerReadyToInstall: Config.getDefault(dbFields.isServerReadyToInstall) as boolean,
       isServerInstalled: Config.getDefault(dbFields.isServerInstalled) as boolean,
       isServerUpToDate: Config.getDefault(dbFields.isServerUpToDate) as boolean,
-      isServerReadyForBidding: Config.getDefault(dbFields.isServerReadyForBidding) as boolean,
       isWaitingForUpgradeApproval: Config.getDefault(dbFields.isWaitingForUpgradeApproval) as boolean,
       hasMiningSeats: Config.getDefault(dbFields.hasMiningSeats) as boolean,
       hasMiningBids: Config.getDefault(dbFields.hasMiningBids) as boolean,
@@ -122,7 +123,7 @@ export class Config {
     this._stringified = fieldsSerialized;
     this._db = db;
     this._unstringified = configData as IConfig;
-    this._loadingFns.resolve();
+    this._loadingPromiser.resolve();
   }
 
   get seedAccount(): KeyringPair {
@@ -130,19 +131,14 @@ export class Config {
     return (this._seedAccount ||= new Keyring({ type: 'sr25519' }).createFromUri(this.security.walletMnemonic));
   }
 
-  get mngAccount(): KeyringPair {
+  get miningAccount(): KeyringPair {
     this._throwErrorIfNotLoaded();
-    return (this._mngAccount ||= this.seedAccount.derive(`//mng`));
+    return (this._miningAccount ||= this.seedAccount.derive(`//mng`));
   }
 
-  get llbAccount(): KeyringPair {
+  get vaultingAccount(): KeyringPair {
     this._throwErrorIfNotLoaded();
-    return (this._llbAccount ||= this.seedAccount.derive(`//llb`));
-  }
-
-  get vltAccount(): KeyringPair {
-    this._throwErrorIfNotLoaded();
-    return (this._vltAccount ||= this.seedAccount.derive(`//vlt`));
+    return (this._vaultingAccount ||= this.seedAccount.derive(`//vlt`));
   }
 
   //////////////////////////////
@@ -244,17 +240,6 @@ export class Config {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.isServerInstalled, value);
     this._unstringified.isServerInstalled = value;
-  }
-
-  get isServerReadyForBidding(): boolean {
-    this._throwErrorIfNotLoaded();
-    return this._unstringified.isServerReadyForBidding;
-  }
-
-  set isServerReadyForBidding(value: boolean) {
-    this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.isServerReadyForBidding, value);
-    this._unstringified.isServerReadyForBidding = value;
   }
 
   get isWaitingForUpgradeApproval(): boolean {
@@ -384,7 +369,6 @@ const dbFields = {
   isServerReadyToInstall: 'isServerReadyToInstall',
   isServerInstalled: 'isServerInstalled',
   isServerUpToDate: 'isServerUpToDate',
-  isServerReadyForBidding: 'isServerReadyForBidding',
   isWaitingForUpgradeApproval: 'isWaitingForUpgradeApproval',
   hasMiningSeats: 'hasMiningSeats',
   hasMiningBids: 'hasMiningBids',
@@ -398,8 +382,8 @@ const defaults: IConfigDefaults = {
     const walletMnemonic = mnemonicGenerate();
     const sessionMnemonic = mnemonicGenerate();
     const seedAccount = new Keyring({ type: 'sr25519' }).createFromUri(walletMnemonic);
-    const mngAccount = seedAccount.derive(`//mng`);
-    const walletJson = jsonStringifyWithBigInts(mngAccount.toJson(''), null, 2);
+    const miningAccount = seedAccount.derive(`//mng`);
+    const walletJson = jsonStringifyWithBigInts(miningAccount.toJson(''), null, 2);
     return {
       walletMnemonic,
       sessionMnemonic,
@@ -439,7 +423,6 @@ const defaults: IConfigDefaults = {
   isServerReadyToInstall: () => false,
   isServerInstalled: () => false,
   isServerUpToDate: () => false,
-  isServerReadyForBidding: () => false,
   isWaitingForUpgradeApproval: () => false,
   hasMiningSeats: () => false,
   hasMiningBids: () => false,

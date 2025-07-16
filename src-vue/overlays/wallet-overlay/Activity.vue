@@ -13,7 +13,7 @@ import { IWallet, useWallets } from '../../stores/wallets';
 
 const props = defineProps({
   walletId: {
-    type: String as Vue.PropType<'mng' | 'llb' | 'vlt'>,
+    type: String as Vue.PropType<'mining' | 'vaulting'>,
     required: true,
   },
 });

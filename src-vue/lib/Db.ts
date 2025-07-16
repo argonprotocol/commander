@@ -8,6 +8,7 @@ import { BitcoinActivitiesTable } from './db/BitcoinActivitiesTable';
 import { BotActivitiesTable } from './db/BotActivitiesTable';
 import { CohortAccountsTable } from './db/CohortAccountsTable';
 import { INSTANCE_NAME } from './Config';
+import { ensureOnlyOneInstance } from './Utils';
 
 export class Db {
   public sql: PluginSql;
@@ -21,6 +22,8 @@ export class Db {
   public framesTable: FramesTable;
 
   constructor(sql: PluginSql) {
+    ensureOnlyOneInstance(this.constructor);
+
     this.sql = sql;
     this.argonActivitiesTable = new ArgonActivitiesTable(this);
     this.bitcoinActivitiesTable = new BitcoinActivitiesTable(this);

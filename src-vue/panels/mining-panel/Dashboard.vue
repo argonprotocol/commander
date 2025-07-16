@@ -4,7 +4,7 @@
     <AlertBars />
 
     <div
-      :class="stats.isReady ? '' : 'opacity-30 pointer-events-none'"
+      :class="stats.isLoaded ? '' : 'opacity-30 pointer-events-none'"
       class="flex flex-col h-full px-3.5 py-3 gap-y-2.5 justify-stretch grow"
     >
       <section class="flex flex-row gap-x-3">
@@ -34,7 +34,7 @@
           <label>Total Earned</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ numeral(globalAPY).formatIfElseCapped('< 100', '0,0.00', '0,0', 9_999) }}%</span>
+          <span>{{ numeral(globalAPY).formatIfElseCapped('< 100', '0,0.[00]', '0,0', 9_999) }}%</span>
           <label>Current APY</label>
         </div>
       </section>
@@ -146,7 +146,7 @@
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full">
-                <span>{{ numeral(cohortAPY).formatIfElse('< 1_000', '0,0.00', '0,0') }}%</span>
+                <span>{{ numeral(cohortAPY).formatIfElse('< 1_000', '0,0.[00]', '0,0') }}%</span>
                 <label>APY Expected</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
@@ -340,7 +340,7 @@ const lastArgonActivityAt = Vue.computed(() => {
 });
 
 const lastBotActivityAt = Vue.computed(() => {
-  const lastActivity = stats.botActivity[0];
+  const lastActivity = stats.biddingActivity[0];
   return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
 });
 

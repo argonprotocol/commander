@@ -36,7 +36,7 @@ import { useConfig } from '../../stores/config';
 import { useBlockchainStore, type IActiveBid } from '../../stores/blockchain';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
 import ActiveBidsActivityOverlayButton from '../../overlays/ActiveBidsActivityOverlayButton.vue';
-import emitter from '../../emitters/basic';
+import basicEmitter from '../../emitters/basicEmitter';
 
 dayjs.extend(utc);
 
@@ -44,7 +44,7 @@ const config = useConfig();
 const blockchainStore = useBlockchainStore();
 
 function openBiddingBudgetOverlay() {
-  emitter.emit('openConfigureMiningBotOverlay');
+  basicEmitter.emit('openConfigureMiningBotOverlay');
 }
 
 Vue.onMounted(async () => {

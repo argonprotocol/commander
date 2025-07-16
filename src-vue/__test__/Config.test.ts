@@ -15,7 +15,6 @@ it.only('can load config defaults', async () => {
   expect(config.isServerReadyToInstall).toBe(false);
   expect(config.isServerInstalled).toBe(false);
   expect(config.isServerUpToDate).toBe(false);
-  expect(config.isServerReadyForBidding).toBe(false);
   expect(config.isWaitingForUpgradeApproval).toBe(false);
   expect(config.hasMiningSeats).toBe(false);
   expect(config.hasMiningBids).toBe(false);

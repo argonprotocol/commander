@@ -10,7 +10,7 @@
       leave-from="opacity-100"
       leave-to="opacity-0"
     >
-      <BgOverlay />
+      <BgOverlay :enableTopBar="true" />
     </TransitionChild>
 
     <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">

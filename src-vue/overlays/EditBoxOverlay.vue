@@ -37,7 +37,7 @@ import SeatingGoal from './edit-box/SeatingGoal.vue';
 import ExpectedGrowth from './edit-box/ExpectedGrowth.vue';
 import CloudMachine from './edit-box/CloudMachine.vue';
 import { useConfig } from '../stores/config';
-import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '../lib/Utils';
+import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
 import { IBiddingRules } from '@argonprotocol/commander-calculator';
 
 const props = defineProps<{

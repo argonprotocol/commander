@@ -1,27 +1,11 @@
 <!-- prettier-ignore -->
 <template>
   <div @focus="handleFocus" @blur="handleBlur" ref="$el" :class="[hasFocus ? 'z-90' : '']" class="relative focus-within:relative" tabindex="0">
-    <div v-if="!props.disabled">
-      <div
-        @pointerdown="handlePointerDown"
-        @pointerup="handlePointerUp"
-        @pointermove="emitDrag"
-        @pointercancel="handlePointerUp"
-        class="absolute top-[-2px] left-0 h-[5px] w-full cursor-n-resize"
-      />
-      <div
-        @pointerdown="handlePointerDown"
-        @pointerup="handlePointerUp"
-        @pointermove="emitDrag"
-        @pointercancel="handlePointerUp"
-        class="absolute bottom-[-2px] left-0 h-[5px] w-full cursor-s-resize"
-      />
-    </div>
     <div
-      InputField
+      InputFieldWrapper
       :class="[
         props.disabled ? 'border-dashed cursor-default' : '',
-        hasFocus ? 'bg-slate-500/5 inner-input-shadow outline-2 -outline-offset-2 outline-argon-button' : '',
+        hasFocus ? 'inner-input-shadow outline-2 -outline-offset-2 outline-argon-button' : '',
         [!hasFocus && !props.disabled ? 'hover:bg-white' : ''],
       ]"
       class="min-w-20 font-mono text-md flex flex-row w-full text-left py-[3px] border border-slate-700/50 rounded-md text-gray-800"
@@ -39,8 +23,8 @@
         :class="[props.disabled ? 'opacity-70' : '']"
         class="inline-block w-auto focus:outline-none py-[1px]"
       ></div>
-      <span :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']" class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-default py-[1px]">
-        {{ suffix }}
+      <span Suffix :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']" class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-default py-[1px]">
+        <span v-if="suffix" class="inline-block">{{ suffix }}</span>
         <span @click="moveCursorToEnd" @dblclick="selectAllText" class="absolute top-0 left-0 w-full h-full cursor-text" />
       </span>
 
@@ -95,14 +79,19 @@
         </transition>
       </Menu>
 
-      <div v-if="!props.disabled" class="flex flex-col mr-2">
-        <NumArrow
+      <div NumArrows v-if="!props.disabled" class="flex flex-col mr-2">
+        <!-- @pointerdown="handlePointerDown"
+        @pointerup="handlePointerUp"
+        @pointermove="emitDrag"
+        @pointercancel="handlePointerUp" -->
+
+        <NumArrow NumArrowUp
           @mousedown="startContinuousIncrement"
           @mouseup="stopContinuousUpdates"
           @mouseleave="stopContinuousUpdates"
           class="relative top-[1px] size-[12px] text-gray-300 cursor-pointer hover:text-gray-600"
         />
-        <NumArrow
+        <NumArrow NumArrowDown
           @mousedown="startContinuousDecrement"
           @mouseup="stopContinuousUpdates"
           @mouseleave="stopContinuousUpdates"
@@ -607,21 +596,3 @@ Vue.onMounted(() => {
   insertIntoInputElem(loginValueConverted);
 });
 </script>
-
-<style scoped>
-@reference "../main.css";
-
-ul {
-  @apply flex flex-col;
-}
-
-ul li {
-  @apply border-b border-gray-300;
-  &:first-child div {
-    @apply rounded-t-md;
-  }
-  &:last-child {
-    @apply rounded-b-md border-b-0;
-  }
-}
-</style>

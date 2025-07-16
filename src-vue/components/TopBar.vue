@@ -52,11 +52,7 @@
           <PopoverButton
             class="relative flex flex-row text-xl font-bold text-[#B74CBA] pt-[1px] pl-[14px] pr-[10px] mr-[0px] h-[30px] items-center hover:bg-slate-400/10 cursor-pointer focus-visible:outline-none"
           >
-            {{ microgonToMoneyNm(controller.totalNetWorth).format('0,0.00') }}
-            <!-- <AlertIcon
-              v-if="!mngWalletIsFullyFunded"
-              class="absolute -top-0 right-[-6px] w-3 h-3 text-[#B74CBA] mr-[7px] inline-block shadow-md"
-            /> -->
+            {{ microgonToMoneyNm(controller.totalNetWorth).formatIfElse('< 1_000', '0,0.00', '0,0') }}
           </PopoverButton>
           <transition
             enter-active-class="transition ease-out duration-200"
@@ -80,16 +76,12 @@
                 class="flex flex-row shrink rounded bg-white text-sm/6 font-semibold text-gray-900 shadow-lg py-1 px-1 ring-1 ring-gray-900/20"
               >
                 <section
-                  @click="() => openWalletOverlay('mng', close)"
+                  @click="() => openWalletOverlay('mining', close)"
                   class="relative flex flex-col items-center w-80 pt-7 px-6 hover:bg-argon-menu-hover/70 cursor-pointer"
                 >
                   <header class="text-lg font-bold text-gray-900">Mining Resources</header>
                   <div class="relative">
                     <MiningWalletIcon class="w-12 h-12 mt-5" />
-                    <!-- <AlertIcon
-                      v-if="!mngWalletIsFullyFunded"
-                      class="text-argon-button absolute top-7 -left-1 w-4 h-4"
-                    /> -->
                   </div>
                   <span class="text-4xl font-bold mt-5">
                     <span>
@@ -104,63 +96,55 @@
                   <div class="relative text-sm text-gray-500 flex flex-row w-full justify-center pb-8">
                     <CopyToClipboard
                       @click.stop
-                      :content="wallets.mngWallet.address"
+                      :content="wallets.miningWallet.address"
                       class="flex flex-row relative items-center justify-center hover:bg-white rounded-full px-6 py-1 cursor-pointer"
                     >
-                      {{ abreviateAddress(wallets.mngWallet.address) }}
+                      {{ abreviateAddress(wallets.miningWallet.address) }}
                       <CopyIcon class="w-3 h-3 ml-1 inline-block" />
                       <template #copied>
                         <div
                           class="absolute top-0 left-0 w-full h-full pointer-events-none flex flex-row items-center justify-center"
                         >
-                          {{ abreviateAddress(wallets.mngWallet.address) }}
+                          {{ abreviateAddress(wallets.miningWallet.address) }}
                           <CopyIcon class="w-3 h-3 ml-1 inline-block" />
                         </div>
                       </template>
                     </CopyToClipboard>
-                    <!-- <div
-                      v-if="!mngWalletIsFullyFunded"
-                      @click.stop="() => openFundMiningWalletOverlay(close)"
-                      class="absolute flex flex-row top-2 left-0 border border-fuchsia-950 shadow-md items-center justify-center whitespace-nowrap uppercase text-white bg-argon-button hover:bg-argon-button-hover rounded px-5 w-full text-center py-1 text-sm"
-                    >
-                      <AlertIcon class="w-4 h-4 text-white mr-2 inline-block" />
-                      <span class="relative top-[0.4px]">Funds Are Low</span>
-                    </div> -->
                   </div>
                   <ul class="relative flex flex-col items-center whitespace-nowrap w-full mb-4">
                     <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
-                      <div>{{ numeral(wallets.mngWallet.availableMicrogons).format('0,0.[00]') }} ARGN</div>
+                      <div>{{ numeral(wallets.miningWallet.availableMicrogons).format('0,0.[00]') }} ARGNs</div>
                       <div>
                         {{ currency.symbol
-                        }}{{ microgonToMoneyNm(wallets.mngWallet.availableMicrogons).format('0,0.00') }}
+                        }}{{ microgonToMoneyNm(wallets.miningWallet.availableMicrogons).format('0,0.00') }}
                       </div>
                     </li>
                     <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
-                      <div>{{ numeral(wallets.mngWallet.availableMicronots).format('0,0.[00]') }} ARGNOT</div>
+                      <div>{{ numeral(wallets.miningWallet.availableMicronots).format('0,0.[00]') }} ARGNOTs</div>
                       <div>
                         {{ currency.symbol
-                        }}{{ micronotToMoneyNm(wallets.mngWallet.availableMicronots).format('0,0.00') }}
+                        }}{{ micronotToMoneyNm(wallets.miningWallet.availableMicronots).format('0,0.00') }}
                       </div>
                     </li>
                     <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
-                      <div>{{ numeral(wallets.mngWallet.reservedMicronots).format('0,0.[00]') }} Locked ARGNOT</div>
+                      <div>{{ numeral(wallets.miningWallet.reservedMicronots).format('0,0.[00]') }} Locked ARGNOTs</div>
                       <div>
                         {{ currency.symbol
-                        }}{{ micronotToMoneyNm(wallets.mngWallet.reservedMicronots).format('0,0.00') }}
+                        }}{{ micronotToMoneyNm(wallets.miningWallet.reservedMicronots).format('0,0.00') }}
                       </div>
                     </li>
                     <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
-                      <div>{{ numeral(wallets.mngWallet.reservedMicronots).format('0,0') }} Mining Seats</div>
+                      <div>{{ numeral(stats.myMiningBids.bidCount).format('0,0') }} Mining Bids</div>
                       <div>
                         {{ currency.symbol
-                        }}{{ micronotToMoneyNm(wallets.mngWallet.reservedMicronots).format('0,0.00') }}
+                        }}{{ micronotToMoneyNm(wallets.miningWallet.reservedMicronots).format('0,0.00') }}
                       </div>
                     </li>
                     <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
-                      <div>{{ numeral(wallets.mngWallet.reservedMicronots).format('0,0') }} Mining Bids</div>
+                      <div>{{ numeral(stats.myMiningSeats.seatCount).format('0,0') }} Mining Seats</div>
                       <div>
                         {{ currency.symbol
-                        }}{{ micronotToMoneyNm(wallets.mngWallet.reservedMicronots).format('0,0.00') }}
+                        }}{{ microgonToMoneyNm(wallets.miningSeatValue).format('0,0.00') }}
                       </div>
                     </li>
                   </ul>
@@ -169,7 +153,7 @@
                 <div class="bg-slate-400/30 w-[1px] h-full mx-1"></div>
 
                 <section
-                  @click="() => openWalletOverlay('vlt', close)"
+                  @click="() => openWalletOverlay('vaulting', close)"
                   class="relative flex flex-col items-center w-80 pt-7 px-6 hover:bg-argon-menu-hover/70 cursor-pointer"
                 >
                   <header class="text-lg font-bold text-gray-900">Vaulting Resources</header>
@@ -178,25 +162,25 @@
                   </div>
                   <span class="text-4xl font-bold mt-5">
                     <span>
-                      {{ currency.symbol }}{{ microgonToMoneyNm(vltWalletTotalValue).format('0,0.00').split('.')[0] }}
+                      {{ currency.symbol }}{{ microgonToMoneyNm(vaultingWalletTotalValue).format('0,0.00').split('.')[0] }}
                     </span>
                     <span class="opacity-50">
-                      .{{ microgonToMoneyNm(vltWalletTotalValue).format('0.00').split('.')[1] }}
+                      .{{ microgonToMoneyNm(vaultingWalletTotalValue).format('0.00').split('.')[1] }}
                     </span>
                   </span>
                   <div class="relative text-sm text-gray-500 flex flex-row w-full justify-center pb-8">
                     <CopyToClipboard
                       @click.stop
-                      :content="wallets.vltWallet.address"
+                      :content="wallets.vaultingWallet.address"
                       class="flex flex-row relative items-center justify-center hover:bg-white rounded-full px-6 py-1 cursor-pointer"
                     >
-                      {{ abreviateAddress(wallets.vltWallet.address) }}
+                      {{ abreviateAddress(wallets.vaultingWallet.address) }}
                       <CopyIcon class="w-3 h-3 ml-1 inline-block" />
                       <template #copied>
                         <div
                           class="absolute top-0 left-0 w-full h-full pointer-events-none flex flex-row items-center justify-center"
                         >
-                          {{ abreviateAddress(wallets.vltWallet.address) }}
+                          {{ abreviateAddress(wallets.vaultingWallet.address) }}
                           <CopyIcon class="w-3 h-3 ml-1 inline-block" />
                         </div>
                       </template>
@@ -204,26 +188,26 @@
                   </div>
                   <ul class="relative flex flex-col items-center whitespace-nowrap w-full mb-4">
                     <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
-                      <div>{{ numeral(wallets.vltWallet.availableMicrogons).format('0,0.[00]') }} ARGN</div>
+                      <div>{{ numeral(wallets.vaultingWallet.availableMicrogons).format('0,0.[00]') }} ARGNs</div>
                       <div>
                         {{ currency.symbol
-                        }}{{ microgonToMoneyNm(wallets.vltWallet.availableMicrogons).format('0,0.00') }}
+                        }}{{ microgonToMoneyNm(wallets.vaultingWallet.availableMicrogons).format('0,0.00') }}
                       </div>
                     </li>
                     <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">
-                      <div>{{ numeral(wallets.vltWallet.availableMicronots).format('0,0.[00]') }} ARGNOT</div>
+                      <div>{{ numeral(wallets.vaultingWallet.availableMicronots).format('0,0.[00]') }} ARGNOTs</div>
                       <div>
                         {{ currency.symbol
-                        }}{{ micronotToMoneyNm(wallets.vltWallet.availableMicronots).format('0,0.00') }}
+                        }}{{ micronotToMoneyNm(wallets.vaultingWallet.availableMicronots).format('0,0.00') }}
                       </div>
                     </li>
                     <li
                       class="flex flex-row items-center justify-between w-full border-t border-b border-gray-600/20 py-2"
                     >
-                      <div>{{ numeral(wallets.vltWallet.availableMicrogons).format('0,0.[00]') }} Vaulted ARGN</div>
+                      <div>{{ numeral(wallets.vaultingWallet.availableMicrogons).format('0,0.[00]') }} Vaulted ARGNs</div>
                       <div>
                         {{ currency.symbol
-                        }}{{ microgonToMoneyNm(wallets.vltWallet.availableMicrogons).format('0,0.00') }}
+                        }}{{ microgonToMoneyNm(wallets.vaultingWallet.availableMicrogons).format('0,0.00') }}
                       </div>
                     </li>
                   </ul>
@@ -265,7 +249,7 @@
               <ul AccountMenu>
                 <li @click="() => openConfigureMiningBotOverlay(close)" class="pt-3 pb-3">
                   <header v-if="!config.hasSavedBiddingRules">Create Personal Mining Bot</header>
-                  <header v-else>Configure Mining Bot Settings</header>
+                  <header v-else>Update Personal Mining Bot</header>
                   <p>
                     Set bid pricing and other required
                     <br />
@@ -305,16 +289,16 @@ import { useController } from '../stores/controller';
 import { useConfig, NETWORK_NAME } from '../stores/config';
 import { useWallets } from '../stores/wallets';
 import { useCurrency } from '../stores/currency';
+import { useStats } from '../stores/stats';
 import WindowControls from '../tauri-controls/WindowControls.vue';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { abreviateAddress } from '../lib/Utils';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import CurrencyMenu from './CurrencyMenu.vue';
 import MiningWalletIcon from '../assets/wallets/mining.svg?component';
 import VaultingWalletIcon from '../assets/wallets/vault.svg?component';
 import CopyIcon from '../assets/copy.svg?component';
 import ConfigIcon from '../assets/config.svg?component';
-import AlertIcon from '../assets/alert.svg?component';
 import CopyToClipboard from './CopyToClipboard.vue';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
 
@@ -322,47 +306,42 @@ const controller = useController();
 const config = useConfig();
 const wallets = useWallets();
 const currency = useCurrency();
+const stats = useStats();
 const { microgonToMoneyNm, micronotToMoneyNm } = createNumeralHelpers(currency);
 
 const currencyMenuIsOpen = Vue.ref(false);
 const walletControlPopoverIsOpen = Vue.ref(false);
 const walletControlPopoverElem = Vue.ref<{ el: HTMLElement | null }>({ el: null });
 
-const mngWalletIsFullyFunded = Vue.computed(() => {
-  if (!config.biddingRules) return false;
+const vaultingWalletTotalValue = Vue.computed(() => {
   return (
-    wallets.mngWallet.availableMicrogons >= config.biddingRules.requiredMicrogons &&
-    wallets.mngWallet.availableMicronots >= config.biddingRules.requiredMicronots
+    wallets.vaultingWallet.availableMicrogons + currency.micronotToMicrogon(wallets.vaultingWallet.availableMicronots)
   );
 });
 
-const vltWalletTotalValue = Vue.computed(() => {
-  return wallets.vltWallet.availableMicrogons + currency.micronotToMicrogon(wallets.vltWallet.availableMicronots);
-});
-
-function openWalletOverlay(walletId: 'mng' | 'llb' | 'vlt', closeFn: () => void) {
-  emitter.emit('openWalletOverlay', { walletId, screen: 'main' });
+function openWalletOverlay(walletId: 'mining' | 'vaulting', closeFn: () => void) {
+  basicEmitter.emit('openWalletOverlay', { walletId, screen: 'main' });
   if (closeFn) {
     closeFn();
   }
 }
 
 function openConfigureStabilizationVaultOverlay(close: () => void) {
-  emitter.emit('openConfigureStabilizationVaultOverlay');
+  basicEmitter.emit('openConfigureStabilizationVaultOverlay');
   if (close) {
     close();
   }
 }
 
 function openConfigureMiningBotOverlay(close: () => void) {
-  emitter.emit('openConfigureMiningBotOverlay');
+  basicEmitter.emit('openConfigureMiningBotOverlay');
   if (close) {
     close();
   }
 }
 
 function openSecuritySettingsOverlay(close: () => void) {
-  emitter.emit('openSecuritySettingsOverlay');
+  basicEmitter.emit('openSecuritySettingsOverlay');
   if (close) {
     close();
   }

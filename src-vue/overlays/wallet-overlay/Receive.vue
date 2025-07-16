@@ -21,7 +21,7 @@
             You can use any polkadot/substrate compatible wallet to add funds to your Commander account. Just scan the
             QR code shown on the right, or copy and paste the address that's printed below it.
           </p>
-          <p v-if="props.walletId === 'mng'" class="mt-2 font-light">
+          <p v-if="props.walletId === 'mining'" class="mt-2 font-light">
             Based on the rules you configured, your Mining Bot needs the following tokens in order to win seats:
           </p>
           <p v-else class="mt-2 font-light">
@@ -88,7 +88,7 @@ import numeral, { createNumeralHelpers } from '../../lib/numeral';
 
 const props = defineProps({
   walletId: {
-    type: String as Vue.PropType<'mng' | 'llb' | 'vlt'>,
+    type: String as Vue.PropType<'mining' | 'vaulting'>,
     required: true,
   },
 });
@@ -113,36 +113,36 @@ function stillNeeded(amount: bigint, walletValue: bigint) {
 }
 
 const requiredMicrogons = Vue.computed(() => {
-  if (props.walletId === 'mng') {
+  if (props.walletId === 'mining') {
     return config.biddingRules?.requiredMicrogons || 0n;
-  } else if (props.walletId === 'vlt') {
+  } else if (props.walletId === 'vaulting') {
     return config.vaultingRules?.requiredMicrogons || 0n;
   }
   return 0n;
 });
 
 const requiredMicronots = Vue.computed(() => {
-  if (props.walletId === 'mng') {
+  if (props.walletId === 'mining') {
     return config.biddingRules?.requiredMicronots || 0n;
-  } else if (props.walletId === 'vlt') {
+  } else if (props.walletId === 'vaulting') {
     return config.vaultingRules?.requiredMicronots || 0n;
   }
   return 0n;
 });
 
 const walletName = Vue.computed(() => {
-  if (props.walletId === 'mng') {
+  if (props.walletId === 'mining') {
     return 'Mining';
-  } else if (props.walletId === 'vlt') {
+  } else if (props.walletId === 'vaulting') {
     return 'Vaulting';
   }
 });
 
 const wallet = Vue.computed(() => {
-  if (props.walletId === 'mng') {
-    return wallets.mngWallet;
-  } else if (props.walletId === 'vlt') {
-    return wallets.vltWallet;
+  if (props.walletId === 'mining') {
+    return wallets.miningWallet;
+  } else if (props.walletId === 'vaulting') {
+    return wallets.vaultingWallet;
   } else {
     return {
       address: '',
@@ -154,12 +154,10 @@ const wallet = Vue.computed(() => {
 
 async function loadQRCode() {
   let address = '';
-  if (props.walletId === 'mng') {
-    address = wallets.mngWallet.address;
-  } else if (props.walletId === 'llb') {
-    address = wallets.llbWallet.address;
-  } else if (props.walletId === 'vlt') {
-    address = wallets.vltWallet.address;
+  if (props.walletId === 'mining') {
+    address = wallets.miningWallet.address;
+  } else if (props.walletId === 'vaulting') {
+    address = wallets.vaultingWallet.address;
   }
   qrCode.value = await QRCode.toDataURL(address);
 }

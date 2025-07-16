@@ -1,5 +1,5 @@
 import { type ComputedRef } from 'vue';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 
 export function showTooltip(
   event: MouseEvent,
@@ -13,27 +13,27 @@ export function showTooltip(
 
   const targetRect = targetElem.getBoundingClientRect();
 
-  let width = 'auto';
-  let horizontalPosition = 'center';
-  let verticalPosition = 'above';
+  let width: 'parent' | 'auto' | 'auto-plus' = 'auto';
+  let horizontalPosition: 'left' | 'center' | 'right' = 'center';
+  let verticalPosition: 'above' | 'below' = 'above';
 
   if (flags.width == 'parent') {
     width = 'parent';
   }
 
-  emitter.emit('showTooltip', {
+  basicEmitter.emit('showTooltip', {
     parentLeft: targetRect.left,
     parentTop: targetRect.top,
     parentWidth: targetRect.width,
     parentHeight: targetRect.height,
     label,
     width,
-    widthPlus: flags.widthPlus,
+    widthPlus: flags.widthPlus || 0,
     horizontalPosition,
     verticalPosition,
   });
 }
 
 export function hideTooltip() {
-  emitter.emit('hideTooltip');
+  basicEmitter.emit('hideTooltip');
 }

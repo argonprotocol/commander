@@ -5,6 +5,7 @@ import { IConfigServerDetails } from '../interfaces/IConfig';
 export class SSH {
   private static config: Config;
   private static isConnected = false;
+  private static isConnectingPromise?: Promise<void>;
 
   public static setConfig(config: Config): void {
     this.config = config;
@@ -88,18 +89,25 @@ export class SSH {
   // PRIVATE METHODS //////////////////////////////
 
   private static async openConnection(): Promise<void> {
-    await this.config.isLoadedPromise;
-    const sshConfig = {
-      host: this.config.serverDetails.ipAddress,
-      username: this.config.serverDetails.sshUser,
-      privateKey: this.config.serverDetails.sshPrivateKey,
-    };
-    if (!sshConfig.host) {
-      throw new Error('No SSH host config provided');
+    if (this.isConnectingPromise) {
+      return await this.isConnectingPromise;
     }
-    console.log('CREATING CONNECTION', sshConfig);
-    await invoke('open_ssh_connection', sshConfig);
-    this.isConnected = true;
+
+    this.isConnectingPromise = new Promise(async resolve => {
+      await this.config.isLoadedPromise;
+      const sshConfig = {
+        host: this.config.serverDetails.ipAddress,
+        username: this.config.serverDetails.sshUser,
+        privateKey: this.config.serverDetails.sshPrivateKey,
+      };
+      if (!sshConfig.host) {
+        throw new Error('No SSH host config provided');
+      }
+      await invoke('open_ssh_connection', sshConfig);
+      this.isConnected = true;
+      resolve();
+      this.isConnectingPromise = undefined;
+    });
   }
 }
 

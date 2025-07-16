@@ -3,9 +3,9 @@
   <BlankSlate v-if="!config.hasSavedBiddingRules" />
   <FinalSetupChecklist v-else-if="!config.isServerReadyToInstall" />
   <CloudMachineIsInstalling v-else-if="!config.isServerInstalled" />
+  <StartingBot v-else-if="!bot.isReady" />
   <Dashboard v-else-if="config.hasMiningSeats" />
-  <StartingBot v-else-if="!stats.isReady && !stats.isBotWaitingForBiddingRules" />
-  <FirstAuction v-else-if="config.isServerReadyForBidding" />
+  <FirstAuction v-else />
 </template>
 
 <script setup lang="ts">
@@ -16,8 +16,8 @@ import FirstAuction from './mining-panel/FirstAuction.vue';
 import Dashboard from './mining-panel/Dashboard.vue';
 import StartingBot from './mining-panel/StartingBot.vue';
 import { useConfig } from '../stores/config';
-import { useStats } from '../stores/stats';
+import { useBot } from '../stores/bot';
 
 const config = useConfig();
-const stats = useStats();
+const bot = useBot();
 </script>

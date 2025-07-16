@@ -7,10 +7,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { BidAmountAdjustmentType, BidAmountFormulaType } from '@argonprotocol/commander-calculator/src/IBiddingRules';
-import { type IOption } from '../../components/InputMenu.vue';
 import InputArgon from '../../components/InputArgon.vue';
-import { getCalculator } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
 
 const config = useConfig();

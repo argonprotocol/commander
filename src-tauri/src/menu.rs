@@ -1,5 +1,5 @@
 use tauri::{App, AppHandle, Manager, Runtime};
-use tauri::menu::{MenuBuilder, SubmenuBuilder, MenuItemBuilder, PredefinedMenuItem};
+use tauri::menu::{MenuBuilder, SubmenuBuilder, MenuItemBuilder};
 
 pub fn create_menu<R: Runtime>(app: &App<R>) -> Result<tauri::menu::Menu<R>, tauri::Error> {
     

@@ -6,6 +6,8 @@
     :dragBy="dragBy"
     :dragByMin="dragByMin"
     :disabled="props.disabled"
+    :min="min"
+    :max="max"
     :alwaysShowDecimals="props.alwaysShowDecimals"
     :options="props.options"
     :model-value="modelValue"
@@ -50,6 +52,16 @@ const prefix = Vue.computed(() => {
 
 const modelValue = Vue.computed(() => {
   return BigNumber(props.modelValue).dividedBy(MICROGONS_PER_ARGON).toNumber();
+});
+
+const min = Vue.computed<number | undefined>(() => {
+  if (props.min === undefined) return undefined;
+  return BigNumber(props.min).dividedBy(MICROGONS_PER_ARGON).toNumber();
+});
+
+const max = Vue.computed<number | undefined>(() => {
+  if (props.max === undefined) return undefined;
+  return BigNumber(props.max).dividedBy(MICROGONS_PER_ARGON).toNumber();
 });
 
 const dragBy = Vue.computed<number | undefined>(() => {

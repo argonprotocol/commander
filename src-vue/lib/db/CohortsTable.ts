@@ -122,4 +122,9 @@ export class CohortsTable extends BaseTable {
       ]),
     );
   }
+
+  async fetchCount(): Promise<number> {
+    const [result] = await this.db.sql.select<[{ count: number }]>('SELECT COUNT(*) as count FROM cohorts');
+    return result.count;
+  }
 }

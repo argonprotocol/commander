@@ -49,7 +49,7 @@
 import * as Vue from 'vue';
 import dayjs from 'dayjs';
 import dayjsUtc from 'dayjs/plugin/utc';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 
 dayjs.extend(dayjsUtc);
 
@@ -74,7 +74,7 @@ const arrowTranslateX = Vue.ref('0');
 
 const label = Vue.ref('');
 
-emitter.on('showTooltip', (incoming: any) => {
+basicEmitter.on('showTooltip', (incoming: any) => {
   isOpen.value = true;
   label.value = incoming.label;
 
@@ -110,7 +110,7 @@ emitter.on('showTooltip', (incoming: any) => {
   }
 });
 
-emitter.on('hideTooltip', () => {
+basicEmitter.on('hideTooltip', () => {
   isOpen.value = false;
 });
 </script>

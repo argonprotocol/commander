@@ -65,8 +65,12 @@ import CountdownClock from '../../components/CountdownClock.vue';
 import ConfettiIcon from '../../assets/confetti.svg?component';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
 import ActiveBidsActivityOverlayButton from '../../overlays/ActiveBidsActivityOverlayButton.vue';
-import { IBiddingRules, BiddingParamsHelper } from '@argonprotocol/commander-calculator';
-import emitter from '../../emitters/basic';
+import BiddingCalculator, {
+  type IBiddingRules,
+  BiddingCalculatorData,
+  BiddingParamsHelper,
+} from '@argonprotocol/commander-calculator';
+import basicEmitter from '../../emitters/basicEmitter';
 import { getMainchain } from '../../stores/mainchain';
 import { useCurrency } from '../../stores/currency';
 import { useStats } from '../../stores/stats';
@@ -86,7 +90,9 @@ const startOfAuctionClosing: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
 const startOfNextCohort: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
 const maxSeatCount = Vue.ref(0);
 
-const biddingParamsHelper = new BiddingParamsHelper(config.biddingRules as IBiddingRules, mainchain);
+const calculatorData = new BiddingCalculatorData(getMainchain());
+const calculator = new BiddingCalculator(calculatorData, config.biddingRules);
+const biddingParamsHelper = new BiddingParamsHelper(config.biddingRules as IBiddingRules, calculator);
 
 const maxBidPerSeat = Vue.computed(() => config.biddingRules?.maximumBidAdjustAbsolute || 0n);
 
@@ -97,7 +103,7 @@ function handleAuctionClosingTick(totalSecondsRemaining: number) {
 }
 
 function openBiddingBudgetOverlay() {
-  emitter.emit('openConfigureMiningBotOverlay');
+  basicEmitter.emit('openConfigureMiningBotOverlay');
 }
 
 Vue.onMounted(async () => {

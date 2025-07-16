@@ -1,17 +1,15 @@
 import { IBidsFile } from '@argonprotocol/commander-bot/src/storage';
-import { StatsSyncer } from './StatsSyncer';
 import { IDashboardStats } from '../interfaces/IStats';
 import { Db } from './Db';
 import { Config } from './Config';
-import { Installer } from '../stores/installer';
-import { SSH } from './SSH';
 import { bigIntMax, calculateCurrentFrameIdFromSystemTime } from '@argonprotocol/commander-calculator/src/utils';
 import { ICohortRecord } from '../interfaces/db/ICohortRecord';
+import { botEmitter } from './Bot';
+import { createPromiser, ensureOnlyOneInstance } from './Utils';
+import ICreatePromiser from '../interfaces/ICreatePromiser';
 
-let IS_INITIALIZED = false;
-
-interface IMiningSeats {
-  activeSeats: number;
+interface IMyMiningSeats {
+  seatCount: number;
   microgonsBid: bigint;
   micronotsStaked: bigint;
   microgonsMined: bigint;
@@ -21,73 +19,50 @@ interface IMiningSeats {
   micronotsToBeMined: bigint;
 }
 
+interface IMyMiningBids {
+  bidCount: number;
+  microgonsBid: bigint;
+}
+
 export class Stats {
   public currentFrameId: number;
   public cohortId: number | null;
 
-  public miningSeats: IMiningSeats;
+  public myMiningSeats: IMyMiningSeats;
+  public myMiningBids: IMyMiningBids;
+
+  public allWinningBids: IBidsFile['winningBids'];
+
   public dashboard: IDashboardStats;
   public argonActivity: any[];
   public bitcoinActivity: any[];
-  public botActivity: any[];
+  public biddingActivity: any[];
 
-  public winningBids: IBidsFile['winningBids'];
-  public myMiningBidCount: number;
-  public myMiningBidCost: bigint;
-
-  public maxSeatsPossible: number;
-  public maxSeatsReductionReason: string;
+  public isLoaded: boolean;
+  public isLoadedPromise: Promise<void>;
 
   private isLoading: boolean = false;
-  private isLoaded: boolean = false;
-  private isLoadedPromise: Promise<void>;
+  private loadedPromiser!: ICreatePromiser<void>;
 
-  public isReady: boolean;
-
-  public isBotStarting: boolean;
-  public isBotSyncing: boolean;
-  public isBotBroken: boolean;
-  public isBotWaitingForBiddingRules: boolean;
-
-  public syncProgress!: number;
-  public syncErrorType!: string | null;
-
-  private loadingFns!: { resolve: () => void; reject: (error: Error) => void };
+  private listeningCounter: number = 0;
 
   private db!: Db;
 
   private config!: Config;
-  private installer!: Installer;
   private dbPromise: Promise<Db>;
-  private syncer!: StatsSyncer;
 
-  private static isInitialized: boolean = false;
+  constructor(dbPromise: Promise<Db>, config: Config) {
+    ensureOnlyOneInstance(this.constructor);
 
-  constructor(dbPromise: Promise<Db>, config: Config, installer: Installer) {
-    if (Stats.isInitialized) {
-      console.log(new Error().stack);
-      throw new Error('Stats already initialized');
-    }
-    Stats.isInitialized = true;
-
-    this.isReady = false;
-    this.isBotStarting = false;
-    this.isBotSyncing = false;
-    this.isBotBroken = false;
-    this.isBotWaitingForBiddingRules = false;
-
-    this.maxSeatsReductionReason = '';
-    this.maxSeatsPossible = 10; // TODO: instead of hardcoded 10, fetch from chain
+    this.isLoaded = false;
 
     this.cohortId = null;
-    this.winningBids = [];
-    this.myMiningBidCount = 0;
-    this.myMiningBidCost = 0n;
+    this.allWinningBids = [];
 
     this.currentFrameId = calculateCurrentFrameIdFromSystemTime();
 
-    this.miningSeats = {
-      activeSeats: 0,
+    this.myMiningSeats = {
+      seatCount: 0,
       microgonsBid: 0n,
       micronotsStaked: 0n,
       microgonsMined: 0n,
@@ -95,6 +70,11 @@ export class Stats {
       microgonsMinted: 0n,
       microgonsToBeMined: 0n,
       micronotsToBeMined: 0n,
+    };
+
+    this.myMiningBids = {
+      bidCount: 0,
+      microgonsBid: 0n,
     };
 
     this.dashboard = {
@@ -114,109 +94,123 @@ export class Stats {
 
     this.argonActivity = [];
     this.bitcoinActivity = [];
-    this.botActivity = [];
+    this.biddingActivity = [];
 
     this.dbPromise = dbPromise;
     this.config = config;
-    this.installer = installer;
 
-    this.isLoadedPromise = new Promise((resolve, reject) => {
-      this.loadingFns = { resolve, reject };
-    });
+    this.loadedPromiser = createPromiser<void>();
+    this.isLoadedPromise = this.loadedPromiser.promise;
   }
 
   public async load() {
     if (this.isLoading || this.isLoaded) return;
     this.isLoading = true;
 
-    console.log('Loading stats...');
-    console.log('Stats is waiting for config');
     await this.config.isLoadedPromise;
-    console.log('Stats is waiting for installer');
-    await this.installer.isLoadedPromise;
     this.db = await this.dbPromise;
 
-    while (!this.isRunnable) {
-      console.log('Stats is waiting for server to be ready...');
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+    botEmitter.on('updated-cohort-data', async (cohortId: number) => {
+      if (!this.isActive()) return;
 
-    console.info('LOADING Stats...');
-    this.syncer = await new StatsSyncer(this, this.config, this.db);
+      if (this.cohortId && this.cohortId !== cohortId) return;
+      this.cohortId = cohortId;
+
+      await this.updateDashboard();
+      await this.updateMiningSeats();
+      await this.updateBitcoinActivity();
+      await this.updateArgonActivity();
+      await this.updateBiddingActivity();
+    });
+
+    botEmitter.on('updated-bids-data', async (allWinningBids: IBidsFile['winningBids']) => {
+      if (!this.isActive()) return;
+      this.updateBiddingData(allWinningBids);
+    });
+
+    botEmitter.on('updated-bitcoin-activity', async () => {
+      if (!this.isActive()) return;
+      this.updateBitcoinActivity();
+    });
+
+    botEmitter.on('updated-argon-activity', async () => {
+      if (!this.isActive()) return;
+      this.updateArgonActivity();
+    });
+
+    botEmitter.on('updated-bidding-activity', async () => {
+      if (!this.isActive()) return;
+      this.updateBiddingActivity();
+    });
+
+    await this.updateMiningSeats();
+    await this.updateBitcoinActivity();
+    await this.updateArgonActivity();
+    await this.updateBiddingActivity();
 
     this.isLoaded = true;
     this.isLoading = false;
-    this.loadingFns.resolve();
+    this.loadedPromiser.resolve();
   }
 
   public async start(): Promise<void> {
-    await this.isLoadedPromise;
-    console.log('STARTING STATS');
+    this.listeningCounter++;
+    if (this.listeningCounter > 1) return;
 
-    this.syncer.on({
-      updateStats: async () => {
-        console.log('UPDATING STATS');
-        this.cohortId ??= await this.fetchLatestCohortIdFromDb();
-        this.dashboard = await this.fetchDashboardFromDb();
-        this.miningSeats = await this.fetchMiningSeatsFromDb();
-        this.argonActivity = await this.db.argonActivitiesTable.fetchLastFiveRecords();
-        this.bitcoinActivity = await this.db.bitcoinActivitiesTable.fetchLastFiveRecords();
-        this.botActivity = await this.db.botActivitiesTable.fetchLastFiveRecords();
-      },
-      refreshCohortData: async (cohortId: number) => {
-        if (this.cohortId && this.cohortId !== cohortId) return;
-        this.cohortId = cohortId;
-        this.dashboard = await this.fetchDashboardFromDb();
-      },
-      updateWinningBids: async (winningBids: IBidsFile['winningBids']) => {
-        this.winningBids = winningBids;
-        const myBids = winningBids.filter(bid => bid.subAccountIndex !== undefined);
-        this.myMiningBidCount = myBids.length;
-        this.myMiningBidCost = myBids.reduce((acc, bid) => acc + (bid.microgonsBid || 0n), 0n);
-      },
-      updateArgonActivity: async () => {
-        this.argonActivity = await this.db.argonActivitiesTable.fetchLastFiveRecords();
-      },
-      updateBitcoinActivity: async () => {
-        this.bitcoinActivity = await this.db.bitcoinActivitiesTable.fetchLastFiveRecords();
-      },
-      updateBotActivity: async () => {
-        this.botActivity = await this.db.botActivitiesTable.fetchLastFiveRecords();
-      },
-    });
-  }
+    this.cohortId ??= await this.fetchLatestCohortIdFromDb();
+    if (!this.cohortId) return;
 
-  public async restartBot() {
-    await SSH.stopBotDocker();
-    await SSH.startBotDocker();
-    await new Promise(resolve => setTimeout(resolve, 5_000));
-    this.isReady = false;
-    this.isBotStarting = false;
-    this.isBotSyncing = false;
-    this.isBotBroken = false;
-    this.isBotWaitingForBiddingRules = false;
-    this.syncProgress = 0;
-    this.maxSeatsPossible = 10;
-    this.maxSeatsReductionReason = '';
-    await this.syncer.reload();
+    await this.loadedPromiser.promise;
+    await Promise.all([
+      this.updateDashboard(),
+      this.updateMiningSeats(),
+      this.updateBitcoinActivity(),
+      this.updateArgonActivity(),
+      this.updateBiddingActivity(),
+      this.updateBiddingData(this.allWinningBids),
+      this.updateBitcoinActivity(),
+      this.updateArgonActivity(),
+      this.updateBiddingActivity(),
+    ]);
   }
 
   public async stop(): Promise<void> {
-    console.log('STOPPING STATS');
-    await this.syncer?.off();
+    this.listeningCounter--;
   }
 
-  public get isRunnable(): boolean {
-    return (
-      this.config.isServerReadyToInstall &&
-      this.config.isServerUpToDate &&
-      this.config.isServerInstalled &&
-      !this.config.isWaitingForUpgradeApproval
-    );
+  public isActive(): boolean {
+    return this.listeningCounter > 0;
   }
 
-  private async fetchMiningSeatsFromDb(): Promise<IMiningSeats> {
-    let activeSeats = 0;
+  private async updateDashboard(): Promise<void> {
+    this.dashboard = await this.fetchDashboardFromDb();
+  }
+
+  private async updateMiningSeats(): Promise<void> {
+    this.myMiningSeats = await this.fetchMiningSeatsFromDb();
+  }
+
+  private async updateBitcoinActivity(): Promise<void> {
+    this.bitcoinActivity = await this.db.bitcoinActivitiesTable.fetchLastFiveRecords();
+  }
+
+  private async updateArgonActivity(): Promise<void> {
+    this.argonActivity = await this.db.argonActivitiesTable.fetchLastFiveRecords();
+  }
+
+  private async updateBiddingActivity(): Promise<void> {
+    this.biddingActivity = await this.db.botActivitiesTable.fetchLastFiveRecords();
+  }
+
+  private async updateBiddingData(allWinningBids: IBidsFile['winningBids']): Promise<void> {
+    this.allWinningBids = allWinningBids;
+    const myWinningBids = allWinningBids.filter(bid => bid.subAccountIndex !== undefined);
+    this.myMiningBids.bidCount = myWinningBids.length;
+    this.myMiningBids.microgonsBid = myWinningBids.reduce((acc, bid) => acc + (bid.microgonsBid || 0n), 0n);
+  }
+
+  private async fetchMiningSeatsFromDb(): Promise<IMyMiningSeats> {
+    let seatCount = 0;
     let microgonsBid = 0n;
     let micronotsStaked = 0n;
     let microgonsMined = 0n;
@@ -232,7 +226,7 @@ export class Stats {
       // factor = (100 - progress) / 100, scaled by 100000 for 3 decimal precision
       const remainingRewards = this.calculateRemainingRewardsToBeMined(cohort);
 
-      activeSeats += cohort.seatsWon;
+      seatCount += cohort.seatsWon;
       microgonsBid += cohort.microgonsBid * BigInt(cohort.seatsWon);
       micronotsStaked += cohort.micronotsStaked * BigInt(cohort.seatsWon);
       microgonsToBeMined += remainingRewards.microgons * BigInt(cohort.seatsWon);
@@ -248,7 +242,7 @@ export class Stats {
     }
 
     return {
-      activeSeats,
+      seatCount,
       microgonsBid,
       micronotsStaked,
       microgonsMined,

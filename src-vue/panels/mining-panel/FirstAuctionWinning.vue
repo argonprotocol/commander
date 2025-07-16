@@ -10,16 +10,16 @@
       <div class="text-center mb-5 uppercase text-base flex flex-row justify-center items-center">
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
         <div class="whitespace-nowrap px-5 text-gray-500">
-          YOU ARE IN BID POSITION{{ seatPositions.length > 1 ? 'S' : '' }}
+          YOU ARE IN BID POSITION{{ bidPositions.length > 1 ? 'S' : '' }}
         </div>
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
       </div>
       <div class="flex flex-col items-center justify-center min-h-[75px] fade-in-out">
-        <div v-if="seatPositions.length" :class="[priceTextSize, 'text-center text-argon-600 font-bold']">
+        <div v-if="bidPositions.length" :class="[priceTextSize, 'text-center text-argon-600 font-bold']">
           {{
-            seatPositions.slice(0, -1).join(', ') +
-            (seatPositions.length > 1 ? ' & ' : '') +
-            seatPositions[seatPositions.length - 1]
+            bidPositions.slice(0, -1).join(', ') +
+            (bidPositions.length > 1 ? ' & ' : '') +
+            bidPositions[bidPositions.length - 1]
           }}
         </div>
         <div v-else class="text-center text-7xl text-argon-600 font-bold">--- --- --- ---</div>
@@ -27,12 +27,12 @@
       <div class="text-center mt-6 mb-5 uppercase text-base flex flex-row justify-center items-center">
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
         <div class="whitespace-nowrap px-5 text-gray-500">
-          AT A {{ seatPositions.length ? 'COMBINED' : 'TOTAL' }} PRICE OF
+          AT A {{ bidPositions.length ? 'COMBINED' : 'TOTAL' }} PRICE OF
         </div>
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
       </div>
       <div class="flex flex-col items-center justify-center min-h-[75px] fade-in-out">
-        <div v-if="seatPositions.length" :class="[priceTextSize, 'text-center text-argon-600 font-bold']">
+        <div v-if="bidPositions.length" :class="[priceTextSize, 'text-center text-argon-600 font-bold']">
           {{ currency.symbol }}{{ microgonToMoneyNm(currentBidPrice).format('0,0') }}
         </div>
         <div v-else class="text-center text-7xl text-argon-600 font-bold">{{ currency.symbol }}--.--</div>
@@ -47,21 +47,20 @@
             @tick="handleAuctionClosingTick"
             v-slot="{ hours, minutes, seconds }"
           >
-            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},</template>
-            <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and</template>
-            {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
+            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }}, </template>
+            <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and </template>
+            {{ seconds }} second{{ seconds > 1 ? 's' : '' }}.
           </CountdownClock>
         </template>
         <template v-else-if="startOfNextCohort != null">
           This auction will begin closing in
           <CountdownClock :time="startOfNextCohort" v-slot="{ hours, minutes, seconds }">
-            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},</template>
-            <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and</template>
-            {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
+            <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }}, </template>
+            <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and </template>
+            {{ seconds }} second{{ seconds > 1 ? 's' : '' }}.
           </CountdownClock>
-          .
           <br />
-          Your account allows for a total bidding budget of of {{ currency.symbol
+          Your account allows for a total bidding budget of {{ currency.symbol
           }}{{ microgonToMoneyNm(totalBiddingBudget).format('0,0') }} if needed.
         </template>
       </p>
@@ -79,8 +78,12 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { useConfig } from '../../stores/config';
 import { useCurrency } from '../../stores/currency';
-import { IBiddingRules, BiddingParamsHelper } from '@argonprotocol/commander-calculator';
-import { IWinningBid } from '@argonprotocol/commander-bot/src/storage';
+import BiddingCalculator, {
+  type IBiddingRules,
+  BiddingCalculatorData,
+  BiddingParamsHelper,
+} from '@argonprotocol/commander-calculator';
+import { type IWinningBid } from '@argonprotocol/commander-bot/src/storage.ts';
 import CountdownClock from '../../components/CountdownClock.vue';
 import ConfettiIcon from '../../assets/confetti.svg?component';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
@@ -105,21 +108,25 @@ const totalBiddingBudget = Vue.ref(0n);
 const seatCount = Vue.ref(100);
 
 const currentBidPrice = Vue.computed(() => {
-  const myBids = stats.winningBids.filter((bid: IWinningBid) => bid.subAccountIndex !== undefined);
+  const myBids = stats.allWinningBids.filter((bid: IWinningBid) => bid.subAccountIndex !== undefined);
   const total = myBids.reduce((acc: bigint, bid: IWinningBid) => acc + (bid.microgonsBid ?? 0n), 0n);
   return total / BigInt(seatCount.value);
 });
 
-const seatPositions = Vue.computed(() => {
-  const myBids = stats.winningBids.filter((bid: IWinningBid) => bid.subAccountIndex !== undefined);
+const bidPositions = Vue.computed(() => {
+  console.log('stats.winningBids', stats.allWinningBids);
+  const myBids = stats.allWinningBids.filter((bid: IWinningBid) => bid.subAccountIndex !== undefined);
   return myBids.map((bid: IWinningBid) => (bid.bidPosition ?? 0) + 1);
 });
 
 const priceTextSize = Vue.computed(() => {
-  return seatPositions.value.length > 8 ? 'text-6xl' : 'text-7xl';
+  return bidPositions.value.length > 8 ? 'text-6xl' : 'text-7xl';
 });
 
-const biddingParamsHelper = new BiddingParamsHelper(config.biddingRules as IBiddingRules, getMainchain());
+const calculatorData = new BiddingCalculatorData(getMainchain());
+const calculator = new BiddingCalculator(calculatorData, config.biddingRules);
+const biddingParamsHelper = new BiddingParamsHelper(config.biddingRules as IBiddingRules, calculator);
+
 const startOfAuctionClosing: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
 const startOfNextCohort: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
 
