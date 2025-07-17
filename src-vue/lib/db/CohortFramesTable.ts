@@ -14,7 +14,7 @@ export class CohortFramesTable extends BaseTable {
     microgonsMinted: bigint,
   ): Promise<void> {
     await this.db.sql.execute(
-      'INSERT OR REPLACE INTO cohort_frames (frameId, cohortId, blocksMined, micronotsMined, microgonsMined, microgonsMinted) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT OR REPLACE INTO CohortFrames (frameId, cohortId, blocksMined, micronotsMined, microgonsMined, microgonsMinted) VALUES (?, ?, ?, ?, ?, ?)',
       [
         frameId,
         cohortId,
@@ -27,7 +27,7 @@ export class CohortFramesTable extends BaseTable {
   }
 
   async fetchActiveCohortFrames(currentFrameId: number): Promise<ICohortFrameRecord[]> {
-    const records = await this.db.sql.select<ICohortFrameRecord[]>('SELECT * FROM cohort_frames WHERE frameId >= ?', [
+    const records = await this.db.sql.select<ICohortFrameRecord[]>('SELECT * FROM CohortFrames WHERE frameId >= ?', [
       currentFrameId - 10,
     ]);
     return convertSqliteBigInts(records, this.bigIntFields);
@@ -40,7 +40,7 @@ export class CohortFramesTable extends BaseTable {
         COALESCE(sum(micronotsMined), 0) as totalMicronotsMined,
         COALESCE(sum(microgonsMined), 0) as totalMicrogonsMined,
         COALESCE(sum(microgonsMinted), 0) as totalMicrogonsMinted
-      FROM cohort_frames`,
+      FROM CohortFrames`,
     );
 
     const results = rawResults;
@@ -59,7 +59,7 @@ export class CohortFramesTable extends BaseTable {
         COALESCE(sum(micronotsMined), 0) as totalMicronotsMined,
         COALESCE(sum(microgonsMined), 0) as totalMicrogonsMined,
         COALESCE(sum(microgonsMinted), 0) as totalMicrogonsMinted
-      FROM cohort_frames WHERE cohortId = ?`,
+      FROM CohortFrames WHERE cohortId = ?`,
       [cohortId],
     );
 

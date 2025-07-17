@@ -1,9 +1,9 @@
 import { afterAll, afterEach, expect, it } from 'vitest';
 import { activateNotary, sudo, teardown, TestMainchain, TestNotary } from '@argonprotocol/testing';
 import createBidderParams from '../src/createBidderParams.ts';
-import { calculateCurrentFrameIdFromSystemTime } from '../src/utils.ts';
 import { type IBiddingRules } from '../src/IBiddingRules.ts';
 import { jsonParseWithBigInts } from '../src/utils.ts';
+import { MiningFrames } from '../src/MiningFrames.ts';
 
 afterEach(teardown);
 afterAll(teardown);
@@ -44,7 +44,7 @@ it('can create bidder params', async () => {
     "requiredMicrogons": "10000000n",
     "requiredMicronots": "1000000n"
   }`) as IBiddingRules;
-  const cohortActivatingFrameId = calculateCurrentFrameIdFromSystemTime();
+  const cohortActivatingFrameId = MiningFrames.calculateCurrentFrameIdFromSystemTime();
   const bidderParams = await createBidderParams(cohortActivatingFrameId, client, biddingRules);
 
   expect(bidderParams.minBid).toBe(0n);

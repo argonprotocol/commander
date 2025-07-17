@@ -34,7 +34,6 @@ export class BotSyncer {
 
   private isSyncingThePast: boolean = false;
 
-  private miningFrames = new MiningFrames();
   private mainchain = getMainchain();
 
   private bidsFileByActivatingFrameId: Record<number, IBidsFile> = {};
@@ -85,6 +84,18 @@ export class BotSyncer {
 
   private async updateWinningBids() {
     const activeBidsFile = await BotFetch.fetchBidsFile();
+
+    for (const [bidPosition, bid] of activeBidsFile.winningBids.entries()) {
+      await this.db.frameBidsTable.insertOrUpdate(
+        this.botState.currentFrameId,
+        bid.address,
+        bid.subAccountIndex,
+        bid.microgonsBid ?? 0n,
+        bidPosition,
+        bid.lastBidAtTick,
+      );
+    }
+
     this.botFns.onEvent('updated-bids-data', activeBidsFile.winningBids);
   }
 
@@ -110,11 +121,10 @@ export class BotSyncer {
       this.botFns.setDbSyncProgress(dbSyncProgress);
       dbSyncProgress = await this.syncThePast(dbSyncProgress);
     }
+    if (dbSyncProgress < 100.0) return;
 
-    if (dbSyncProgress >= 100.0) {
-      this.botFns.setStatus(BotStatus.Ready);
-      this.botFns.onEvent('updated-cohort-data', this.botState.currentFrameId);
-    }
+    this.botFns.setStatus(BotStatus.Ready);
+    this.botFns.onEvent('updated-cohort-data', this.botState.currentFrameId);
   }
 
   private async syncThePast(progress: number): Promise<number> {
@@ -162,10 +172,14 @@ export class BotSyncer {
       false,
     );
 
-    const cohortEarningsByFrameId = this.injectMissingCohortEarnings(earningsFile.byCohortActivatingFrameId, frameId);
+    // Every frame should have a coresponding cohort, even if it has no seats
+    await this.syncDbCohort(frameId);
+    const processedCohorts: Set<number> = new Set([frameId]);
 
-    let totalBlocksMined = 0;
-    const processedCohorts: Set<number> = new Set();
+    const cohortEarningsByFrameId = await this.injectMissingCohortEarnings(
+      earningsFile.byCohortActivatingFrameId,
+      frameId,
+    );
     const cohortEarningsEntries = Object.entries(cohortEarningsByFrameId) as [string, IEarningsFileCohort][];
 
     for (const [cohortActivatingFrameIdStr, cohortEarningsDuringFrame] of cohortEarningsEntries) {
@@ -174,15 +188,7 @@ export class BotSyncer {
         await this.syncDbCohort(cohortActivatingFrameId);
         processedCohorts.add(cohortActivatingFrameId);
       }
-
-      totalBlocksMined += cohortEarningsDuringFrame.blocksMined;
       await this.syncDbCohortFrame(cohortActivatingFrameId, frameId, cohortEarningsDuringFrame);
-    }
-
-    // Ensure current frame is added as a cohort, even if it has no seats
-    if (!processedCohorts.has(frameId)) {
-      await this.syncDbCohort(frameId);
-      processedCohorts.add(frameId);
     }
 
     const isProcessed = earningsFile.frameProgress === 100.0;
@@ -239,10 +245,7 @@ export class BotSyncer {
 
     try {
       const mainchainClient = await this.mainchain.client;
-      const [cohortStartingTick] = await this.miningFrames.getTickRangeForFrame(
-        mainchainClient,
-        cohortActivatingFrameId,
-      );
+      const [cohortStartingTick] = await MiningFrames.getTickRangeForFrame(mainchainClient, cohortActivatingFrameId);
       const cohortEndingTick = cohortStartingTick + TICKS_PER_COHORT;
       const framesCompleted = Math.min(this.botState.currentFrameId - cohortActivatingFrameId, 10);
       const miningSeatCount = BigInt(await this.mainchain.getMiningSeatCount());
@@ -268,21 +271,25 @@ export class BotSyncer {
         micronotsToBeMinedPerSeat,
       );
 
-      await this.db.cohortAccountsTable.deleteForCohort(cohortActivatingFrameId);
-
-      for (const subaccount of bidsFile.winningBids) {
-        if (subaccount.subAccountIndex === undefined) return;
-        await this.db.cohortAccountsTable.insert(
-          subaccount.subAccountIndex,
-          cohortActivatingFrameId,
-          subaccount.address,
-          subaccount.microgonsBid ?? 0n,
-          subaccount.bidPosition ?? 0,
-        );
-      }
+      await this.updateDbCohortAccounts(cohortActivatingFrameId, bidsFile);
     } catch (e) {
       console.error('Error syncing cohort:', e);
       throw e;
+    }
+  }
+
+  private async updateDbCohortAccounts(cohortActivatingFrameId: number, bidsFile: IBidsFile): Promise<void> {
+    await this.db.cohortAccountsTable.deleteForCohort(cohortActivatingFrameId);
+
+    for (const subaccount of bidsFile.winningBids) {
+      if (subaccount.subAccountIndex === undefined) return;
+      await this.db.cohortAccountsTable.insert(
+        subaccount.subAccountIndex,
+        cohortActivatingFrameId,
+        subaccount.address,
+        subaccount.microgonsBid ?? 0n,
+        subaccount.bidPosition ?? 0,
+      );
     }
   }
 
@@ -344,7 +351,7 @@ export class BotSyncer {
     this.botFns.onEvent('updated-bitcoin-activity');
   }
 
-  private async updateBotActivity(): Promise<void> {
+  private async updateBiddingActivity(): Promise<void> {
     const botHistory = await BotFetch.fetchBotHistory();
     // TODO: Implement bot activity update logic
     this.botFns.onEvent('updated-bidding-activity');

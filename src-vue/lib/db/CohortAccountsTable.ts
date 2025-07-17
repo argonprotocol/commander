@@ -6,7 +6,7 @@ export class CohortAccountsTable extends BaseTable {
   private bigIntFields: string[] = ['microgonsBid'];
 
   async deleteForCohort(cohortId: number): Promise<void> {
-    await this.db.sql.execute('DELETE FROM cohort_accounts WHERE cohortId = ?', [cohortId]);
+    await this.db.sql.execute('DELETE FROM CohortAccounts WHERE cohortId = ?', [cohortId]);
   }
 
   async insert(
@@ -17,14 +17,14 @@ export class CohortAccountsTable extends BaseTable {
     bidPosition: number,
   ): Promise<void> {
     await this.db.sql.execute(
-      'INSERT INTO cohort_accounts (idx, cohortId, address, microgonsBid, bidPosition) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO CohortAccounts (idx, cohortId, address, microgonsBid, bidPosition) VALUES (?, ?, ?, ?, ?)',
       [idx, cohortId, address, toSqliteBigInt(microgonsBid), bidPosition],
     );
   }
 
   async fetchForCohortId(cohortId: number): Promise<ICohortAccountRecord[]> {
     const rawRecords = await this.db.sql.select<ICohortAccountRecord[]>(
-      'SELECT * FROM cohort_accounts WHERE cohortId = ?',
+      'SELECT * FROM CohortAccounts WHERE cohortId = ?',
       [cohortId],
     );
     return convertSqliteBigInts(rawRecords, this.bigIntFields);

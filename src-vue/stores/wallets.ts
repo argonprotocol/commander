@@ -4,7 +4,7 @@ import { ask } from '@tauri-apps/plugin-dialog';
 import { getMainchainClient } from '../stores/mainchain.ts';
 import handleUnknownFatalError from './helpers/handleUnknownFatalError.ts';
 import { useConfig } from './config.ts';
-import { createPromiser } from '../lib/Utils.ts';
+import { createDeferred } from '../lib/Utils.ts';
 import { useStats } from './stats.ts';
 import { useCurrency } from './currency.ts';
 
@@ -23,7 +23,7 @@ export const useWallets = defineStore('wallets', () => {
   const currency = useCurrency();
 
   const isLoaded = Vue.ref(false);
-  const { promise: isLoadedPromise, resolve: isLoadedResolve, reject: isLoadedReject } = createPromiser<void>();
+  const { promise: isLoadedPromise, resolve: isLoadedResolve, reject: isLoadedReject } = createDeferred<void>();
 
   const miningWallet = Vue.reactive<IWallet>({
     name: 'Mining Wallet',
@@ -49,6 +49,32 @@ export const useWallets = defineStore('wallets', () => {
       (stats.myMiningSeats.microgonsMinted || 0n) +
       (stats.myMiningSeats.microgonsMined || 0n)
     );
+  });
+
+  const miningBidValue = Vue.computed(() => {
+    return stats.myMiningBids.microgonsBid;
+  });
+
+  const totalMiningResources = Vue.computed(() => {
+    return (
+      miningWallet.availableMicrogons +
+      currency.micronotToMicrogon(miningWallet.availableMicronots) +
+      currency.micronotToMicrogon(miningWallet.reservedMicronots) +
+      miningSeatValue.value +
+      miningBidValue.value
+    );
+  });
+
+  const totalVaultingResources = Vue.computed(() => {
+    return (
+      vaultingWallet.availableMicrogons +
+      currency.micronotToMicrogon(vaultingWallet.availableMicronots) +
+      currency.micronotToMicrogon(vaultingWallet.reservedMicronots)
+    );
+  });
+
+  const totalNetWorth = Vue.computed(() => {
+    return totalMiningResources.value + totalVaultingResources.value;
   });
 
   const totalWalletMicrogons = Vue.ref(0n);
@@ -129,5 +155,9 @@ export const useWallets = defineStore('wallets', () => {
     totalWalletMicrogons,
     totalWalletMicronots,
     miningSeatValue,
+    miningBidValue,
+    totalMiningResources,
+    totalVaultingResources,
+    totalNetWorth,
   };
 });

@@ -12,8 +12,8 @@ import { InstallerCheck } from './InstallerCheck';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
-import { createPromiser, ensureOnlyOneInstance, resetOnlyOneInstance } from './Utils';
-import ICreatePromiser from '../interfaces/ICreatePromiser';
+import { createDeferred, ensureOnlyOneInstance, resetOnlyOneInstance } from './Utils';
+import IDeferred from '../interfaces/IDeferred';
 
 dayjs.extend(utc);
 
@@ -47,7 +47,7 @@ export default class Installer {
 
   private hasApprovedUpgrade = false;
 
-  private loadingPromiser!: ICreatePromiser<void>;
+  private isLoadedDeferred!: IDeferred<void>;
   private config: Config;
   private installerCheck: InstallerCheck;
 
@@ -59,8 +59,8 @@ export default class Installer {
     this.reasonToSkipInstall = '';
     this.reasonToSkipInstallData = null;
 
-    this.loadingPromiser = createPromiser<void>();
-    this.isLoadedPromise = this.loadingPromiser.promise;
+    this.isLoadedDeferred = createDeferred<void>();
+    this.isLoadedPromise = this.isLoadedDeferred.promise;
   }
 
   public async load(): Promise<void> {
@@ -75,7 +75,7 @@ export default class Installer {
     }
 
     this.isLoaded = true;
-    this.loadingPromiser.resolve();
+    this.isLoadedDeferred.resolve();
   }
 
   public async run(waitForLoaded: boolean = true): Promise<void> {

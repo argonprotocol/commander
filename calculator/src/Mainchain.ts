@@ -1,7 +1,8 @@
 import { type ArgonClient, convertFixedU128ToBigNumber, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
 import BigNumber from 'bignumber.js';
-import { bigIntMin, calculateCurrentFrameIdFromSystemTime } from './utils.ts';
+import { bigIntMin } from './utils.ts';
 import { type IWinningBid } from '@argonprotocol/commander-bot/src/storage.ts';
+import { MiningFrames } from './MiningFrames.ts';
 
 export type MainchainClient = ArgonClient;
 export { MICROGONS_PER_ARGON };
@@ -254,7 +255,7 @@ export class Mainchain {
   }
 
   public async fetchPreviousDayWinningBidAmounts(): Promise<bigint[]> {
-    const startingFrameId = calculateCurrentFrameIdFromSystemTime();
+    const startingFrameId = MiningFrames.calculateCurrentFrameIdFromSystemTime();
     let frameIdToCheck = startingFrameId;
     while (true) {
       // We must loop backwards until we find a frame with winning bids

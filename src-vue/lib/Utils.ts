@@ -212,21 +212,21 @@ export function resetOnlyOneInstance(constructor: any) {
   constructor.isInitialized = false;
 }
 
-export function createPromiser<T>(): {
+export function createDeferred<T>(): {
   promise: Promise<T>;
   resolve: (value: T) => void;
   reject: (reason?: any) => void;
 } {
-  let promiseResolve!: (value: T) => void;
-  let promiseReject!: (reason?: any) => void;
-  let promise: Promise<T> = new Promise((resolve, reject) => {
-    promiseResolve = resolve;
-    promiseReject = reject;
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: any) => void;
+  let promise: Promise<T> = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
   });
 
   return {
     promise,
-    resolve: promiseResolve,
-    reject: promiseReject,
+    resolve,
+    reject,
   };
 }

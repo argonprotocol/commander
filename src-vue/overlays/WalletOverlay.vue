@@ -4,7 +4,7 @@
     <Dialog @close="closeOverlay">
       <DialogPanel class="flex items-center justify-center absolute top-0 left-0 right-0 bottom-0 z-10 pointer-events-none">
         <BgOverlay @close="closeOverlay" />
-        <div class="bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl relative w-8/12 max-h-10/12 overflow-scroll">
+        <div class="absolute top-12 bottom-3 bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl w-9/12 overflow-scroll">
           <Receive v-if="activeScreen === 'receive'" @navigate="navigate" :walletId="walletId" />
           <div v-else>
             <div
@@ -60,11 +60,10 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { TransitionChild, TransitionRoot, Dialog, DialogPanel } from '@headlessui/vue';
+import { TransitionRoot, Dialog, DialogPanel } from '@headlessui/vue';
 import basicEmitter from '../emitters/basicEmitter';
 import { useCurrency } from '../stores/currency';
 import { useWallets } from '../stores/wallets';
-import { useController } from '../stores/controller';
 import { abreviateAddress } from '../lib/Utils';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import Resources from './wallet-overlay/Resources.vue';
@@ -73,14 +72,10 @@ import Receive from './wallet-overlay/Receive.vue';
 import BgOverlay from '../components/BgOverlay.vue';
 import CopyIcon from '../assets/copy.svg?component';
 import CopyToClipboard from '../components/CopyToClipboard.vue';
-import { useStats } from '../stores/stats';
 import { createNumeralHelpers } from '../lib/numeral';
-
-const stats = useStats();
 
 const currency = useCurrency();
 const wallets = useWallets();
-const controller = useController();
 
 const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
@@ -115,9 +110,9 @@ const activeTab = Vue.ref('tokens');
 
 const totalValue = Vue.computed(() => {
   if (walletId.value === 'mining') {
-    return controller.totalMiningResources;
+    return wallets.totalMiningResources;
   } else if (walletId.value === 'vaulting') {
-    return 0n;
+    return wallets.totalVaultingResources;
   }
   return 0n;
 });

@@ -1,8 +1,8 @@
 import { getMainchain } from '../stores/mainchain';
 import { MICROGONS_PER_ARGON, SATS_PER_BTC } from '@argonprotocol/mainchain';
 import BigNumber from 'bignumber.js';
-import ICreatePromiser from '../interfaces/ICreatePromiser';
-import { createPromiser } from './Utils';
+import IDeferred from '../interfaces/IDeferred';
+import { createDeferred } from './Utils';
 
 export const SATOSHIS_PER_BITCOIN = SATS_PER_BTC;
 export { MICROGONS_PER_ARGON };
@@ -52,14 +52,14 @@ export class Currency {
   public isLoaded: boolean;
   public isLoadedPromise: Promise<void>;
 
-  private loadedPromiser: ICreatePromiser<void>;
+  private isLoadedDeferred: IDeferred<void>;
 
   constructor(defaultCurrencyKey: ICurrencyKey) {
     this.setCurrencyKey(defaultCurrencyKey);
 
     this.isLoaded = false;
-    this.loadedPromiser = createPromiser<void>();
-    this.isLoadedPromise = this.loadedPromiser.promise;
+    this.isLoadedDeferred = createDeferred<void>();
+    this.isLoadedPromise = this.isLoadedDeferred.promise;
   }
 
   public setCurrencyKey(currencyKey: ICurrencyKey) {
@@ -85,7 +85,7 @@ export class Currency {
     this.microgonExchangeRateTo.INR = this.otherExchangeRateToMicrogons(usdExchangeRateTo.INR);
 
     this.isLoaded = true;
-    this.loadedPromiser.resolve();
+    this.isLoadedDeferred.resolve();
   }
 
   public microgonToArgon(microgons: bigint): number {

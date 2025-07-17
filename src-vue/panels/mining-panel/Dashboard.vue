@@ -41,14 +41,14 @@
 
       <section box class="flex flex-col text-center px-2">
         <header class="text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30">
-          YOUR CLOUD MACHINE {{ stats.isReady ? 'IS LIVE' : '' }}
+          YOUR CLOUD MACHINE {{ bot.isReady ? 'IS LIVE' : '' }}
         </header>
         <div class="flex flex-row py-2">
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
             <span class="opacity-50">Last Bitcoin Block</span>
             <CountupClock as="span" :time="lastBitcoinActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
-              <template v-if="hours">{{ hours }}h,</template>
-              <template v-if="minutes">{{ minutes }}m and</template>
+              <template v-if="hours">{{ hours }}h, </template>
+              <template v-if="minutes">{{ minutes }}m and </template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
               <template v-else>-- ----</template>
             </CountupClock>
@@ -57,8 +57,8 @@
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
             <span class="opacity-50">Last Argon Block</span>
             <CountupClock as="span" :time="lastArgonActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
-              <template v-if="hours">{{ hours }}h,</template>
-              <template v-if="minutes">{{ minutes }}m and</template>
+              <template v-if="hours">{{ hours }}h, </template>
+              <template v-if="minutes">{{ minutes }}m and </template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
               <template v-else>-- ----</template>
             </CountupClock>
@@ -67,8 +67,8 @@
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
             <span class="opacity-50">Last Bidding Activity</span>
             <CountupClock as="span" :time="lastBotActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
-              <template v-if="hours">{{ hours }}h,</template>
-              <template v-if="minutes">{{ minutes }}m and</template>
+              <template v-if="hours">{{ hours }}h, </template>
+              <template v-if="minutes">{{ minutes }}m and </template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
               <template v-else>-- ----</template>
             </CountupClock>
@@ -77,25 +77,17 @@
       </section>
 
       <section box class="flex flex-col grow text-center px-2">
-        <header
-          class="flex flex-row justify-between text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30"
-        >
-          <div
-            @click="goToPreviousCohort"
-            class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer group hover:opacity-80"
-          >
+        <header class="flex flex-row justify-between text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30">
+          <div @click="goToPrevFrame" :class="stats.prevFrameId ? 'opacity-60' : 'opacity-20 pointer-events-none'" class="flex flex-row items-center font-light text-base cursor-pointer group hover:opacity-80">
             <ChevronLeftIcon class="w-6 h-6 opacity-50 mx-1 group-hover:opacity-80" />
-            PREV SLOT
+            PREV
           </div>
           <span class="flex flex-row items-center">
-            COHORT #{{ stats.dashboard.cohort?.cohortId }} ({{ cohortStartDate }} - {{ cohortEndDate }})
-            <span class="inline-block rounded-full bg-green-500/80 w-2.5 h-2.5 ml-2"></span>
+            COHORT #{{ stats.selectedFrameId }} ({{ cohortStartDate }} - {{ cohortEndDate }})
+            <span v-if="stats.selectedFrameId > stats.latestFrameId - 10" class="inline-block rounded-full bg-green-500/80 w-2.5 h-2.5 ml-2"></span>
           </span>
-          <div
-            @click="goToNextCohort"
-            class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer group hover:opacity-80"
-          >
-            NEXT SLOT
+          <div @click="goToNextFrame" :class="stats.nextFrameId ? 'opacity-60' : 'opacity-20 pointer-events-none'" class="flex flex-row items-center font-light text-base cursor-pointer group hover:opacity-80">
+            NEXT
             <ChevronRightIcon class="w-6 h-6 opacity-50 mx-1 group-hover:opacity-80" />
           </div>
         </header>
@@ -202,34 +194,16 @@
       </section>
 
       <section box class="relative flex flex-col h-[20%] min-h-32 !pb-0.5 px-2">
-        <div
-          nib-handle
-          class="absolute -top-1 -bottom-1 w-2 bg-white rounded-full border border-slate-400/50 shadow-md z-10"
-          :style="{ left: `${percentOfYear}%` }"
-        >
-          <div
-            class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full border border-slate-400/50 shadow-md"
-          ></div>
+        <div nib-handle :style="{ left: `${percentOfYear}%` }" class="absolute -top-1 -bottom-1 w-2 bg-white rounded-full border border-slate-400/50 shadow-md z-10">
+          <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full border border-slate-400/50 shadow-md"></div>
         </div>
-        <div
-          class="absolute top-[1px] bottom-[33px] w-[2.739726027%] bg-gradient-to-b from-transparent to-argon-button/10"
-          :style="{ left: `${percentOfYear}%` }"
-        ></div>
+        <div :style="{ left: `${percentOfYear}%` }" class="absolute top-[1px] bottom-[33px] w-[2.739726027%] bg-gradient-to-b from-transparent to-argon-button/10"></div>
         <div class="grow relative">
-          <div
-            class="absolute bottom-[-1px] left-0 w-[4.109589041%] h-[0px] border-[4px] border-argon-button/10 border-dotted"
-          ></div>
-          <div
-            class="absolute bottom-[-1px] left-[4.109589041%] w-[10.684931509%] h-0 border-[4px] border-argon-button/10"
-          ></div>
-          <div
-            class="absolute bottom-[-1px] left-[14.79452055%] h-0 border-[4px] border-argon-button"
-            :style="{ width: `${percentOfYear - 14.79452055}%` }"
-          ></div>
+          <div class="absolute bottom-[-1px] left-0 w-[4.109589041%] h-[0px] border-[4px] border-argon-button/10 border-dotted"></div>
+          <div class="absolute bottom-[-1px] left-[4.109589041%] w-[10.684931509%] h-0 border-[4px] border-argon-button/10"></div>
+          <div :style="{ width: `${percentOfYear - 14.79452055}%` }" class="absolute bottom-[-1px] left-[14.79452055%] h-0 border-[4px] border-argon-button"></div>
         </div>
-        <ul
-          class="flex flex-row text-md opacity-50 divide-x divide-slate-400/70 text-center w-full border-t border-slate-400/60 pt-2"
-        >
+        <ul class="flex flex-row text-md opacity-50 divide-x divide-slate-400/70 text-center w-full border-t border-slate-400/60 pt-2">
           <li class="flex-1">Jan</li>
           <li class="flex-1">Feb</li>
           <li class="flex-1">Mar</li>
@@ -256,16 +230,19 @@ import utc from 'dayjs/plugin/utc';
 import { calculateAPY, abreviateAddress } from '../../lib/Utils';
 import { useStats } from '../../stores/stats';
 import { useCurrency } from '../../stores/currency';
+import { useBot } from '../../stores/bot';
 import { useBlockchainStore } from '../../stores/blockchain';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import CountupClock from '../../components/CountupClock.vue';
 import AlertBars from '../../components/AlertBars.vue';
 import { IBlock } from '../../stores/blockchain';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
+import { MiningFrames } from '@argonprotocol/commander-calculator';
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
 
+const bot = useBot();
 const stats = useStats();
 const currency = useCurrency();
 const blockchainStore = useBlockchainStore();
@@ -273,7 +250,7 @@ const blockchainStore = useBlockchainStore();
 const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
 const dayInYear = dayjs().diff(dayjs().startOf('year'), 'days') + 1;
-const percentOfYear = Math.min(dayInYear / 365, 1) * 100;
+const percentOfYear = Vue.ref(Math.min(dayInYear / 365, 1) * 100);
 
 const currentCohortId = Vue.ref(0);
 const blocks = Vue.ref<IBlock[]>([]);
@@ -297,7 +274,6 @@ const globalAPY = Vue.computed(() => {
 const cohortMicrogonsExpected = Vue.computed(() => {
   const cohort = stats.dashboard.cohort;
   if (!cohort) return 0n;
-  console.log('cohort', cohort);
   return cohort.microgonsMined + cohort.microgonsMinted + currency.micronotToMicrogon(cohort.micronotsMined);
 });
 
@@ -312,20 +288,20 @@ const cohortAPY = Vue.computed(() => {
 });
 
 const cohortStartDate = Vue.computed(() => {
-  const cohort = stats.dashboard.cohort;
-  if (!cohort?.firstTick) {
+  const tickRange = stats.selectedCohortTickRange;
+  if (!tickRange[0]) {
     return '-----';
   }
-  const date = dayjs.utc(cohort.firstTick * 60e3);
+  const date = dayjs.utc(tickRange[0] * 60e3);
   return date.local().format('MMMM D');
 });
 
 const cohortEndDate = Vue.computed(() => {
-  const cohort = stats.dashboard.cohort;
-  if (!cohort?.lastTick) {
+  const tickRange = stats.selectedCohortTickRange;
+  if (!tickRange[1]) {
     return '-----';
   }
-  const date = dayjs.utc(cohort.lastTick * 60e3);
+  const date = dayjs.utc(tickRange[1] * 60e3);
   return date.local().format('MMMM D');
 });
 
@@ -344,7 +320,7 @@ const lastBotActivityAt = Vue.computed(() => {
   return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
 });
 
-let blocksSubscription: any = null;
+let unsubscribeFromBlocks: any = null;
 
 Vue.watch(
   () => stats.dashboard.cohort,
@@ -352,9 +328,9 @@ Vue.watch(
     if (!cohort) return;
     if (cohort.cohortId === currentCohortId.value) return;
 
-    if (blocksSubscription) {
-      await blockchainStore.unsubscribeFromBlocks(blocksSubscription);
-      blocksSubscription = null;
+    if (unsubscribeFromBlocks) {
+      unsubscribeFromBlocks();
+      unsubscribeFromBlocks = null;
     }
 
     currentCohortId.value = cohort.cohortId;
@@ -362,7 +338,7 @@ Vue.watch(
     const endingFrameId = cohort.cohortId + 10;
     blocks.value = await blockchainStore.fetchBlocks(lastBlockNumber, endingFrameId, 8);
 
-    blocksSubscription = await blockchainStore.subscribeToBlocks(newBlock => {
+    unsubscribeFromBlocks = await blockchainStore.subscribeToBlocks(newBlock => {
       if (newBlock.number === blocks.value[0]?.number) return;
       blocks.value.unshift(newBlock);
       if (blocks.value.length > 8) {
@@ -372,26 +348,36 @@ Vue.watch(
   },
 );
 
-async function goToPreviousCohort() {
-  const cohortId = stats.dashboard.cohortId;
-  if (!cohortId) return;
-
-  const previousCohortId = Math.max(cohortId - 1, 1);
+async function goToPrevFrame() {
+  const newFrameId = stats.prevFrameId;
+  if (!newFrameId) return;
+  stats.selectFrameId(newFrameId);
+  percentOfYear.value = calculatePercentOfYear(newFrameId);
 }
 
-async function goToNextCohort() {
-  const cohortId = stats.dashboard.cohortId;
-  if (!cohortId) return;
+async function goToNextFrame() {
+  const newFrameId = stats.nextFrameId;
+  if (!newFrameId) return;
+  stats.selectFrameId(newFrameId);
+  percentOfYear.value = calculatePercentOfYear(newFrameId);
+}
 
-  const nextCohortId = cohortId + 1;
+function calculatePercentOfYear(frameId: number) {
+  const tickRange = MiningFrames.getTickRangeForFrameFromSystemTime(frameId);
+  const date = dayjs.utc(tickRange[0] * 60e3);
+  const dayInYear = date.diff(dayjs().startOf('year'), 'days') + 1;
+  console.log('dayInYear', frameId, dayInYear, tickRange, date.format('YYYY-MM-DD'));
+  return Math.min(dayInYear / 365, 1) * 100;
 }
 
 Vue.onMounted(() => {
-  stats.start();
+  stats.subscribeToDashboard();
+  stats.subscribeToActivity();
 });
 
 Vue.onUnmounted(() => {
-  stats.stop();
+  stats.unsubscribeFromDashboard();
+  stats.unsubscribeFromActivity();
 });
 </script>
 

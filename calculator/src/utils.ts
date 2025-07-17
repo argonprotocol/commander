@@ -1,15 +1,3 @@
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-
-dayjs.extend(utc);
-
-// These constants can be fetched from client.query.miningSlot.miningConfig()
-const TICKS_BETWEEN_SLOTS = 1_440;
-const SLOT_BIDDING_START_AFTER_TICKS = 17_280;
-
-// This constant can be fetched from client.query.ticks.genesisTick()
-const GENESIS_TICK = 28_937_955;
-
 export function formatArgonots(x: bigint | number): number {
   const isNegative = x < 0;
   const [whole, decimal] = (Math.abs(Number(x)) / 1e6).toFixed(2).split('.');
@@ -76,15 +64,4 @@ export function jsonParseWithBigInts(data: string): any {
     }
     return value;
   });
-}
-
-export function calculateCurrentTickFromSystemTime(): number {
-  return Math.floor(dayjs().utc().unix() / 60);
-}
-
-export function calculateCurrentFrameIdFromSystemTime(): number {
-  const currentTick = calculateCurrentTickFromSystemTime();
-  const slotOneStartTick = GENESIS_TICK + SLOT_BIDDING_START_AFTER_TICKS + TICKS_BETWEEN_SLOTS;
-  const ticksSinceSlotOne = currentTick - slotOneStartTick;
-  return Math.floor(ticksSinceSlotOne / TICKS_BETWEEN_SLOTS) + 1;
 }

@@ -204,7 +204,7 @@ export class CohortStorage {
     if (!entry) {
       entry = new JsonStore<IEarningsFile>(Path.join(this.basedir, key), async () => {
         const client = await this.clientPromise;
-        const tickRange = await new MiningFrames().getTickRangeForFrame(client, frameId);
+        const tickRange = await MiningFrames.getTickRangeForFrame(client, frameId);
         return {
           frameId,
           frameProgress: 0,

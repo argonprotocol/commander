@@ -25,8 +25,8 @@ const stats = useStats();
 const config = useConfig();
 const bot = useBot();
 
-Vue.onMounted(() => stats.start());
-Vue.onUnmounted(() => stats.stop());
+Vue.onMounted(() => stats.subscribeToActivity());
+Vue.onUnmounted(() => stats.unsubscribeFromActivity());
 </script>
 
 <style scoped>

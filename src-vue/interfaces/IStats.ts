@@ -20,7 +20,7 @@ export interface IBidsFileSubaccount {
 
 export interface IDashboardStats {
   global: IDashboardGlobalStats;
-  cohortId: number | null;
+  frameId: number | null;
   cohort: IDashboardCohortStats | null;
 }
 

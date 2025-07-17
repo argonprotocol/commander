@@ -52,7 +52,7 @@
           <PopoverButton
             class="relative flex flex-row text-xl font-bold text-[#B74CBA] pt-[1px] pl-[14px] pr-[10px] mr-[0px] h-[30px] items-center hover:bg-slate-400/10 cursor-pointer focus-visible:outline-none"
           >
-            {{ microgonToMoneyNm(controller.totalNetWorth).formatIfElse('< 1_000', '0,0.00', '0,0') }}
+            {{ microgonToMoneyNm(wallets.totalNetWorth).formatIfElse('< 1_000', '0,0.00', '0,0') }}
           </PopoverButton>
           <transition
             enter-active-class="transition ease-out duration-200"
@@ -67,7 +67,7 @@
               v-slot="{ close }"
               class="absolute -right-2 z-[1000] mt-2 flex w-screen max-w-min"
             >
-              <div class="absolute -top-[15px] right-[20px] w-[30px] h-[15px] overflow-hidden">
+              <div class="absolute -top-[15px] right-[20px] w-[30px] h-[15px] overflow-hidden pointer-events-none">
                 <div
                   class="relative top-[5px] left-[5px] w-[20px] h-[20px] rotate-45 bg-white ring-1 ring-gray-900/20"
                 ></div>
@@ -86,10 +86,10 @@
                   <span class="text-4xl font-bold mt-5">
                     <span>
                       {{ currency.symbol
-                      }}{{ microgonToMoneyNm(controller.totalMiningResources).format('0,0.00').split('.')[0] }}
+                      }}{{ microgonToMoneyNm(wallets.totalMiningResources).format('0,0.00').split('.')[0] }}
                     </span>
                     <span class="opacity-50">
-                      .{{ microgonToMoneyNm(controller.totalMiningResources).format('0.00').split('.')[1] }}
+                      .{{ microgonToMoneyNm(wallets.totalMiningResources).format('0.00').split('.')[1] }}
                     </span>
                   </span>
 
@@ -137,7 +137,7 @@
                       <div>{{ numeral(stats.myMiningBids.bidCount).format('0,0') }} Mining Bids</div>
                       <div>
                         {{ currency.symbol
-                        }}{{ micronotToMoneyNm(wallets.miningWallet.reservedMicronots).format('0,0.00') }}
+                        }}{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}
                       </div>
                     </li>
                     <li class="flex flex-row items-center justify-between w-full border-t border-gray-600/20 py-2">

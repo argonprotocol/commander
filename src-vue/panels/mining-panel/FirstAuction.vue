@@ -23,6 +23,6 @@ const stats = useStats();
 const bot = useBot();
 const config = useConfig();
 
-Vue.onMounted(() => stats.start());
-Vue.onUnmounted(() => stats.stop());
+Vue.onMounted(() => stats.subscribeToActivity());
+Vue.onUnmounted(() => stats.unsubscribeFromActivity());
 </script>

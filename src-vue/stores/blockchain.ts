@@ -108,10 +108,6 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     });
   }
 
-  async function unsubscribeFromBlocks(subscription: any) {
-    subscription.unsubscribe();
-  }
-
   async function updateMiningSeatCount() {
     miningSeatCount.value = await getMainchain().getMiningSeatCount();
   }
@@ -130,7 +126,6 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     miningSeatCount,
     cachedBlocks,
     subscribeToBlocks,
-    unsubscribeFromBlocks,
     updateAggregateBidCosts,
     updateAggregateBlockRewards,
     updateMiningSeatCount,

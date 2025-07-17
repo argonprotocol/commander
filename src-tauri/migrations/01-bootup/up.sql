@@ -1,28 +1,28 @@
-CREATE TABLE config (
+CREATE TABLE Config (
   key TEXT PRIMARY KEY NOT NULL,
   value TEXT NOT NULL,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TRIGGER config_update_timestamp
-AFTER UPDATE ON config
+CREATE TRIGGER ConfigUpdateTimestamp
+AFTER UPDATE ON Config
 BEGIN
-  UPDATE config SET updatedAt = CURRENT_TIMESTAMP WHERE key = NEW.key;
+  UPDATE Config SET updatedAt = CURRENT_TIMESTAMP WHERE key = NEW.key;
 END;
 
-CREATE TABLE argon_activities (
+CREATE TABLE ArgonActivities (
   localNodeBlockNumber INTEGER NOT NULL,
   mainNodeBlockNumber INTEGER NOT NULL,
   insertedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE bitcoin_activities (
+CREATE TABLE BitcoinActivities (
   localNodeBlockNumber INTEGER NOT NULL,
   mainNodeBlockNumber INTEGER NOT NULL,
   insertedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE bot_activities (
+CREATE TABLE BiddingActivities (
   blockNumber INTEGER NOT NULL,
   tick INTEGER NOT NULL,
   address TEXT NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE bot_activities (
   insertedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE cohort_accounts (
+CREATE TABLE CohortAccounts (
   idx INTEGER NOT NULL,
   cohortId INTEGER NOT NULL,
   address TEXT NOT NULL,
@@ -44,13 +44,13 @@ CREATE TABLE cohort_accounts (
   FOREIGN KEY (cohortId) REFERENCES cohorts(id)
 );
 
-CREATE TRIGGER cohort_accounts_update_timestamp
-AFTER UPDATE ON cohort_accounts
+CREATE TRIGGER CohortAccountsUpdateTimestamp
+AFTER UPDATE ON CohortAccounts
 BEGIN
-  UPDATE cohort_accounts SET updatedAt = CURRENT_TIMESTAMP WHERE idx = NEW.idx AND cohortId = NEW.cohortId;
+  UPDATE CohortAccounts SET updatedAt = CURRENT_TIMESTAMP WHERE idx = NEW.idx AND cohortId = NEW.cohortId;
 END;
 
-CREATE TABLE cohort_frames (
+CREATE TABLE CohortFrames (
   frameId INTEGER NOT NULL,
   cohortId INTEGER NOT NULL,
   blocksMined INTEGER NOT NULL,
@@ -64,13 +64,13 @@ CREATE TABLE cohort_frames (
   FOREIGN KEY (cohortId) REFERENCES cohorts(id)
 );
 
-CREATE TRIGGER cohort_frames_update_timestamp
-AFTER UPDATE ON cohort_frames
+CREATE TRIGGER CohortFramesUpdateTimestamp
+AFTER UPDATE ON CohortFrames
 BEGIN
-  UPDATE cohort_frames SET updatedAt = CURRENT_TIMESTAMP WHERE frameId = NEW.frameId AND cohortId = NEW.cohortId;
+  UPDATE CohortFrames SET updatedAt = CURRENT_TIMESTAMP WHERE frameId = NEW.frameId AND cohortId = NEW.cohortId;
 END;
 
-CREATE TABLE cohorts (
+CREATE TABLE Cohorts (
   id INTEGER NOT NULL PRIMARY KEY,
   progress REAL NOT NULL,
   transactionFees INTEGER NOT NULL,
@@ -84,13 +84,13 @@ CREATE TABLE cohorts (
   FOREIGN KEY (id) REFERENCES frames(id)
 );
 
-CREATE TRIGGER cohorts_update_timestamp
-AFTER UPDATE ON cohorts
+CREATE TRIGGER CohortsUpdateTimestamp
+AFTER UPDATE ON Cohorts
 BEGIN
-  UPDATE cohorts SET updatedAt = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  UPDATE Cohorts SET updatedAt = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
 
-CREATE TABLE frames (
+CREATE TABLE Frames (
   id INTEGER NOT NULL PRIMARY KEY,
   firstTick INTEGER NOT NULL,
   lastTick INTEGER NOT NULL,
@@ -105,13 +105,32 @@ CREATE TABLE frames (
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TRIGGER frames_update_timestamp
-AFTER UPDATE ON frames
+CREATE TRIGGER FramesUpdateTimestamp
+AFTER UPDATE ON Frames
 BEGIN
-  UPDATE frames SET updatedAt = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  UPDATE Frames SET updatedAt = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
 
-CREATE TABLE bitcoin_locks (
+CREATE TABLE FrameBids (
+  frameId INTEGER NOT NULL,
+  address TEXT NOT NULL,
+  subAccountIndex INTEGER,
+  microgonsBid INTEGER NOT NULL,
+  bidPosition INTEGER NOT NULL,
+  lastBidAtTick INTEGER,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (frameId, address),
+  FOREIGN KEY (frameId) REFERENCES frames(id)
+);
+
+CREATE TRIGGER FrameBidsUpdateTimestamp
+AFTER UPDATE ON FrameBids
+BEGIN
+  UPDATE FrameBids SET updatedAt = CURRENT_TIMESTAMP WHERE frameId = NEW.frameId AND address = NEW.address;
+END;
+
+CREATE TABLE BitcoinLocks (
   utxoId INTEGER NOT NULL PRIMARY KEY,
   status TEXT NOT NULL CHECK(status IN ('initialized', 'pendingMint', 'verificationFailed', 'minted', 'releaseRequested', 'vaultCosigned')),
   txid TEXT,
@@ -132,19 +151,19 @@ CREATE TABLE bitcoin_locks (
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TRIGGER bitcoin_locks_update_timestamp
-AFTER UPDATE ON bitcoin_locks
+CREATE TRIGGER BitcoinLocksUpdateTimestamp
+AFTER UPDATE ON BitcoinLocks
 BEGIN
-  UPDATE bitcoin_locks SET updatedAt = CURRENT_TIMESTAMP WHERE utxoId = NEW.utxoId;
+  UPDATE BitcoinLocks SET updatedAt = CURRENT_TIMESTAMP WHERE utxoId = NEW.utxoId;
 END;
 
 --- Tracks the latest index for each bitcoin lock's HD path
-CREATE TABLE bitcoin_lock_vault_hd_seq (
+CREATE TABLE BitcoinLockVaultHdSeq (
   vaultId INTEGER NOT NULL PRIMARY KEY,
   latestIndex INTEGER NOT NULL
 );
 
-CREATE TABLE vaults (
+CREATE TABLE Vaults (
   id INTEGER NOT NULL PRIMARY KEY,
   hdPath TEXT NOT NULL,
   createdAtBlockHeight INTEGER NOT NULL,
@@ -154,8 +173,8 @@ CREATE TABLE vaults (
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TRIGGER vaults_update_timestamp
-AFTER UPDATE ON vaults
+CREATE TRIGGER VaultsUpdateTimestamp
+AFTER UPDATE ON Vaults
 BEGIN
-  UPDATE vaults SET updatedAt = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  UPDATE Vaults SET updatedAt = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;

@@ -45,18 +45,9 @@ const wallets = useWallets();
 
 const { microgonToArgonNm, micronotToArgonotNm, microgonToMoneyNm } = createNumeralHelpers(currency);
 const miningWallet = Vue.computed(() => wallets.miningWallet);
+const vaultingWallet = Vue.computed(() => wallets.vaultingWallet);
 
 const emit = defineEmits(['navigate']);
-
-const miningSeatValue = Vue.computed(() => {
-  return (
-    stats.myMiningSeats.microgonsToBeMined +
-    currency.micronotToMicrogon(stats.myMiningSeats.micronotsToBeMined) +
-    currency.micronotToMicrogon(stats.myMiningSeats.micronotsMined) +
-    stats.myMiningSeats.microgonsMinted +
-    stats.myMiningSeats.microgonsMined
-  );
-});
 
 interface IResource {
   name: string;
@@ -75,7 +66,7 @@ const resources: Record<'mining' | 'vaulting', Vue.ComputedRef<IResource[]>> = {
         name: 'Argons',
         icon: ArgonToken,
         itemCountStr: microgonToArgonNm(miningWallet.value.availableMicrogons).format('0,0.[00000000]'),
-        itemCountLabel: 'ARGN',
+        itemCountLabel: 'ARGNs',
         microgonValue: miningWallet.value.availableMicrogons,
         diff: 0,
         uniswapUrl: 'https://app.uniswap.org/explore/tokens/ethereum/0x6a9143639d8b70d50b031ffad55d4cc65ea55155',
@@ -84,7 +75,7 @@ const resources: Record<'mining' | 'vaulting', Vue.ComputedRef<IResource[]>> = {
         name: 'Argonots',
         icon: ArgonotToken,
         itemCountStr: micronotToArgonotNm(miningWallet.value.availableMicronots).format('0,0.[00000000]'),
-        itemCountLabel: 'ARGNOT',
+        itemCountLabel: 'ARGNOTs',
         microgonValue: currency.micronotToMicrogon(miningWallet.value.availableMicronots),
         diff: 0,
         uniswapUrl: 'https://app.uniswap.org/explore/tokens/ethereum/0x6a9143639d8b70d50b031ffad55d4cc65ea55155',
@@ -93,7 +84,7 @@ const resources: Record<'mining' | 'vaulting', Vue.ComputedRef<IResource[]>> = {
         name: 'Locked Argonots',
         icon: ArgonotLockedToken,
         itemCountStr: micronotToArgonotNm(miningWallet.value.reservedMicronots).format('0,0.[00000000]'),
-        itemCountLabel: 'ARGNOT',
+        itemCountLabel: 'ARGNOTs',
         microgonValue: currency.micronotToMicrogon(miningWallet.value.reservedMicronots),
         diff: 0,
         uniswapUrl: 'https://app.uniswap.org/explore/tokens/ethereum/0x6a9143639d8b70d50b031ffad55d4cc65ea55155',
@@ -103,7 +94,7 @@ const resources: Record<'mining' | 'vaulting', Vue.ComputedRef<IResource[]>> = {
         icon: MiningBidToken,
         itemCountStr: numeral(stats.myMiningBids.bidCount).format('0,0'),
         itemCountLabel: `Bids @ ${numeral(stats.myMiningBids.microgonsBid / BigInt(stats.myMiningBids.bidCount || 1)).format('0,0.00')} Per Bid`,
-        microgonValue: stats.myMiningBids.microgonsBid,
+        microgonValue: wallets.miningBidValue,
         diff: 0,
       },
       {
@@ -111,7 +102,7 @@ const resources: Record<'mining' | 'vaulting', Vue.ComputedRef<IResource[]>> = {
         icon: MiningSeatToken,
         itemCountStr: numeral(stats.myMiningSeats.seatCount).format('0'),
         itemCountLabel: 'Seats',
-        microgonValue: miningSeatValue.value,
+        microgonValue: wallets.miningSeatValue,
         diff: 0,
       },
     ];
@@ -121,9 +112,27 @@ const resources: Record<'mining' | 'vaulting', Vue.ComputedRef<IResource[]>> = {
       {
         name: 'Argons',
         icon: ArgonToken,
-        itemCountStr: microgonToArgonNm(miningWallet.value.availableMicrogons).format('0,0.[00000000]'),
-        itemCountLabel: 'ARGN',
-        microgonValue: miningWallet.value.availableMicrogons,
+        itemCountStr: microgonToArgonNm(vaultingWallet.value.availableMicrogons).format('0,0.[00000000]'),
+        itemCountLabel: 'ARGNs',
+        microgonValue: vaultingWallet.value.availableMicrogons,
+        diff: 0,
+        uniswapUrl: 'https://app.uniswap.org/explore/tokens/ethereum/0x6a9143639d8b70d50b031ffad55d4cc65ea55155',
+      },
+      {
+        name: 'Argonots',
+        icon: ArgonotToken,
+        itemCountStr: micronotToArgonotNm(vaultingWallet.value.availableMicronots).format('0,0.[00000000]'),
+        itemCountLabel: 'ARGNOTs',
+        microgonValue: currency.micronotToMicrogon(vaultingWallet.value.availableMicronots),
+        diff: 0,
+        uniswapUrl: 'https://app.uniswap.org/explore/tokens/ethereum/0x6a9143639d8b70d50b031ffad55d4cc65ea55155',
+      },
+      {
+        name: 'Vaulted Argonots',
+        icon: ArgonotLockedToken,
+        itemCountStr: micronotToArgonotNm(vaultingWallet.value.reservedMicronots).format('0,0.[00000000]'),
+        itemCountLabel: 'ARGNOTs',
+        microgonValue: currency.micronotToMicrogon(vaultingWallet.value.reservedMicronots),
         diff: 0,
         uniswapUrl: 'https://app.uniswap.org/explore/tokens/ethereum/0x6a9143639d8b70d50b031ffad55d4cc65ea55155',
       },

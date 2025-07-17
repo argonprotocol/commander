@@ -5,21 +5,23 @@ import { ConfigTable } from './db/ConfigTable';
 import { FramesTable } from './db/FramesTable';
 import { ArgonActivitiesTable } from './db/ArgonActivitiesTable';
 import { BitcoinActivitiesTable } from './db/BitcoinActivitiesTable';
-import { BotActivitiesTable } from './db/BotActivitiesTable';
+import { BiddingActivitiesTable } from './db/BiddingActivitiesTable';
 import { CohortAccountsTable } from './db/CohortAccountsTable';
 import { INSTANCE_NAME } from './Config';
 import { ensureOnlyOneInstance } from './Utils';
+import { FrameBidsTable } from './db/FrameBidsTable';
 
 export class Db {
   public sql: PluginSql;
   public argonActivitiesTable: ArgonActivitiesTable;
   public bitcoinActivitiesTable: BitcoinActivitiesTable;
-  public botActivitiesTable: BotActivitiesTable;
+  public biddingActivitiesTable: BiddingActivitiesTable;
   public cohortAccountsTable: CohortAccountsTable;
   public cohortFramesTable: CohortFramesTable;
   public cohortsTable: CohortsTable;
   public configTable: ConfigTable;
   public framesTable: FramesTable;
+  public frameBidsTable: FrameBidsTable;
 
   constructor(sql: PluginSql) {
     ensureOnlyOneInstance(this.constructor);
@@ -27,12 +29,13 @@ export class Db {
     this.sql = sql;
     this.argonActivitiesTable = new ArgonActivitiesTable(this);
     this.bitcoinActivitiesTable = new BitcoinActivitiesTable(this);
-    this.botActivitiesTable = new BotActivitiesTable(this);
+    this.biddingActivitiesTable = new BiddingActivitiesTable(this);
     this.cohortAccountsTable = new CohortAccountsTable(this);
     this.cohortFramesTable = new CohortFramesTable(this);
     this.cohortsTable = new CohortsTable(this);
     this.configTable = new ConfigTable(this);
     this.framesTable = new FramesTable(this);
+    this.frameBidsTable = new FrameBidsTable(this);
   }
 
   static async load(): Promise<Db> {

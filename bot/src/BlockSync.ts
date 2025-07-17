@@ -61,7 +61,6 @@ export class BlockSync {
   private unsubscribe?: () => void;
   private previousNextCohortJson?: string;
   private isStopping: boolean = false;
-  private miningFrames: MiningFrames;
   private mainchain!: Mainchain;
   private lastExchangeRateDate?: Date;
   private lastExchangeRateFrameId?: number;
@@ -76,7 +75,6 @@ export class BlockSync {
   ) {
     this.scheduleNext = this.scheduleNext.bind(this);
     this.botStateFile = this.storage.botStateFile();
-    this.miningFrames = new MiningFrames();
   }
 
   async load() {
@@ -98,10 +96,7 @@ export class BlockSync {
     await this.setOldestFrameIdIfNeeded();
 
     const botStateData = (await this.botStateFile.get())!;
-    const oldestTickRange = await this.miningFrames.getTickRangeForFrame(
-      this.localClient,
-      botStateData.oldestFrameIdToSync,
-    );
+    const oldestTickRange = await MiningFrames.getTickRangeForFrame(this.localClient, botStateData.oldestFrameIdToSync);
     this.oldestTick = oldestTickRange[0];
 
     // plug any gaps in the sync state
@@ -256,7 +251,7 @@ export class BlockSync {
     const tickDate = new Date(tick * 60000);
 
     if (this.lastProcessed?.frameId !== currentFrameId) {
-      this.currentFrameTickRange = await this.miningFrames.getTickRangeForFrame(this.localClient, currentFrameId);
+      this.currentFrameTickRange = await MiningFrames.getTickRangeForFrame(this.localClient, currentFrameId);
     }
 
     const didChangeBiddings = await this.syncBidding(header, events);

@@ -13,7 +13,7 @@ export class CohortsTable extends BaseTable {
 
   public async fetchLatestActiveId(): Promise<number | null> {
     const result = await this.db.sql.select<{ id: number }[]>(
-      'SELECT id FROM cohorts WHERE seatsWon > 0 ORDER BY id DESC LIMIT 1',
+      'SELECT id FROM Cohorts WHERE seatsWon > 0 ORDER BY id DESC LIMIT 1',
     );
     return result.length > 0 ? result[0].id : null;
   }
@@ -22,12 +22,10 @@ export class CohortsTable extends BaseTable {
     id: number,
   ): Promise<(ICohortRecord & { firstTick: number; lastTick: number; lastBlockNumber: number }) | null> {
     const rawRecords = await this.db.sql.select<any[]>(
-      `SELECT cohorts.*, frames.firstTick as firstTick, frames.lastBlockNumber as lastBlockNumber FROM cohorts
-      LEFT JOIN frames ON cohorts.id = frames.id
-      WHERE seatsWon > 0
-      AND cohorts.id = ?
-      ORDER BY cohorts.id
-      DESC LIMIT 1`,
+      `SELECT Cohorts.*, Frames.firstTick as firstTick, Frames.lastBlockNumber as lastBlockNumber FROM Cohorts
+      LEFT JOIN Frames ON Cohorts.id = Frames.id
+      WHERE Cohorts.id = ?
+      ORDER BY Cohorts.id DESC LIMIT 1`,
       [id],
     );
 
@@ -56,7 +54,7 @@ export class CohortsTable extends BaseTable {
         `SELECT 
         COALESCE(sum(transactionFees), 0) as totalTransactionFees, 
         COALESCE(sum(microgonsBid), 0) as totalMicrogonsBid
-      FROM cohorts`,
+      FROM Cohorts`,
       );
 
       const oldestActiveFrameId = Math.max(1, currentFrameId - 10);
@@ -64,7 +62,7 @@ export class CohortsTable extends BaseTable {
         `SELECT 
         COALESCE(count(id), 0) as activeCohorts,
         COALESCE(sum(seatsWon), 0) as activeSeats
-      FROM cohorts WHERE id >= ?`,
+      FROM Cohorts WHERE id >= ? AND seatsWon > 0`,
         [oldestActiveFrameId],
       );
 
@@ -84,7 +82,7 @@ export class CohortsTable extends BaseTable {
   }
 
   async fetchActiveCohorts(currentFrameId: number): Promise<ICohortRecord[]> {
-    const records = await this.db.sql.select<any[]>('SELECT * FROM cohorts WHERE seatsWon > 0 AND id >= ?', [
+    const records = await this.db.sql.select<any[]>('SELECT * FROM Cohorts WHERE seatsWon > 0 AND id >= ?', [
       currentFrameId - 10,
     ]);
     return convertSqliteBigInts(records, this.bigIntFields) as ICohortRecord[];
@@ -101,7 +99,7 @@ export class CohortsTable extends BaseTable {
     micronotsToBeMined: bigint,
   ): Promise<void> {
     await this.db.sql.execute(
-      `INSERT OR REPLACE INTO cohorts (
+      `INSERT OR REPLACE INTO Cohorts (
         id, 
         progress, 
         transactionFees, 
@@ -124,7 +122,7 @@ export class CohortsTable extends BaseTable {
   }
 
   async fetchCount(): Promise<number> {
-    const [result] = await this.db.sql.select<[{ count: number }]>('SELECT COUNT(*) as count FROM cohorts');
+    const [result] = await this.db.sql.select<[{ count: number }]>('SELECT COUNT(*) as count FROM Cohorts');
     return result.count;
   }
 }

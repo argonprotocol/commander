@@ -1,12 +1,13 @@
-import { IBidsFile } from '@argonprotocol/commander-bot/src/storage';
+import { IBidsFile, IWinningBid } from '@argonprotocol/commander-bot/src/storage';
 import { IDashboardStats } from '../interfaces/IStats';
 import { Db } from './Db';
 import { Config } from './Config';
-import { bigIntMax, calculateCurrentFrameIdFromSystemTime } from '@argonprotocol/commander-calculator/src/utils';
+import { bigIntMax } from '@argonprotocol/commander-calculator/src/utils';
 import { ICohortRecord } from '../interfaces/db/ICohortRecord';
 import { botEmitter } from './Bot';
-import { createPromiser, ensureOnlyOneInstance } from './Utils';
-import ICreatePromiser from '../interfaces/ICreatePromiser';
+import { createDeferred, ensureOnlyOneInstance } from './Utils';
+import IDeferred from '../interfaces/IDeferred';
+import { MiningFrames } from '@argonprotocol/commander-calculator/src/MiningFrames';
 
 interface IMyMiningSeats {
   seatCount: number;
@@ -25,13 +26,14 @@ interface IMyMiningBids {
 }
 
 export class Stats {
-  public currentFrameId: number;
-  public cohortId: number | null;
+  public latestFrameId: number;
+  public selectedFrameId!: number;
+  public selectedCohortTickRange!: [number, number];
 
   public myMiningSeats: IMyMiningSeats;
   public myMiningBids: IMyMiningBids;
 
-  public allWinningBids: IBidsFile['winningBids'];
+  public allWinningBids: IWinningBid[];
 
   public dashboard: IDashboardStats;
   public argonActivity: any[];
@@ -42,24 +44,28 @@ export class Stats {
   public isLoadedPromise: Promise<void>;
 
   private isLoading: boolean = false;
-  private loadedPromiser!: ICreatePromiser<void>;
-
-  private listeningCounter: number = 0;
+  private isLoadedDeferred!: IDeferred<void>;
 
   private db!: Db;
 
   private config!: Config;
   private dbPromise: Promise<Db>;
 
+  private dashboardSubscribers: number = 0;
+  private dashboardHasUpdates: boolean = true;
+
+  private activitySubscribers: number = 0;
+  private activityHasUpdates: boolean = true;
+
   constructor(dbPromise: Promise<Db>, config: Config) {
     ensureOnlyOneInstance(this.constructor);
 
     this.isLoaded = false;
 
-    this.cohortId = null;
     this.allWinningBids = [];
 
-    this.currentFrameId = calculateCurrentFrameIdFromSystemTime();
+    this.latestFrameId = MiningFrames.calculateCurrentFrameIdFromSystemTime();
+    this.selectFrameId(this.latestFrameId, true);
 
     this.myMiningSeats = {
       seatCount: 0,
@@ -78,7 +84,7 @@ export class Stats {
     };
 
     this.dashboard = {
-      cohortId: null,
+      frameId: null,
       cohort: null,
       global: {
         activeCohorts: 0,
@@ -99,8 +105,30 @@ export class Stats {
     this.dbPromise = dbPromise;
     this.config = config;
 
-    this.loadedPromiser = createPromiser<void>();
-    this.isLoadedPromise = this.loadedPromiser.promise;
+    this.isLoadedDeferred = createDeferred<void>();
+    this.isLoadedPromise = this.isLoadedDeferred.promise;
+  }
+
+  public get prevFrameId(): number | null {
+    const newFrameId = this.selectedFrameId - 1;
+    if (newFrameId < 1) return null;
+    return newFrameId;
+  }
+
+  public get nextFrameId(): number | null {
+    const newFrameId = this.selectedFrameId + 1;
+    if (newFrameId > this.latestFrameId) return null;
+    return newFrameId;
+  }
+
+  public selectFrameId(frameId: number, skipDashboardUpdate: boolean = false) {
+    const firstFrameTickRange = MiningFrames.getTickRangeForFrameFromSystemTime(frameId);
+    const lastFrameTickRange = MiningFrames.getTickRangeForFrameFromSystemTime(frameId + 9);
+    this.selectedFrameId = frameId;
+    this.selectedCohortTickRange = [firstFrameTickRange[0], lastFrameTickRange[1]];
+    if (skipDashboardUpdate) return;
+
+    this.updateDashboard().catch(console.error);
   }
 
   public async load() {
@@ -110,76 +138,111 @@ export class Stats {
     await this.config.isLoadedPromise;
     this.db = await this.dbPromise;
 
-    botEmitter.on('updated-cohort-data', async (cohortId: number) => {
-      if (!this.isActive()) return;
-
-      if (this.cohortId && this.cohortId !== cohortId) return;
-      this.cohortId = cohortId;
-
-      await this.updateDashboard();
+    botEmitter.on('updated-cohort-data', async (frameId: number) => {
       await this.updateMiningSeats();
-      await this.updateBitcoinActivity();
-      await this.updateArgonActivity();
-      await this.updateBiddingActivity();
+
+      const isOnLatestFrame = this.selectedFrameId === this.latestFrameId;
+      this.latestFrameId = frameId;
+      if (!isOnLatestFrame) return;
+
+      this.selectFrameId(frameId, true);
+
+      if (this.isSubscribedToDashboard) {
+        await this.updateDashboard();
+        this.dashboardHasUpdates = false;
+      } else {
+        this.dashboardHasUpdates = true;
+      }
+
+      if (this.isSubscribedToActivity) {
+        await this.updateBitcoinActivity();
+        await this.updateArgonActivity();
+        await this.updateBiddingActivity();
+        this.activityHasUpdates = false;
+      } else {
+        this.activityHasUpdates = true;
+      }
     });
 
-    botEmitter.on('updated-bids-data', async (allWinningBids: IBidsFile['winningBids']) => {
-      if (!this.isActive()) return;
-      this.updateBiddingData(allWinningBids);
+    botEmitter.on('updated-bids-data', async (_: IBidsFile['winningBids']) => {
+      this.updateMiningBids();
     });
 
     botEmitter.on('updated-bitcoin-activity', async () => {
-      if (!this.isActive()) return;
-      this.updateBitcoinActivity();
+      if (this.isSubscribedToActivity) {
+        await this.updateBitcoinActivity();
+        this.activityHasUpdates = false;
+      } else {
+        this.activityHasUpdates = true;
+      }
     });
 
     botEmitter.on('updated-argon-activity', async () => {
-      if (!this.isActive()) return;
-      this.updateArgonActivity();
+      if (this.isSubscribedToActivity) {
+        await this.updateArgonActivity();
+        this.activityHasUpdates = false;
+      } else {
+        this.activityHasUpdates = true;
+      }
     });
 
     botEmitter.on('updated-bidding-activity', async () => {
-      if (!this.isActive()) return;
-      this.updateBiddingActivity();
+      if (this.isSubscribedToActivity) {
+        await this.updateBiddingActivity();
+        this.activityHasUpdates = false;
+      } else {
+        this.activityHasUpdates = true;
+      }
     });
 
     await this.updateMiningSeats();
-    await this.updateBitcoinActivity();
-    await this.updateArgonActivity();
-    await this.updateBiddingActivity();
+    await this.updateMiningBids();
 
     this.isLoaded = true;
     this.isLoading = false;
-    this.loadedPromiser.resolve();
+    this.isLoadedDeferred.resolve();
   }
 
-  public async start(): Promise<void> {
-    this.listeningCounter++;
-    if (this.listeningCounter > 1) return;
+  public async subscribeToDashboard(): Promise<void> {
+    this.dashboardSubscribers++;
+    if (this.dashboardSubscribers > 1) return;
 
-    this.cohortId ??= await this.fetchLatestCohortIdFromDb();
-    if (!this.cohortId) return;
+    await this.isLoadedDeferred.promise;
 
-    await this.loadedPromiser.promise;
-    await Promise.all([
-      this.updateDashboard(),
-      this.updateMiningSeats(),
-      this.updateBitcoinActivity(),
-      this.updateArgonActivity(),
-      this.updateBiddingActivity(),
-      this.updateBiddingData(this.allWinningBids),
-      this.updateBitcoinActivity(),
-      this.updateArgonActivity(),
-      this.updateBiddingActivity(),
-    ]);
+    if (this.dashboardHasUpdates) {
+      this.dashboardHasUpdates = false;
+      await this.updateDashboard();
+    }
   }
 
-  public async stop(): Promise<void> {
-    this.listeningCounter--;
+  public async subscribeToActivity(): Promise<void> {
+    this.activitySubscribers++;
+    if (this.activitySubscribers > 1) return;
+
+    await this.isLoadedDeferred.promise;
+
+    if (this.activityHasUpdates) {
+      this.activityHasUpdates = false;
+      await Promise.all([this.updateBitcoinActivity(), this.updateArgonActivity(), this.updateBiddingActivity()]);
+    }
   }
 
-  public isActive(): boolean {
-    return this.listeningCounter > 0;
+  public async unsubscribeFromDashboard(): Promise<void> {
+    this.dashboardSubscribers--;
+    if (this.dashboardSubscribers < 0) this.dashboardSubscribers = 0;
+  }
+
+  public async unsubscribeFromActivity(): Promise<void> {
+    this.activitySubscribers--;
+    if (this.activitySubscribers < 0) this.activitySubscribers = 0;
+  }
+
+  private get isSubscribedToDashboard(): boolean {
+    return this.dashboardSubscribers > 0;
+  }
+
+  private get isSubscribedToActivity(): boolean {
+    return this.activitySubscribers > 0;
   }
 
   private async updateDashboard(): Promise<void> {
@@ -199,12 +262,22 @@ export class Stats {
   }
 
   private async updateBiddingActivity(): Promise<void> {
-    this.biddingActivity = await this.db.botActivitiesTable.fetchLastFiveRecords();
+    this.biddingActivity = await this.db.biddingActivitiesTable.fetchLastFiveRecords();
   }
 
-  private async updateBiddingData(allWinningBids: IBidsFile['winningBids']): Promise<void> {
-    this.allWinningBids = allWinningBids;
-    const myWinningBids = allWinningBids.filter(bid => bid.subAccountIndex !== undefined);
+  private async updateMiningBids(): Promise<void> {
+    const frameBids = await this.db.frameBidsTable.fetchForFrameId(this.latestFrameId, 10);
+    this.allWinningBids = frameBids.map(x => {
+      return {
+        address: x.address,
+        subAccountIndex: x.subAccountIndex,
+        lastBidAtTick: x.lastBidAtTick,
+        bidPosition: x.bidPosition,
+        microgonsBid: x.microgonsBid,
+      };
+    });
+
+    const myWinningBids = this.allWinningBids.filter(bid => bid.subAccountIndex !== undefined);
     this.myMiningBids.bidCount = myWinningBids.length;
     this.myMiningBids.microgonsBid = myWinningBids.reduce((acc, bid) => acc + (bid.microgonsBid || 0n), 0n);
   }
@@ -219,7 +292,7 @@ export class Stats {
     let microgonsToBeMined = 0n;
     let micronotsToBeMined = 0n;
 
-    const activeCohorts = await this.db.cohortsTable.fetchActiveCohorts(this.currentFrameId);
+    const activeCohorts = await this.db.cohortsTable.fetchActiveCohorts(this.latestFrameId);
 
     for (const cohort of activeCohorts) {
       // Scale factor to preserve precision (cohort.progress has 3 decimal places)
@@ -233,7 +306,7 @@ export class Stats {
       micronotsToBeMined += remainingRewards.micronots * BigInt(cohort.seatsWon);
     }
 
-    const activeCohortFrames = await this.db.cohortFramesTable.fetchActiveCohortFrames(this.currentFrameId);
+    const activeCohortFrames = await this.db.cohortFramesTable.fetchActiveCohortFrames(this.latestFrameId);
 
     for (const cohortFrame of activeCohortFrames) {
       microgonsMined += cohortFrame.microgonsMined;
@@ -273,8 +346,8 @@ export class Stats {
     try {
       return {
         global: await this.fetchDashboardGlobalStatsFromDb(),
-        cohortId: this.cohortId,
-        cohort: this.cohortId ? await this.fetchDashboardCohortStatsFromDb(this.cohortId) : null,
+        frameId: this.selectedFrameId,
+        cohort: this.selectedFrameId ? await this.fetchDashboardCohortStatsFromDb(this.selectedFrameId) : null,
       };
     } catch (error) {
       console.error('Error fetching dashboard from db', error);
@@ -308,8 +381,8 @@ export class Stats {
     };
   }
 
-  private async fetchDashboardCohortStatsFromDb(cohortId: number): Promise<IDashboardStats['cohort']> {
-    const cohort = await this.db.cohortsTable.fetchById(cohortId);
+  private async fetchDashboardCohortStatsFromDb(frameId: number): Promise<IDashboardStats['cohort']> {
+    const cohort = await this.db.cohortsTable.fetchById(frameId);
     if (!cohort) return null;
 
     const cohortStats = await this.db.cohortFramesTable.fetchCohortStats(cohort.id);

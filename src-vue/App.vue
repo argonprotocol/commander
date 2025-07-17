@@ -2,7 +2,7 @@
 <template>
   <div class="h-screen w-screen flex flex-col overflow-hidden">
     <TopBar />
-    <main v-if="config.isLoaded" class="flex-grow relative">
+    <main v-if="controller.isLoaded" class="flex-grow relative">
       <MiningPanel v-if="showMiningPanel" />
       <VaultingPanel v-else-if="controller.panel === 'vaulting'" />
       <LiquidLockingPanel v-else-if="controller.panel === 'liquid-locking'" />

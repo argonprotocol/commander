@@ -18,8 +18,8 @@ import {
   SeatGoalInterval,
   SeatGoalType,
 } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
-import { createPromiser, ensureOnlyOneInstance } from './Utils';
-import ICreatePromiser from '../interfaces/ICreatePromiser';
+import { createDeferred, ensureOnlyOneInstance } from './Utils';
+import IDeferred from '../interfaces/IDeferred';
 
 export const env = (import.meta as any).env;
 export const NETWORK_NAME = env.VITE_NETWORK_NAME || 'mainnet';
@@ -36,7 +36,7 @@ export class Config {
   public hasSavedBiddingRules: boolean;
   public hasSavedVaultingRules: boolean;
 
-  private _loadingPromiser!: ICreatePromiser<void>;
+  private _loadedDeferred!: IDeferred<void>;
 
   private _db!: Db;
   private _fieldsToSave: Set<string> = new Set();
@@ -55,8 +55,8 @@ export class Config {
       progress: 0,
       startDate: null,
     };
-    this._loadingPromiser = createPromiser<void>();
-    this.isLoadedPromise = this._loadingPromiser.promise;
+    this._loadedDeferred = createDeferred<void>();
+    this.isLoadedPromise = this._loadedDeferred.promise;
     this.isLoaded = false;
 
     this.hasSavedBiddingRules = false;
@@ -123,7 +123,7 @@ export class Config {
     this._stringified = fieldsSerialized;
     this._db = db;
     this._unstringified = configData as IConfig;
-    this._loadingPromiser.resolve();
+    this._loadedDeferred.resolve();
   }
 
   get seedAccount(): KeyringPair {

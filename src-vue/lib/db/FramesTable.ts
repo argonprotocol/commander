@@ -1,7 +1,6 @@
 import { IFrameRecord } from '../../interfaces/db/IFrameRecord';
 import { BaseTable, IFieldTypes } from './BaseTable';
 import { convertSqliteFields, toSqlParams } from '../Utils';
-import { jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
 
 export class FramesTable extends BaseTable {
   private fields: IFieldTypes = {
@@ -22,7 +21,7 @@ export class FramesTable extends BaseTable {
     isProcessed: boolean,
   ): Promise<void> {
     await this.db.sql.execute(
-      'INSERT OR REPLACE INTO frames (id, firstTick, lastTick, firstBlockNumber, lastBlockNumber, microgonToUsd, microgonToBtc, microgonToArgonot, progress, isProcessed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT OR REPLACE INTO Frames (id, firstTick, lastTick, firstBlockNumber, lastBlockNumber, microgonToUsd, microgonToBtc, microgonToArgonot, progress, isProcessed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       toSqlParams([
         id,
         firstTick,
@@ -51,7 +50,7 @@ export class FramesTable extends BaseTable {
     isProcessed: boolean,
   ): Promise<void> {
     await this.db.sql.execute(
-      'UPDATE frames SET firstTick = ?, lastTick = ?, firstBlockNumber = ?, lastBlockNumber = ?, microgonToUsd = ?, microgonToBtc = ?, microgonToArgonot = ?, progress = ?, isProcessed = ? WHERE id = ?',
+      'UPDATE Frames SET firstTick = ?, lastTick = ?, firstBlockNumber = ?, lastBlockNumber = ?, microgonToUsd = ?, microgonToBtc = ?, microgonToArgonot = ?, progress = ?, isProcessed = ? WHERE id = ?',
       toSqlParams([
         firstTick,
         lastTick,
@@ -68,7 +67,7 @@ export class FramesTable extends BaseTable {
   }
 
   async fetchById(id: number): Promise<IFrameRecord> {
-    const [rawRecord] = await this.db.sql.select<[any]>('SELECT * FROM frames WHERE id = ?', [id]);
+    const [rawRecord] = await this.db.sql.select<[any]>('SELECT * FROM Frames WHERE id = ?', [id]);
     if (!rawRecord) throw new Error(`Frame ${id} not found`);
 
     return convertSqliteFields(rawRecord, this.fields) as IFrameRecord;
@@ -76,14 +75,14 @@ export class FramesTable extends BaseTable {
 
   async fetchProcessedCount(): Promise<number> {
     const [result] = await this.db.sql.select<[{ count: number }]>(
-      'SELECT COUNT(*) as count FROM frames WHERE isProcessed = 1',
+      'SELECT COUNT(*) as count FROM Frames WHERE isProcessed = 1',
     );
     return result.count;
   }
 
   async latestId(): Promise<number> {
     const [rawRecord] = await this.db.sql.select<[{ maxId: number }]>(
-      'SELECT COALESCE(MAX(id), 0) as maxId FROM frames',
+      'SELECT COALESCE(MAX(id), 0) as maxId FROM Frames',
     );
     return rawRecord.maxId;
   }

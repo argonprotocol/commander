@@ -40,13 +40,16 @@
               <tr>
                 <td>{{ microgonToArgonNm(requiredMicrogons).format('0,0.[00000000]') }} ARGN</td>
                 <td>{{ microgonToArgonNm(wallet.availableMicrogons).format('0,0.[00000000]') }} ARGN</td>
-                <td class="text-right">{{ wallet.availableMicrogons == requiredMicrogons ? 'success' : 'waiting' }}</td>
+                <td v-if="!requiredMicrogons" class="text-right">--</td>
+                <td v-else-if="wallet.availableMicrogons >= requiredMicrogons" class="text-right text-green-700 font-bold">success</td>
+                <td v-else class="text-right">waiting</td>
               </tr>
               <tr>
                 <td>{{ micronotToArgonotNm(requiredMicronots).format('0,0.[00000000]') }} ARGNOT</td>
                 <td>{{ micronotToArgonotNm(wallet.availableMicronots).format('0,0.[00000000]') }} ARGNOT</td>
                 <td v-if="!requiredMicronots" class="text-right">--</td>
-                <td v-else class="text-right">{{ wallet.availableMicronots == requiredMicronots ? 'success' : 'waiting' }}</td>
+                <td v-else-if="wallet.availableMicronots >= requiredMicronots" class="text-right text-green-700 font-bold">success</td>
+                <td v-else class="text-right">waiting</td>
               </tr>
             </tbody>
           </table>
