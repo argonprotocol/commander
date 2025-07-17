@@ -71,7 +71,6 @@ const showMiningPanel = Vue.computed(() => {
 });
 
 function clickHandler() {
-  console.log('click');
   hideTooltip();
 }
 

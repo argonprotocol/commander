@@ -3,6 +3,8 @@ import { MICROGONS_PER_ARGON, SATS_PER_BTC } from '@argonprotocol/mainchain';
 import BigNumber from 'bignumber.js';
 import IDeferred from '../interfaces/IDeferred';
 import { createDeferred } from './Utils';
+import { Config } from './Config';
+import { save } from '@tauri-apps/plugin-dialog';
 
 export const SATOSHIS_PER_BITCOIN = SATS_PER_BTC;
 export { MICROGONS_PER_ARGON };
@@ -52,22 +54,18 @@ export class Currency {
   public isLoaded: boolean;
   public isLoadedPromise: Promise<void>;
 
+  private config: Config;
   private isLoadedDeferred: IDeferred<void>;
 
-  constructor(defaultCurrencyKey: ICurrencyKey) {
-    this.setCurrencyKey(defaultCurrencyKey);
+  constructor(config: Config) {
+    this.config = config;
 
     this.isLoaded = false;
     this.isLoadedDeferred = createDeferred<void>();
     this.isLoadedPromise = this.isLoadedDeferred.promise;
   }
 
-  public setCurrencyKey(currencyKey: ICurrencyKey) {
-    this.record = this.records[currencyKey];
-    this.symbol = this.record.symbol;
-  }
-
-  async load() {
+  public async load() {
     const [otherResponse, microgonExchangeRateTo] = await Promise.all([
       fetch('https://open.er-api.com/v6/latest/USD'),
       getMainchain().fetchMicrogonExchangeRatesTo(),
@@ -77,15 +75,25 @@ export class Currency {
     this.microgonExchangeRateTo.ARGNOT = microgonExchangeRateTo.ARGNOT;
     this.microgonExchangeRateTo.BTC = microgonExchangeRateTo.BTC;
 
-    const usdExchangeRateTo = (await otherResponse.json()).rates;
-    if (!usdExchangeRateTo) return;
+    const usdExchangeRateFrom = (await otherResponse.json()).rates;
+    if (!usdExchangeRateFrom) return;
 
-    this.microgonExchangeRateTo.EUR = this.otherExchangeRateToMicrogons(usdExchangeRateTo.EUR);
-    this.microgonExchangeRateTo.GBP = this.otherExchangeRateToMicrogons(usdExchangeRateTo.GBP);
-    this.microgonExchangeRateTo.INR = this.otherExchangeRateToMicrogons(usdExchangeRateTo.INR);
+    this.microgonExchangeRateTo.EUR = this.otherExchangeRateToMicrogons(usdExchangeRateFrom.EUR);
+    this.microgonExchangeRateTo.GBP = this.otherExchangeRateToMicrogons(usdExchangeRateFrom.GBP);
+    this.microgonExchangeRateTo.INR = this.otherExchangeRateToMicrogons(usdExchangeRateFrom.INR);
 
-    this.isLoaded = true;
-    this.isLoadedDeferred.resolve();
+    this.config.isLoadedPromise.then(() => {
+      this.setCurrencyKey(this.config.defaultCurrencyKey, false);
+      this.isLoaded = true;
+      this.isLoadedDeferred.resolve();
+    });
+  }
+
+  public setCurrencyKey(currencyKey: ICurrencyKey, saveToConfig: boolean = true) {
+    console.log(`Setting currencyKey from ${this.record?.key} to ${currencyKey}`, saveToConfig);
+    this.record = this.records[currencyKey];
+    this.symbol = this.record.symbol;
+    if (saveToConfig) this.config.defaultCurrencyKey = currencyKey;
   }
 
   public microgonToArgon(microgons: bigint): number {
@@ -175,7 +183,8 @@ export class Currency {
   }
 
   private otherExchangeRateToMicrogons(otherExchangeRate: number): bigint {
-    const bigNumber = BigNumber(otherExchangeRate).multipliedBy(this.microgonExchangeRateTo.USD);
-    return BigInt(bigNumber.integerValue().toString());
+    const dollarsRequiredBn = BigNumber(1).dividedBy(otherExchangeRate);
+    const microgonsRequiredBn = dollarsRequiredBn.multipliedBy(this.microgonExchangeRateTo.USD);
+    return BigInt(microgonsRequiredBn.integerValue().toString());
   }
 }

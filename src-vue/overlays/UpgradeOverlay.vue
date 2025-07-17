@@ -49,7 +49,7 @@
                 :class="isStartingUpgrade ? 'opacity-50 pointer-events-none' : ''"
                 class="bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-12 py-2 rounded-md cursor-pointer"
               >
-                {{ isStartingUpgrade ? 'Starting Upgrading...' : 'Upgrade My Cloud Machine' }}
+                {{ isStartingUpgrade ? 'Starting Upgrade...' : 'Upgrade My Cloud Machine' }}
               </button>
             </div>
           </div>

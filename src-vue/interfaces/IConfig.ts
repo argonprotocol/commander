@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { BiddingRulesSchema } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
 import { VaultingRulesSchema } from './IVaultingRules';
+import { CurrencyKey } from '../lib/Currency';
 
 export enum InstallStepKey {
   ServerConnect = 'ServerConnect',
@@ -92,6 +93,8 @@ export const ConfigSchema = z.object({
   hasMiningBids: z.boolean(), // hasMiningBids
   biddingRules: BiddingRulesSchema,
   vaultingRules: VaultingRulesSchema,
+
+  defaultCurrencyKey: z.nativeEnum(CurrencyKey),
 });
 
 // ---- Optional Type Inference ---- //
@@ -122,4 +125,5 @@ export interface IConfigDefaults {
   hasMiningBids: () => IConfig['hasMiningBids'];
   biddingRules: () => IConfig['biddingRules'];
   vaultingRules: () => IConfig['vaultingRules'];
+  defaultCurrencyKey: () => IConfig['defaultCurrencyKey'];
 }

@@ -180,7 +180,7 @@ export class Mainchain {
     const usdForBtc = convertFixedU128ToBigNumber(priceIndex.btcUsdPrice.toBigInt());
 
     // These exchange rates should be relative to the argon
-    const microgonsForUsd = this.calculateExchangeRateInMicrogons(BigNumber(microgonsForArgon), usdForArgon);
+    const microgonsForUsd = this.calculateExchangeRateInMicrogons(BigNumber(1), usdForArgon);
     const microgonsForArgnot = this.calculateExchangeRateInMicrogons(usdForArgnot, usdForArgon);
     const microgonsForBtc = this.calculateExchangeRateInMicrogons(usdForBtc, usdForArgon);
 
@@ -272,11 +272,11 @@ export class Mainchain {
   }
 
   private calculateExchangeRateInMicrogons(usdAmount: BigNumber, usdForArgon: BigNumber): bigint {
-    const defaultValue = BigInt(1 * MICROGONS_PER_ARGON);
-    if (usdAmount.isZero() || usdForArgon.isZero()) return defaultValue;
+    const oneArgonInMicrogons = BigInt(1 * MICROGONS_PER_ARGON);
+    if (usdAmount.isZero() || usdForArgon.isZero()) return oneArgonInMicrogons;
 
-    const argons = usdAmount.dividedBy(usdForArgon);
-    return BigInt(argons.multipliedBy(MICROGONS_PER_ARGON).integerValue().toString());
+    const argonsRequired = usdAmount.dividedBy(usdForArgon);
+    return BigInt(argonsRequired.multipliedBy(MICROGONS_PER_ARGON).integerValue().toString());
   }
 }
 

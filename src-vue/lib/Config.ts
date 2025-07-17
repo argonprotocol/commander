@@ -20,6 +20,7 @@ import {
 } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
 import { createDeferred, ensureOnlyOneInstance } from './Utils';
 import IDeferred from '../interfaces/IDeferred';
+import { CurrencyKey } from './Currency';
 
 export const env = (import.meta as any).env;
 export const NETWORK_NAME = env.VITE_NETWORK_NAME || 'mainnet';
@@ -88,6 +89,7 @@ export class Config {
       hasMiningBids: Config.getDefault(dbFields.hasMiningBids) as boolean,
       biddingRules: Config.getDefault(dbFields.biddingRules) as IConfig['biddingRules'],
       vaultingRules: Config.getDefault(dbFields.vaultingRules) as IConfig['vaultingRules'],
+      defaultCurrencyKey: Config.getDefault(dbFields.defaultCurrencyKey) as CurrencyKey,
     };
   }
 
@@ -295,6 +297,17 @@ export class Config {
     this._unstringified.vaultingRules = value;
   }
 
+  get defaultCurrencyKey(): CurrencyKey {
+    this._throwErrorIfNotLoaded();
+    return this._unstringified.defaultCurrencyKey;
+  }
+
+  set defaultCurrencyKey(value: CurrencyKey) {
+    this._throwErrorIfNotLoaded();
+    this._tryFieldsToSave(dbFields.defaultCurrencyKey, value);
+    this._unstringified.defaultCurrencyKey = value;
+  }
+
   public async saveBiddingRules() {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.biddingRules, this.biddingRules);
@@ -374,6 +387,7 @@ const dbFields = {
   hasMiningBids: 'hasMiningBids',
   biddingRules: 'biddingRules',
   vaultingRules: 'vaultingRules',
+  defaultCurrencyKey: 'defaultCurrencyKey',
 } as const;
 
 const defaults: IConfigDefaults = {
@@ -471,4 +485,5 @@ const defaults: IConfigDefaults = {
       requiredMicronots: 0n,
     };
   },
+  defaultCurrencyKey: () => CurrencyKey.ARGN,
 };
