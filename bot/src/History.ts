@@ -8,7 +8,7 @@ import {
   type IBotActivity,
   type IBotActivityBidReceived,
 } from './interfaces/IHistoryFile.ts';
-import type { Storage } from './storage.ts';
+import type { Storage } from './Storage.ts';
 
 export enum SeatReductionReason {
   InsufficientFunds = 'InsufficientFunds',

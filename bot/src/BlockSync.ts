@@ -11,7 +11,7 @@ import {
   type SpRuntimeDispatchError,
   type Vec,
 } from '@argonprotocol/mainchain';
-import { type Storage } from './storage.ts';
+import { type Storage } from './Storage.ts';
 import type { IBotState, IBotStateFile } from './interfaces/IBotStateFile.ts';
 import type { IWinningBid } from './interfaces/IBidsFile.ts';
 import { JsonStore } from './JsonStore.ts';

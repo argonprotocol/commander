@@ -1,6 +1,6 @@
 import { type Accountset, MiningBids } from '@argonprotocol/mainchain';
 import { createBidderParams, type IBiddingRules } from '@argonprotocol/commander-calculator';
-import { type Storage } from './storage.ts';
+import { type Storage } from './Storage.ts';
 import { CohortBidder } from './CohortBidder.ts';
 import type { History } from './History.ts';
 

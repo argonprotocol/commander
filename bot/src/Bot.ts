@@ -1,7 +1,7 @@
 import * as Fs from 'node:fs';
 import { Accountset, type ArgonClient, type KeyringPair } from '@argonprotocol/mainchain';
 import { getClient } from './utils.ts';
-import { Storage } from './storage.ts';
+import { Storage } from './Storage.ts';
 import { AutoBidder } from './AutoBidder.ts';
 import { BlockSync } from './BlockSync.ts';
 import { Dockers } from './Dockers.ts';
