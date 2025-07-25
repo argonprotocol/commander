@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="min-w-8 min-h-8 w-8 h-8">
     <div

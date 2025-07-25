@@ -1,9 +1,11 @@
+<!-- prettier-ignore -->
 <template>
-  <BlankSlate v-if="!config.isServerConnected" />
+  <BlankSlate v-if="!config.hasSavedBiddingRules" />
+  <FinalSetupChecklist v-else-if="!config.isServerReadyToInstall" />
   <CloudMachineIsInstalling v-else-if="!config.isServerInstalled" />
+  <StartingBot v-else-if="!bot.isReady" />
   <Dashboard v-else-if="config.hasMiningSeats" />
-  <FirstAuction v-else-if="config.isServerReadyForBidding" />
-  <FinalSetupChecklist v-else />
+  <FirstAuction v-else />
 </template>
 
 <script setup lang="ts">
@@ -12,7 +14,10 @@ import FinalSetupChecklist from './mining-panel/FinalSetupChecklist.vue';
 import CloudMachineIsInstalling from './mining-panel/CloudMachineIsInstalling.vue';
 import FirstAuction from './mining-panel/FirstAuction.vue';
 import Dashboard from './mining-panel/Dashboard.vue';
+import StartingBot from './mining-panel/StartingBot.vue';
 import { useConfig } from '../stores/config';
+import { useBot } from '../stores/bot';
 
 const config = useConfig();
+const bot = useBot();
 </script>

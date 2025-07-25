@@ -1,39 +1,41 @@
+<!-- prettier-ignore -->
 <template>
   <li
     v-if="!['Hidden', 'Failed'].includes(stepStatus)"
     :status="stepStatus"
-    :style="{ height: `${stepHeightPct}%`, opacity: hasError ? '0.5' : '1' }"
-    class="Component InstallProgressStep relative flex flex-row items-center border-t border-slate-300 text-black/30 whitespace-nowrap w-full pl-1"
+    :style="{ height: `${stepHeightPct}%`, opacity: hasError ? '0.7' : '1' }"
+    class="Component InstallProgressStep max-h-24 relative flex flex-row items-center border-t border-slate-300 text-black/30 whitespace-nowrap w-full"
   >
     <div v-if="stepStatus === 'Working'" spinner />
     <CheckboxGray
       v-else
       :isChecked="['Completed', 'Completing'].includes(stepStatus)"
+      :style="{ opacity: hasError ? '0.7' : '1' }"
       color="gray"
-      class="absolute top-1/2 -translate-y-1/2 left-0"
+      class="mr-2.5"
     />
-    <label>{{ getLabel(step) }}</label>
+    <label>{{ getLabel(stepLabel) }}</label>
     <ProgressBar
       v-if="['Working', 'Completing', 'Completed', 'Failed'].includes(stepStatus)"
       :hasError="stepStatus === 'Failed'"
       :progress="stepProgress"
-      :is-slow="step.isSlow"
     />
   </li>
   <li
     v-if="stepStatus === 'Failed'"
+    :status="stepStatus"
     :class="{ 'opacity-50 pointer-events-none': isRetrying }"
-    class="Component InstallProgressStep relative flex flex-col border-t border-slate-300 text-black/70 w-full px-2 py-4 grow h-full"
+    class="Component InstallProgressStep relative flex flex-col border-t border-slate-300 text-black/70 w-full px-0 py-4 grow h-full"
   >
     <div
       class="absolute top-2 left-0 bottom-0 w-full z-0"
       style="background-image: linear-gradient(to bottom, transparent 100%, #fad1d8 90%)"
     ></div>
-    <div class="flex flex-row items-center whitespace-nowrap px-2 relative z-10 pt-4">
+    <div class="flex flex-row items-center whitespace-nowrap pr-2 relative z-10 pt-4">
       <AlertIcon class="w-7 h-7 mr-2.5 text-argon-button" />
-      <label class="font-bold text-lg truncate grow">FAILED to {{ getLabel(step, -1) }}</label>
+      <label class="font-bold text-lg truncate grow text-left">FAILED to {{ getLabel(stepLabel, -1) }}</label>
       <button
-        v-if="!isRetrying && step.key === InstallStepKey.ServerConnect"
+        v-if="!isRetrying && stepLabel.key === InstallStepKey.ServerConnect"
         class="text-argon-button font-bold px-4 py-0.5 border border-argon-button rounded cursor-pointer hover:border-argon-button-hover hover:text-argon-button-hover mr-2"
       >
         Configure Cloud Machine
@@ -46,7 +48,7 @@
         Remove Server
       </button>
       <button
-        @click="retryFailedStep(step)"
+        @click="retryFailedStep(stepLabel)"
         class="text-white font-bold bg-argon-button px-4 py-0.5 border border-fuchsia-800 rounded cursor-pointer hover:bg-argon-button-hover"
       >
         <span v-if="isRetrying">Retrying...</span>
@@ -54,15 +56,15 @@
       </button>
     </div>
     <p
-      v-if="step.key === InstallStepKey.ServerConnect"
-      class="text-black/70 border-t border-slate-400/50 pt-3 mt-3 px-2.5 relative z-10"
+      v-if="stepLabel.key === InstallStepKey.ServerConnect"
+      class="text-black/70 border-t border-dashed border-slate-400/50 pt-3 mt-3 pr-2.5 relative z-10"
     >
       Commander could not connect to your server. Click the Configure Cloud Machine button if your IP address has
       changed. You can also retry the connection. If this issue persists, you might need to remove the current server
       and start afresh with a new one.
     </p>
-    <p v-else class="text-black/70 border-t border-slate-400/50 pt-3 pb-5 mt-3 px-2.5 relative z-10">
-      Commander has encountered an unrecoverable error while trying to provision your server. You can rerun this step by
+    <p v-else class="text-black/70 border-t border-dashed border-slate-400/50 pt-3 pb-5 mt-3 pr-2.5 relative z-10">
+      Commander has encountered an unrecoverable error while trying to provision your server. Rerun this step by
       clicking Retry. If the issue persists, you might need to remove the current server and start afresh with a new
       one.
     </p>
@@ -71,43 +73,39 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { useConfig, type Config } from '../stores/config';
-import type { IStep } from '../lib/InstallerStep';
-import { InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
+import { useConfig } from '../stores/config';
+import type { IStepLabel } from '../lib/InstallerStep';
+import { InstallStepErrorType, InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
 import ProgressBar from '../components/ProgressBar.vue';
 import CheckboxGray from '../components/CheckboxGray.vue';
 import AlertIcon from '../assets/alert.svg?component';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import { useInstaller } from '../stores/installer';
 
 const props = defineProps<{
   isCompact?: boolean;
-  step: IStep;
-  stepCount: number;
+  stepLabel: IStepLabel;
+  stepsCount: number;
   stepIndex: number;
 }>();
 
 const config = useConfig();
 const installer = useInstaller();
 
-const step = Vue.ref<IStep>(props.step);
+const stepLabel = Vue.ref<IStepLabel>(props.stepLabel);
 
 const isRetrying = Vue.ref(false);
-const hasError = Vue.ref('');
+const hasError = Vue.computed(() => {
+  return !!config.installDetails.errorType;
+});
 
 const stepStatus = Vue.computed(() => {
-  let stepStatus = step.value.status;
+  if (stepLabel.value.key === InstallStepKey.ServerConnect && props.stepIndex > 0) {
+    alert(`stepLabel.value.key (index = ${props.stepIndex}) is ServerConnect`);
+  }
+  let stepStatus = config.installDetails[stepLabel.value.key].status;
   if (stepStatus === InstallStepStatus.Pending && props.stepIndex === 0) {
     stepStatus = InstallStepStatus.Working;
-  }
-  if (stepStatus === InstallStepStatus.Working) {
-    console.log(
-      step.value.key,
-      config.installDetails[step.value.key].status,
-      props.stepIndex,
-      'STATUS IS WORKING',
-      JSON.stringify(step.value, null, 2),
-    );
   }
   return stepStatus;
 });
@@ -118,22 +116,22 @@ const stepProgress = Vue.computed(() => {
   } else if (stepStatus.value === InstallStepStatus.Pending) {
     return 0;
   }
-  return config.installDetails[step.value.key].progress;
+  return config.installDetails[stepLabel.value.key].progress;
 });
 
 const stepHeightPct = Vue.computed(() => {
   let totalHeight = 100;
-  // if (installer.errorType.value === 'BitcoinInstall') {
-  //   totalHeight -= 7;
-  // } else if (installer.errorType.value === 'ArgonInstall') {
-  //   totalHeight -= 22;
-  // } else if (installer.errorType.value === 'MiningLaunch') {
-  //   totalHeight -= 35;
-  // }
-  return totalHeight / props.stepCount;
+  if (config.installDetails.errorType === InstallStepErrorType.BitcoinInstall) {
+    totalHeight -= 7;
+  } else if (config.installDetails.errorType === InstallStepErrorType.ArgonInstall) {
+    totalHeight -= 22;
+  } else if (config.installDetails.errorType === InstallStepErrorType.MiningLaunch) {
+    totalHeight -= 35;
+  }
+  return totalHeight / props.stepsCount;
 });
 
-function getLabelNumber(step: IStep) {
+function getLabelNumber(step: IStepLabel) {
   switch (stepStatus.value) {
     case InstallStepStatus.Pending:
       return 0;
@@ -149,18 +147,18 @@ function getLabelNumber(step: IStep) {
   return 0;
 }
 
-function getLabel(step: IStep, offset: number = 0) {
-  return step.labels[getLabelNumber(step) + offset];
+function getLabel(step: IStepLabel, offset: number = 0) {
+  return step.options[getLabelNumber(step) + offset];
 }
 
-async function retryFailedStep(step: IStep) {
+async function retryFailedStep(step: IStepLabel) {
   isRetrying.value = true;
   await installer.runFailedStep(step.key);
   isRetrying.value = false;
 }
 
 function openServerRemoveOverlay() {
-  emitter.emit('openServerRemoveOverlay');
+  basicEmitter.emit('openServerRemoveOverlay');
 }
 </script>
 
@@ -196,7 +194,7 @@ li.Component.InstallProgressStep {
 
   &[status='Failed'] {
     label {
-      @apply text-red-900/70;
+      @apply text-argon-600;
     }
   }
 
@@ -207,11 +205,11 @@ li.Component.InstallProgressStep {
   }
 
   label {
-    @apply pl-9 mr-5 text-gray-700/50 font-bold;
+    @apply mr-5 font-bold;
   }
 
   [spinner] {
-    @apply hidden min-w-8 min-h-8 w-8 h-8 border absolute top-1/2 -translate-y-1/2 -left-0 -translate-x-0;
+    @apply hidden min-w-8 min-h-8 w-8 h-8 border mr-2 relative -left-0.5;
   }
 }
 

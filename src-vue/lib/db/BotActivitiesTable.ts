@@ -1,25 +1,31 @@
-import { BaseTable } from './BaseTable';
-import camelcaseKeys from 'camelcase-keys';
-
-interface IBotActivityRecord {
-  tag: string;
-  insertedAt: string;
-}
+import { BaseTable, IFieldTypes } from './BaseTable';
+import { IBotActivityRecord } from '../../interfaces/db/IBotActivityRecord';
+import { convertFromSqliteFields, toSqlParams } from '../Utils';
 
 export class BotActivitiesTable extends BaseTable {
-  async insert(tag: string, insertedAt: string): Promise<IBotActivityRecord> {
-    const [rawRecord] = await this.db.sql.select<[any]>(
-      'INSERT INTO bot_activities (tag, inserted_at) VALUES (?1, ?2) RETURNING *',
-      [tag, insertedAt],
+  private fieldTypes: IFieldTypes = {
+    json: ['data'],
+  };
+
+  async insertOrUpdate(
+    id: number,
+    tick: number,
+    blockNumber: number | undefined,
+    frameId: number | undefined,
+    type: string,
+    data: any,
+  ): Promise<void> {
+    await this.db.execute(
+      `INSERT OR REPLACE INTO BotActivities (id, frameId, tick, blockNumber, type, data) VALUES (?, ?, ?, ?, ?, ?)`,
+      toSqlParams([id, frameId, tick, blockNumber, type, data]),
     );
-    return camelcaseKeys(rawRecord) as IBotActivityRecord;
   }
 
-  async fetchLastFiveRecords(): Promise<IBotActivityRecord[]> {
-    const rawRecords = await this.db.sql.select<any[]>(
-      'SELECT * FROM bot_activities ORDER BY inserted_at DESC LIMIT 5',
-      [],
+  async fetchRecentRecords(limit: number): Promise<IBotActivityRecord[]> {
+    const rawRecords = await this.db.select<IBotActivityRecord[]>(
+      'SELECT * FROM BotActivities ORDER BY id DESC LIMIT ?',
+      [limit],
     );
-    return camelcaseKeys(rawRecords) as IBotActivityRecord[];
+    return convertFromSqliteFields(rawRecords, this.fieldTypes);
   }
 }

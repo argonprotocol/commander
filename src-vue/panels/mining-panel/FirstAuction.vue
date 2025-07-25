@@ -1,9 +1,10 @@
+<!-- prettier-ignore -->
 <template>
   <div class="flex flex-col h-full w-full cursor-default">
     <AlertBars />
 
-    <FirstAuctionFailed v-if="!stats.maxSeatsPossible" />
-    <FirstAuctionWinning v-else-if="stats.hasMiningBids" />
+    <FirstAuctionFailed v-if="!bot.maxSeatsPossible" />
+    <FirstAuctionWinning v-else-if="config.hasMiningBids" />
     <FirstAuctionStarting v-else />
   </div>
 </template>
@@ -15,13 +16,13 @@ import FirstAuctionStarting from './FirstAuctionStarting.vue';
 import FirstAuctionWinning from './FirstAuctionWinning.vue';
 import FirstAuctionFailed from './FirstAuctionFailed.vue';
 import { useStats } from '../../stores/stats';
+import { useConfig } from '../../stores/config';
+import { useBot } from '../../stores/bot';
 
 const stats = useStats();
+const bot = useBot();
+const config = useConfig();
 
-Vue.watch(
-  () => stats.hasMiningBids,
-  newVal => {
-    console.log('hasMiningBids', newVal);
-  },
-);
+Vue.onMounted(() => stats.subscribeToActivity());
+Vue.onUnmounted(() => stats.unsubscribeFromActivity());
 </script>

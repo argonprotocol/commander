@@ -1,32 +1,11 @@
+<!-- prettier-ignore -->
 <template>
-  <div
-    ref="$el"
-    :class="[hasFocus ? 'z-90' : '']"
-    class="relative focus-within:relative"
-    tabindex="0"
-    @focus="handleFocus"
-    @blur="handleBlur"
-  >
-    <div v-if="!props.disabled">
-      <div
-        @pointerdown="handlePointerDown"
-        @pointerup="handlePointerUp"
-        @pointermove="emitDrag"
-        @pointercancel="handlePointerUp"
-        class="absolute top-[-2px] left-0 h-[5px] w-full cursor-n-resize"
-      />
-      <div
-        @pointerdown="handlePointerDown"
-        @pointerup="handlePointerUp"
-        @pointermove="emitDrag"
-        @pointercancel="handlePointerUp"
-        class="absolute bottom-[-2px] left-0 h-[5px] w-full cursor-s-resize"
-      />
-    </div>
+  <div @focus="handleFocus" @blur="handleBlur" ref="$el" :class="[hasFocus ? 'z-90' : '']" class="relative focus-within:relative" tabindex="0">
     <div
+      InputFieldWrapper
       :class="[
         props.disabled ? 'border-dashed cursor-default' : '',
-        hasFocus ? 'bg-slate-500/5 inner-input-shadow outline-2 -outline-offset-2 outline-argon-button' : '',
+        hasFocus ? 'inner-input-shadow outline-2 -outline-offset-2 outline-argon-button' : '',
         [!hasFocus && !props.disabled ? 'hover:bg-white' : ''],
       ]"
       class="min-w-20 font-mono text-md flex flex-row w-full text-left py-[3px] border border-slate-700/50 rounded-md text-gray-800"
@@ -44,16 +23,9 @@
         :class="[props.disabled ? 'opacity-70' : '']"
         class="inline-block w-auto focus:outline-none py-[1px]"
       ></div>
-      <span
-        :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']"
-        class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-default py-[1px]"
-      >
-        {{ suffix }}
-        <span
-          @click="moveCursorToEnd"
-          @dblclick="selectAllText"
-          class="absolute top-0 left-0 w-full h-full cursor-text"
-        />
+      <span Suffix :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']" class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-default py-[1px]">
+        <span v-if="suffix" class="inline-block">{{ suffix }}</span>
+        <span @click="moveCursorToEnd" @dblclick="selectAllText" class="absolute top-0 left-0 w-full h-full cursor-text" />
       </span>
 
       <Menu v-if="props.options.length > 0">
@@ -88,13 +60,10 @@
                 :class="option.description ? 'border-b border-gray-500/20 last:border-b-0' : ''"
                 class="text-md font-mono text-left font-bold text-gray-800 py-1 first:rounded-t last:rounded-b"
               >
-                <div
-                  :class="[isActive ? 'bg-argon-button text-white' : '']"
-                  class="flex flex-col pr-3 pl-2 py-0 cursor-pointer"
-                >
+                <div :class="[isActive ? 'bg-argon-button text-white' : '']" class="flex flex-col pr-3 pl-2 py-0 cursor-pointer">
                   <div class="flex flex-row justify-between items-center">
                     <div class="whitespace-nowrap grow pr-3">
-                      {{ option.title || fmtCommas(option.value) }}
+                      {{ option.title || numeral(option.value).format('0,0') }}
                     </div>
                     <div v-if="option.value !== undefined" class="opacity-70 font-light relative">
                       {{ formatFn(option.value) }}
@@ -110,14 +79,19 @@
         </transition>
       </Menu>
 
-      <div v-if="!props.disabled" class="flex flex-col mr-2">
-        <NumArrow
+      <div NumArrows v-if="!props.disabled" class="flex flex-col mr-2">
+        <!-- @pointerdown="handlePointerDown"
+        @pointerup="handlePointerUp"
+        @pointermove="emitDrag"
+        @pointercancel="handlePointerUp" -->
+
+        <NumArrow NumArrowUp
           @mousedown="startContinuousIncrement"
           @mouseup="stopContinuousUpdates"
           @mouseleave="stopContinuousUpdates"
           class="relative top-[1px] size-[12px] text-gray-300 cursor-pointer hover:text-gray-600"
         />
-        <NumArrow
+        <NumArrow NumArrowDown
           @mousedown="startContinuousDecrement"
           @mouseup="stopContinuousUpdates"
           @mouseleave="stopContinuousUpdates"
@@ -132,11 +106,11 @@
 import * as Vue from 'vue';
 import { LightBulbIcon } from '@heroicons/vue/24/outline';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
-import { fmtCommas, fmtDecimalsMax } from '../lib/Utils';
 import NumArrow from '../assets/num-arrow.svg?component';
-import { useCurrencyStore } from '../stores/currency';
+import { useCurrency } from '../stores/currency';
+import numeral from '../lib/numeral';
 
-const currencyStore = useCurrencyStore();
+const currency = useCurrency();
 
 const props = withDefaults(
   defineProps<{
@@ -148,13 +122,16 @@ const props = withDefaults(
     dragByMin?: number;
     disabled?: boolean;
     prefix?: string;
-    format?: 'argons' | 'percent' | 'integer' | 'minutes';
+    suffix?: string;
+    alwaysShowDecimals?: boolean;
+    format?: 'percent' | 'integer' | 'minutes';
   }>(),
   {
     options: () => [],
     dragBy: 1,
     dragByMin: 0.01,
     prefix: '',
+    suffix: '',
     disabled: false,
     format: 'integer',
   },
@@ -178,26 +155,22 @@ const decrementTimer = Vue.ref<number | null>(null);
 const initialDelay = 500; // Initial delay before starting continuous updates
 const updateInterval = 50; // Interval between updates once continuous mode starts
 
-const prefix = Vue.computed(() => {
-  return props.prefix + (props.format === 'argons' ? currencyStore.currencySymbol : '');
-});
-
 const suffix = Vue.computed(() => {
   if (props.format === 'percent') {
     return '%';
   } else if (props.format === 'minutes') {
     return loginValueConverted === 1 ? ' minute' : ' minutes';
   } else {
-    return '';
+    return props.suffix || '';
   }
 });
 
-function originalToConverted(valueOriginal: number) {
-  return props.format === 'argons' ? currencyStore.argonTo(valueOriginal) : valueOriginal;
+function originalToConverted(valueOriginal: number): number {
+  return Number(valueOriginal);
 }
 
-function convertedToOriginal(convertedValue: number) {
-  return props.format === 'argons' ? currencyStore.toArgon(convertedValue) : convertedValue;
+function convertedToOriginal(convertedValue: number): number {
+  return convertedValue;
 }
 
 function updateInputValue(valueConverted: number) {
@@ -231,7 +204,8 @@ function insertIntoInputElem(convertedValue: number) {
 }
 
 function formatFn(value: number) {
-  return fmtCommas(fmtDecimalsMax(value, 2, 2));
+  const hasDecimals = value.toString().split('.')[1]?.length > 0;
+  return numeral(value).formatIfElse(x => hasDecimals || props.alwaysShowDecimals, '0,0.00', '0,0');
 }
 
 function moveCursorToEnd() {
@@ -600,7 +574,7 @@ function selectAllText() {
 Vue.watch(
   () => props.modelValue,
   newModelValue => {
-    const valueConverted = originalToConverted(newModelValue);
+    const valueConverted = originalToConverted(Number(newModelValue));
     if (valueConverted !== loginValueConverted) {
       updateInputValue(valueConverted);
     }
@@ -610,8 +584,9 @@ Vue.watch(
 Vue.watch(
   () => props.min,
   newMin => {
-    if (newMin !== undefined && loginValueConverted < newMin) {
-      updateInputValue(newMin);
+    const newMinValue = Number(newMin);
+    if (newMinValue !== undefined && loginValueConverted < newMinValue) {
+      updateInputValue(newMinValue);
     }
   },
   { immediate: true },
@@ -621,21 +596,3 @@ Vue.onMounted(() => {
   insertIntoInputElem(loginValueConverted);
 });
 </script>
-
-<style scoped>
-@reference "../main.css";
-
-ul {
-  @apply flex flex-col;
-}
-
-ul li {
-  @apply border-b border-gray-300;
-  &:first-child div {
-    @apply rounded-t-md;
-  }
-  &:last-child {
-    @apply rounded-b-md border-b-0;
-  }
-}
-</style>

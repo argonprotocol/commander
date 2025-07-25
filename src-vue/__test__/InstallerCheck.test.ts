@@ -13,13 +13,15 @@ import { InstallerCheck } from '../lib/InstallerCheck';
 import { Config } from '../lib/Config';
 import { createMockedDbPromise } from './helpers/db';
 import { InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
+import Installer from '../lib/Installer';
 
 it.only('jump through the install steps rapidly when time has expired', async () => {
-  const dbPromise = createMockedDbPromise({ isServerConnected: 'false' });
+  const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'false' });
   const config = new Config(dbPromise);
   await config.load();
 
-  const installerCheck = new InstallerCheck(config);
+  const installer = new Installer(config);
+  const installerCheck = new InstallerCheck(installer, config);
   const filenames: string[] = [];
 
   // @ts-ignore
@@ -36,7 +38,7 @@ it.only('jump through the install steps rapidly when time has expired', async ()
       cycleCount++;
 
       if (stepKey === InstallStepKey.ServerConnect) {
-        const nextStepKey = InstallStepKey.FileCheck;
+        const nextStepKey = InstallStepKey.FileUpload;
         filenames.push(`${nextStepKey}.started`, `${nextStepKey}.log`, `${nextStepKey}.finished`);
       } else {
         filenames.push(`${stepKey}.started`, `${stepKey}.log`, `${stepKey}.finished`);

@@ -1,4 +1,4 @@
-import PluginSql from '@tauri-apps/plugin-sql';
+import PluginSql, { QueryResult } from '@tauri-apps/plugin-sql';
 import { CohortFramesTable } from './db/CohortFramesTable';
 import { CohortsTable } from './db/CohortsTable';
 import { ConfigTable } from './db/ConfigTable';
@@ -8,6 +8,8 @@ import { BitcoinActivitiesTable } from './db/BitcoinActivitiesTable';
 import { BotActivitiesTable } from './db/BotActivitiesTable';
 import { CohortAccountsTable } from './db/CohortAccountsTable';
 import { INSTANCE_NAME } from './Config';
+import { ensureOnlyOneInstance } from './Utils';
+import { FrameBidsTable } from './db/FrameBidsTable';
 
 export class Db {
   public sql: PluginSql;
@@ -19,8 +21,11 @@ export class Db {
   public cohortsTable: CohortsTable;
   public configTable: ConfigTable;
   public framesTable: FramesTable;
+  public frameBidsTable: FrameBidsTable;
 
   constructor(sql: PluginSql) {
+    ensureOnlyOneInstance(this.constructor);
+
     this.sql = sql;
     this.argonActivitiesTable = new ArgonActivitiesTable(this);
     this.bitcoinActivitiesTable = new BitcoinActivitiesTable(this);
@@ -30,10 +35,29 @@ export class Db {
     this.cohortsTable = new CohortsTable(this);
     this.configTable = new ConfigTable(this);
     this.framesTable = new FramesTable(this);
+    this.frameBidsTable = new FrameBidsTable(this);
   }
 
   static async load(): Promise<Db> {
     const sql = await PluginSql.load(`sqlite:${INSTANCE_NAME}/database.sqlite`);
     return new Db(sql);
+  }
+
+  async execute(query: string, bindValues?: unknown[]): Promise<QueryResult> {
+    try {
+      return await this.sql.execute(query, bindValues);
+    } catch (error) {
+      console.error('Error executing query:', { query, bindValues, error });
+      throw error;
+    }
+  }
+
+  async select<T>(query: string, bindValues?: unknown[]): Promise<T> {
+    try {
+      return await this.sql.select<T>(query, bindValues);
+    } catch (error) {
+      console.error('Error selecting query:', { query, bindValues, error });
+      throw error;
+    }
   }
 }

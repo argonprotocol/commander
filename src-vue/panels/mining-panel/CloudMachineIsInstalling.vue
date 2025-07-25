@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div :class="hasError ? 'pt-16' : 'pt-20'" class="Panel CloudMachineIsInstalling flex flex-col px-[15%] h-full pb-16">
     <h1 class="text-4xl font-bold">Initializing Your Cloud Machine</h1>

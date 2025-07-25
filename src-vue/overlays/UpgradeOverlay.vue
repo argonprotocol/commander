@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
     <TransitionChild
@@ -39,8 +40,7 @@
           <div v-else>
             <p>
               You have been upgraded to Commander version {{ config.version }}. This new version requires an upgrade to
-              your cloud machine. Don't worry, we'll take care of all the details. Just click the "Upgrade" button to
-              begin.
+              your cloud machine. Click the "Upgrade" button, and we'll take care of the details.
             </p>
 
             <div class="flex flex-row justify-end gap-4 mt-6 border-t border-slate-300 pt-4">
@@ -49,7 +49,7 @@
                 :class="isStartingUpgrade ? 'opacity-50 pointer-events-none' : ''"
                 class="bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-12 py-2 rounded-md cursor-pointer"
               >
-                {{ isStartingUpgrade ? 'Starting Upgrading...' : 'Upgrade My Cloud Machine' }}
+                {{ isStartingUpgrade ? 'Starting Upgrade...' : 'Upgrade My Cloud Machine' }}
               </button>
             </div>
           </div>

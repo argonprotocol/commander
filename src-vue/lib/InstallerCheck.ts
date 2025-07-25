@@ -9,17 +9,21 @@ import {
   InstallStepKey,
 } from '../interfaces/IConfig';
 import { Config } from './Config';
+import Installer from './Installer';
 
 dayjs.extend(utc);
 
 export class InstallerCheck {
-  public bypassCachedFilenames = false;
+  public shouldUseCachedFilenames = false;
+  private hasCachedFilenames = false;
 
+  private installer: Installer;
   private config: Config;
   private cachedFilenames: string[] = [];
   private isCompletedPromise: Promise<void> | null = null;
 
-  constructor(config: Config) {
+  constructor(installer: Installer, config: Config) {
+    this.installer = installer;
     this.config = config;
   }
 
@@ -28,20 +32,18 @@ export class InstallerCheck {
       while (true) {
         await this.updateInstallStatus();
         if (this.hasError) {
-          reject(new Error('Install process has error'));
+          console.log('InstallerCheck has error', this.config.installDetails.errorMessage);
+          resolve();
           return;
         }
 
         if (this.isServerInstallComplete) {
-          this.config.isServerInstalled = true;
-          this.config.isServerUpToDate = true;
-          await this.config.save();
+          resolve();
           return;
         }
 
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
-      resolve();
     });
   }
 
@@ -56,7 +58,7 @@ export class InstallerCheck {
   public get isServerInstallComplete(): boolean {
     return (
       this.config.installDetails.UbuntuCheck.progress >= 100 &&
-      this.config.installDetails.FileCheck.progress >= 100 &&
+      this.config.installDetails.FileUpload.progress >= 100 &&
       this.config.installDetails.DockerInstall.progress >= 100 &&
       this.config.installDetails.BitcoinInstall.progress >= 100 &&
       this.config.installDetails.ArgonInstall.progress >= 100 &&
@@ -65,13 +67,12 @@ export class InstallerCheck {
   }
 
   public async updateInstallStatus(): Promise<void> {
-    console.log('updateInstallStatus');
     const filenames = await this.fetchLogFilenames();
     const installDetailsPending = Config.getDefault('installDetails') as IConfigInstallDetails;
 
     const stepsToProcess: Record<InstallStepKey, number> = {
-      [InstallStepKey.ServerConnect]: 1,
-      [InstallStepKey.FileCheck]: 1,
+      [InstallStepKey.ServerConnect]: 0.2,
+      [InstallStepKey.FileUpload]: 1,
       [InstallStepKey.UbuntuCheck]: 1,
       [InstallStepKey.DockerInstall]: 5,
       [InstallStepKey.BitcoinInstall]: 10,
@@ -85,37 +86,35 @@ export class InstallerCheck {
       const stepNewData = installDetailsPending[stepKey] as IConfigInstallStep;
       const stepOldData = this.config.installDetails[stepKey] as IConfigInstallStep;
       const prevStepHasCompleted = !prevStep || prevStep.status === InstallStepStatus.Completed;
-      const statusOnServer = InstallerCheck.extractFilenameStatus(stepKey, stepOldData, filenames);
+      const filenameStatus = this.extractFilenameStatus(stepKey, stepOldData, filenames);
 
       if (installDetailsPending.errorType) {
         stepNewData.status = InstallStepStatus.Hidden;
-        stepNewData.progress = 100;
-      } else if (prevStepHasCompleted && statusOnServer === 'Finished') {
+      } else if (prevStepHasCompleted && filenameStatus === 'Finished') {
         stepNewData.startDate = stepOldData.startDate || dayjs.utc().toISOString();
         stepNewData.progress = stepOldData.progress;
-        stepNewData.progress = await InstallerCheck.calculateFinalStepProgress(stepNewData);
+        if (this.installer.isRunning) {
+          stepNewData.progress = await InstallerCheck.calculateFinishedStepProgress(stepNewData);
+        }
         if (stepNewData.progress >= 100 && stepOldData.status === InstallStepStatus.Working) {
           stepNewData.status = InstallStepStatus.Completing;
         } else if (stepNewData.progress >= 100) {
           stepNewData.status = InstallStepStatus.Completed;
         } else {
-          console.log('SETTING SERVER STEP TO WORKING1', stepKey);
           stepNewData.status = InstallStepStatus.Working;
         }
-      } else if (prevStepHasCompleted && statusOnServer === 'Failed') {
+      } else if (prevStepHasCompleted && filenameStatus === 'Failed') {
         stepNewData.status = InstallStepStatus.Failed;
         stepNewData.progress = stepOldData.progress;
         installDetailsPending.errorType = stepKey as unknown as InstallStepErrorType;
-      } else if (prevStepHasCompleted) {
-        console.log('SETTING SERVER STEP TO WORKING2', stepKey);
+        installDetailsPending.errorMessage = await this.extractFailedStepErrorMessage(stepKey);
+      } else if (prevStepHasCompleted && this.installer.isRunning) {
         stepNewData.status = InstallStepStatus.Working;
         stepNewData.startDate = stepOldData.startDate || dayjs.utc().toISOString();
         stepNewData.progress = stepOldData.progress;
-        stepNewData.progress = await InstallerCheck.calculateWorkingStepProgress(
-          stepKey,
-          stepNewData,
-          estimatedMinutes,
-        );
+        stepNewData.progress = await this.calculateWorkingStepProgress(stepKey, stepNewData, estimatedMinutes);
+      } else if (prevStepHasCompleted) {
+        Object.assign(stepNewData, stepOldData);
       } else {
         stepNewData.status = InstallStepStatus.Pending;
         stepNewData.progress = 0;
@@ -129,6 +128,10 @@ export class InstallerCheck {
     }
 
     this.config.installDetails = installDetailsPending;
+    if (this.isServerInstallComplete) {
+      this.config.isServerInstalled = true;
+      this.config.isServerUpToDate = true;
+    }
     await this.config.save();
   }
 
@@ -136,15 +139,14 @@ export class InstallerCheck {
     this.cachedFilenames = [];
   }
 
-  private static extractFilenameStatus(
+  private extractFilenameStatus(
     stepName: InstallStepKey,
     stepOldData: IConfigInstallStep,
     filenames: String[],
   ): 'Pending' | 'Started' | 'Finished' | 'Failed' {
-    if ([InstallStepKey.ServerConnect, InstallStepKey.FileCheck].includes(stepName)) {
-      const nextStepName =
-        stepName === InstallStepKey.ServerConnect ? InstallStepKey.FileCheck : InstallStepKey.UbuntuCheck;
-      const nextStepHasStarted = filenames.includes(`${nextStepName}.started`);
+    const isServerConnectStep = stepName === InstallStepKey.ServerConnect;
+    if (isServerConnectStep) {
+      const nextStepHasStarted = this.installer.fileUploadProgress > 0;
       if (stepOldData.progress >= 100 || nextStepHasStarted) {
         return 'Finished';
       } else {
@@ -162,59 +164,76 @@ export class InstallerCheck {
     return 'Pending';
   }
 
-  private static async calculateWorkingStepProgress(
+  private async calculateWorkingStepProgress(
     stepName: InstallStepKey,
     stepPending: IConfigInstallStep,
     estimatedMinutes: number,
   ): Promise<number> {
-    if (stepName === InstallStepKey.MiningLaunch) {
-      return await InstallerCheck.fetchMiningLaunchProgress();
+    if (stepName === InstallStepKey.FileUpload) {
+      return this.installer.fileUploadProgress;
+    } else if (stepName === InstallStepKey.BitcoinInstall) {
+      return await InstallerCheck.fetchBitcoinInstallProgress();
+    } else if (stepName === InstallStepKey.ArgonInstall) {
+      return await InstallerCheck.fetchArgonInstallProgress();
     }
 
     const startDate = dayjs.utc(stepPending.startDate);
     return InstallerCheck.calculateStepProgress(startDate, estimatedMinutes);
   }
 
-  private static async calculateFinalStepProgress(stepPending: IConfigInstallStep): Promise<number> {
-    const estimatedMinutes = 0.0833; // 5 seconds
+  private static async calculateFinishedStepProgress(stepPending: IConfigInstallStep): Promise<number> {
+    const desiredMinutes = 0.0166; // 1 second
     const startDate = dayjs.utc(stepPending.startDate);
-    return this.calculateStepProgress(startDate, estimatedMinutes);
+    const progress = this.calculateStepProgress(startDate, desiredMinutes);
+    return progress;
   }
 
-  private static calculateStepProgress(startDate: Dayjs, estimatedMinutes: number): number {
+  private static calculateStepProgress(startDate: Dayjs, desiredMinutes: number): number {
     const now = dayjs.utc();
-    const estimatedMilliseconds = estimatedMinutes * 60 * 1000;
+    const desiredMilliseconds = desiredMinutes * 60 * 1000;
     const elapsedMilliseconds = now.diff(startDate, 'milliseconds');
-    let progress = Math.round((elapsedMilliseconds / estimatedMilliseconds) * 10_000) / 100;
+    let progress = Math.round((elapsedMilliseconds / desiredMilliseconds) * 10_000) / 100;
     progress = Math.min(progress, 100);
     progress = Math.max(progress, 0.01);
 
     return progress;
   }
 
-  private static async fetchMiningLaunchProgress(): Promise<number> {
-    // Run commands sequentially instead of concurrently
-    const [argonOutput] = await SSH.runCommand('docker exec deploy-argon-miner-1 syncstatus.sh');
-    const [bitcoinOutput] = await SSH.runCommand('docker exec deploy-bitcoin-1 syncstatus.sh');
+  private static async fetchBitcoinInstallProgress(): Promise<number> {
+    const [output] = await SSH.runCommand('docker exec deploy-bitcoin-1 syncstatus.sh');
+    return parseFloat(output.trim().replace('%', '')) || 0.0;
+  }
 
-    const argonProgress = parseFloat(argonOutput.trim().replace('%', '')) || 0.0;
-    const bitcoinProgress = parseFloat(bitcoinOutput.trim().replace('%', '')) || 0.0;
-    const progress = (argonProgress + bitcoinProgress) / 2.0;
-
-    return progress;
+  private static async fetchArgonInstallProgress(): Promise<number> {
+    const [output] = await SSH.runCommand('docker exec deploy-argon-miner-1 syncstatus.sh');
+    return parseFloat(output.trim().replace('%', '')) || 0.0;
   }
 
   private async fetchLogFilenames(): Promise<string[]> {
-    if (this.cachedFilenames.length && !this.bypassCachedFilenames) {
+    if (this.hasCachedFilenames && this.shouldUseCachedFilenames) {
       return this.cachedFilenames;
     }
 
     try {
-      const [output] = await SSH.runCommand('ls ~/install-logs');
-      this.cachedFilenames = output.split('\n').filter(s => s);
+      const [output, code] = await SSH.runCommand('ls ~/install-logs');
+      if (code === 0) {
+        this.cachedFilenames = output.split('\n').filter(s => s);
+      } else {
+        console.error('Failed to fetch log filenames', output);
+      }
+      this.hasCachedFilenames = true;
       return this.cachedFilenames;
     } catch {
       return [];
     }
+  }
+
+  private async extractFailedStepErrorMessage(stepKey: InstallStepKey): Promise<string> {
+    const stepName = InstallStepKey[stepKey];
+    const [output, code] = await SSH.runCommand(`cat ~/install-logs/${stepName}.failed`);
+    if (code === 0) {
+      return output.trim();
+    }
+    return '';
   }
 }

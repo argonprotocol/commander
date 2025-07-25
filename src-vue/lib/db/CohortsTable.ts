@@ -1,13 +1,19 @@
-import { MiningFrames } from '@argonprotocol/commander-bot/src/MiningFrames';
 import { ICohortRecord } from '../../interfaces/db/ICohortRecord';
 import { BaseTable } from './BaseTable';
-import camelcaseKeys from 'camelcase-keys';
-import { getMainchainClient } from '../../stores/mainchain';
+import { convertSqliteBigInts, fromSqliteBigInt, toSqlParams } from '../Utils';
 
 export class CohortsTable extends BaseTable {
+  private bigIntFields: string[] = [
+    'transactionFees',
+    'microgonsBid',
+    'micronotsStaked',
+    'microgonsToBeMined',
+    'micronotsToBeMined',
+  ];
+
   public async fetchLatestActiveId(): Promise<number | null> {
-    const result = await this.db.sql.select<{ id: number }[]>(
-      'SELECT id FROM cohorts WHERE seats_won > 0 ORDER BY id DESC LIMIT 1',
+    const result = await this.db.select<{ id: number }[]>(
+      'SELECT id FROM Cohorts WHERE seatsWon > 0 ORDER BY id DESC LIMIT 1',
     );
     return result.length > 0 ? result[0].id : null;
   }
@@ -15,13 +21,11 @@ export class CohortsTable extends BaseTable {
   public async fetchById(
     id: number,
   ): Promise<(ICohortRecord & { firstTick: number; lastTick: number; lastBlockNumber: number }) | null> {
-    const rawRecords = await this.db.sql.select<any[]>(
-      `SELECT cohorts.*, frames.first_tick as first_tick, frames.last_block_number as last_block_number FROM cohorts
-      LEFT JOIN frames ON cohorts.id = frames.id
-      WHERE seats_won > 0
-      AND cohorts.id = ?
-      ORDER BY cohorts.id
-      DESC LIMIT 1`,
+    const rawRecords = await this.db.select<any[]>(
+      `SELECT Cohorts.*, Frames.firstTick as firstTick, Frames.lastBlockNumber as lastBlockNumber FROM Cohorts
+      LEFT JOIN Frames ON Cohorts.id = Frames.id
+      WHERE Cohorts.id = ?
+      ORDER BY Cohorts.id DESC LIMIT 1`,
       [id],
     );
 
@@ -29,7 +33,7 @@ export class CohortsTable extends BaseTable {
       return null;
     }
 
-    const record = camelcaseKeys(rawRecords[0]);
+    const record = convertSqliteBigInts(rawRecords[0], this.bigIntFields);
     const ticksPerDay = 1_440;
     const lastTick = record.firstTick + ticksPerDay * 10;
 
@@ -42,47 +46,83 @@ export class CohortsTable extends BaseTable {
   public async fetchGlobalStats(currentFrameId: number): Promise<{
     totalActiveCohorts: number;
     totalActiveSeats: number;
-    totalTransactionFees: number;
-    totalArgonsBid: number;
+    totalTransactionFees: bigint;
+    totalMicrogonsBid: bigint;
   }> {
-    const [rawTotalStats] = await this.db.sql.select<[any]>(
-      `SELECT 
-        COALESCE(sum(transaction_fees), 0) as total_transaction_fees, 
-        COALESCE(sum(argons_bid), 0) as total_argons_bid
-      FROM cohorts`,
-    );
+    try {
+      const [rawTotalStats] = await this.db.select<[any]>(
+        `SELECT 
+        COALESCE(sum(transactionFees), 0) as totalTransactionFees, 
+        COALESCE(sum(microgonsBid), 0) as totalMicrogonsBid
+      FROM Cohorts`,
+      );
 
-    const oldestActiveFrameId = Math.max(1, currentFrameId - 10);
-    const [rawActiveStats] = await this.db.sql.select<[any]>(
-      `SELECT 
-        COALESCE(count(id), 0) as active_cohorts,
-        COALESCE(sum(seats_won), 0) as active_seats
-      FROM cohorts WHERE id >= ?`,
-      [oldestActiveFrameId],
-    );
+      const oldestActiveFrameId = Math.max(1, currentFrameId - 10);
+      const [rawActiveStats] = await this.db.select<[any]>(
+        `SELECT 
+        COALESCE(count(id), 0) as activeCohorts,
+        COALESCE(sum(seatsWon), 0) as activeSeats
+      FROM Cohorts WHERE id >= ? AND seatsWon > 0`,
+        [oldestActiveFrameId],
+      );
 
-    const totalStats = camelcaseKeys(rawTotalStats);
-    const activeStats = camelcaseKeys(rawActiveStats);
+      const totalStats = rawTotalStats;
+      const activeStats = rawActiveStats;
 
-    return {
-      totalActiveCohorts: activeStats.activeCohorts,
-      totalActiveSeats: activeStats.activeSeats,
-      totalTransactionFees: totalStats.totalTransactionFees,
-      totalArgonsBid: totalStats.totalArgonsBid,
-    };
+      return {
+        totalActiveCohorts: activeStats.activeCohorts,
+        totalActiveSeats: activeStats.activeSeats,
+        totalTransactionFees: fromSqliteBigInt(totalStats.totalTransactionFees),
+        totalMicrogonsBid: fromSqliteBigInt(totalStats.totalMicrogonsBid),
+      };
+    } catch (e) {
+      console.error('Error fetching global stats', e);
+      throw e;
+    }
+  }
+
+  async fetchActiveCohorts(currentFrameId: number): Promise<ICohortRecord[]> {
+    const records = await this.db.select<any[]>('SELECT * FROM Cohorts WHERE seatsWon > 0 AND id >= ?', [
+      currentFrameId - 10,
+    ]);
+    return convertSqliteBigInts(records, this.bigIntFields) as ICohortRecord[];
   }
 
   async insertOrUpdate(
     id: number,
     progress: number,
-    transactionFees: number,
-    argonotsStaked: number,
-    argonsBid: number,
+    transactionFees: bigint,
+    micronotsStaked: bigint,
+    microgonsBid: bigint,
     seatsWon: number,
+    microgonsToBeMined: bigint,
+    micronotsToBeMined: bigint,
   ): Promise<void> {
-    await this.db.sql.execute(
-      'INSERT OR REPLACE INTO cohorts (id, progress, transaction_fees, argonots_staked, argons_bid, seats_won) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, progress, transactionFees, argonotsStaked, argonsBid, seatsWon],
+    await this.db.execute(
+      `INSERT OR REPLACE INTO Cohorts (
+        id, 
+        progress, 
+        transactionFees, 
+        micronotsStaked, 
+        microgonsBid, 
+        seatsWon, 
+        microgonsToBeMined, 
+        micronotsToBeMined) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      toSqlParams([
+        id,
+        progress,
+        transactionFees,
+        micronotsStaked,
+        microgonsBid,
+        seatsWon,
+        microgonsToBeMined,
+        micronotsToBeMined,
+      ]),
     );
+  }
+
+  async fetchCount(): Promise<number> {
+    const [result] = await this.db.select<[{ count: number }]>('SELECT COUNT(*) as count FROM Cohorts');
+    return result.count;
   }
 }

@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="Component ProgressBar" :hasError="props.hasError">
     <div Bar :style="{ width: `calc(${progress}% + 2px)` }">
@@ -12,12 +13,11 @@ import * as Vue from 'vue';
 
 const props = defineProps<{
   progress: number;
-  isSlow?: boolean;
   hasError?: boolean;
 }>();
 
 const progressLabel = Vue.computed(() => {
-  if (props.progress < 99 && !props.isSlow) {
+  if (props.progress < 99) {
     return `${props.progress.toFixed(1)}%`;
   } else if (props.progress < 99.99) {
     return `${props.progress.toFixed(2)}%`;

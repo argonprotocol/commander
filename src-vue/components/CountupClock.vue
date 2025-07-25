@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <component :is="as" :class="$attrs.class">
     <slot :hours="hours" :minutes="minutes" :seconds="seconds" :isNull="isNull"></slot>

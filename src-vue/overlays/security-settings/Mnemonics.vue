@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <h2
     class="flex flex-row justify-between items-center text-2xl font-bold text-slate-800/70 border-b border-slate-300 pb-3 pl-2 pr-3 mb-4"

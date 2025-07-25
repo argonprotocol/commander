@@ -1,17 +1,9 @@
+<!-- prettier-ignore -->
 <template>
-  <TransitionRoot
-    :show="isOpen"
-    as="template"
-    enter="duration-300 ease-out"
-    enter-from="opacity-0"
-    enter-to="opacity-100"
-    leave="duration-200 ease-in"
-    leave-from="opacity-100"
-    leave-to="opacity-0"
-  >
-    <Dialog @close="maybeCloseOverlay" :initialFocus="dialogPanel">
+  <TransitionRoot as="template" :show="isOpen" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100">
+    <Dialog @close="closeOverlay" :initialFocus="dialogPanel">
       <DialogPanel class="absolute top-0 left-0 right-0 bottom-0 z-10">
-        <BgOverlay @close="maybeCloseOverlay" />
+        <BgOverlay @close="closeOverlay" />
         <div
           ref="dialogPanel"
           class="absolute top-[40px] left-3 right-3 bottom-3 flex flex-col overflow-hidden rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all"
@@ -36,10 +28,8 @@
             </h2>
 
             <div class="grow relative w-full">
-              <div
-                class="absolute h-[20px] left-0 right-0 bottom-0 z-10 bg-gradient-to-b from-transparent to-argon-menu-bg pointer-events-none"
-              ></div>
-              <div class="absolute top-0 left-0 right-0 bottom-0 px-[6%] overflow-y-scroll pt-8 pb-[50px]">
+              <div class="absolute h-[20px] left-0 right-0 bottom-0 z-10 bg-gradient-to-b from-transparent to-argon-menu-bg pointer-events-none"></div>
+              <div ref="scrollContainer" class="absolute top-0 left-0 right-0 bottom-0 px-[6%] overflow-y-scroll pt-8 pb-[50px]">
                 <p class="text-gray-500 border-b border-slate-300 pb-4 mb-8">
                   Argon Commander will automatically setup and configure your mining server. All you need to do is
                   activate it. The following steps show you how to activate a new server at Digital Ocean. Please follow
@@ -154,9 +144,7 @@
                             <CopyIcon class="w-4 h-4 opacity-80" />
                           </div>
                           <template #copied>
-                            <div
-                              class="bg-white py-4 pl-4 pr-8 border border-slate-300 rounded-md w-full pointer-events-none overflow-hidden"
-                            >
+                            <div class="bg-white py-4 pl-4 pr-8 border border-slate-300 rounded-md w-full pointer-events-none overflow-hidden">
                               <span class="bg-blue-200 whitespace-nowrap w-full inline-block">
                                 {{ serverDetails.sshPublicKey }}
                               </span>
@@ -265,9 +253,8 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import dayjs from 'dayjs';
-import { TransitionRoot, Dialog, DialogPanel } from '@headlessui/vue';
-import emitter from '../emitters/basic';
+import { TransitionRoot, Dialog, DialogPanel, TransitionChild } from '@headlessui/vue';
+import basicEmitter from '../emitters/basicEmitter';
 import { useConfig } from '../stores/config';
 import { useInstaller } from '../stores/installer';
 import BgOverlay from '../components/BgOverlay.vue';
@@ -283,7 +270,7 @@ const installer = useInstaller();
 
 const serverDetails = Vue.computed(() => config.serverDetails);
 
-let openedAt = dayjs();
+const scrollContainer = Vue.ref<HTMLDivElement>();
 
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
@@ -296,17 +283,10 @@ const hasServerDetailsError = Vue.ref(false);
 const dialogPanel = Vue.ref(null);
 const copyToClipboard = Vue.ref<typeof CopyToClipboard>();
 
-emitter.on('openServerConnectOverlay', async () => {
+basicEmitter.on('openServerConnectOverlay', async () => {
   isOpen.value = true;
   isLoaded.value = true;
 });
-
-function maybeCloseOverlay() {
-  const secondsSinceOpened = dayjs().diff(openedAt, 'seconds');
-  if (secondsSinceOpened < 2) {
-    closeOverlay();
-  }
-}
 
 const closeOverlay = () => {
   isOpen.value = false;
@@ -321,6 +301,7 @@ async function addServer() {
   if (ipAddress.value === '') {
     hasIpAddressError.value = true;
     isSaving.value = false;
+    scrollContainer.value?.scrollTo({ top: scrollContainer.value.scrollHeight, behavior: 'smooth' });
     return;
   }
 
@@ -330,18 +311,13 @@ async function addServer() {
       ipAddress: ipAddress.value,
     };
     await SSH.tryConnection(newServerDetails);
-
-    config.isServerConnected = true;
-    config.isServerInstalled = false;
-    config.isServerUpToDate = false;
     config.serverDetails = newServerDetails;
     await config.save();
+    closeOverlay();
   } catch (error) {
     console.log('error', error);
     hasServerDetailsError.value = true;
   }
-  closeOverlay();
-  installer.run();
   isSaving.value = false;
 }
 

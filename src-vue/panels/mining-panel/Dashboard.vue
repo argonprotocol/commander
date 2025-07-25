@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="flex flex-col h-full cursor-default">
     <AlertBars />
@@ -16,33 +17,38 @@
           <label>Active Seat{{ stats.dashboard.global.activeSeats === 1 ? '' : 's' }}</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ formatLargeNumber(stats.dashboard.global.totalBlocksMined || 0) }}</span>
+          <span>{{ numeral(stats.dashboard.global.totalBlocksMined || 0).format('0,0') }}</span>
           <label>Total Block{{ stats.dashboard.global.totalBlocksMined === 1 ? '' : 's' }} Mined</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ currencySymbol }}{{ formatLargeNumber(argonTo(globalArgonsInvested / 1_000_000)) }}</span>
+          <span>
+            {{ currency.symbol
+            }}{{ microgonToMoneyNm(globalMicrogonsInvested).formatIfElse('< 1_000', '0,0.00', '0,0') }}
+          </span>
           <label>Total Invested</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ currencySymbol }}{{ formatLargeNumber(argonTo(globalArgonsEarned / 1_000_000)) }}</span>
+          <span>
+            {{ currency.symbol }}{{ microgonToMoneyNm(globalMicrogonsEarned).formatIfElse('< 1_000', '0,0.00', '0,0') }}
+          </span>
           <label>Total Earned</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ fmtCommas(globalAPY) }}%</span>
+          <span>{{ numeral(globalAPY).formatIfElseCapped('< 100', '0,0.[00]', '0,0', 9_999) }}%</span>
           <label>Current APY</label>
         </div>
       </section>
 
       <section box class="flex flex-col text-center px-2">
         <header class="text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30">
-          YOUR CLOUD MACHINE IS LIVE
+          YOUR CLOUD MACHINE {{ bot.isReady ? 'IS LIVE' : '' }}
         </header>
-        <div class="flex flex-row py-2">
+        <div class="flex flex-row pt-2 pb-1">
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
             <span class="opacity-50">Last Bitcoin Block</span>
-            <CountupClock as="span" :time="lastBitcoinActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
-              <template v-if="hours">{{ hours }}h,</template>
-              <template v-if="minutes">{{ minutes }}m and</template>
+            <CountupClock as="span" :time="lastBitcoinActivityAt" v-slot="{ hours, minutes, seconds, isNull }" class="font-mono">
+              <template v-if="hours">{{ hours }}h, </template>
+              <template v-if="minutes">{{ minutes }}m, </template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
               <template v-else>-- ----</template>
             </CountupClock>
@@ -50,46 +56,48 @@
           <div class="h-full w-[1px] bg-slate-400/30"></div>
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
             <span class="opacity-50">Last Argon Block</span>
-            <CountupClock as="span" :time="lastArgonActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
-              <template v-if="hours">{{ hours }}h,</template>
-              <template v-if="minutes">{{ minutes }}m and</template>
+            <CountupClock as="span" :time="lastArgonActivityAt" v-slot="{ hours, minutes, seconds, isNull }" class="font-mono">
+              <template v-if="hours">{{ hours }}h, </template>
+              <template v-if="minutes">{{ minutes }}m, </template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
               <template v-else>-- ----</template>
             </CountupClock>
           </div>
           <div class="h-full w-[1px] bg-slate-400/30"></div>
-          <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
-            <span class="opacity-50">Last Bidding Activity</span>
-            <CountupClock as="span" :time="lastBotActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
-              <template v-if="hours">{{ hours }}h,</template>
-              <template v-if="minutes">{{ minutes }}m and</template>
+          <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-1 pt-3">
+            <span class="opacity-50">Last Bidding</span>
+            <CountupClock as="span" :time="lastBotActivityAt" v-slot="{ hours, minutes, seconds, isNull }" class="font-mono">
+              <template v-if="hours">{{ hours }}h, </template>
+              <template v-if="minutes">{{ minutes }}m, </template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
               <template v-else>-- ----</template>
             </CountupClock>
+            <ActiveBidsOverlayButton :position="'left'" class="ml-1.5 z-50">
+              <span class="group inline-block border border-transparent hover:border-argon-200 rounded cursor-pointer pt-0.5 pb-1 px-1 relative top-0.5">
+                <AuctionIcon class="w-5.5 h-5.5 group-hover:text-argon-600" />
+              </span>
+            </ActiveBidsOverlayButton>
+            <BotHistoryOverlayButton :position="'left'" class="z-50">
+              <span class="group inline-block border border-transparent hover:border-argon-200 rounded cursor-pointer pt-1 pb-0.5 px-1 relative top-0.5">
+                <ActivityIcon class="w-5.5 h-5.5 group-hover:text-argon-600" />
+              </span>
+            </BotHistoryOverlayButton>
           </div>
         </div>
       </section>
 
       <section box class="flex flex-col grow text-center px-2">
-        <header
-          class="flex flex-row justify-between text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30"
-        >
-          <div
-            @click="goToPreviousCohort"
-            class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer group hover:opacity-80"
-          >
+        <header class="flex flex-row justify-between text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30">
+          <div @click="goToPrevFrame" :class="stats.prevFrameId ? 'opacity-60' : 'opacity-20 pointer-events-none'" class="flex flex-row items-center font-light text-base cursor-pointer group hover:opacity-80">
             <ChevronLeftIcon class="w-6 h-6 opacity-50 mx-1 group-hover:opacity-80" />
-            PREV SLOT
+            PREV
           </div>
           <span class="flex flex-row items-center">
-            COHORT #{{ stats.dashboard.cohort?.cohortId }} ({{ cohortStartDate }} - {{ cohortEndDate }})
-            <span class="inline-block rounded-full bg-green-500/80 w-2.5 h-2.5 ml-2"></span>
+            COHORT #{{ stats.selectedFrameId }} ({{ cohortStartDate }} - {{ cohortEndDate }})
+            <span v-if="stats.selectedFrameId > stats.latestFrameId - 10" class="inline-block rounded-full bg-green-500/80 w-2.5 h-2.5 ml-2"></span>
           </span>
-          <div
-            @click="goToNextCohort"
-            class="flex flex-row items-center opacity-50 font-light text-base cursor-pointer group hover:opacity-80"
-          >
-            NEXT SLOT
+          <div @click="goToNextFrame" :class="stats.nextFrameId ? 'opacity-60' : 'opacity-20 pointer-events-none'" class="flex flex-row items-center font-light text-base cursor-pointer group hover:opacity-80">
+            NEXT
             <ChevronRightIcon class="w-6 h-6 opacity-50 mx-1 group-hover:opacity-80" />
           </div>
         </header>
@@ -104,39 +112,44 @@
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
                 <span>
                   {{
-                    fmtCommas(
-                      fmtDecimalsMax(
-                        (stats.dashboard.cohort.argonsMined + stats.dashboard.cohort.argonsMinted) / 1_000_000,
-                        2,
-                      ),
-                    )
+                    microgonToMoneyNm(
+                      stats.dashboard.cohort.microgonsMined + stats.dashboard.cohort.microgonsMinted,
+                    ).formatIfElse('< 1_000', '0,0.00', '0,0')
                   }}
                 </span>
-                <label>Argons Earned</label>
+                <label>Argons Collected</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30">
                 <span>
-                  {{ fmtCommas(fmtDecimalsMax(stats.dashboard.cohort.argonotsMined / 1_000_000, 2)) }}
+                  {{
+                    microgonToMoneyNm(stats.dashboard.cohort.micronotsMined).formatIfElse('< 1_000', '0,0.00', '0,0')
+                  }}
                 </span>
-                <label>Argonots Earned</label>
+                <label>Argonots Collected</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
             </div>
             <div class="flex flex-row w-full h-1/2 gap-x-2">
               <div stat-box class="flex flex-col w-1/3 h-full">
-                <span>{{ currencySymbol }}{{ fmtMoney(cohortArgonsInvested / 1_000_000) }}</span>
+                <span>
+                  {{ currency.symbol
+                  }}{{ microgonToMoneyNm(cohortMicrogonsInvested).formatIfElse('< 1_000', '0,0.00', '0,0') }}
+                </span>
                 <label>Total Invested</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full">
-                <span>{{ currencySymbol }}{{ fmtMoney(cohortArgonsEarned / 1_000_000) }}</span>
-                <label>Expected Earnings</label>
+                <span>
+                  {{ currency.symbol
+                  }}{{ microgonToMoneyNm(cohortMicrogonsExpected).formatIfElse('< 1_000', '0,0.00', '0,0') }}
+                </span>
+                <label>Earnings Expected</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div stat-box class="flex flex-col w-1/3 h-full">
-                <span>{{ fmtCommas(fmtDecimalsMax(cohortAPY, 2)) }}%</span>
-                <label>Expected APY</label>
+                <span>{{ numeral(cohortAPY).formatIfElse('< 1_000', '0,0.[00]', '0,0') }}%</span>
+                <label>APY Expected</label>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
             </div>
@@ -144,13 +157,13 @@
           <div class="flex flex-col w-1/2 pl-3 pt-2">
             <table class="relative h-full">
               <thead>
-                <tr class="text-md text-gray-500 text-left">
-                  <th class="py-2 border-b border-slate-400/30 pl-1" :style="{ height: `${blocks.length + 1 / 100}%` }">
+                <tr class="text-md text-gray-500 text-left table-fixed">
+                  <th class="py-2 border-b border-slate-400/30 pl-1 w-[15%]" :style="{ height: `${blocks.length + 1 / 100}%` }">
                     Block
                   </th>
-                  <th class="py-2 border-b border-slate-400/30">Time</th>
-                  <th class="py-2 border-b border-slate-400/30">Earned</th>
-                  <th class="py-2 border-b border-slate-400/30 text-right pr-3">Author</th>
+                  <th class="py-2 border-b border-slate-400/30 w-[30%]">Time</th>
+                  <th class="py-2 border-b border-slate-400/30 w-[20%]">Earned</th>
+                  <th class="py-2 border-b border-slate-400/30 w-[35%] text-right pr-3">Author</th>
                 </tr>
               </thead>
               <tbody>
@@ -162,10 +175,21 @@
                     {{ block.timestamp.fromNow() }}
                   </td>
                   <td class="text-left border-t border-slate-400/30">
-                    {{ currencySymbol }}{{ fmtMoney(argonotToArgon(block.argonots) + block.argons) }}
+                    {{ currency.symbol
+                    }}{{
+                      microgonToMoneyNm(currency.micronotToMicrogon(block.micronots) + block.microgons).formatIfElse(
+                        '< 1_000',
+                        '0,0.00',
+                        '0,0',
+                      )
+                    }}
                   </td>
-                  <td class="text-right border-t border-slate-400/30">
-                    {{ abreviateAddress(block.author, 10) }}
+                  <td class="relative text-right border-t border-slate-400/30">
+                    <span>{{ abreviateAddress(block.author, 10) }}</span>
+                    <span v-if="isOurAddress(block.author)" class="absolute right-0 top-1/2 -translate-y-1/2 bg-argon-600 text-white px-1.5 pb-0.25 rounded text-sm">
+                      YOU
+                      <span class="absolute top-0 -left-3 inline-block h-full bg-gradient-to-r from-transparent to-white w-3"></span>
+                    </span>
                   </td>
                 </tr>
               </tbody>
@@ -184,34 +208,16 @@
       </section>
 
       <section box class="relative flex flex-col h-[20%] min-h-32 !pb-0.5 px-2">
-        <div
-          nib-handle
-          class="absolute -top-1 -bottom-1 w-2 bg-white rounded-full border border-slate-400/50 shadow-md z-10"
-          :style="{ left: `${percentOfYear}%` }"
-        >
-          <div
-            class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full border border-slate-400/50 shadow-md"
-          ></div>
+        <div nib-handle :style="{ left: `${percentOfYear}%` }" class="absolute -top-1 -bottom-1 w-2 bg-white rounded-full border border-slate-400/50 shadow-md z-10">
+          <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full border border-slate-400/50 shadow-md"></div>
         </div>
-        <div
-          class="absolute top-[1px] bottom-[33px] w-[2.739726027%] bg-gradient-to-b from-transparent to-argon-button/10"
-          :style="{ left: `${percentOfYear}%` }"
-        ></div>
+        <div :style="{ left: `${percentOfYear}%` }" class="absolute top-[1px] bottom-[33px] w-[2.739726027%] bg-gradient-to-b from-transparent to-argon-button/10"></div>
         <div class="grow relative">
-          <div
-            class="absolute bottom-[-1px] left-0 w-[4.109589041%] h-[0px] border-[4px] border-argon-button/10 border-dotted"
-          ></div>
-          <div
-            class="absolute bottom-[-1px] left-[4.109589041%] w-[10.684931509%] h-0 border-[4px] border-argon-button/10"
-          ></div>
-          <div
-            class="absolute bottom-[-1px] left-[14.79452055%] h-0 border-[4px] border-argon-button"
-            :style="{ width: `${percentOfYear - 14.79452055}%` }"
-          ></div>
+          <div class="absolute bottom-[-1px] left-0 w-[4.109589041%] h-[0px] border-[4px] border-argon-button/10 border-dotted"></div>
+          <div class="absolute bottom-[-1px] left-[4.109589041%] w-[10.684931509%] h-0 border-[4px] border-argon-button/10"></div>
+          <div :style="{ width: `${percentOfYear - 14.79452055}%` }" class="absolute bottom-[-1px] left-[14.79452055%] h-0 border-[4px] border-argon-button"></div>
         </div>
-        <ul
-          class="flex flex-row text-md opacity-50 divide-x divide-slate-400/70 text-center w-full border-t border-slate-400/60 pt-2"
-        >
+        <ul class="flex flex-row text-md opacity-50 divide-x divide-slate-400/70 text-center w-full border-t border-slate-400/60 pt-2">
           <li class="flex-1">Jan</li>
           <li class="flex-1">Feb</li>
           <li class="flex-1">Mar</li>
@@ -230,88 +236,118 @@
   </div>
 </template>
 
+<script lang="ts">
+import type { IBlock } from '../../stores/blockchain';
+
+const blocks = Vue.ref<IBlock[]>([]);
+</script>
+
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { storeToRefs } from 'pinia';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import utc from 'dayjs/plugin/utc';
-import { fmtCommas, fmtMoney, calculateAPY, fmtDecimals, fmtDecimalsMax, abreviateAddress } from '../../lib/Utils';
+import { calculateAPY, abreviateAddress } from '../../lib/Utils';
 import { useStats } from '../../stores/stats';
-import { useCurrencyStore } from '../../stores/currency';
+import { useCurrency } from '../../stores/currency';
+import { useBot } from '../../stores/bot';
 import { useBlockchainStore } from '../../stores/blockchain';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import CountupClock from '../../components/CountupClock.vue';
 import AlertBars from '../../components/AlertBars.vue';
-import { IBlock } from '../../stores/blockchain';
+import numeral, { createNumeralHelpers } from '../../lib/numeral';
+import { MiningFrames } from '@argonprotocol/commander-calculator';
+import AuctionIcon from '../../assets/auction.svg?component';
+import ActivityIcon from '../../assets/activity.svg?component';
+import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
+import BotHistoryOverlayButton from '../../overlays/BotHistoryOverlayButton.vue';
+import { getMainchainClient } from '../../stores/mainchain';
+import { Accountset, Keyring } from '@argonprotocol/mainchain';
+import { useConfig } from '../../stores/config';
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
 
+const bot = useBot();
 const stats = useStats();
-const currencyStore = useCurrencyStore();
+const config = useConfig();
+const currency = useCurrency();
+const clientPromise = getMainchainClient();
 const blockchainStore = useBlockchainStore();
 
-const { argonTo, argonotToArgon } = currencyStore;
-const { currencySymbol } = storeToRefs(currencyStore);
+const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
 const dayInYear = dayjs().diff(dayjs().startOf('year'), 'days') + 1;
-const percentOfYear = Math.min(dayInYear / 365, 1) * 100;
+const percentOfYear = Vue.ref(Math.min(dayInYear / 365, 1) * 100);
 
 const currentCohortId = Vue.ref(0);
-const blocks = Vue.ref<IBlock[]>([]);
 
-const globalArgonsEarned = Vue.computed(() => {
-  const global = stats.dashboard.global;
-  return global.totalArgonsMined + global.totalArgonsMinted + argonotToArgon(global.totalArgonotsMined);
+const walletMiningJson = JSON.parse(config.security.walletJson);
+const walletMiningAccount = new Keyring().createFromJson(walletMiningJson);
+walletMiningAccount.decodePkcs8(''); // TODO: Need to use passphrase when feature is added
+const accountset = new Accountset({
+  client: clientPromise,
+  seedAccount: walletMiningAccount,
+  sessionKeyMnemonic: config.security.sessionMnemonic,
+  subaccountRange: new Array(99).fill(0).map((_, i) => i),
 });
 
-const globalArgonsInvested = Vue.computed(() => {
+const globalMicrogonsEarned = Vue.computed(() => {
   const global = stats.dashboard.global;
-  return global.totalArgonsBid + global.totalTransactionFees;
+  return (
+    global.totalMicrogonsMined + global.totalMicrogonsMinted + currency.micronotToMicrogon(global.totalMicronotsMined)
+  );
+});
+
+const globalMicrogonsInvested = Vue.computed(() => {
+  const global = stats.dashboard.global;
+  return global.totalMicrogonsBid + global.totalTransactionFees;
 });
 
 const globalAPY = Vue.computed(() => {
-  return calculateAPY(globalArgonsInvested.value, globalArgonsEarned.value);
+  return calculateAPY(globalMicrogonsInvested.value, globalMicrogonsEarned.value);
 });
 
-const cohortArgonsEarned = Vue.computed(() => {
+const cohortMicrogonsExpected = Vue.computed(() => {
   const cohort = stats.dashboard.cohort;
-  if (!cohort) return 0;
-  return cohort.argonsMined + cohort.argonsMinted + argonotToArgon(cohort.argonotsMined);
+  if (!cohort) return 0n;
+
+  const microgons =
+    cohort.microgonsMined + cohort.microgonsMinted + cohort.microgonsToBeMined + cohort.microgonsToBeMinted;
+  const micronots = cohort.micronotsMined + cohort.micronotsToBeMined;
+  return microgons + currency.micronotToMicrogon(micronots);
 });
 
-const cohortArgonsInvested = Vue.computed(() => {
+const cohortMicrogonsInvested = Vue.computed(() => {
   const cohort = stats.dashboard.cohort;
-  if (!cohort) return 0;
-  return cohort.argonsBid + cohort.transactionFees;
+  if (!cohort) return 0n;
+  return cohort.microgonsBid + cohort.transactionFees;
 });
 
 const cohortAPY = Vue.computed(() => {
-  return calculateAPY(cohortArgonsInvested.value, cohortArgonsEarned.value);
+  return calculateAPY(cohortMicrogonsInvested.value, cohortMicrogonsExpected.value);
 });
 
 const cohortStartDate = Vue.computed(() => {
-  const cohort = stats.dashboard.cohort;
-  if (!cohort?.firstTick) {
+  const tickRange = stats.selectedCohortTickRange;
+  if (!tickRange[0]) {
     return '-----';
   }
-  const date = dayjs.utc(cohort.firstTick * 60e3);
+  const date = dayjs.utc(tickRange[0] * 60e3);
   return date.local().format('MMMM D');
 });
 
 const cohortEndDate = Vue.computed(() => {
-  const cohort = stats.dashboard.cohort;
-  if (!cohort?.lastTick) {
+  const tickRange = stats.selectedCohortTickRange;
+  if (!tickRange[1]) {
     return '-----';
   }
-  const date = dayjs.utc(cohort.lastTick * 60e3);
+  const date = dayjs.utc(tickRange[1] * 60e3);
   return date.local().format('MMMM D');
 });
 
 const lastBitcoinActivityAt = Vue.computed(() => {
   const lastActivity = stats.bitcoinActivity[0];
-  console.log('lastBitcoinActivityAt', lastActivity);
   return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
 });
 
@@ -321,11 +357,11 @@ const lastArgonActivityAt = Vue.computed(() => {
 });
 
 const lastBotActivityAt = Vue.computed(() => {
-  const lastActivity = stats.botActivity[0];
+  const lastActivity = stats.biddingActivity[0];
   return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
 });
 
-let blocksSubscription: any = null;
+let unsubscribeFromBlocks: any = null;
 
 Vue.watch(
   () => stats.dashboard.cohort,
@@ -333,9 +369,9 @@ Vue.watch(
     if (!cohort) return;
     if (cohort.cohortId === currentCohortId.value) return;
 
-    if (blocksSubscription) {
-      await blockchainStore.unsubscribeFromBlocks(blocksSubscription);
-      blocksSubscription = null;
+    if (unsubscribeFromBlocks) {
+      unsubscribeFromBlocks();
+      unsubscribeFromBlocks = null;
     }
 
     currentCohortId.value = cohort.cohortId;
@@ -343,7 +379,7 @@ Vue.watch(
     const endingFrameId = cohort.cohortId + 10;
     blocks.value = await blockchainStore.fetchBlocks(lastBlockNumber, endingFrameId, 8);
 
-    blocksSubscription = await blockchainStore.subscribeToBlocks(newBlock => {
+    unsubscribeFromBlocks = await blockchainStore.subscribeToBlocks(newBlock => {
       if (newBlock.number === blocks.value[0]?.number) return;
       blocks.value.unshift(newBlock);
       if (blocks.value.length > 8) {
@@ -353,30 +389,42 @@ Vue.watch(
   },
 );
 
-async function goToPreviousCohort() {
-  const cohortId = stats.dashboard.cohortId;
-  if (!cohortId) return;
-
-  const previousCohortId = Math.max(cohortId - 1, 1);
+async function goToPrevFrame() {
+  const newFrameId = stats.prevFrameId;
+  if (!newFrameId) return;
+  stats.selectFrameId(newFrameId);
+  percentOfYear.value = calculatePercentOfYear(newFrameId);
 }
 
-async function goToNextCohort() {
-  const cohortId = stats.dashboard.cohortId;
-  if (!cohortId) return;
-
-  const nextCohortId = cohortId + 1;
+async function goToNextFrame() {
+  const newFrameId = stats.nextFrameId;
+  if (!newFrameId) return;
+  stats.selectFrameId(newFrameId);
+  percentOfYear.value = calculatePercentOfYear(newFrameId);
 }
 
-function formatLargeNumber(number: number, maxLength = 5) {
-  if (number < 10 ** (maxLength - 2)) {
-    // 1_000
-    return fmtDecimalsMax(number, 2, 2);
-  } else if (number < 99 ** (maxLength - 2)) {
-    // 99_000
-    return fmtCommas(fmtDecimals(number, 0));
-  }
-  return number;
+function calculatePercentOfYear(frameId: number) {
+  const tickRange = MiningFrames.getTickRangeForFrameFromSystemTime(frameId);
+  const date = dayjs.utc(tickRange[0] * 60e3);
+  const dayInYear = date.diff(dayjs().startOf('year'), 'days') + 1;
+
+  return Math.min(dayInYear / 365, 1) * 100;
 }
+
+function isOurAddress(address: string): boolean {
+  const ourSubAccount = accountset.subAccountsByAddress[address];
+  return !!ourSubAccount;
+}
+
+Vue.onMounted(() => {
+  stats.subscribeToDashboard();
+  stats.subscribeToActivity();
+});
+
+Vue.onUnmounted(() => {
+  stats.unsubscribeFromDashboard();
+  stats.unsubscribeFromActivity();
+});
 </script>
 
 <style scoped>

@@ -1,37 +1,16 @@
+<!-- prettier-ignore -->
 <template>
-  <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
-    <TransitionChild
-      as="template"
-      enter="ease-out duration-300"
-      enter-from="opacity-0"
-      enter-to="opacity-100"
-      leave="ease-in duration-200"
-      leave-from="opacity-100"
-      leave-to="opacity-0"
-    >
-      <BgOverlay @close="closeOverlay" />
-    </TransitionChild>
-
-    <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">
-      <TransitionChild
-        as="template"
-        enter="ease-out duration-300"
-        enter-from="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-        enter-to="opacity-100 translate-y-0 sm:scale-100"
-        leave="ease-in duration-200"
-        leave-from="opacity-100 translate-y-0 sm:scale-100"
-        leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-      >
-        <div
-          class="bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl relative w-8/12 max-h-9/12 overflow-scroll"
-        >
-          <Send v-if="activeScreen === 'send'" @navigate="navigate" :walletId="walletId" />
-          <Receive v-else-if="activeScreen === 'receive'" @navigate="navigate" :walletId="walletId" />
+  <TransitionRoot as="template" :show="isOpen" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100">
+    <Dialog @close="closeOverlay">
+      <DialogPanel class="flex items-center justify-center absolute top-0 left-0 right-0 bottom-0 z-10 pointer-events-none">
+        <BgOverlay @close="closeOverlay" />
+        <div class="absolute top-12 bottom-3 bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl w-9/12 overflow-scroll">
+          <Receive v-if="activeScreen === 'receive'" @navigate="navigate" :walletId="walletId" />
           <div v-else>
             <div
               class="flex flex-row justify-between items-center w-full px-3 py-3 space-x-4 text-5xl font-bold border-b border-black/20"
             >
-              <h2 class="text-2xl font-bold">{{ walletName }} Wallet</h2>
+              <h2 class="text-2xl font-bold">{{ walletName }} Resources</h2>
               <CopyToClipboard :content="wallet.address" class="relative text-2xl font-normal grow cursor-pointer">
                 <span class="opacity-50">
                   {{ abreviateAddress(wallet.address) }}
@@ -51,73 +30,76 @@
                 <XMarkIcon class="w-5 h-5 text-[#B74CBA] stroke-4" />
               </div>
             </div>
-            <div class="w-full text-center py-14 text-5xl font-bold border-b border-black/20">
-              {{ currencyStore.currencySymbol }}{{ fmtCommas(argonTo(wallet.totalValue).toFixed()).split('.')[0] }}
-              <span class="opacity-50">.{{ wallet.totalValue.toFixed(2).split('.')[1] }}</span>
+            <div class="w-full flex flex-col items-center py-10 border-b border-black/20">
+              <div class="w-full text-center text-5xl font-bold">
+                <span>{{ currency.symbol }}{{ microgonToMoneyNm(totalValue).format('0,0.00').split('.')[0] }}</span>
+                <span class="opacity-50">.{{ microgonToMoneyNm(totalValue).format('0.00').split('.')[1] }}</span>
+              </div>
+              <div class="w-full text-center pt-2">Total Value of {{ walletName }} Resources</div>
             </div>
             <div
               class="flex flex-row justify-between items-center w-full text-center pt-5 pb-2 px-3 space-x-4 font-bold"
             >
               <ul class="flex flex-row space-x-4 grow">
-                <li @click="navigate({ tab: 'tokens' })" class="cursor-pointer">Tokens</li>
+                <li @click="navigate({ tab: 'tokens' })" class="cursor-pointer">Resources</li>
                 <li @click="navigate({ tab: 'activity' })" class="cursor-pointer">Activity</li>
               </ul>
               <ul class="flex flex-row">
-                <li @click="navigate({ screen: 'receive' })" class="cursor-pointer">Add Funds</li>
+                <li @click="navigate({ screen: 'receive' })" class="cursor-pointer">Transfer Funds</li>
               </ul>
             </div>
 
-            <Tokens v-if="activeTab === 'tokens'" @navigate="navigate" />
-            <Activity v-else-if="activeTab === 'activity'" />
+            <Resources v-if="activeTab === 'tokens'" :walletId="walletId" @navigate="navigate" />
+            <Activity v-else-if="activeTab === 'activity'" :walletId="walletId" />
           </div>
         </div>
-      </TransitionChild>
-    </div>
+      </DialogPanel>
+    </Dialog>
   </TransitionRoot>
 </template>
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { TransitionChild, TransitionRoot } from '@headlessui/vue';
-import emitter from '../emitters/basic';
-import { useCurrencyStore } from '../stores/currency';
-import { fmtCommas, abreviateAddress } from '../lib/Utils';
+import { TransitionRoot, Dialog, DialogPanel } from '@headlessui/vue';
+import basicEmitter from '../emitters/basicEmitter';
+import { useCurrency } from '../stores/currency';
+import { useWallets } from '../stores/wallets';
+import { abreviateAddress } from '../lib/Utils';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
-import Tokens from './wallet-overlay/Tokens.vue';
+import Resources from './wallet-overlay/Resources.vue';
 import Activity from './wallet-overlay/Activity.vue';
 import Receive from './wallet-overlay/Receive.vue';
-import Send from './wallet-overlay/Send.vue';
 import BgOverlay from '../components/BgOverlay.vue';
 import CopyIcon from '../assets/copy.svg?component';
 import CopyToClipboard from '../components/CopyToClipboard.vue';
+import { createNumeralHelpers } from '../lib/numeral';
 
-const currencyStore = useCurrencyStore();
-const { argonTo } = currencyStore;
+const currency = useCurrency();
+const wallets = useWallets();
+
+const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 
-const walletId: Vue.Ref<'mng' | 'llb' | 'vlt'> = Vue.ref('mng');
+const walletId: Vue.Ref<'mining' | 'vaulting'> = Vue.ref('mining');
 const walletName = Vue.ref('');
 const wallet = Vue.ref({
   address: '',
-  argons: 0,
-  argonots: 0,
-  totalValue: 0,
+  availableMicrogons: 0n,
+  availableMicronots: 0n,
+  reservedMicronots: 0n,
 });
 
 Vue.watch(
   walletId,
   () => {
-    if (walletId.value === 'mng') {
+    if (walletId.value === 'mining') {
       walletName.value = 'Mining';
-      wallet.value = currencyStore.mngWallet;
-    } else if (walletId.value === 'llb') {
-      walletName.value = 'Liquid Locking';
-      wallet.value = currencyStore.llbWallet;
-    } else if (walletId.value === 'vlt') {
+      wallet.value = wallets.miningWallet;
+    } else if (walletId.value === 'vaulting') {
       walletName.value = 'Vaulting';
-      wallet.value = currencyStore.vltWallet;
+      wallet.value = wallets.vaultingWallet;
     }
   },
   { immediate: true },
@@ -125,6 +107,15 @@ Vue.watch(
 
 const activeScreen = Vue.ref('main');
 const activeTab = Vue.ref('tokens');
+
+const totalValue = Vue.computed(() => {
+  if (walletId.value === 'mining') {
+    return wallets.totalMiningResources;
+  } else if (walletId.value === 'vaulting') {
+    return wallets.totalVaultingResources;
+  }
+  return 0n;
+});
 
 function navigate($event: any) {
   if ($event.close) {
@@ -139,7 +130,7 @@ function navigate($event: any) {
   }
 }
 
-emitter.on('openWalletOverlay', async (data: any) => {
+basicEmitter.on('openWalletOverlay', async (data: any) => {
   walletId.value = data.walletId;
   isOpen.value = true;
   isLoaded.value = true;

@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
     <TransitionChild
@@ -135,9 +136,8 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { storeToRefs } from 'pinia';
 import { TransitionChild, TransitionRoot } from '@headlessui/vue';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import BgOverlay from '../components/BgOverlay.vue';
 import { useConfig } from '../stores/config';
@@ -161,7 +161,7 @@ const hasServerDetailsError = Vue.ref(false);
 
 const copyToClipboard = Vue.ref<typeof CopyToClipboard>();
 
-emitter.on('openServerConfigureOverlay', async (data: any) => {
+basicEmitter.on('openServerConfigureOverlay', async () => {
   isOpen.value = true;
   ipAddress.value = config.serverDetails.ipAddress;
   isLoaded.value = true;
@@ -198,7 +198,7 @@ async function updateServer() {
     };
     await SSH.tryConnection(newServerDetails);
 
-    config.isServerConnected = true;
+    config.isServerReadyToInstall = true;
     config.isServerUpToDate = false;
     config.serverDetails = newServerDetails;
     await config.save();

@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div
     InsufficientFunds
@@ -17,7 +18,7 @@
   <div
     MaxBudgetTooLow
     v-else-if="maxBudgetIsTooLow"
-    @click="openBiddingRulesOverlay"
+    @click="openConfigureMiningBotOverlay"
     class="group flex flex-row items-center gap-x-3 cursor-pointer bg-argon-error hover:bg-argon-error-darker text-white px-3.5 py-2 border-b border-argon-error-darkest"
     style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
   >
@@ -34,7 +35,7 @@
   <div
     MaxBidTooLow
     v-else-if="maxBidIsTooLow"
-    @click="openBiddingRulesOverlay"
+    @click="openConfigureMiningBotOverlay"
     class="group flex flex-row items-center gap-x-3 cursor-pointer bg-argon-error hover:bg-argon-error-darker text-white px-3.5 py-2 border-b border-argon-error-darkest"
     style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
   >
@@ -64,27 +65,29 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { useConfig } from '../stores/config';
-import { useCurrencyStore } from '../stores/currency';
+import { useWallets } from '../stores/wallets';
 import AlertIcon from '../assets/alert.svg?component';
-import emitter from '../emitters/basic';
+import basicEmitter from '../emitters/basicEmitter';
 import { useStats } from '../stores/stats';
+import { useBot } from '../stores/bot';
 
 const stats = useStats();
 const config = useConfig();
-const currencyStore = useCurrencyStore();
+const bot = useBot();
+const wallets = useWallets();
 
 const hasLowFunds = Vue.computed(() => {
-  if (!currencyStore.isLoaded) return false;
+  if (!wallets.isLoaded) return false;
 
   if (!config.biddingRules) {
     return false;
   }
 
-  if (currencyStore.mngWallet.argons < config.biddingRules.requiredArgons) {
+  if (wallets.miningWallet.availableMicrogons < config.biddingRules.requiredMicrogons) {
     return true;
   }
 
-  if (currencyStore.mngWallet.argonots < config.biddingRules.requiredArgonots) {
+  if (wallets.miningWallet.availableMicronots < config.biddingRules.requiredMicronots) {
     return true;
   }
 
@@ -92,27 +95,27 @@ const hasLowFunds = Vue.computed(() => {
 });
 
 const hasInsufficientFunds = Vue.computed(() => {
-  if (!currencyStore.isLoaded) return false;
+  if (!wallets.isLoaded) return false;
   // if server has thrown an insufficient funds error
   return false;
 });
 
 const maxBudgetIsTooLow = Vue.computed(() => {
-  if (!currencyStore.isLoaded) return false;
-  return !stats.maxSeatsPossible && stats.maxSeatsReductionReason === 'MaxBudgetTooLow';
+  if (!wallets.isLoaded) return false;
+  return !bot.maxSeatsPossible && bot.maxSeatsReductionReason === 'MaxBudgetTooLow';
 });
 
 const maxBidIsTooLow = Vue.computed(() => {
-  if (!currencyStore.isLoaded) return false;
+  if (!wallets.isLoaded) return false;
   // if server has thrown a MaxBidTooLow error
   return false;
 });
 
 function openFundMiningWalletOverlay() {
-  emitter.emit('openWalletOverlay', { walletId: 'mng', screen: 'receive' });
+  basicEmitter.emit('openWalletOverlay', { walletId: 'mining', screen: 'receive' });
 }
 
-function openBiddingRulesOverlay() {
-  emitter.emit('openBiddingRulesOverlay');
+function openConfigureMiningBotOverlay() {
+  basicEmitter.emit('openConfigureMiningBotOverlay');
 }
 </script>

@@ -1,5 +1,6 @@
+<!-- prettier-ignore -->
 <template>
-  <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
+  <TransitionRoot class="absolute inset-0 z-10 pointer-events-none" :show="isOpen">
     <TransitionChild
       as="template"
       enter="ease-out duration-300"
@@ -9,7 +10,7 @@
       leave-from="opacity-100"
       leave-to="opacity-0"
     >
-      <BgOverlay />
+      <BgOverlay :enableTopBar="true" />
     </TransitionChild>
 
     <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">
@@ -28,7 +29,7 @@
           <h2 class="text-2xl font-bold text-slate-800/70 border-b border-slate-300 pt-6 pb-3 mb-3">
             Syncing Your Cloud Machine
           </h2>
-          <div v-if="config.syncDetails.errorType" class="flex flex-row items-center gap-x-2">
+          <div v-if="syncErrorType" class="flex flex-row items-center gap-x-2">
             <AlertIcon class="w-4 h-4 text-red-600 relative inline-block" />
             <div class="text-red-500">There was an error syncing your cloud machine.</div>
             <button
@@ -38,7 +39,7 @@
               {{ isRetrying ? 'Retrying...' : 'Retry' }}
             </button>
           </div>
-          <ProgressBar :progress="config.syncDetails.progress" class="mt-3" />
+          <ProgressBar :progress="bot.syncProgress" class="mt-3" />
         </div>
       </TransitionChild>
     </div>
@@ -49,15 +50,15 @@
 import * as Vue from 'vue';
 import { TransitionChild, TransitionRoot } from '@headlessui/vue';
 import BgOverlay from '../components/BgOverlay.vue';
-import { useConfig } from '../stores/config';
 import ProgressBar from '../components/ProgressBar.vue';
 import AlertIcon from '../assets/alert.svg?component';
-import { useStats } from '../stores/stats';
+import { useBot } from '../stores/bot';
 
 const isOpen = Vue.ref(true);
 const isRetrying = Vue.ref(false);
-const config = useConfig();
-const stats = useStats();
+const bot = useBot();
+
+const syncErrorType = Vue.ref<string | null>(null);
 
 async function retrySync() {
   isRetrying.value = true;

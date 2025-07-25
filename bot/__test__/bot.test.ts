@@ -1,10 +1,10 @@
 import { activateNotary, runOnTeardown, sudo, teardown, TestMainchain, TestNotary } from '@argonprotocol/testing';
-import { MiningRotations, mnemonicGenerate } from '@argonprotocol/mainchain';
-import * as BiddingCalculator from '@argonprotocol/commander-calculator';
+import { FrameCalculator, mnemonicGenerate } from '@argonprotocol/mainchain';
 import { afterAll, afterEach, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import Path from 'node:path';
 import Bot from '../src/Bot.ts';
+import * as BiddingCalculator from '@argonprotocol/commander-calculator';
 
 afterEach(teardown);
 afterAll(teardown);
@@ -21,17 +21,9 @@ it('can autobid and store stats', async () => {
   const client = await clientPromise;
   await activateNotary(sudo(), client, notary);
 
-  const path = fs.mkdtempSync('/tmp/bot-');
-  runOnTeardown(() => fs.promises.rm(path, { recursive: true, force: true }));
+  const botDataDir = fs.mkdtempSync('/tmp/bot-');
 
-  const bot = new Bot({
-    pair: sudo(),
-    archiveRpcUrl: chain.address,
-    localRpcUrl: chain.address,
-    biddingRulesPath: Path.resolve(path, 'rules.json'),
-    datadir: path,
-    keysMnemonic: mnemonicGenerate(),
-  });
+  runOnTeardown(() => fs.promises.rm(botDataDir, { recursive: true, force: true }));
 
   vi.spyOn(BiddingCalculator, 'createBidderParams').mockImplementation(async () => {
     return {
@@ -44,21 +36,43 @@ it('can autobid and store stats', async () => {
     };
   });
 
-  await expect(bot.start()).resolves.toBeTruthy();
+  vi.spyOn(Bot.prototype as any, 'loadBiddingRules').mockImplementation(() => {
+    /* return an empty object so it's not undefined */
+    return {};
+  });
+
+  const bot = new Bot({
+    pair: sudo(),
+    archiveRpcUrl: chain.address,
+    localRpcUrl: chain.address,
+    biddingRulesPath: Path.resolve(botDataDir, 'rules.json'),
+    datadir: botDataDir,
+    keysMnemonic: mnemonicGenerate(),
+    shouldSkipDockerSync: true,
+  });
+
+  await expect(bot.start()).resolves.toBeUndefined();
   const status = await bot.blockSync.state();
   expect(status.lastBlockNumber).toBeGreaterThanOrEqual(status.lastFinalizedBlockNumber);
   console.log(status);
   let firstCohort = 1;
+
+  console.log('Waiting for first rotation');
   // wait for the first rotation
   await new Promise(async resolve => {
+    console.log('Waiting for activeMinersCount');
     const unsubscribe = await client.query.miningSlot.activeMinersCount(async x => {
       if (x.toNumber() > 0) {
         unsubscribe();
-        firstCohort = await client.query.miningSlot.nextCohortId().then(x => x.toNumber() - 1);
+        firstCohort = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
         resolve(x);
       }
     });
+    console.log('Set up activeMinersCount');
   });
+
+  console.log('First rotation found', firstCohort);
+
   let voteBlocks = 0;
   let lastFinalizedBlockNumber = 0;
   const cohortActivatingFrameIdsWithEarnings = new Set<number>();
@@ -70,7 +84,7 @@ it('can autobid and store stats', async () => {
       lastFinalizedBlockNumber = x.number.toNumber();
       if (isVoteBlock) {
         console.log(`Block ${x.number} is vote block`);
-        const frameId = await new MiningRotations().getForHeader(client, x);
+        const frameId = await new FrameCalculator().getForHeader(client, x);
         if (frameId !== undefined) cohortActivatingFrameIdsWithEarnings.add(frameId);
         voteBlocks++;
         if (voteBlocks > 5) {
@@ -87,9 +101,9 @@ it('can autobid and store stats', async () => {
   const cohort1Bids = await bot.storage.bidsFile(firstCohort).get();
   expect(cohort1Bids).toBeTruthy();
   console.log(`Cohort 1`, cohort1Bids);
-  expect(cohort1Bids?.argonotsStakedPerSeat).toBeGreaterThanOrEqual(10000);
+  expect(cohort1Bids?.micronotsStakedPerSeat).toBeGreaterThanOrEqual(10000);
   expect(cohort1Bids?.seatsWon).toBe(10);
-  expect(cohort1Bids?.argonsBidTotal).toBe(10_000n * 10n);
+  expect(cohort1Bids?.microgonsBidTotal).toBe(10_000n * 10n);
 
   // wait for sync state to equal latest finalized
   while (true) {
@@ -99,7 +113,7 @@ it('can autobid and store stats', async () => {
   }
 
   const cohortActivatingFrameIds = new Set<number>();
-  let argonsMined = 0n;
+  let microgonsMined = 0n;
   for (const frameId of cohortActivatingFrameIdsWithEarnings) {
     const earningsData = await bot.storage.earningsFile(frameId!).get();
     expect(earningsData).toBeDefined();
@@ -107,11 +121,11 @@ it('can autobid and store stats', async () => {
     for (const [cohortActivatingFrameId, cohortData] of Object.entries(earningsData!.byCohortActivatingFrameId)) {
       cohortActivatingFrameIds.add(Number(cohortActivatingFrameId!));
       expect(Number(cohortActivatingFrameId)).toBeGreaterThan(0);
-      expect(cohortData.argonsMined).toBeGreaterThan(0);
-      argonsMined += cohortData.argonsMined;
+      expect(cohortData.microgonsMined).toBeGreaterThan(0);
+      microgonsMined += cohortData.microgonsMined;
     }
   }
-  expect(argonsMined).toBeGreaterThanOrEqual(375_000 * voteBlocks);
+  expect(microgonsMined).toBeGreaterThanOrEqual(375_000 * voteBlocks);
 
   // wait for a clean stop
   const lastProcessed = bot.blockSync.lastProcessed;
@@ -126,7 +140,7 @@ it('can autobid and store stats', async () => {
     cohortActivatingFrameIdsWithEarnings: [...cohortActivatingFrameIdsWithEarnings],
     cohortActivatingFrameIds: [...cohortActivatingFrameIds],
   });
-  await bot.stop();
+  await bot.shutdown();
 
   // try to recover from blocks
 
@@ -136,15 +150,16 @@ it('can autobid and store stats', async () => {
     pair: sudo(),
     archiveRpcUrl: chain.address,
     localRpcUrl: chain.address,
-    biddingRulesPath: Path.resolve(path, 'rules.json'),
+    biddingRulesPath: Path.resolve(botDataDir, 'rules.json'),
     datadir: path2,
     keysMnemonic: mnemonicGenerate(),
     oldestFrameIdToSync: Math.min(...cohortActivatingFrameIds) - 1,
+    shouldSkipDockerSync: true,
   });
   console.log('Starting bot 2');
-  await expect(botRestart.start()).resolves.toBeTruthy();
+  await expect(botRestart.start()).resolves.toBeUndefined();
   console.log('Stopping bot 2');
-  await botRestart.stop();
+  await botRestart.shutdown();
 
   // compare directories
   for (const cohortActivatingFrameId of cohortActivatingFrameIdsWithEarnings) {

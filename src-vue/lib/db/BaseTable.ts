@@ -7,3 +7,11 @@ export class BaseTable {
     this.db = db;
   }
 }
+
+export interface IFieldTypes {
+  boolean?: string[];
+  bigint?: string[];
+  bigintJson?: string[];
+  json?: string[];
+  date?: string[];
+}

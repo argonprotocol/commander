@@ -1,9 +1,11 @@
 import { z } from 'zod';
-import { BiddingRulesSchema, IBiddingRules } from './IBiddingRules';
+import { BiddingRulesSchema } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
+import { VaultingRulesSchema } from './IVaultingRules';
+import { CurrencyKey } from '../lib/Currency';
 
 export enum InstallStepKey {
   ServerConnect = 'ServerConnect',
-  FileCheck = 'FileCheck',
+  FileUpload = 'FileUpload',
   UbuntuCheck = 'UbuntuCheck',
   DockerInstall = 'DockerInstall',
   BitcoinInstall = 'BitcoinInstall',
@@ -13,7 +15,7 @@ export enum InstallStepKey {
 
 export enum InstallStepErrorType {
   Unknown = 'Unknown',
-  FileCheck = InstallStepKey.FileCheck,
+  FileUpload = InstallStepKey.FileUpload,
   UbuntuCheck = InstallStepKey.UbuntuCheck,
   DockerInstall = InstallStepKey.DockerInstall,
   BitcoinInstall = InstallStepKey.BitcoinInstall,
@@ -41,7 +43,6 @@ export const ConfigServerDetailsSchema = z.object({
   sshPublicKey: z.string(),
   sshPrivateKey: z.string(),
   sshUser: z.string(),
-  oldestFrameIdToSync: z.number().nullable(),
 });
 
 export const ConfigInstallStep = z.object({
@@ -52,7 +53,7 @@ export const ConfigInstallStep = z.object({
 
 export const ConfigInstallDetailsSchema = z.object({
   [InstallStepKey.ServerConnect]: ConfigInstallStep,
-  [InstallStepKey.FileCheck]: ConfigInstallStep,
+  [InstallStepKey.FileUpload]: ConfigInstallStep,
   [InstallStepKey.UbuntuCheck]: ConfigInstallStep,
   [InstallStepKey.DockerInstall]: ConfigInstallStep,
   [InstallStepKey.BitcoinInstall]: ConfigInstallStep,
@@ -79,17 +80,21 @@ export const ConfigSchema = z.object({
   security: ConfigSecuritySchema,
   serverDetails: ConfigServerDetailsSchema,
   installDetails: ConfigInstallDetailsSchema,
-  syncDetails: ConfigSyncDetailsSchema,
+  oldestFrameIdToSync: z.number(),
 
-  isServerConnected: z.boolean(), // isConnected
+  isVaultReadyToCreate: z.boolean(),
+
+  isServerReadyToInstall: z.boolean(), // isConnected
   isServerInstalled: z.boolean(), // isNewServer
   isServerUpToDate: z.boolean(), // isInstalling
-  isServerReadyForBidding: z.boolean(), // isReadyForMining
   isWaitingForUpgradeApproval: z.boolean(), // isRequiringUpgrade
 
   hasMiningSeats: z.boolean(), // hasMiningSeats
   hasMiningBids: z.boolean(), // hasMiningBids
-  biddingRules: BiddingRulesSchema.nullable(),
+  biddingRules: BiddingRulesSchema,
+  vaultingRules: VaultingRulesSchema,
+
+  defaultCurrencyKey: z.nativeEnum(CurrencyKey),
 });
 
 // ---- Optional Type Inference ---- //
@@ -110,13 +115,15 @@ export interface IConfigDefaults {
   security: () => IConfig['security'];
   serverDetails: () => Promise<IConfig['serverDetails']>;
   installDetails: () => IConfig['installDetails'];
-  syncDetails: () => IConfig['syncDetails'];
-  isServerConnected: () => IConfig['isServerConnected'];
+  oldestFrameIdToSync: () => IConfig['oldestFrameIdToSync'];
+  isVaultReadyToCreate: () => IConfig['isVaultReadyToCreate'];
+  isServerReadyToInstall: () => IConfig['isServerReadyToInstall'];
   isServerInstalled: () => IConfig['isServerInstalled'];
   isServerUpToDate: () => IConfig['isServerUpToDate'];
-  isServerReadyForBidding: () => IConfig['isServerReadyForBidding'];
   isWaitingForUpgradeApproval: () => IConfig['isWaitingForUpgradeApproval'];
   hasMiningSeats: () => IConfig['hasMiningSeats'];
   hasMiningBids: () => IConfig['hasMiningBids'];
   biddingRules: () => IConfig['biddingRules'];
+  vaultingRules: () => IConfig['vaultingRules'];
+  defaultCurrencyKey: () => IConfig['defaultCurrencyKey'];
 }

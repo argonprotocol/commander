@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <!-- <ChartOpaque :style="chartOpaqueStyle" class="absolute top-0 bottom-[47px]" /> -->
   <div

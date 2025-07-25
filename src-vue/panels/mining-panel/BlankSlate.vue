@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="flex flex-col h-full">
     <div style="text-shadow: 1px 1px 0 white">
@@ -12,10 +13,10 @@
       </p>
     </div>
     <button
-      @click="openServerConnectOverlay"
+      @click="openConfigureMiningBotOverlay"
       class="bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow text-2xl font-bold text-white px-12 py-2 rounded-md mx-auto block mt-10 cursor-pointer"
     >
-      Connect Cloud Machine
+      Create Personal Mining Bot
     </button>
     <div class="flex-grow flex flex-row items-end w-full">
       <div class="flex flex-col w-full px-5 pb-5">
@@ -24,7 +25,7 @@
         >
           <li class="w-1/4">
             <div class="text-4xl font-bold">
-              {{ blockchainStore.miningSeatCount ? fmtCommas(blockchainStore.miningSeatCount) : '---' }}
+              {{ blockchainStore.miningSeatCount ? numeral(blockchainStore.miningSeatCount).format('0,0') : '---' }}
             </div>
             <div>Mining Seats</div>
           </li>
@@ -32,51 +33,49 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">
-                  {{ currencySymbol }}
+                <span :class="[currency.symbol === '₳' ? 'font-semibold' : 'font-bold']">
+                  {{ currency.symbol }}
                 </span>
-                {{ fmtMoney(argonTo(blockchainStore.aggregatedBidCosts), 1_000) }}
+                <span>{{ microgonToMoneyNm(blockchainStore.aggregatedBidCosts).formatIfElse('< 1_000', '0,0.00', '0,0') }}</span>
               </template>
               <template v-else>---</template>
             </div>
-            <div>Aggregate Bid Costs</div>
+            <div>Pending Bids</div>
           </li>
           <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">
-                  {{ currencySymbol }}
+                <span :class="[currency.symbol === '₳' ? 'font-semibold' : 'font-bold']">
+                  {{ currency.symbol }}
                 </span>
-                {{ fmtMoney(argonTo(aggregatedBlockRewards), 1_000) }}
+                <span>{{ microgonToMoneyNm(aggregatedBlockRewards).formatIfElse('< 1_000', '0,0.00', '0,0') }}</span>
               </template>
               <template v-else>---</template>
             </div>
-            <div>Mimimum Aggregate Rewards</div>
+            <div>Pending Rewards</div>
           </li>
           <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">
             <div class="text-4xl font-bold">
-              <template v-if="isLoaded">
-                {{ fmtMoney(Math.min(currentAPY, 999_999), 100) }}%{{ currentAPY >= 9_999 ? '+' : ' ' }}
-              </template>
+              <template v-if="isLoaded">{{ numeral(currentAPY).format('0,0') }}%</template>
               <template v-else>---</template>
             </div>
             <div>Annual Percentage Yield</div>
           </li>
         </ul>
-        <ul Blocks class="w-full flex flex-row justify-end h-[137px]" :style="{ opacity: blocksAreLoaded ? 1 : 0.5 }">
+        <ul Blocks class="w-full flex flex-row justify-end h-[137px]">
           <template v-for="(block, index) in blocks" :key="`${block.hash}-${index}`">
-            <li Block class="leading-6">
+            <li Block class="leading-6" :class="{ 'opacity-50': !block.hash }">
               <div v-if="block.hash" class="border-b border-slate-300 pb-1 mb-2">
                 #
                 <span class="font-bold opacity-50">{{ block.number }}</span>
               </div>
               <div v-if="block.hash">{{ block.extrinsics }} txns</div>
-              <div v-if="block.hash">{{ block.argons }} argons</div>
-              <div v-if="block.hash">{{ block.argonots }} argonots</div>
+              <div v-if="block.hash">{{ microgonToArgonNm(block.microgons).format('0.[00]') }} argons</div>
+              <div v-if="block.hash">{{ micronotToArgonotNm(block.micronots).format('0.[00]') }} argonots</div>
             </li>
-            <li Connection></li>
+            <li Connection :class="{ 'opacity-50': !block.hash }"></li>
           </template>
           <li Block class="flex flex-col text-center justify-center items-center">
             <div v-if="blocks[blocks.length - 1].hash" class="flex flex-col text-center justify-center items-center">
@@ -104,19 +103,20 @@
 import * as Vue from 'vue';
 import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import emitter from '../../emitters/basic';
-import { useBlockchainStore, type IBlock } from '../../stores/blockchain';
-import { useCurrencyStore } from '../../stores/currency';
-import { fmtCommas, fmtMoney, calculateAPY } from '../../lib/Utils';
 import { storeToRefs } from 'pinia';
+import basicEmitter from '../../emitters/basicEmitter';
+import { useBlockchainStore, type IBlock } from '../../stores/blockchain';
+import { useCurrency } from '../../stores/currency';
+import { calculateAPY } from '../../lib/Utils';
+import numeral, { createNumeralHelpers } from '../../lib/numeral';
 
 dayjs.extend(utc);
 
 const blockchainStore = useBlockchainStore();
-const currencyStore = useCurrencyStore();
+const currency = useCurrency();
 
-const { argonTo, argonotToArgon } = currencyStore;
-const { currencySymbol } = storeToRefs(currencyStore);
+const { cachedBlocks: blocks } = storeToRefs(blockchainStore);
+const { microgonToArgonNm, micronotToArgonotNm, microgonToMoneyNm } = createNumeralHelpers(currency);
 
 const minutesSinceBlock = Vue.ref(0);
 const secondsSinceBlock = Vue.ref(0);
@@ -124,7 +124,8 @@ const isLoaded = Vue.ref(false);
 
 const aggregatedBlockRewards = Vue.computed(() => {
   return (
-    blockchainStore.aggregatedBlockRewards.argons + argonotToArgon(blockchainStore.aggregatedBlockRewards.argonots)
+    blockchainStore.aggregatedBlockRewards.microgons +
+    currency.micronotToMicrogon(blockchainStore.aggregatedBlockRewards.micronots)
   );
 });
 
@@ -132,33 +133,22 @@ const currentAPY = Vue.computed(() => {
   return calculateAPY(blockchainStore.aggregatedBidCosts, aggregatedBlockRewards.value);
 });
 
-const blockLoading = { hash: null } as unknown as IBlock;
-
-const blocks = Vue.ref<IBlock[]>([
-  blockLoading,
-  blockLoading,
-  blockLoading,
-  blockLoading,
-  blockLoading,
-  blockLoading,
-  blockLoading,
-  blockLoading,
-]);
-const blocksAreLoaded = Vue.ref(false);
 let blocksSubscription: any = null;
 let lastBlockTimestamp: Dayjs;
 
 function loadBlocks() {
   blockchainStore.fetchBlocks(null, null, 8).then(newBlocks => {
-    blocks.value = newBlocks;
-    blocksAreLoaded.value = true;
+    blocks.value = newBlocks.reverse();
   });
   lastBlockTimestamp = blocks.value[0]?.timestamp;
   blocksSubscription = blockchainStore.subscribeToBlocks(newBlock => {
-    blocks.value.unshift(newBlock);
+    const blockExists = blocks.value.find(block => block.hash === newBlock.hash);
+    if (blockExists) return;
+
+    blocks.value.push(newBlock);
     lastBlockTimestamp = newBlock.timestamp;
     if (blocks.value.length > 8) {
-      blocks.value.pop();
+      blocks.value.shift();
     }
   });
 }
@@ -174,8 +164,8 @@ function updateTimeSinceBlock() {
   setTimeout(() => updateTimeSinceBlock(), 1000);
 }
 
-function openServerConnectOverlay() {
-  emitter.emit('openServerConnectOverlay');
+function openConfigureMiningBotOverlay() {
+  basicEmitter.emit('openConfigureMiningBotOverlay');
 }
 
 Vue.onMounted(async () => {

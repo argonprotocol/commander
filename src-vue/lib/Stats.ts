@@ -1,179 +1,372 @@
-import { IBidsFile, ISyncState } from '@argonprotocol/commander-bot/src/storage';
-import { StatsFetcher } from './stats/Fetcher';
-import { StatsSyncer } from './stats/Syncer';
-import { IStats, IActiveBids, IDashboardStats } from '../interfaces/IStats';
+import { type IBidsFile, type IWinningBid } from '@argonprotocol/commander-bot';
+import { IDashboardStats } from '../interfaces/IStats';
 import { Db } from './Db';
 import { Config } from './Config';
-import { SSH } from './SSH';
-import { Installer } from '../stores/installer';
-import { getMainchainClient } from '../stores/mainchain';
-import { MiningFrames } from '@argonprotocol/commander-bot/src/MiningFrames';
+import { bigIntMax } from '@argonprotocol/commander-calculator/src/utils';
+import { ICohortRecord } from '../interfaces/db/ICohortRecord';
+import { botEmitter } from './Bot';
+import { createDeferred, ensureOnlyOneInstance } from './Utils';
+import IDeferred from '../interfaces/IDeferred';
+import { MiningFrames } from '@argonprotocol/commander-calculator/src/MiningFrames';
+import BigNumber from 'bignumber.js';
 
-let IS_INITIALIZED = false;
+interface IMyMiningSeats {
+  seatCount: number;
+  microgonsBid: bigint;
+  micronotsStaked: bigint;
+  microgonsMined: bigint;
+  micronotsMined: bigint;
+  microgonsMinted: bigint;
+  microgonsToBeMined: bigint;
+  microgonsToBeMinted: bigint;
+  micronotsToBeMined: bigint;
+}
 
-interface CohortAccount {
-  idx: number;
-  address: string;
-  bidPosition: number;
-  argonsBid: number;
+interface IMyMiningBids {
+  bidCount: number;
+  microgonsBid: bigint;
 }
 
 export class Stats {
-  public cohortId: number | null;
+  public latestFrameId: number;
+  public selectedFrameId!: number;
+  public selectedCohortTickRange!: [number, number];
+
+  public myMiningSeats: IMyMiningSeats;
+  public myMiningBids: IMyMiningBids;
+
+  public allWinningBids: IWinningBid[];
 
   public dashboard: IDashboardStats;
   public argonActivity: any[];
   public bitcoinActivity: any[];
-  public botActivity: any[];
-
-  public winningBids: IBidsFile['winningBids'];
-
-  public maxSeatsPossible: number;
-  public maxSeatsReductionReason: string;
+  public biddingActivity: any[];
 
   public isLoaded: boolean;
   public isLoadedPromise: Promise<void>;
-  public isRunning: boolean;
 
-  private _loadingFns!: { resolve: () => void; reject: (error: Error) => void };
+  private isLoading: boolean = false;
+  private isLoadedDeferred!: IDeferred<void>;
 
-  private syncState!: ISyncState;
   private db!: Db;
 
-  private _config!: Config;
-  private _installer!: Installer;
-  private _dbPromise: Promise<Db>;
+  private config!: Config;
+  private dbPromise: Promise<Db>;
 
-  constructor(dbPromise: Promise<Db>, config: Config, installer: Installer) {
-    if (IS_INITIALIZED) {
-      console.log(new Error().stack);
-      throw new Error('Stats already initialized');
-    }
-    IS_INITIALIZED = true;
+  private dashboardSubscribers: number = 0;
+  private dashboardHasUpdates: boolean = true;
+
+  private activitySubscribers: number = 0;
+  private activityHasUpdates: boolean = true;
+
+  constructor(dbPromise: Promise<Db>, config: Config) {
+    ensureOnlyOneInstance(this.constructor);
 
     this.isLoaded = false;
-    this.isRunning = false;
-    this.maxSeatsReductionReason = '';
-    this.maxSeatsPossible = 10; // TODO: instead of hardcoded 10, fetch from chain
-    this.cohortId = null;
-    this.winningBids = [];
+
+    this.allWinningBids = [];
+
+    this.latestFrameId = MiningFrames.calculateCurrentFrameIdFromSystemTime();
+    this.selectFrameId(this.latestFrameId, true);
+
+    this.myMiningSeats = {
+      seatCount: 0,
+      microgonsBid: 0n,
+      micronotsStaked: 0n,
+      microgonsMined: 0n,
+      micronotsMined: 0n,
+      microgonsMinted: 0n,
+      microgonsToBeMined: 0n,
+      microgonsToBeMinted: 0n,
+      micronotsToBeMined: 0n,
+    };
+
+    this.myMiningBids = {
+      bidCount: 0,
+      microgonsBid: 0n,
+    };
+
     this.dashboard = {
-      cohortId: null,
+      frameId: null,
       cohort: null,
       global: {
         activeCohorts: 0,
         activeSeats: 0,
         totalBlocksMined: 0,
-        totalArgonsBid: 0,
-        totalTransactionFees: 0,
-        totalArgonotsMined: 0,
-        totalArgonsMined: 0,
-        totalArgonsMinted: 0,
+        totalMicrogonsBid: 0n,
+        totalTransactionFees: 0n,
+        totalMicronotsMined: 0n,
+        totalMicrogonsMined: 0n,
+        totalMicrogonsMinted: 0n,
       },
     };
+
     this.argonActivity = [];
     this.bitcoinActivity = [];
-    this.botActivity = [];
+    this.biddingActivity = [];
 
-    this._dbPromise = dbPromise;
-    this._config = config;
-    this._installer = installer;
+    this.dbPromise = dbPromise;
+    this.config = config;
 
-    this.isLoadedPromise = new Promise((resolve, reject) => {
-      this._loadingFns = { resolve, reject };
-    });
+    this.isLoadedDeferred = createDeferred<void>();
+    this.isLoadedPromise = this.isLoadedDeferred.promise;
+  }
+
+  public get prevFrameId(): number | null {
+    const newFrameId = this.selectedFrameId - 1;
+    if (newFrameId < 1) return null;
+    return newFrameId;
+  }
+
+  public get nextFrameId(): number | null {
+    const newFrameId = this.selectedFrameId + 1;
+    if (newFrameId > this.latestFrameId) return null;
+    return newFrameId;
+  }
+
+  public selectFrameId(frameId: number, skipDashboardUpdate: boolean = false) {
+    const firstFrameTickRange = MiningFrames.getTickRangeForFrameFromSystemTime(frameId);
+    const lastFrameTickRange = MiningFrames.getTickRangeForFrameFromSystemTime(frameId + 9);
+    this.selectedFrameId = frameId;
+    this.selectedCohortTickRange = [firstFrameTickRange[0], lastFrameTickRange[1]];
+    if (skipDashboardUpdate) return;
+
+    this.updateDashboard().catch(console.error);
   }
 
   public async load() {
-    if (!this._config.isServerConnected) {
-      console.log('Skipping Stats.load because server is not connected');
-      return;
-    }
+    if (this.isLoading || this.isLoaded) return;
+    this.isLoading = true;
 
-    await this._installer.isLoadedPromise;
+    await this.config.isLoadedPromise;
+    this.db = await this.dbPromise;
 
-    while (!this.isRunnable) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+    botEmitter.on('updated-cohort-data', async (frameId: number) => {
+      await this.updateMiningSeats();
 
-    console.info('Loading stats...', { isServerUpToDate: this._config.isServerUpToDate });
-    this.db = await this._dbPromise;
+      const isOnLatestFrame = this.selectedFrameId === this.latestFrameId;
+      this.latestFrameId = frameId;
+      if (!isOnLatestFrame) return;
 
-    console.info('Fetching sync state...');
-    await this.updateSyncState();
+      this.selectFrameId(frameId, true);
 
-    console.info('Trying to sync state...');
-    const syncer = await new StatsSyncer(this._config, this.db);
-    await syncer.sync(this.syncState);
+      if (this.isSubscribedToDashboard) {
+        await this.updateDashboard();
+        this.dashboardHasUpdates = false;
+      } else {
+        this.dashboardHasUpdates = true;
+      }
 
-    this.run(syncer);
+      if (this.isSubscribedToActivity) {
+        await this.updateBitcoinActivities();
+        await this.updateArgonActivities();
+        await this.updateBotActivities();
+        this.activityHasUpdates = false;
+      } else {
+        this.activityHasUpdates = true;
+      }
+    });
+
+    botEmitter.on('updated-bids-data', async (_: IBidsFile['winningBids']) => {
+      this.updateMiningBids();
+    });
+
+    botEmitter.on('updated-bitcoin-activity', async () => {
+      if (this.isSubscribedToActivity) {
+        await this.updateBitcoinActivities();
+        this.activityHasUpdates = false;
+      } else {
+        this.activityHasUpdates = true;
+      }
+    });
+
+    botEmitter.on('updated-argon-activity', async () => {
+      if (this.isSubscribedToActivity) {
+        await this.updateArgonActivities();
+        this.activityHasUpdates = false;
+      } else {
+        this.activityHasUpdates = true;
+      }
+    });
+
+    botEmitter.on('updated-bidding-activity', async () => {
+      if (this.isSubscribedToActivity) {
+        await this.updateBotActivities();
+        this.activityHasUpdates = false;
+      } else {
+        this.activityHasUpdates = true;
+      }
+    });
+
+    await this.updateMiningSeats();
+    await this.updateMiningBids();
 
     this.isLoaded = true;
-    this._loadingFns.resolve();
+    this.isLoading = false;
+    this.isLoadedDeferred.resolve();
   }
 
-  private async run(syncer: StatsSyncer): Promise<void> {
-    if (this.isRunning) return;
-    this.isRunning = true;
+  public async subscribeToDashboard(): Promise<void> {
+    this.dashboardSubscribers++;
+    if (this.dashboardSubscribers > 1) return;
 
-    while (!this.isRunnable) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    await this.isLoadedDeferred.promise;
+
+    if (this.dashboardHasUpdates) {
+      this.dashboardHasUpdates = false;
+      await this.updateDashboard();
     }
+  }
 
-    console.log('RUNNING STATS');
-    this.cohortId ??= await this.fetchLatestCohortIdFromDb();
+  public async subscribeToActivity(): Promise<void> {
+    this.activitySubscribers++;
+    if (this.activitySubscribers > 1) return;
 
-    await this.updateSyncState();
-    const currentFrameId = this.syncState.currentFrameId;
-    const activeBidsFile = await StatsFetcher.fetchBidsFile();
-    this.winningBids = activeBidsFile.winningBids;
+    await this.isLoadedDeferred.promise;
 
-    try {
-      await syncer.syncDbFrame(currentFrameId);
-    } catch (e) {
-      console.info('Failed to sync db frame:', e);
+    if (this.activityHasUpdates) {
+      this.activityHasUpdates = false;
+      await Promise.all([this.updateBitcoinActivities(), this.updateArgonActivities(), this.updateBotActivities()]);
     }
+  }
 
-    if (syncer.isMissingCurrentFrame) {
-      const yesterdayFrameId = currentFrameId - 1;
-      const yesterdayFrame = await this.db.framesTable.fetchById(yesterdayFrameId);
-      if (!yesterdayFrame?.isProcessed) {
-        await syncer.syncDbFrame(yesterdayFrameId);
-      }
-    }
+  public async unsubscribeFromDashboard(): Promise<void> {
+    this.dashboardSubscribers--;
+    if (this.dashboardSubscribers < 0) this.dashboardSubscribers = 0;
+  }
 
-    await this.updateArgonActivity();
-    await this.updateBitcoinActivity();
+  public async unsubscribeFromActivity(): Promise<void> {
+    this.activitySubscribers--;
+    if (this.activitySubscribers < 0) this.activitySubscribers = 0;
+  }
 
+  private get isSubscribedToDashboard(): boolean {
+    return this.dashboardSubscribers > 0;
+  }
+
+  private get isSubscribedToActivity(): boolean {
+    return this.activitySubscribers > 0;
+  }
+
+  private async updateDashboard(): Promise<void> {
     this.dashboard = await this.fetchDashboardFromDb();
-    this.argonActivity = await this.db.argonActivitiesTable.fetchLastFiveRecords();
+  }
+
+  private async updateMiningSeats(): Promise<void> {
+    this.myMiningSeats = await this.fetchMiningSeatsFromDb();
+  }
+
+  private async updateBitcoinActivities(): Promise<void> {
     this.bitcoinActivity = await this.db.bitcoinActivitiesTable.fetchLastFiveRecords();
-    this.botActivity = await this.db.botActivitiesTable.fetchLastFiveRecords();
-
-    this.isRunning = false;
-    setTimeout(() => {
-      this.run(syncer);
-    }, 1e3);
   }
 
-  private get isRunnable(): boolean {
-    return this._config.isServerUpToDate && !this._config.isWaitingForUpgradeApproval;
+  private async updateArgonActivities(): Promise<void> {
+    this.argonActivity = await this.db.argonActivitiesTable.fetchLastFiveRecords();
   }
 
-  public async fetchDashboardFromDb(): Promise<IDashboardStats> {
+  private async updateBotActivities(): Promise<void> {
+    this.biddingActivity = await this.db.botActivitiesTable.fetchRecentRecords(15);
+  }
+
+  private async updateMiningBids(): Promise<void> {
+    const frameBids = await this.db.frameBidsTable.fetchForFrameId(this.latestFrameId, 10);
+    this.allWinningBids = frameBids.map(x => {
+      return {
+        address: x.address,
+        subAccountIndex: x.subAccountIndex,
+        lastBidAtTick: x.lastBidAtTick,
+        bidPosition: x.bidPosition,
+        microgonsBid: x.microgonsBid,
+      };
+    });
+
+    const myWinningBids = this.allWinningBids.filter(bid => typeof bid.subAccountIndex === 'number');
+    this.myMiningBids.bidCount = myWinningBids.length;
+    this.myMiningBids.microgonsBid = myWinningBids.reduce((acc, bid) => acc + (bid.microgonsBid || 0n), 0n);
+  }
+
+  private async fetchMiningSeatsFromDb(): Promise<IMyMiningSeats> {
+    let seatCount = 0;
+    let microgonsBid = 0n;
+    let micronotsStaked = 0n;
+    let microgonsMined = 0n;
+    let micronotsMined = 0n;
+    let microgonsMinted = 0n;
+    let microgonsToBeMined = 0n;
+    let microgonsToBeMinted = 0n;
+    let micronotsToBeMined = 0n;
+
+    const activeCohorts = await this.db.cohortsTable.fetchActiveCohorts(this.latestFrameId);
+
+    for (const cohort of activeCohorts) {
+      // Scale factor to preserve precision (cohort.progress has 3 decimal places)
+      // factor = (100 - progress) / 100, scaled by 100000 for 3 decimal precision
+      const remainingRewardsPerSeat = this.calculateRemainingRewardsExpectedPerSeat(cohort);
+
+      seatCount += cohort.seatsWon;
+      microgonsBid += cohort.microgonsBid * BigInt(cohort.seatsWon);
+      micronotsStaked += cohort.micronotsStaked * BigInt(cohort.seatsWon);
+      microgonsToBeMined += remainingRewardsPerSeat.microgonsToBeMined * BigInt(cohort.seatsWon);
+      microgonsToBeMinted += remainingRewardsPerSeat.microgonsToBeMinted * BigInt(cohort.seatsWon);
+      micronotsToBeMined += remainingRewardsPerSeat.micronotsToBeMined * BigInt(cohort.seatsWon);
+    }
+
+    const activeCohortFrames = await this.db.cohortFramesTable.fetchActiveCohortFrames(this.latestFrameId);
+
+    for (const cohortFrame of activeCohortFrames) {
+      microgonsMined += cohortFrame.microgonsMined;
+      micronotsMined += cohortFrame.micronotsMined;
+      microgonsMinted += cohortFrame.microgonsMinted;
+    }
+
     return {
-      global: await this.fetchDashboardGlobalStatsFromDb(),
-      cohortId: this.cohortId,
-      cohort: this.cohortId ? await this.fetchDashboardCohortStatsFromDb(this.cohortId) : null,
+      seatCount,
+      microgonsBid,
+      micronotsStaked,
+      microgonsMined,
+      micronotsMined,
+      microgonsMinted,
+      microgonsToBeMined,
+      microgonsToBeMinted,
+      micronotsToBeMined,
     };
   }
 
-  private async fetchLatestCohortIdFromDb(): Promise<number | null> {
+  private calculateRemainingRewardsExpectedPerSeat(cohort: ICohortRecord): {
+    microgonsToBeMined: bigint;
+    microgonsToBeMinted: bigint;
+    micronotsToBeMined: bigint;
+  } {
+    const microgonsExpected = bigIntMax(cohort.microgonsBid, cohort.microgonsToBeMined);
+    const microgonsExpectedToBeMinted = microgonsExpected - cohort.microgonsToBeMined;
+
+    const factorBn = BigNumber(100 - cohort.progress).dividedBy(100);
+
+    const microgonsToBeMinedBn = BigNumber(cohort.microgonsToBeMined).multipliedBy(factorBn);
+    const micronotsToBeMinedBn = BigNumber(cohort.micronotsToBeMined).multipliedBy(factorBn);
+    const microgonsToBeMintedBn = BigNumber(microgonsExpectedToBeMinted).multipliedBy(factorBn);
+
+    const microgonsToBeMined = BigInt(microgonsToBeMinedBn.integerValue().toString());
+    const microgonsToBeMinted = BigInt(microgonsToBeMintedBn.integerValue().toString());
+    const micronotsToBeMined = BigInt(micronotsToBeMinedBn.integerValue().toString());
+
+    return {
+      microgonsToBeMined,
+      microgonsToBeMinted,
+      micronotsToBeMined,
+    };
+  }
+
+  private async fetchDashboardFromDb(): Promise<IDashboardStats> {
     try {
-      const id = await this.db.cohortsTable.fetchLatestActiveId();
-      return id || null;
-    } catch {
-      return null;
+      return {
+        global: await this.fetchDashboardGlobalStatsFromDb(),
+        frameId: this.selectedFrameId,
+        cohort: this.selectedFrameId ? await this.fetchDashboardCohortStatsFromDb(this.selectedFrameId) : null,
+      };
+    } catch (error) {
+      console.error('Error fetching dashboard from db', error);
+      throw error;
     }
   }
 
@@ -186,19 +379,20 @@ export class Stats {
       activeCohorts: globalStats1.totalActiveCohorts,
       activeSeats: globalStats1.totalActiveSeats,
       totalBlocksMined: globalStats2.totalBlocksMined,
-      totalArgonsBid: globalStats1.totalArgonsBid,
+      totalMicrogonsBid: globalStats1.totalMicrogonsBid,
       totalTransactionFees: globalStats1.totalTransactionFees,
-      totalArgonotsMined: globalStats2.totalArgonotsMined,
-      totalArgonsMined: globalStats2.totalArgonsMined,
-      totalArgonsMinted: globalStats2.totalArgonsMinted,
+      totalMicronotsMined: globalStats2.totalMicronotsMined,
+      totalMicrogonsMined: globalStats2.totalMicrogonsMined,
+      totalMicrogonsMinted: globalStats2.totalMicrogonsMinted,
     };
   }
 
-  private async fetchDashboardCohortStatsFromDb(cohortId: number): Promise<IDashboardStats['cohort']> {
-    const cohort = await this.db.cohortsTable.fetchById(cohortId);
+  private async fetchDashboardCohortStatsFromDb(frameId: number): Promise<IDashboardStats['cohort']> {
+    const cohort = await this.db.cohortsTable.fetchById(frameId);
     if (!cohort) return null;
 
     const cohortStats = await this.db.cohortFramesTable.fetchCohortStats(cohort.id);
+    const remainingRewardsPerSeat = this.calculateRemainingRewardsExpectedPerSeat(cohort);
 
     return {
       cohortId: cohort.id,
@@ -206,58 +400,17 @@ export class Stats {
       lastTick: cohort.lastTick,
       lastBlockNumber: cohort.lastBlockNumber,
       transactionFees: cohort.transactionFees,
-      argonotsStaked: cohort.argonotsStaked,
-      argonsBid: cohort.argonsBid,
+      micronotsStaked: cohort.micronotsStaked,
+      microgonsBid: cohort.microgonsBid,
       seatsWon: cohort.seatsWon,
       progress: cohort.progress,
       blocksMined: cohortStats.totalBlocksMined,
-      argonotsMined: cohortStats.totalArgonotsMined,
-      argonsMined: cohortStats.totalArgonsMined,
-      argonsMinted: cohortStats.totalArgonsMinted,
+      micronotsMined: cohortStats.totalMicronotsMined,
+      microgonsMined: cohortStats.totalMicrogonsMined,
+      microgonsMinted: cohortStats.totalMicrogonsMinted,
+      microgonsToBeMined: remainingRewardsPerSeat.microgonsToBeMined,
+      microgonsToBeMinted: remainingRewardsPerSeat.microgonsToBeMinted,
+      micronotsToBeMined: remainingRewardsPerSeat.micronotsToBeMined,
     };
-  }
-
-  private async updateSyncState(): Promise<void> {
-    this.syncState = await StatsFetcher.fetchSyncState();
-    this.maxSeatsReductionReason = this.syncState.maxSeatsReductionReason;
-    this.maxSeatsPossible = this.syncState.maxSeatsPossible;
-
-    if (this.syncState.oldestFrameIdToSync > 0) {
-      this._config.serverDetails.oldestFrameIdToSync = this.syncState.oldestFrameIdToSync;
-    }
-
-    this._config.hasMiningSeats = this.syncState.hasMiningSeats;
-    this._config.hasMiningBids = this.syncState.hasMiningBids;
-
-    await this._config.save();
-  }
-
-  private async updateArgonActivity(): Promise<void> {
-    const latestBlockNumbers = this.syncState.argonBlockNumbers;
-    const lastArgonActivity = await this.db.argonActivitiesTable.latest();
-
-    const localhostMatches = lastArgonActivity?.localNodeBlockNumber === latestBlockNumbers.localNode;
-    const mainchainMatches = lastArgonActivity?.mainNodeBlockNumber === latestBlockNumbers.mainNode;
-
-    if (!localhostMatches || !mainchainMatches) {
-      await this.db.argonActivitiesTable.insert(latestBlockNumbers.localNode, latestBlockNumbers.mainNode);
-    }
-  }
-
-  private async updateBitcoinActivity(): Promise<void> {
-    const latestBlockNumbers = this.syncState.bitcoinBlockNumbers;
-    const savedActivity = await this.db.bitcoinActivitiesTable.latest();
-
-    const localhostMatches = savedActivity?.localNodeBlockNumber === latestBlockNumbers.localNode;
-    const mainchainMatches = savedActivity?.mainNodeBlockNumber === latestBlockNumbers.mainNode;
-
-    if (!localhostMatches || !mainchainMatches) {
-      await this.db.bitcoinActivitiesTable.insert(latestBlockNumbers.localNode, latestBlockNumbers.mainNode);
-    }
-  }
-
-  private async updateBotActivity(): Promise<void> {
-    const botHistory = await StatsFetcher.fetchBotHistory(this.localPort);
-    // TODO: Implement bot activity update logic
   }
 }

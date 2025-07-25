@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <slot :hours="hours" :minutes="minutes" :seconds="seconds"></slot>
 </template>

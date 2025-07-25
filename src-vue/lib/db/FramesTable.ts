@@ -1,10 +1,12 @@
 import { IFrameRecord } from '../../interfaces/db/IFrameRecord';
-import { BaseTable } from './BaseTable';
-import camelcaseKeys from 'camelcase-keys';
-import { convertSqliteBooleans, toSqliteBoolean } from '../Utils';
+import { BaseTable, IFieldTypes } from './BaseTable';
+import { convertFromSqliteFields, toSqlParams } from '../Utils';
 
 export class FramesTable extends BaseTable {
-  private booleanFields: string[] = ['is_processed'];
+  private fieldTypes: IFieldTypes = {
+    boolean: ['isProcessed'],
+    bigintJson: ['microgonToUsd', 'microgonToBtc', 'microgonToArgonot'],
+  };
 
   async insertOrUpdate(
     id: number,
@@ -12,12 +14,26 @@ export class FramesTable extends BaseTable {
     lastTick: number,
     firstBlockNumber: number,
     lastBlockNumber: number,
+    microgonToUsd: bigint[],
+    microgonToBtc: bigint[],
+    microgonToArgonot: bigint[],
     progress: number,
     isProcessed: boolean,
   ): Promise<void> {
-    await this.db.sql.execute(
-      'INSERT OR REPLACE INTO frames (id, first_tick, last_tick, first_block_number, last_block_number, progress, is_processed) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id, firstTick, lastTick, firstBlockNumber, lastBlockNumber, progress, toSqliteBoolean(isProcessed)],
+    await this.db.execute(
+      'INSERT OR REPLACE INTO Frames (id, firstTick, lastTick, firstBlockNumber, lastBlockNumber, microgonToUsd, microgonToBtc, microgonToArgonot, progress, isProcessed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      toSqlParams([
+        id,
+        firstTick,
+        lastTick,
+        firstBlockNumber,
+        lastBlockNumber,
+        microgonToUsd,
+        microgonToBtc,
+        microgonToArgonot,
+        progress,
+        isProcessed,
+      ]),
     );
   }
 
@@ -27,34 +43,45 @@ export class FramesTable extends BaseTable {
     lastTick: number,
     firstBlockNumber: number,
     lastBlockNumber: number,
+    microgonToUsd: bigint[],
+    microgonToBtc: bigint[],
+    microgonToArgonot: bigint[],
     progress: number,
     isProcessed: boolean,
   ): Promise<void> {
-    await this.db.sql.execute(
-      'UPDATE frames SET first_tick = ?, last_tick = ?, first_block_number = ?, last_block_number = ?, progress = ?, is_processed = ? WHERE id = ?',
-      [firstTick, lastTick, firstBlockNumber, lastBlockNumber, progress, toSqliteBoolean(isProcessed), id],
+    await this.db.execute(
+      'UPDATE Frames SET firstTick = ?, lastTick = ?, firstBlockNumber = ?, lastBlockNumber = ?, microgonToUsd = ?, microgonToBtc = ?, microgonToArgonot = ?, progress = ?, isProcessed = ? WHERE id = ?',
+      toSqlParams([
+        firstTick,
+        lastTick,
+        firstBlockNumber,
+        lastBlockNumber,
+        microgonToUsd,
+        microgonToBtc,
+        microgonToArgonot,
+        progress,
+        isProcessed,
+        id,
+      ]),
     );
   }
 
   async fetchById(id: number): Promise<IFrameRecord> {
-    const [rawRecord] = await this.db.sql.select<[any]>('SELECT * FROM frames WHERE id = ?', [id]);
-
+    const [rawRecord] = await this.db.select<[any]>('SELECT * FROM Frames WHERE id = ?', [id]);
     if (!rawRecord) throw new Error(`Frame ${id} not found`);
 
-    return camelcaseKeys(convertSqliteBooleans(rawRecord, this.booleanFields)) as IFrameRecord;
+    return convertFromSqliteFields(rawRecord, this.fieldTypes) as IFrameRecord;
   }
 
   async fetchProcessedCount(): Promise<number> {
-    const [result] = await this.db.sql.select<[{ count: number }]>(
-      'SELECT COUNT(*) as count FROM frames WHERE is_processed = 1',
+    const [result] = await this.db.select<[{ count: number }]>(
+      'SELECT COUNT(*) as count FROM Frames WHERE isProcessed = 1',
     );
     return result.count;
   }
 
   async latestId(): Promise<number> {
-    const [rawRecord] = await this.db.sql.select<[{ max_id: number }]>(
-      'SELECT COALESCE(MAX(id), 0) as max_id FROM frames',
-    );
-    return rawRecord.max_id;
+    const [rawRecord] = await this.db.select<[{ maxId: number }]>('SELECT COALESCE(MAX(id), 0) as maxId FROM Frames');
+    return rawRecord.maxId;
   }
 }

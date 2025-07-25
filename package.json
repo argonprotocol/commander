@@ -17,11 +17,10 @@
   },
   "dependencies": {
     "@argonprotocol/commander-calculator": "workspace:*",
-    "@argonprotocol/mainchain": "1.1.0",
+    "@argonprotocol/mainchain": "1.3.2",
     "@chenfengyuan/vue-countdown": "^2.1.3",
     "@headlessui/vue": "^1.7.23",
     "@heroicons/vue": "^2.2.0",
-    "@polkadot/api": "^15.5.2",
     "@tailwindcss/vite": "^4.0.3",
     "@tauri-apps/api": "^2.2.0",
     "@tauri-apps/plugin-dialog": "~2",
@@ -39,6 +38,7 @@
     "chartjs-adapter-dayjs-4": "^1.0.4",
     "dayjs": "^1.11.13",
     "mitt": "^3.0.1",
+    "numeral": "^2.0.6",
     "ordinal": "^1.0.3",
     "pinia": "^3.0.1",
     "qrcode": "^1.5.4",
@@ -56,6 +56,7 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2",
     "@types/node": "^22.15.17",
+    "@types/numeral": "^2",
     "@types/qrcode": "^1.5.5",
     "@vitejs/plugin-vue": "^5.2.1",
     "clsx": "^2.1.1",

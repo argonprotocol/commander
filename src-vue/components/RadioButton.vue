@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <input
     type="radio"

@@ -1,46 +1,74 @@
-import { ICohortFrameStats, ICohortFrameRecord } from '../../interfaces/db/ICohortFrames';
+import { ICohortFrameRecord, ICohortFrameStats } from '../../interfaces/db/ICohortFrameRecord';
 import { BaseTable } from './BaseTable';
-import camelcaseKeys from 'camelcase-keys';
+import { convertSqliteBigInts, fromSqliteBigInt, toSqliteBigInt } from '../Utils';
 
 export class CohortFramesTable extends BaseTable {
+  private bigIntFields: string[] = ['micronotsMined', 'microgonsMined', 'microgonsMinted'];
+
   async insertOrUpdate(
     frameId: number,
     cohortId: number,
     blocksMined: number,
-    argonotsMined: number,
-    argonsMined: number,
-    argonsMinted: number,
+    micronotsMined: bigint,
+    microgonsMined: bigint,
+    microgonsMinted: bigint,
   ): Promise<void> {
-    await this.db.sql.execute(
-      'INSERT OR REPLACE INTO cohort_frames (frame_id, cohort_id, blocks_mined, argonots_mined, argons_mined, argons_minted) VALUES (?, ?, ?, ?, ?, ?)',
-      [frameId, cohortId, blocksMined, argonotsMined, argonsMined, argonsMinted],
+    await this.db.execute(
+      'INSERT OR REPLACE INTO CohortFrames (frameId, cohortId, blocksMined, micronotsMined, microgonsMined, microgonsMinted) VALUES (?, ?, ?, ?, ?, ?)',
+      [
+        frameId,
+        cohortId,
+        blocksMined,
+        toSqliteBigInt(micronotsMined),
+        toSqliteBigInt(microgonsMined),
+        toSqliteBigInt(microgonsMinted),
+      ],
     );
+  }
+
+  async fetchActiveCohortFrames(currentFrameId: number): Promise<ICohortFrameRecord[]> {
+    const records = await this.db.select<ICohortFrameRecord[]>('SELECT * FROM CohortFrames WHERE frameId >= ?', [
+      currentFrameId - 10,
+    ]);
+    return convertSqliteBigInts(records, this.bigIntFields);
   }
 
   public async fetchGlobalStats(): Promise<ICohortFrameStats> {
-    const [rawResults] = await this.db.sql.select<[any]>(
+    const [rawResults] = await this.db.select<[any]>(
       `SELECT 
-        COALESCE(sum(blocks_mined), 0) as total_blocks_mined,
-        COALESCE(sum(argonots_mined), 0) as total_argonots_mined,
-        COALESCE(sum(argons_mined), 0) as total_argons_mined,
-        COALESCE(sum(argons_minted), 0) as total_argons_minted
-      FROM cohort_frames`,
+        COALESCE(sum(blocksMined), 0) as totalBlocksMined,
+        COALESCE(sum(micronotsMined), 0) as totalMicronotsMined,
+        COALESCE(sum(microgonsMined), 0) as totalMicrogonsMined,
+        COALESCE(sum(microgonsMinted), 0) as totalMicrogonsMinted
+      FROM CohortFrames`,
     );
 
-    return camelcaseKeys(rawResults) as ICohortFrameStats;
+    const results = rawResults;
+    return {
+      totalBlocksMined: results.totalBlocksMined,
+      totalMicronotsMined: fromSqliteBigInt(results.totalMicronotsMined),
+      totalMicrogonsMined: fromSqliteBigInt(results.totalMicrogonsMined),
+      totalMicrogonsMinted: fromSqliteBigInt(results.totalMicrogonsMinted),
+    };
   }
 
   public async fetchCohortStats(cohortId: number): Promise<ICohortFrameStats> {
-    const [rawResults] = await this.db.sql.select<[any]>(
+    const [rawResults] = await this.db.select<[any]>(
       `SELECT 
-        COALESCE(sum(blocks_mined), 0) as total_blocks_mined,
-        COALESCE(sum(argonots_mined), 0) as total_argonots_mined,
-        COALESCE(sum(argons_mined), 0) as total_argons_mined,
-        COALESCE(sum(argons_minted), 0) as total_argons_minted
-      FROM cohort_frames WHERE cohort_id = ?`,
+        COALESCE(sum(blocksMined), 0) as totalBlocksMined,
+        COALESCE(sum(micronotsMined), 0) as totalMicronotsMined,
+        COALESCE(sum(microgonsMined), 0) as totalMicrogonsMined,
+        COALESCE(sum(microgonsMinted), 0) as totalMicrogonsMinted
+      FROM CohortFrames WHERE cohortId = ?`,
       [cohortId],
     );
 
-    return camelcaseKeys(rawResults) as ICohortFrameStats;
+    const results = rawResults;
+    return {
+      totalBlocksMined: results.totalBlocksMined,
+      totalMicronotsMined: fromSqliteBigInt(results.totalMicronotsMined),
+      totalMicrogonsMined: fromSqliteBigInt(results.totalMicrogonsMined),
+      totalMicrogonsMinted: fromSqliteBigInt(results.totalMicrogonsMinted),
+    };
   }
 }

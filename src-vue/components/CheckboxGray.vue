@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="w-7 h-7 max-w-7 max-h-7">
     <div

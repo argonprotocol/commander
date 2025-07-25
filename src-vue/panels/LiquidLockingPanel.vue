@@ -1,3 +1,4 @@
+<!-- prettier-ignore -->
 <template>
   <div class="flex flex-col h-full opacity-60 pointer-events-none">
     <div style="text-shadow: 1px 1px 0 white">
@@ -26,7 +27,7 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                {{ fmtCommas(fmtDecimalsMax(bitcoinLocked)) }}
+                {{ numeral(bitcoinLocked).format('0,0.[00000000]') }}
               </template>
               <template v-else>---</template>
             </div>
@@ -36,10 +37,10 @@
           <li class="w-1/4">
             <div class="text-4xl font-bold">
               <template v-if="isLoaded">
-                <span :class="[currencySymbol === '₳' ? 'font-semibold' : 'font-bold']">
-                  {{ currencySymbol }}
+                <span :class="[currency.symbol === '₳' ? 'font-semibold' : 'font-bold']">
+                  {{ currency.symbol }}
                 </span>
-                {{ fmtMoney(argonTo(liquidityRealized), 1_000) }}
+                {{ microgonToMoneyNm(liquidityRealized).formatIfElse('< 1_000', '0,0.00', '0,0') }}
               </template>
               <template v-else>---</template>
             </div>
@@ -48,9 +49,7 @@
           <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">
             <div class="text-4xl font-bold">
-              <template v-if="isLoaded">
-                {{ fmtMoney(Math.min(hodlerAPR, 999_999), 100) }}%{{ hodlerAPR >= 9_999 ? '+' : ' ' }}
-              </template>
+              <template v-if="isLoaded">{{ numeral(hodlerAPR).formatCapped('0,0', 9_999) }}%</template>
               <template v-else>---</template>
             </div>
             <div>Bitcoin Hodling Return</div>
@@ -58,11 +57,7 @@
           <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">
             <div class="text-4xl font-bold">
-              <template v-if="isLoaded">
-                {{ fmtCommas(fmtDecimalsMax(Math.min(liquidLockingAPR, 999_999))) }}%{{
-                  liquidLockingAPR >= 9_999 ? '+' : ' '
-                }}
-              </template>
+              <template v-if="isLoaded">{{ numeral(liquidLockingAPR).formatCapped('0,0', 9_999) }}%</template>
               <template v-else>---</template>
             </div>
             <div>Liquid Locking Return</div>
@@ -80,9 +75,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { fmtMoney, fmtCommas, fmtDecimalsMax } from '../lib/Utils';
-import { useCurrencyStore } from '../stores/currency';
-import { storeToRefs } from 'pinia';
+import { useCurrency } from '../stores/currency';
 import { getBitcoinPrices, getBitcoinFees } from '../stores/bitcoin';
 import Chart from '../components/Chart.vue';
 import Vault from '../lib/LlbVault';
@@ -90,22 +83,21 @@ import VaultSnapshot from '../lib/LlbVaultSnapshot';
 import BitcoinFees from '../lib/BitcoinFees';
 import NibSlider from '../components/NibSlider.vue';
 import { getMainchain } from '../stores/mainchain';
+import numeral, { createNumeralHelpers } from '../lib/numeral';
 
 const mainchain = getMainchain();
-const currencyStore = useCurrencyStore();
+const currency = useCurrency();
 
+const { microgonToMoneyNm } = createNumeralHelpers(currency);
 const bitcoinPrices = getBitcoinPrices();
 const bitcoinFees = getBitcoinFees();
 
 const chartRef = Vue.ref<InstanceType<typeof Chart> | null>(null);
 
-const { argonTo, btcToArgon } = currencyStore;
-const { currencySymbol } = storeToRefs(currencyStore);
-
 const isLoaded = Vue.ref(false);
 
 const bitcoinLocked = Vue.ref(0);
-const liquidityRealized = Vue.ref(0);
+const liquidityRealized = Vue.ref(0n);
 const hodlerAPR = Vue.ref(350);
 const liquidLockingAPR = Vue.ref(72);
 
@@ -141,7 +133,7 @@ function loadChartData() {
 Vue.onMounted(async () => {
   const vaults = await mainchain.fetchVaults();
   bitcoinLocked.value = vaults.reduce((acc, vault) => acc + vault.bitcoinLocked, 0);
-  liquidityRealized.value = btcToArgon(vaults.reduce((acc, vault) => acc + vault.bitcoinLocked, 0));
+  liquidityRealized.value = currency.btcToMicrogon(vaults.reduce((acc, vault) => acc + vault.bitcoinLocked, 0));
   loadChartData();
   isLoaded.value = true;
 });

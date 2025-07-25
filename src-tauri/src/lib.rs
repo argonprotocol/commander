@@ -1,8 +1,8 @@
 use log;
 use log::trace;
 use serde;
-use ssh::singleton;
 use ssh::SSH;
+use ssh_singleton::*;
 use std;
 use std::path::Path;
 use tauri::{AppHandle, Manager};
@@ -12,7 +12,9 @@ use window_vibrancy::*;
 
 mod env;
 mod migrations;
+mod menu;
 mod ssh;
+mod ssh_singleton;
 mod utils;
 
 #[derive(serde::Serialize, Debug)]
@@ -40,7 +42,7 @@ async fn try_ssh_connection(
     ssh.run_command("echo 'test'")
         .await
         .map_err(|e| e.to_string())?;
-    singleton::replace_ssh_connection(ssh)
+    replace_ssh_singleton_connection(ssh)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -56,7 +58,7 @@ async fn open_ssh_connection(
     log::info!("ensure_ssh_connection");
     let (host, port) = Utils::extract_host_port(host);
     let ssh_config = ssh::SSHConfig::new(&host, port, username, private_key).unwrap();
-    singleton::try_open_ssh_connection(&ssh_config)
+    test_opne_ssh_connection(&ssh_config)
         .await
         .map_err(|e| {
             log::error!("Error connecting to SSH: {:#}", e);
@@ -69,7 +71,7 @@ async fn open_ssh_connection(
 #[tauri::command]
 async fn close_ssh_connection() -> Result<String, String> {
     log::info!("close_ssh_connection");
-    singleton::close_ssh_connection()
+    close_ssh_singleton_connection()
         .await
         .map_err(|e| e.to_string())?;
 
@@ -79,7 +81,7 @@ async fn close_ssh_connection() -> Result<String, String> {
 #[tauri::command]
 async fn ssh_run_command(command: String) -> Result<(String, u32), String> {
     log::info!("ssh_run_command: {}", command);
-    let ssh: ssh::SSH = singleton::get_ssh_connection()
+    let ssh: ssh::SSH = get_ssh_singleton_connection()
         .await
         .map_err(|e| e.to_string())?
         .ok_or("No SSH connection")?;
@@ -98,7 +100,7 @@ async fn ssh_upload_directory(
         local_relative_dir,
         remote_dir
     );
-    let ssh: ssh::SSH = singleton::get_ssh_connection()
+    let ssh: ssh::SSH = get_ssh_singleton_connection()
         .await
         .map_err(|e| e.to_string())?
         .ok_or("No SSH connection")?;
@@ -111,7 +113,7 @@ async fn ssh_upload_directory(
 #[tauri::command]
 async fn ssh_upload_file(contents: String, remote_path: String) -> Result<String, String> {
     log::info!("ssh_upload_file: {}, {}", contents, remote_path);
-    let ssh: ssh::SSH = singleton::get_ssh_connection()
+    let ssh: ssh::SSH = get_ssh_singleton_connection()
         .await
         .map_err(|e| e.to_string())?
         .ok_or("No SSH connection")?;
@@ -207,16 +209,6 @@ pub fn run() {
     let migrations = migrations::get_migrations();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_http::init())
-        .plugin(logger.build())
-        .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(
-            tauri_plugin_sql::Builder::default()
-                .add_migrations(&db_url, migrations)
-                .build(),
-        )
         .setup(move |app| {
             log::info!("Starting Commander with instance name: {}", instance_name);
             let window = app.get_webview_window("main").unwrap();
@@ -228,8 +220,26 @@ pub fn run() {
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(16.0))
                 .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
 
+            // Create the application menu
+            let menu = menu::create_menu(app)?;
+            app.set_menu(menu)?;
+
             Ok(())
         })
+        .on_menu_event(|app, event| {
+            menu::handle_menu_event(&app, &event);
+        })
+        .plugin(tauri_plugin_http::init())
+        .plugin(logger.build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations(&db_url, migrations)
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
