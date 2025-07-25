@@ -49,4 +49,7 @@ export interface IDashboardCohortStats {
   micronotsMined: bigint;
   microgonsMined: bigint;
   microgonsMinted: bigint;
+  microgonsToBeMined: bigint;
+  microgonsToBeMinted: bigint;
+  micronotsToBeMined: bigint;
 }

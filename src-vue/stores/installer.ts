@@ -9,6 +9,7 @@ export type { Installer };
 
 export function useInstaller(): Vue.Reactive<Installer> {
   if (!installer) {
+    console.log('Initializing installer');
     const config = useConfig();
     installer = Vue.reactive(new Installer(config as Config));
     installer.load().catch(handleUnknownFatalError);

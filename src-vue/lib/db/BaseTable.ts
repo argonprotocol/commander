@@ -9,9 +9,9 @@ export class BaseTable {
 }
 
 export interface IFieldTypes {
-  booleanFields?: string[];
-  bigintFields?: string[];
-  bigintJsonFields?: string[];
-  jsonFields?: string[];
-  dateFields?: string[];
+  boolean?: string[];
+  bigint?: string[];
+  bigintJson?: string[];
+  json?: string[];
+  date?: string[];
 }

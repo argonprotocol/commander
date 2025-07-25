@@ -53,6 +53,7 @@ start() {
         exit 1
     fi
     echo "STARTED" >> "$filepath"
+    echo "STARTED $step_name"
 }
 
 reset() {
@@ -76,6 +77,7 @@ finish() {
     else
         echo "FINISHED" >> "${logs_dir}/${step_name}.finished"
     fi
+    echo "FINISHED $step_name"
 }
 
 failed() {
@@ -103,10 +105,10 @@ check_shasum() {
     command_output=$(run_command "cat ~/SHASUMS256")
     expected_shasums=$(echo "$command_output")
     if [ -z "$expected_shasums" ]; then
-        failed "SHASUMS256 not found"
+        failed "Server SHASUMS256 not found"
     fi
 
     if ! echo "$expected_shasums" | grep "$dir_name $local_shasum" > /dev/null; then
-        failed "SHASUMS256 does contain: $dir_name $local_shasum"
+        failed "Server SHASUMS256 does not match: $dir_name $local_shasum"
     fi
 }

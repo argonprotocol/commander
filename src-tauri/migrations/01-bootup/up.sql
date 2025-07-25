@@ -11,25 +11,33 @@ BEGIN
 END;
 
 CREATE TABLE ArgonActivities (
+  frameId INTEGER NOT NULL,
   localNodeBlockNumber INTEGER NOT NULL,
   mainNodeBlockNumber INTEGER NOT NULL,
-  insertedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+  insertedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (localNodeBlockNumber, mainNodeBlockNumber)
+  -- FOREIGN KEY (frameId) REFERENCES frames(id)
 );
 
 CREATE TABLE BitcoinActivities (
+  frameId INTEGER NOT NULL,
   localNodeBlockNumber INTEGER NOT NULL,
   mainNodeBlockNumber INTEGER NOT NULL,
-  insertedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+  insertedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (localNodeBlockNumber, mainNodeBlockNumber)
+  -- FOREIGN KEY (frameId) REFERENCES frames(id)
 );
 
-CREATE TABLE BiddingActivities (
-  blockNumber INTEGER NOT NULL,
+CREATE TABLE BotActivities (
+  id INTEGER NOT NULL,
   tick INTEGER NOT NULL,
-  address TEXT NOT NULL,
-  bidAmount INTEGER NOT NULL,
-  bidPosition INTEGER NOT NULL,
-  prevPosition INTEGER NOT NULL,
-  insertedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+  blockNumber INTEGER,
+  frameId INTEGER,
+  type TEXT NOT NULL,
+  data TEXT NOT NULL,
+  insertedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+  -- FOREIGN KEY (frameId) REFERENCES frames(id)
 );
 
 CREATE TABLE CohortAccounts (
@@ -113,6 +121,7 @@ END;
 
 CREATE TABLE FrameBids (
   frameId INTEGER NOT NULL,
+  confirmedAtBlockNumber INTEGER NOT NULL,
   address TEXT NOT NULL,
   subAccountIndex INTEGER,
   microgonsBid INTEGER NOT NULL,
@@ -120,8 +129,7 @@ CREATE TABLE FrameBids (
   lastBidAtTick INTEGER,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (frameId, address),
-  FOREIGN KEY (frameId) REFERENCES frames(id)
+  PRIMARY KEY (frameId, address)
 );
 
 CREATE TRIGGER FrameBidsUpdateTimestamp

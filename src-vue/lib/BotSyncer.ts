@@ -1,11 +1,17 @@
 import { Config } from './Config';
 import { Db } from './Db';
 import { BotFetch } from './BotFetch';
-import { IEarningsFileCohort, IBotState, IBotStateStarting, IBidsFile } from '@argonprotocol/commander-bot/src/storage';
+import {
+  type IEarningsFileCohort,
+  type IBotState,
+  type IBotStateStarting,
+  type IBidsFile,
+} from '@argonprotocol/commander-bot';
 import { MiningFrames, TICKS_PER_COHORT } from '@argonprotocol/commander-calculator';
 import { getMainchain } from '../stores/mainchain';
 import { BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors';
 import { IBotEmitter } from './Bot';
+import Installer from './Installer';
 
 export enum BotStatus {
   Starting = 'Starting',
@@ -26,26 +32,30 @@ export type IBotFns = {
 
 export class BotSyncer {
   public isMissingCurrentFrame: boolean = false;
+  public isPaused: boolean = false;
 
   private db: Db;
   private config: Config;
   private botState!: IBotState;
   private botFns: IBotFns;
+  private installer: Installer;
 
   private isSyncingThePast: boolean = false;
 
   private mainchain = getMainchain();
 
-  private bidsFileByActivatingFrameId: Record<number, IBidsFile> = {};
+  private bidsFileCacheByActivatingFrameId: Record<number, [number, IBidsFile]> = {};
 
-  constructor(config: Config, db: Db, botFn: IBotFns) {
+  constructor(config: Config, db: Db, installer: Installer, botFn: IBotFns) {
     this.config = config;
     this.db = db;
+    this.installer = installer;
     this.botFns = botFn;
   }
 
   public async load(): Promise<void> {
     await this.config.isLoadedPromise;
+    await this.installer.isLoadedPromise;
 
     this.runContinuously();
   }
@@ -54,9 +64,15 @@ export class BotSyncer {
     if (this.isRunnable) {
       try {
         await this.updateBotState();
-        await this.updateArgonActivity();
-        await this.updateBitcoinActivity();
-        await this.updateWinningBids();
+        await this.syncArgonActivity();
+        await this.syncBitcoinActivity();
+        await this.syncBotActivity();
+        await this.syncCurrentBids();
+
+        if (!this.isSyncingThePast) {
+          this.botFns.setStatus(BotStatus.Ready);
+          this.botFns.onEvent('updated-cohort-data', this.botState.currentFrameId);
+        }
       } catch (e) {
         if (e instanceof BotServerIsLoading) {
           this.botFns.setStatus(BotStatus.Starting);
@@ -65,6 +81,7 @@ export class BotSyncer {
           this.botFns.setServerSyncProgress(e.progress);
         } else {
           this.botFns.setStatus(BotStatus.Broken);
+          console.error('BotSyncer error:', e);
         }
       }
     }
@@ -74,6 +91,7 @@ export class BotSyncer {
 
   private get isRunnable(): boolean {
     return (
+      !this.isPaused &&
       this.config.isServerReadyToInstall &&
       this.config.isServerUpToDate &&
       this.config.isServerInstalled &&
@@ -82,12 +100,13 @@ export class BotSyncer {
     );
   }
 
-  private async updateWinningBids() {
+  private async syncCurrentBids() {
     const activeBidsFile = await BotFetch.fetchBidsFile();
 
     for (const [bidPosition, bid] of activeBidsFile.winningBids.entries()) {
       await this.db.frameBidsTable.insertOrUpdate(
-        this.botState.currentFrameId,
+        activeBidsFile.cohortBiddingFrameId,
+        activeBidsFile.lastBlockNumber,
         bid.address,
         bid.subAccountIndex,
         bid.microgonsBid ?? 0n,
@@ -95,6 +114,11 @@ export class BotSyncer {
         bid.lastBidAtTick,
       );
     }
+
+    await this.db.execute('DELETE FROM FrameBids WHERE frameId = ? AND confirmedAtBlockNumber != ?', [
+      activeBidsFile.cohortBiddingFrameId,
+      activeBidsFile.lastBlockNumber,
+    ]);
 
     this.botFns.onEvent('updated-bids-data', activeBidsFile.winningBids);
   }
@@ -119,41 +143,40 @@ export class BotSyncer {
     if (dbSyncProgress < 100.0) {
       this.botFns.setStatus(BotStatus.DbSyncing);
       this.botFns.setDbSyncProgress(dbSyncProgress);
-      dbSyncProgress = await this.syncThePast(dbSyncProgress);
+      await this.syncThePast(dbSyncProgress);
+    } else {
+      this.syncCurrentFrame();
     }
-    if (dbSyncProgress < 100.0) return;
-
-    this.botFns.setStatus(BotStatus.Ready);
-    this.botFns.onEvent('updated-cohort-data', this.botState.currentFrameId);
   }
 
-  private async syncThePast(progress: number): Promise<number> {
-    if (this.isSyncingThePast) {
-      return progress;
-    }
+  private async syncCurrentFrame(): Promise<void> {
+    await this.syncDbFrame(this.botState.currentFrameId);
+  }
 
+  private async syncThePast(progress: number): Promise<void> {
+    if (this.isSyncingThePast) return;
     this.isSyncingThePast = true;
 
     const oldestFrameIdToSync = this.botState.oldestFrameIdToSync;
     const currentFrameId = this.botState.currentFrameId;
     const framesToSync = currentFrameId - oldestFrameIdToSync + 1;
 
-    const promise = new Promise<number>(async resolve => {
+    const promise = new Promise<void>(async resolve => {
       for (let frameId = oldestFrameIdToSync; frameId <= currentFrameId; frameId++) {
         await this.syncDbFrame(frameId);
         progress = await this.calculateDbSyncProgress(this.botState);
         this.botFns.setDbSyncProgress(progress);
       }
 
-      this.bidsFileByActivatingFrameId = {};
-      resolve(progress);
+      if (progress > -100) {
+        this.isSyncingThePast = false;
+      }
+      resolve();
     });
 
     if (framesToSync < 2) {
       await promise;
     }
-
-    return progress;
   }
 
   public async syncDbFrame(frameId: number): Promise<void> {
@@ -221,7 +244,7 @@ export class BotSyncer {
       if (cohort) {
         didWinSeats = !!cohort.seatsWon;
       } else {
-        const bidsFile = await this.fetchBidsFileByActivatingFrameId(frameIdToCheck);
+        const bidsFile = await this.fetchBidsFileFromCache(frameIdToCheck);
         didWinSeats = !!bidsFile.winningBids.filter(x => x.subAccountIndex !== undefined).length;
       }
 
@@ -240,7 +263,7 @@ export class BotSyncer {
   }
 
   private async syncDbCohort(cohortActivatingFrameId: number): Promise<void> {
-    const bidsFile = await this.fetchBidsFileByActivatingFrameId(cohortActivatingFrameId);
+    const bidsFile = await this.fetchBidsFileFromCache(cohortActivatingFrameId);
     if (bidsFile.frameBiddingProgress < 100.0) return;
 
     try {
@@ -298,7 +321,6 @@ export class BotSyncer {
     frameId: number,
     cohortEarningsDuringFrame: IEarningsFileCohort,
   ): Promise<void> {
-    console.log('SYNCING COHORT FRAME', cohortActivatingFrameId, frameId);
     await this.db.cohortFramesTable.insertOrUpdate(
       frameId,
       cohortActivatingFrameId,
@@ -309,21 +331,30 @@ export class BotSyncer {
     );
   }
 
-  private async fetchBidsFileByActivatingFrameId(cohortActivatingFrameId: number): Promise<IBidsFile> {
-    if (this.isSyncingThePast && this.bidsFileByActivatingFrameId[cohortActivatingFrameId]) {
-      return this.bidsFileByActivatingFrameId[cohortActivatingFrameId];
+  private async fetchBidsFileFromCache(cohortActivatingFrameId: number): Promise<IBidsFile> {
+    let [timeoutId, bidsFile] = this.bidsFileCacheByActivatingFrameId[cohortActivatingFrameId] || [];
+
+    if (timeoutId) {
+      clearTimeout(timeoutId);
     }
 
-    const bidsFile = await BotFetch.fetchBidsFile(cohortActivatingFrameId);
-
-    if (this.isSyncingThePast) {
-      this.bidsFileByActivatingFrameId[cohortActivatingFrameId] = bidsFile;
+    if (!bidsFile) {
+      bidsFile = await BotFetch.fetchBidsFile(cohortActivatingFrameId);
     }
+
+    const isCurrentFrame = cohortActivatingFrameId === this.botState.currentFrameId;
+    const millisecondsToCache = isCurrentFrame ? 1_000 : 600_000;
+
+    timeoutId = setTimeout(() => {
+      delete this.bidsFileCacheByActivatingFrameId[cohortActivatingFrameId];
+    }, millisecondsToCache) as unknown as number;
+
+    this.bidsFileCacheByActivatingFrameId[cohortActivatingFrameId] = [timeoutId, bidsFile];
 
     return bidsFile;
   }
 
-  private async updateArgonActivity(): Promise<void> {
+  private async syncArgonActivity(): Promise<void> {
     const latestBlockNumbers = this.botState.argonBlockNumbers;
     const lastArgonActivity = await this.db.argonActivitiesTable.latest();
 
@@ -331,13 +362,17 @@ export class BotSyncer {
     const mainchainMatches = lastArgonActivity?.mainNodeBlockNumber === latestBlockNumbers.mainNode;
 
     if (!localhostMatches || !mainchainMatches) {
-      await this.db.argonActivitiesTable.insert(latestBlockNumbers.localNode, latestBlockNumbers.mainNode);
+      await this.db.argonActivitiesTable.insert(
+        this.botState.currentFrameId,
+        latestBlockNumbers.localNode,
+        latestBlockNumbers.mainNode,
+      );
     }
 
     this.botFns.onEvent('updated-argon-activity');
   }
 
-  private async updateBitcoinActivity(): Promise<void> {
+  private async syncBitcoinActivity(): Promise<void> {
     const latestBlockNumbers = this.botState.bitcoinBlockNumbers;
     const savedActivity = await this.db.bitcoinActivitiesTable.latest();
 
@@ -345,15 +380,30 @@ export class BotSyncer {
     const mainchainMatches = savedActivity?.mainNodeBlockNumber === latestBlockNumbers.mainNode;
 
     if (!localhostMatches || !mainchainMatches) {
-      await this.db.bitcoinActivitiesTable.insert(latestBlockNumbers.localNode, latestBlockNumbers.mainNode);
+      await this.db.bitcoinActivitiesTable.insert(
+        this.botState.currentFrameId,
+        latestBlockNumbers.localNode,
+        latestBlockNumbers.mainNode,
+      );
     }
 
     this.botFns.onEvent('updated-bitcoin-activity');
   }
 
-  private async updateBiddingActivity(): Promise<void> {
-    const botHistory = await BotFetch.fetchBotHistory();
-    // TODO: Implement bot activity update logic
+  private async syncBotActivity(): Promise<void> {
+    const history = await BotFetch.fetchHistory();
+
+    for (const [index, activity] of history.activities.entries()) {
+      await this.db.botActivitiesTable.insertOrUpdate(
+        activity.id,
+        activity.tick,
+        activity.blockNumber,
+        activity.frameId,
+        activity.type,
+        activity.data,
+      );
+    }
+
     this.botFns.onEvent('updated-bidding-activity');
   }
 

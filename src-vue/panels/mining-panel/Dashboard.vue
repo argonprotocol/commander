@@ -43,12 +43,12 @@
         <header class="text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30">
           YOUR CLOUD MACHINE {{ bot.isReady ? 'IS LIVE' : '' }}
         </header>
-        <div class="flex flex-row py-2">
+        <div class="flex flex-row pt-2 pb-1">
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
             <span class="opacity-50">Last Bitcoin Block</span>
-            <CountupClock as="span" :time="lastBitcoinActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
+            <CountupClock as="span" :time="lastBitcoinActivityAt" v-slot="{ hours, minutes, seconds, isNull }" class="font-mono">
               <template v-if="hours">{{ hours }}h, </template>
-              <template v-if="minutes">{{ minutes }}m and </template>
+              <template v-if="minutes">{{ minutes }}m, </template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
               <template v-else>-- ----</template>
             </CountupClock>
@@ -56,22 +56,32 @@
           <div class="h-full w-[1px] bg-slate-400/30"></div>
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
             <span class="opacity-50">Last Argon Block</span>
-            <CountupClock as="span" :time="lastArgonActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
+            <CountupClock as="span" :time="lastArgonActivityAt" v-slot="{ hours, minutes, seconds, isNull }" class="font-mono">
               <template v-if="hours">{{ hours }}h, </template>
-              <template v-if="minutes">{{ minutes }}m and </template>
+              <template v-if="minutes">{{ minutes }}m, </template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
               <template v-else>-- ----</template>
             </CountupClock>
           </div>
           <div class="h-full w-[1px] bg-slate-400/30"></div>
-          <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
-            <span class="opacity-50">Last Bidding Activity</span>
-            <CountupClock as="span" :time="lastBotActivityAt" v-slot="{ hours, minutes, seconds, isNull }">
+          <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-1 pt-3">
+            <span class="opacity-50">Last Bidding</span>
+            <CountupClock as="span" :time="lastBotActivityAt" v-slot="{ hours, minutes, seconds, isNull }" class="font-mono">
               <template v-if="hours">{{ hours }}h, </template>
-              <template v-if="minutes">{{ minutes }}m and </template>
+              <template v-if="minutes">{{ minutes }}m, </template>
               <template v-if="!isNull">{{ seconds }}s ago</template>
               <template v-else>-- ----</template>
             </CountupClock>
+            <ActiveBidsOverlayButton :position="'left'" class="ml-1.5 z-50">
+              <span class="group inline-block border border-transparent hover:border-argon-200 rounded cursor-pointer pt-0.5 pb-1 px-1 relative top-0.5">
+                <AuctionIcon class="w-5.5 h-5.5 group-hover:text-argon-600" />
+              </span>
+            </ActiveBidsOverlayButton>
+            <BotHistoryOverlayButton :position="'left'" class="z-50">
+              <span class="group inline-block border border-transparent hover:border-argon-200 rounded cursor-pointer pt-1 pb-0.5 px-1 relative top-0.5">
+                <ActivityIcon class="w-5.5 h-5.5 group-hover:text-argon-600" />
+              </span>
+            </BotHistoryOverlayButton>
           </div>
         </div>
       </section>
@@ -147,13 +157,13 @@
           <div class="flex flex-col w-1/2 pl-3 pt-2">
             <table class="relative h-full">
               <thead>
-                <tr class="text-md text-gray-500 text-left">
-                  <th class="py-2 border-b border-slate-400/30 pl-1" :style="{ height: `${blocks.length + 1 / 100}%` }">
+                <tr class="text-md text-gray-500 text-left table-fixed">
+                  <th class="py-2 border-b border-slate-400/30 pl-1 w-[15%]" :style="{ height: `${blocks.length + 1 / 100}%` }">
                     Block
                   </th>
-                  <th class="py-2 border-b border-slate-400/30">Time</th>
-                  <th class="py-2 border-b border-slate-400/30">Earned</th>
-                  <th class="py-2 border-b border-slate-400/30 text-right pr-3">Author</th>
+                  <th class="py-2 border-b border-slate-400/30 w-[30%]">Time</th>
+                  <th class="py-2 border-b border-slate-400/30 w-[20%]">Earned</th>
+                  <th class="py-2 border-b border-slate-400/30 w-[35%] text-right pr-3">Author</th>
                 </tr>
               </thead>
               <tbody>
@@ -174,8 +184,12 @@
                       )
                     }}
                   </td>
-                  <td class="text-right border-t border-slate-400/30">
-                    {{ abreviateAddress(block.author, 10) }}
+                  <td class="relative text-right border-t border-slate-400/30">
+                    <span>{{ abreviateAddress(block.author, 10) }}</span>
+                    <span v-if="isOurAddress(block.author)" class="absolute right-0 top-1/2 -translate-y-1/2 bg-argon-600 text-white px-1.5 pb-0.25 rounded text-sm">
+                      YOU
+                      <span class="absolute top-0 -left-3 inline-block h-full bg-gradient-to-r from-transparent to-white w-3"></span>
+                    </span>
                   </td>
                 </tr>
               </tbody>
@@ -222,6 +236,12 @@
   </div>
 </template>
 
+<script lang="ts">
+import type { IBlock } from '../../stores/blockchain';
+
+const blocks = Vue.ref<IBlock[]>([]);
+</script>
+
 <script setup lang="ts">
 import * as Vue from 'vue';
 import dayjs from 'dayjs';
@@ -235,16 +255,24 @@ import { useBlockchainStore } from '../../stores/blockchain';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import CountupClock from '../../components/CountupClock.vue';
 import AlertBars from '../../components/AlertBars.vue';
-import { IBlock } from '../../stores/blockchain';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
 import { MiningFrames } from '@argonprotocol/commander-calculator';
+import AuctionIcon from '../../assets/auction.svg?component';
+import ActivityIcon from '../../assets/activity.svg?component';
+import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
+import BotHistoryOverlayButton from '../../overlays/BotHistoryOverlayButton.vue';
+import { getMainchainClient } from '../../stores/mainchain';
+import { Accountset, Keyring } from '@argonprotocol/mainchain';
+import { useConfig } from '../../stores/config';
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
 
 const bot = useBot();
 const stats = useStats();
+const config = useConfig();
 const currency = useCurrency();
+const clientPromise = getMainchainClient();
 const blockchainStore = useBlockchainStore();
 
 const { microgonToMoneyNm } = createNumeralHelpers(currency);
@@ -253,7 +281,16 @@ const dayInYear = dayjs().diff(dayjs().startOf('year'), 'days') + 1;
 const percentOfYear = Vue.ref(Math.min(dayInYear / 365, 1) * 100);
 
 const currentCohortId = Vue.ref(0);
-const blocks = Vue.ref<IBlock[]>([]);
+
+const walletMiningJson = JSON.parse(config.security.walletJson);
+const walletMiningAccount = new Keyring().createFromJson(walletMiningJson);
+walletMiningAccount.decodePkcs8(''); // TODO: Need to use passphrase when feature is added
+const accountset = new Accountset({
+  client: clientPromise,
+  seedAccount: walletMiningAccount,
+  sessionKeyMnemonic: config.security.sessionMnemonic,
+  subaccountRange: new Array(99).fill(0).map((_, i) => i),
+});
 
 const globalMicrogonsEarned = Vue.computed(() => {
   const global = stats.dashboard.global;
@@ -274,7 +311,11 @@ const globalAPY = Vue.computed(() => {
 const cohortMicrogonsExpected = Vue.computed(() => {
   const cohort = stats.dashboard.cohort;
   if (!cohort) return 0n;
-  return cohort.microgonsMined + cohort.microgonsMinted + currency.micronotToMicrogon(cohort.micronotsMined);
+
+  const microgons =
+    cohort.microgonsMined + cohort.microgonsMinted + cohort.microgonsToBeMined + cohort.microgonsToBeMinted;
+  const micronots = cohort.micronotsMined + cohort.micronotsToBeMined;
+  return microgons + currency.micronotToMicrogon(micronots);
 });
 
 const cohortMicrogonsInvested = Vue.computed(() => {
@@ -366,8 +407,13 @@ function calculatePercentOfYear(frameId: number) {
   const tickRange = MiningFrames.getTickRangeForFrameFromSystemTime(frameId);
   const date = dayjs.utc(tickRange[0] * 60e3);
   const dayInYear = date.diff(dayjs().startOf('year'), 'days') + 1;
-  console.log('dayInYear', frameId, dayInYear, tickRange, date.format('YYYY-MM-DD'));
+
   return Math.min(dayInYear / 365, 1) * 100;
+}
+
+function isOurAddress(address: string): boolean {
+  const ourSubAccount = accountset.subAccountsByAddress[address];
+  return !!ourSubAccount;
 }
 
 Vue.onMounted(() => {

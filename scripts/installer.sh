@@ -1,8 +1,10 @@
 #!/bin/bash
 
 # Debug logging - use absolute path to ensure we catch all instances
-DEBUG_LOG="/tmp/install_server_debug.log"
+DEBUG_LOG="/tmp/installer_debug.log"
+
 SCRIPT_PATH="$(readlink -f "$0")"
+SCRIPTS_DIR="$(dirname "$SCRIPT_PATH")"
 
 # Prevent recursive execution
 if [ "$PPID" != "1" ]; then
@@ -22,7 +24,7 @@ fi
 } >> "$DEBUG_LOG"
 
 # Lock file path - use absolute path
-LOCKFILE="/tmp/install_server.lock"
+LOCKFILE="/tmp/installer.lock"
 
 # Function to clean up lock file on exit
 cleanup() {
@@ -211,6 +213,24 @@ if ! (already_ran "BitcoinInstall"); then
 #         failed "no configuration file provided: not found"
 #    fi
 
+    command_output=$(run_command "docker compose --env-file=.env.$ARGON_CHAIN up bitcoin -d --build --force-recreate")
+    if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
+        failed "no configuration file provided: not found"
+    fi
+
+    # Loop until syncstatus is >= 100%
+    while true; do
+        sleep 1
+        command_output=$(run_command "docker exec deploy-bitcoin-1 syncstatus.sh")
+        percent_value=$(echo "$command_output" | tr -d '%')
+        if (( $(echo "$percent_value >= 100" | bc -l) )); then
+            echo "Bitcoin Sync is complete (>= 100%)"
+            break
+        else
+            echo "Bitcoin Sync is not complete (< 100%), waiting... ($percent_value%)"
+        fi
+    done
+
     finish "BitcoinInstall"
 fi
 
@@ -237,6 +257,29 @@ if ! (already_ran "ArgonInstall"); then
         failed "bot image was not found:\n$command_output"
     fi    
 
+    command_output=$(run_command "docker compose --env-file=.env.$ARGON_CHAIN up argon-miner -d --build --force-recreate")
+    if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
+        failed "no configuration file provided: not found"
+    fi
+
+    # Loop until syncstatus is >= 100%
+    while true; do
+        sleep 1
+        command_output=$(run_command "docker exec deploy-argon-miner-1 syncstatus.sh")
+        percent_value=$(echo "$command_output" | tr -d '%')
+        echo "Argon Sync... ($percent_value%)"
+        if (( $(echo "$percent_value >= 100" | bc -l) )); then
+            echo "Argon Sync is complete (>= 100%)"
+            break
+        fi
+        command_output=$(run_command "docker exec deploy-argon-miner-1 iscomplete.sh")
+        if [[ "$command_output" != "true" && "$command_output" != "false" && "$command_output" != "" ]]; then
+            failed "Argon iscomplete.sh has error: $command_output"
+        elif [[ "$command_output" == "" ]]; then
+            echo "Argon iscomplete.sh is empty: $command_output"
+        fi
+    done
+
     finish "ArgonInstall"
 fi
 
@@ -245,15 +288,22 @@ reset "MiningLaunch"
 start "MiningLaunch"
 
 echo "-----------------------------------------------------------------"
-echo "STARTING MINERS ON $ARGON_CHAIN"
+echo "STARTING BOT ON $ARGON_CHAIN"
 
-command_output=$(run_command "docker compose --env-file=.env.$ARGON_CHAIN --profile miners up -d --build --force-recreate")
-if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
-    failed "no configuration file provided: not found"
-fi
-
-sleep 2
 run_command "docker compose --env-file=.env.$ARGON_CHAIN up bot -d --build --force-recreate"
 
+
+while true; do
+    sleep 1
+    raw_output=$("$SCRIPTS_DIR/get_bot_http.sh" "/bot-state")
+    echo $raw_output
+    status=$(echo $raw_output | jq -r '.status')
+    if [[ "$status" == "200" ]]; then
+        echo "Bot is running"
+      break;
+    fi
+done
+
+finish "MiningLaunch"
+
 # Do NOT finish this step, it will be finished by the installer check
-# finish "MiningLaunch"

@@ -1,171 +1,22 @@
 import Path from 'node:path';
 import { LRU } from 'tiny-lru';
 import * as fs from 'node:fs';
-import { JsonExt, type ArgonClient } from '@argonprotocol/mainchain';
 import { MiningFrames } from '@argonprotocol/commander-calculator';
-import type { IBlockNumbers } from './Dockers.ts';
-import { CohortBidder } from '@argonprotocol/mainchain';
+import type { IBotStateFile } from './interfaces/IBotStateFile.ts';
+import type { IEarningsFile } from './interfaces/IEarningsFile.ts';
+import type { IBidsFile } from './interfaces/IBidsFile.ts';
+import { JsonStore } from './JsonStore.ts';
+import type { IHistoryFile } from './interfaces/IHistoryFile.ts';
 
-export type IBidsHistory = CohortBidder['bidHistory'];
+export class Storage {
+  private lruCache = new LRU<JsonStore<any>>(100);
 
-export interface ILastModifiedAt {
-  lastModifiedAt?: Date;
-}
-
-export interface IEarningsFile extends ILastModifiedAt {
-  frameId: number;
-  frameProgress: number;
-  firstTick: number;
-  lastTick: number;
-  firstBlockNumber: number;
-  lastBlockNumber: number;
-  microgonToUsd: bigint[];
-  microgonToBtc: bigint[];
-  microgonToArgonot: bigint[];
-  byCohortActivatingFrameId: {
-    [cohortActivatingFrameId: number]: IEarningsFileCohort;
-  };
-}
-
-export interface IEarningsFileCohort {
-  lastBlockMinedAt: string;
-  blocksMined: number;
-  microgonsMined: bigint;
-  microgonsMinted: bigint;
-  micronotsMined: bigint;
-}
-
-export interface IBidsFile extends ILastModifiedAt {
-  cohortBiddingFrameId: number;
-  cohortActivatingFrameId: number;
-  frameBiddingProgress: number;
-  lastBlockNumber: number;
-  microgonsBidTotal: bigint;
-  transactionFees: bigint;
-  micronotsStakedPerSeat: bigint;
-  argonotsUsdPrice: number;
-  microgonsToBeMinedPerBlock: bigint;
-  seatsWon: number;
-  winningBids: Array<IWinningBid>;
-}
-
-export interface IWinningBid {
-  address: string;
-  subAccountIndex?: number;
-  lastBidAtTick?: number;
-  bidPosition?: number;
-  microgonsBid?: bigint;
-}
-
-export interface IBotStateStarting {
-  isReady: boolean;
-  isStarting?: boolean;
-  isWaitingForBiddingRules?: boolean;
-  isSyncing?: boolean;
-  syncProgress: number;
-  argonBlockNumbers: IBlockNumbers;
-  bitcoinBlockNumbers: IBlockNumbers;
-}
-
-export interface IBotStateError extends IBotStateStarting {
-  serverError: string;
-}
-
-export interface IBotState extends ILastModifiedAt {
-  isReady: boolean;
-  isStarting?: boolean;
-  isWaitingForBiddingRules?: boolean;
-  isSyncing?: boolean;
-  hasMiningBids: boolean;
-  hasMiningSeats: boolean;
-  argonBlockNumbers: IBlockNumbers;
-  bitcoinBlockNumbers: IBlockNumbers;
-  bidsLastModifiedAt: Date;
-  earningsLastModifiedAt: Date;
-  lastBlockNumber: number;
-  lastFinalizedBlockNumber: number;
-  oldestFrameIdToSync: number;
-  currentFrameId: number;
-  currentFrameProgress: number;
-  syncProgress: number;
-  queueDepth: number;
-  maxSeatsPossible: number;
-  maxSeatsReductionReason: string;
-}
-
-export interface IBotStateFile extends IBotState {
-  lastBlockNumberByFrameId: {
-    [frameId: number]: number;
-  };
-}
-
-async function atomicWrite(path: string, contents: string) {
-  const tmp = `${path}.tmp`;
-  await fs.promises.writeFile(tmp, contents);
-  await fs.promises.rename(tmp, path);
-}
-
-export class JsonStore<T extends Record<string, any> & ILastModifiedAt> {
-  private data: T | undefined;
-  private defaults!: Omit<T, 'lastModified'>;
-
-  constructor(
-    private path: string,
-    private defaultsFn: () => Omit<T, 'lastModified'> | Promise<Omit<T, 'lastModified'>>,
-  ) {}
-
-  public async mutate(mutateFn: (data: T) => boolean | void | Promise<boolean | void>): Promise<boolean> {
-    await this.load();
-    if (!this.data) {
-      this.data = structuredClone(this.defaults) as T;
-    }
-    const result = await mutateFn(this.data!);
-    if (result === false) return false;
-    this.data!.lastModifiedAt = new Date();
-    // filter non properties
-    this.data = Object.fromEntries(Object.entries(this.data!).filter(([key]) => key in this.defaults)) as T;
-    await atomicWrite(this.path, JsonExt.stringify(this.data, 2));
-    return true;
-  }
-
-  public async exists(): Promise<boolean> {
-    try {
-      const stats = await fs.promises.stat(this.path);
-      return stats.isFile();
-    } catch (e) {
-      return false;
-    }
-  }
-
-  public async get(): Promise<T | undefined> {
-    await this.load();
-    return structuredClone(this.data || (this.defaults as T));
-  }
-
-  private async load(): Promise<void> {
-    this.defaults = await this.defaultsFn();
-    if (this.data === undefined) {
-      try {
-        const data = await fs.promises.readFile(this.path, 'utf-8').then(JsonExt.parse);
-        if (data.lastModifiedAt) {
-          data.lastModifiedAt = new Date(data.lastModifiedAt);
-        }
-        this.data = data;
-      } catch {}
-    }
-  }
-}
-
-export class CohortStorage {
-  constructor(
-    private basedir: string,
-    private clientPromise: Promise<ArgonClient>,
-  ) {
+  constructor(private basedir: string) {
     fs.mkdirSync(this.basedir, { recursive: true });
     fs.mkdirSync(Path.join(this.basedir, 'bids'), { recursive: true });
     fs.mkdirSync(Path.join(this.basedir, 'earnings'), { recursive: true });
+    fs.mkdirSync(Path.join(this.basedir, 'history'), { recursive: true });
   }
-  private lruCache = new LRU<JsonStore<any>>(100);
 
   public botStateFile(): JsonStore<IBotStateFile> {
     const key = `bot-state.json`;
@@ -202,9 +53,8 @@ export class CohortStorage {
     const key = `earnings/frame-${frameId}.json`;
     let entry = this.lruCache.get(key);
     if (!entry) {
-      entry = new JsonStore<IEarningsFile>(Path.join(this.basedir, key), async () => {
-        const client = await this.clientPromise;
-        const tickRange = await MiningFrames.getTickRangeForFrame(client, frameId);
+      entry = new JsonStore<IEarningsFile>(Path.join(this.basedir, key), () => {
+        const tickRange = MiningFrames.getTickRangeForFrameFromSystemTime(frameId);
         return {
           frameId,
           frameProgress: 0,
@@ -237,10 +87,23 @@ export class CohortStorage {
         microgonsBidTotal: 0n,
         transactionFees: 0n,
         micronotsStakedPerSeat: 0n,
-        argonotsUsdPrice: 0,
         microgonsToBeMinedPerBlock: 0n,
         winningBids: [],
       }));
+      this.lruCache.set(key, entry);
+    }
+    return entry;
+  }
+
+  public historyFile(frameId: number): JsonStore<IHistoryFile> {
+    const key = `history/frame-${frameId}.json`;
+    let entry = this.lruCache.get(key);
+    if (!entry) {
+      entry = new JsonStore<IHistoryFile>(Path.join(this.basedir, key), () => {
+        return {
+          activities: [],
+        };
+      });
       this.lruCache.set(key, entry);
     }
     return entry;

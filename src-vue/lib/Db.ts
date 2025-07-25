@@ -1,11 +1,11 @@
-import PluginSql from '@tauri-apps/plugin-sql';
+import PluginSql, { QueryResult } from '@tauri-apps/plugin-sql';
 import { CohortFramesTable } from './db/CohortFramesTable';
 import { CohortsTable } from './db/CohortsTable';
 import { ConfigTable } from './db/ConfigTable';
 import { FramesTable } from './db/FramesTable';
 import { ArgonActivitiesTable } from './db/ArgonActivitiesTable';
 import { BitcoinActivitiesTable } from './db/BitcoinActivitiesTable';
-import { BiddingActivitiesTable } from './db/BiddingActivitiesTable';
+import { BotActivitiesTable } from './db/BotActivitiesTable';
 import { CohortAccountsTable } from './db/CohortAccountsTable';
 import { INSTANCE_NAME } from './Config';
 import { ensureOnlyOneInstance } from './Utils';
@@ -15,7 +15,7 @@ export class Db {
   public sql: PluginSql;
   public argonActivitiesTable: ArgonActivitiesTable;
   public bitcoinActivitiesTable: BitcoinActivitiesTable;
-  public biddingActivitiesTable: BiddingActivitiesTable;
+  public botActivitiesTable: BotActivitiesTable;
   public cohortAccountsTable: CohortAccountsTable;
   public cohortFramesTable: CohortFramesTable;
   public cohortsTable: CohortsTable;
@@ -29,7 +29,7 @@ export class Db {
     this.sql = sql;
     this.argonActivitiesTable = new ArgonActivitiesTable(this);
     this.bitcoinActivitiesTable = new BitcoinActivitiesTable(this);
-    this.biddingActivitiesTable = new BiddingActivitiesTable(this);
+    this.botActivitiesTable = new BotActivitiesTable(this);
     this.cohortAccountsTable = new CohortAccountsTable(this);
     this.cohortFramesTable = new CohortFramesTable(this);
     this.cohortsTable = new CohortsTable(this);
@@ -41,5 +41,23 @@ export class Db {
   static async load(): Promise<Db> {
     const sql = await PluginSql.load(`sqlite:${INSTANCE_NAME}/database.sqlite`);
     return new Db(sql);
+  }
+
+  async execute(query: string, bindValues?: unknown[]): Promise<QueryResult> {
+    try {
+      return await this.sql.execute(query, bindValues);
+    } catch (error) {
+      console.error('Error executing query:', { query, bindValues, error });
+      throw error;
+    }
+  }
+
+  async select<T>(query: string, bindValues?: unknown[]): Promise<T> {
+    try {
+      return await this.sql.select<T>(query, bindValues);
+    } catch (error) {
+      console.error('Error selecting query:', { query, bindValues, error });
+      throw error;
+    }
   }
 }

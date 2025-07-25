@@ -140,7 +140,7 @@ it('can autobid and store stats', async () => {
     cohortActivatingFrameIdsWithEarnings: [...cohortActivatingFrameIdsWithEarnings],
     cohortActivatingFrameIds: [...cohortActivatingFrameIds],
   });
-  await bot.stop();
+  await bot.shutdown();
 
   // try to recover from blocks
 
@@ -159,7 +159,7 @@ it('can autobid and store stats', async () => {
   console.log('Starting bot 2');
   await expect(botRestart.start()).resolves.toBeUndefined();
   console.log('Stopping bot 2');
-  await botRestart.stop();
+  await botRestart.shutdown();
 
   // compare directories
   for (const cohortActivatingFrameId of cohortActivatingFrameIdsWithEarnings) {

@@ -73,7 +73,7 @@ let previousBiddingRules = jsonStringifyWithBigInts(config.biddingRules);
 const titles = {
   capitalToCommit: 'Capital to Commit',
   maximumBid: 'Maximum Bid',
-  minimumBid: 'Minimum Bid',
+  minimumBid: 'Starting Bid',
   rebiddingStrategy: 'Rebidding Strategy',
   seatGoals: 'Seat Goals',
   expectedGrowth: 'Expected Growth',

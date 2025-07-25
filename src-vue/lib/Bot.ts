@@ -3,8 +3,10 @@ import { Db } from './Db';
 import { BotSyncer, BotStatus } from './BotSyncer';
 import { ensureOnlyOneInstance } from './Utils';
 
-import { IBidsFile } from '@argonprotocol/commander-bot/src/storage';
+import { type IBidsFile } from '@argonprotocol/commander-bot';
 import mitt, { type Emitter } from 'mitt';
+import Installer from './Installer';
+import { SSH } from './SSH';
 
 export type IBotEmitter = {
   'updated-cohort-data': number;
@@ -24,6 +26,7 @@ export class Bot {
   private status: BotStatus | null = null;
   private config: Config;
   private dbPromise: Promise<Db>;
+  private botSyncer!: BotSyncer;
 
   constructor(config: Config, dbPromise: Promise<Db>) {
     ensureOnlyOneInstance(this.constructor);
@@ -36,9 +39,9 @@ export class Bot {
     this.dbPromise = dbPromise;
   }
 
-  public async load(): Promise<void> {
+  public async load(installer: Installer): Promise<void> {
     const db = await this.dbPromise;
-    const botSyncer = new BotSyncer(this.config, db, {
+    this.botSyncer = new BotSyncer(this.config, db, installer, {
       onEvent: (type: keyof IBotEmitter, payload?: any) => botEmitter.emit(type, payload),
       setStatus: (x: BotStatus) => (this.status = x),
       setServerSyncProgress: (x: number) => (this.syncProgress = x * 0.9),
@@ -47,7 +50,14 @@ export class Bot {
       setMaxSeatsReductionReason: (x: string) => (this.maxSeatsReductionReason = x),
     });
 
-    await botSyncer.load();
+    await this.botSyncer.load();
+  }
+
+  public async restart(): Promise<void> {
+    this.botSyncer.isPaused = true;
+    await SSH.stopBotDocker();
+    await SSH.startBotDocker();
+    this.botSyncer.isPaused = false;
   }
 
   public get isStarting(): boolean {

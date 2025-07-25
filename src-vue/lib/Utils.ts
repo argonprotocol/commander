@@ -1,4 +1,5 @@
 import { JsonExt } from '@argonprotocol/mainchain';
+import { jsonStringifyWithBigIntsEnhanced, jsonParseWithBigIntsEnhanced } from '@argonprotocol/commander-calculator';
 import { IFieldTypes } from './db/BaseTable.ts';
 
 export function isInt(n: any) {
@@ -43,44 +44,9 @@ export function toSqlParams(
     } else if (typeof param === 'bigint') {
       return toSqliteBigInt(param);
     } else if (typeof param === 'object') {
-      return jsonStringifyWithBigInts(param);
+      return jsonStringifyWithBigIntsEnhanced(param);
     }
     return param;
-  });
-}
-
-export function jsonStringifyWithBigInts(
-  data: any,
-  replacerFn: null | ((key: string, value: any) => any) = null,
-  space: number | string | undefined = undefined,
-): string {
-  return JSON.stringify(
-    data,
-    (_key, value) => {
-      if (typeof value === 'bigint') {
-        value = value.toString() + 'n';
-      }
-      if (value instanceof Uint8Array) {
-        return {
-          type: 'Buffer',
-          data: Array.from(value), // Convert Uint8Array to an array of numbers
-        };
-      }
-      return replacerFn ? replacerFn(_key, value) : value;
-    },
-    space,
-  );
-}
-
-export function jsonParseWithBigInts(data: string): any {
-  return JSON.parse(data, (_key, value) => {
-    if (isBigIntString(value)) {
-      return convertBigIntStringToNumber(value);
-    }
-    if (value && typeof value === 'object' && value.type === 'Buffer' && Array.isArray(value.data)) {
-      return Uint8Array.from(value.data); // Convert array of numbers back to Uint8Array
-    }
-    return value;
   });
 }
 
@@ -134,10 +100,10 @@ export function convertSqliteBigInts(obj: any, bigIntFields: string[]): any {
   }, obj);
 }
 
-export function convertSqliteFields(obj: any, fields: Partial<Record<keyof IFieldTypes, string[]>>): any {
+export function convertFromSqliteFields(obj: any, fields: Partial<Record<keyof IFieldTypes, string[]>>): any {
   // Handle array of objects
   if (Array.isArray(obj)) {
-    return obj.map(item => convertSqliteFields(item, fields));
+    return obj.map(item => convertFromSqliteFields(item, fields));
   }
 
   // Handle single object
@@ -151,7 +117,7 @@ export function convertSqliteFields(obj: any, fields: Partial<Record<keyof IFiel
       } else if (type === 'bigintJson') {
         obj[fieldName] = BigInt(obj[fieldName]);
       } else if (type === 'bigintJson') {
-        obj[fieldName] = jsonParseWithBigInts(obj[fieldName]);
+        obj[fieldName] = jsonParseWithBigIntsEnhanced(obj[fieldName]);
       } else if (type === 'json') {
         obj[fieldName] = JsonExt.parse(obj[fieldName]);
       } else if (type === 'date') {

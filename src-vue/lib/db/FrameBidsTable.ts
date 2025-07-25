@@ -7,20 +7,29 @@ export class FrameBidsTable extends BaseTable {
 
   async insertOrUpdate(
     frameId: number,
+    confirmedAtBlockNumber: number,
     address: string,
     subAccountIndex: number | undefined,
     microgonsBid: bigint,
     bidPosition: number,
     lastBidAtTick: number | undefined,
   ): Promise<void> {
-    await this.db.sql.execute(
-      'INSERT OR REPLACE INTO FrameBids (frameId, address, subAccountIndex, microgonsBid, bidPosition, lastBidAtTick) VALUES (?, ?, ?, ?, ?, ?)',
-      toSqlParams([frameId, address, subAccountIndex, toSqliteBigInt(microgonsBid), bidPosition, lastBidAtTick]),
+    await this.db.execute(
+      'INSERT OR REPLACE INTO FrameBids (frameId, confirmedAtBlockNumber, address, subAccountIndex, microgonsBid, bidPosition, lastBidAtTick) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      toSqlParams([
+        frameId,
+        confirmedAtBlockNumber,
+        address,
+        subAccountIndex,
+        toSqliteBigInt(microgonsBid),
+        bidPosition,
+        lastBidAtTick,
+      ]),
     );
   }
 
   async fetchForFrameId(frameId: number, limit: number = 100): Promise<IFrameBidRecord[]> {
-    const rawRecords = await this.db.sql.select<IFrameBidRecord[]>(
+    const rawRecords = await this.db.select<IFrameBidRecord[]>(
       'SELECT * FROM FrameBids WHERE frameId = ? ORDER BY microgonsBid DESC LIMIT ?',
       [frameId, limit],
     );

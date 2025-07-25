@@ -52,11 +52,11 @@ COPY ./bitcoin.conf /etc/bitcoin/bitcoin.conf
 COPY ./bitcoin-signet.conf /etc/bitcoin/bitcoin-signet.conf
 COPY ./entrypoint.sh /
 
-COPY syncstatus.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/syncstatus.sh
-
 COPY latestblocks.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/latestblocks.sh
+
+COPY syncstatus.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/syncstatus.sh
 
 ENTRYPOINT [ "./entrypoint.sh" ]
 CMD [ "/usr/local/bin/bitcoind", "-conf=/etc/bitcoin/bitcoin.conf" ]

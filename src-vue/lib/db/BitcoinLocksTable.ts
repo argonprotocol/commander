@@ -1,6 +1,6 @@
 import { BaseTable, IFieldTypes } from './BaseTable';
 import { IBitcoinLock, JsonExt } from '@argonprotocol/mainchain';
-import { convertSqliteFields, toSqlParams } from '../Utils.ts';
+import { convertFromSqliteFields, toSqlParams } from '../Utils.ts';
 
 export interface IRatchet {
   mintAmount: bigint;
@@ -35,16 +35,16 @@ export interface IBitcoinLockRecord {
 }
 
 export class BitcoinLocksTable extends BaseTable {
-  private fields: IFieldTypes = {
-    bigintFields: ['satoshis', 'lockPrice', 'releaseBitcoinNetworkFee'],
-    jsonFields: ['lockDetails', 'ratchets'],
-    dateFields: ['createdAt', 'updatedAt'],
+  private fieldTypes: IFieldTypes = {
+    bigint: ['satoshis', 'lockPrice', 'releaseBitcoinNetworkFee'],
+    json: ['lockDetails', 'ratchets'],
+    date: ['createdAt', 'updatedAt'],
   };
 
   async insert(
     lock: Omit<IBitcoinLockRecord, 'createdAt' | 'updatedAt' | 'txid' | 'vout'>,
   ): Promise<IBitcoinLockRecord> {
-    const [record] = await this.db.sql.select<IBitcoinLockRecord[]>(
+    const [record] = await this.db.select<IBitcoinLockRecord[]>(
       `INSERT INTO BitcoinLocks (
         utxoId, status, satoshis, lockPrice, cosignVersion, lockDetails, network, hdPath, vaultId, ratchets
       ) VALUES (
@@ -67,7 +67,7 @@ export class BitcoinLocksTable extends BaseTable {
   }
 
   async getNextVaultHdKeyIndex(vaultId: number): Promise<number> {
-    const { latestIndex } = await this.db.sql.select<{ latestIndex: number }>(
+    const { latestIndex } = await this.db.select<{ latestIndex: number }>(
       `INSERT INTO BitcoinLockVaultHdSeq (vaultId, latestIndex) VALUES ($1, $2)
        ON CONFLICT (vaultId) DO UPDATE SET latestIndex = BitcoinLockVaultHdSeq.latestIndex + 1
        RETURNING latestIndex`,
@@ -87,7 +87,7 @@ export class BitcoinLocksTable extends BaseTable {
     lock.requestedReleaseAtHeight = height;
     lock.releaseToDestinationAddress = toDestinationAddress;
     lock.releaseBitcoinNetworkFee = networkFee;
-    await this.db.sql.execute(
+    await this.db.execute(
       `UPDATE BitcoinLocks SET status = 'releaseRequested', requestedReleaseAtHeight=$2, releaseToDestinationAddress=$3, releaseBitcoinNetworkFee=$4 WHERE utxoId = $1`,
       toSqlParams([
         lock.utxoId,
@@ -99,15 +99,15 @@ export class BitcoinLocksTable extends BaseTable {
   }
 
   async fetchAll(): Promise<IBitcoinLockRecord[]> {
-    return await this.db.sql
+    return await this.db
       .select<IBitcoinLockRecord[]>('SELECT * FROM BitcoinLocks ORDER BY createdAt DESC', [])
       .then(x => {
-        return x.map(rawRecord => convertSqliteFields(rawRecord, this.fields));
+        return x.map(rawRecord => convertFromSqliteFields(rawRecord, this.fieldTypes));
       });
   }
 
   async saveNewRatchet(lock: IBitcoinLockRecord): Promise<void> {
-    await this.db.sql.execute(
+    await this.db.execute(
       `UPDATE BitcoinLocks SET lockPrice = $2, lockDetails = $3, ratchets = $4 WHERE utxoId = $1`,
       toSqlParams([lock.utxoId, lock.lockPrice, lock.lockDetails, lock.ratchets]),
     );
@@ -115,7 +115,7 @@ export class BitcoinLocksTable extends BaseTable {
 
   async saveRatchetUpdates(lock: IBitcoinLockRecord): Promise<void> {
     const ratchets = JsonExt.stringify(lock.ratchets);
-    await this.db.sql.execute(
+    await this.db.execute(
       `UPDATE BitcoinLocks SET ratchets = $2, status = $3 WHERE utxoId = $1`,
       toSqlParams([lock.utxoId, ratchets, lock.status]),
     );
@@ -125,14 +125,14 @@ export class BitcoinLocksTable extends BaseTable {
     lock.status = 'vaultCosigned';
     lock.releaseCosignSignature = signature;
     lock.releaseCosignHeight = atHeight;
-    await this.db.sql.execute(
+    await this.db.execute(
       'UPDATE BitcoinLocks SET status = $1, releaseCosignSignature = $2, releaseCosignHeight = $3 WHERE utxoId = $4',
       toSqlParams([lock.status, lock.releaseCosignSignature, lock.releaseCosignHeight, lock.utxoId]),
     );
   }
 
   async recordVerifiedStatus(lock: IBitcoinLockRecord) {
-    await this.db.sql.execute(
+    await this.db.execute(
       'UPDATE BitcoinLocks SET status = $1, txid = $2, vout = $3 WHERE utxoId = $4',
       toSqlParams([lock.status, lock.txid, lock.vout, lock.utxoId]),
     );

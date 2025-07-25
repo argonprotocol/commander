@@ -90,7 +90,6 @@ export class Currency {
   }
 
   public setCurrencyKey(currencyKey: ICurrencyKey, saveToConfig: boolean = true) {
-    console.log(`Setting currencyKey from ${this.record?.key} to ${currencyKey}`, saveToConfig);
     this.record = this.records[currencyKey];
     this.symbol = this.record.symbol;
     if (saveToConfig) this.config.defaultCurrencyKey = currencyKey;

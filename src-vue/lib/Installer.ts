@@ -68,7 +68,7 @@ export default class Installer {
 
     const isRunning = await this.calculateIsRunning();
     const isReadyToRun = !isRunning && (await this.calculateIsReadyToRun(false));
-    if (isReadyToRun) {
+    if (isReadyToRun && !isRunning) {
       await this.run(false);
     } else {
       await this.activateInstallerCheck(false);
@@ -156,6 +156,7 @@ export default class Installer {
       try {
         this.config.installDetails.errorType = InstallStepErrorType.Unknown;
         this.config.installDetails.errorMessage = errorMessage;
+        this.config.installDetails = this.config.installDetails;
         await this.config.save();
       } catch (e) {
         console.error(`Failed to save install status: ${e}`);
@@ -267,7 +268,6 @@ export default class Installer {
 
     const localFilesAreValid = await this.doLocalFilesMatchLocalShasums();
     if (!localFilesAreValid) {
-      console.info('Local files are NOT valid');
       this.isReadyToRun = false;
       this.reasonToSkipInstall = ReasonsToSkipInstall.LocalShasumsNotAccurate;
       this.reasonToSkipInstallData = { localFilesAreValid };
@@ -365,7 +365,7 @@ export default class Installer {
     }
 
     try {
-      const [pid] = await SSH.runCommand('pgrep -f ~/scripts/install_server.sh');
+      const [pid] = await SSH.runCommand('pgrep -f ~/scripts/installer.sh');
       const isRunningRemotely = pid.trim() !== '';
       if (isRunningRemotely) {
         console.log('Install process IS running remotely');
@@ -379,12 +379,10 @@ export default class Installer {
   }
 
   private async activateInstallerCheck(waitForLoaded: boolean = true): Promise<void> {
-    console.log('Activating installer check');
+    console.log('activateInstallerCheck', waitForLoaded);
     if (waitForLoaded) {
       await this.isLoadedPromise;
     }
-    const isRunning = await this.calculateIsRunning();
-    if (isRunning) return;
 
     const hasProgress = this.config.installDetails.ServerConnect.progress > 0.0;
     const isComplete = this.config.installDetails.MiningLaunch.progress >= 100;
@@ -432,11 +430,12 @@ export default class Installer {
     const [remoteShasums] = await SSH.runCommand('cat ~/SHASUMS256.copied 2>/dev/null || true');
     const localShasums = await this.getLocalShasums();
     const remoteFilesMatchLocalShasums = localShasums === remoteShasums;
+
     console.info(`Remote files ${remoteFilesMatchLocalShasums ? 'DO' : 'do NOT'} match local shasums`);
 
     if (!remoteFilesMatchLocalShasums) {
-      console.info(`Remote shasums: ${remoteShasums}`);
-      console.info(`Local shasums: ${localShasums}`);
+      console.info(`Remote shasums: \n${remoteShasums}`);
+      console.info(`Local shasums: \n${localShasums}`);
     }
 
     return remoteFilesMatchLocalShasums;
@@ -444,32 +443,36 @@ export default class Installer {
 
   private async doLocalFilesMatchLocalShasums(): Promise<boolean> {
     const localShasums = await this.getLocalShasums();
-    let dynamicShasums = '';
 
+    let dynamicShasums = '';
     for (const dirName of CORE_DIRS) {
       const shasum = await invoke('create_shasum', { dirName });
-
       if (dynamicShasums !== '') {
         dynamicShasums += '\n';
       }
       dynamicShasums += `${dirName} ${shasum}`;
     }
 
+    console.info(`Local shasums:\n${localShasums}`);
+    console.info(`Dynamic shasums:\n${dynamicShasums}`);
+
     const localTrimmed = localShasums.trim();
     const dynamicTrimmed = dynamicShasums.trim();
-    const localLines = localTrimmed.split('\n');
-    const dynamicLines = dynamicTrimmed.split('\n');
+    const shasumsMatch = localTrimmed === dynamicTrimmed;
 
-    for (let i = 0; i < localLines.length; i++) {
-      if (localLines[i] !== dynamicLines[i]) {
-        console.info(`Mismatch at line ${i + 1}:`);
-        console.info(`  Local:   ${localLines[i]}`);
-        console.info(`  Dynamic: ${dynamicLines[i]}`);
+    console.info(`Local files ${shasumsMatch ? 'DO' : 'do NOT'} match dynamic shasums`);
+    if (!shasumsMatch) {
+      const localLines = localTrimmed.split('\n');
+      const dynamicLines = dynamicTrimmed.split('\n');
+
+      for (let i = 0; i < localLines.length; i++) {
+        if (localLines[i] !== dynamicLines[i]) {
+          console.info(`Mismatch at line ${i + 1}:`);
+          console.info(`  Local:   ${localLines[i]}`);
+          console.info(`  Dynamic: ${dynamicLines[i]}`);
+        }
       }
     }
-
-    const shasumsMatch = localTrimmed === dynamicTrimmed;
-    console.info(`Local files ${shasumsMatch ? 'DO' : 'do NOT'} match local shasums`);
 
     return shasumsMatch;
   }
@@ -572,8 +575,8 @@ export default class Installer {
   }
 
   private async startRemoteScript(): Promise<void> {
-    const remoteScriptPath = '~/scripts/install_server.sh';
-    const remoteScriptLogPath = '~/install_server.log';
+    const remoteScriptPath = '~/scripts/installer.sh';
+    const remoteScriptLogPath = '~/installer.log';
     const shellCommand = `ARGON_CHAIN=${NETWORK_NAME} nohup ${remoteScriptPath} > ${remoteScriptLogPath} 2>&1 &`;
 
     // await SSH.runCommand(`rm -f ${remoteScriptLogPath}`);

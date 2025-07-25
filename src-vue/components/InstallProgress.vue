@@ -1,10 +1,7 @@
 <!-- prettier-ignore -->
 <template>
   <div class="Component InstallProgress flex flex-col grow relative h-full">
-    <div
-      v-if="hasInvalidLocalShasums"
-      class="relative flex flex-col border-t border-slate-300 text-black/70 w-full px-2 py-4 grow h-full"
-    >
+    <div v-if="hasInvalidLocalShasums" class="relative flex flex-col border-t border-slate-300 text-black/70 w-full px-2 py-4 grow h-full">
       <div
         class="absolute top-0 left-0 bottom-0 w-full z-0"
         style="background-image: linear-gradient(to bottom, transparent 0%, #fad1d8 90%)"

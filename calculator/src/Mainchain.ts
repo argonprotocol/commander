@@ -1,7 +1,7 @@
 import { type ArgonClient, convertFixedU128ToBigNumber, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
 import BigNumber from 'bignumber.js';
 import { bigIntMin } from './utils.ts';
-import { type IWinningBid } from '@argonprotocol/commander-bot/src/storage.ts';
+import { type IWinningBid } from '@argonprotocol/commander-bot';
 import { MiningFrames } from './MiningFrames.ts';
 
 export type MainchainClient = ArgonClient;

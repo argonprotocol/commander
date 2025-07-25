@@ -57,10 +57,45 @@ export function jsonStringifyWithBigInts(
   );
 }
 
+export function jsonStringifyWithBigIntsEnhanced(
+  data: any,
+  replacerFn: null | ((key: string, value: any) => any) = null,
+  space: number | string | undefined = undefined,
+): string {
+  return JSON.stringify(
+    data,
+    (_key, value) => {
+      if (typeof value === 'bigint') {
+        value = value.toString() + 'n';
+      }
+      if (value instanceof Uint8Array) {
+        return {
+          type: 'Buffer',
+          data: Array.from(value), // Convert Uint8Array to an array of numbers
+        };
+      }
+      return replacerFn ? replacerFn(_key, value) : value;
+    },
+    space,
+  );
+}
+
 export function jsonParseWithBigInts(data: string): any {
   return JSON.parse(data, (_key, value) => {
     if (isBigIntString(value)) {
       return convertBigIntStringToNumber(value);
+    }
+    return value;
+  });
+}
+
+export function jsonParseWithBigIntsEnhanced(data: string): any {
+  return JSON.parse(data, (_key, value) => {
+    if (isBigIntString(value)) {
+      return convertBigIntStringToNumber(value);
+    }
+    if (value && typeof value === 'object' && value.type === 'Buffer' && Array.isArray(value.data)) {
+      return Uint8Array.from(value.data); // Convert array of numbers back to Uint8Array
     }
     return value;
   });

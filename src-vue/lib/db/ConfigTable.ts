@@ -5,7 +5,7 @@ import { BaseTable } from './BaseTable';
 export class ConfigTable extends BaseTable {
   public async fetchAllAsObject(): Promise<Partial<IConfig>> {
     const data: any = {};
-    const rows = await this.db.sql.select<IConfigRecord[]>('SELECT key, value FROM Config', []);
+    const rows = await this.db.select<IConfigRecord[]>('SELECT key, value FROM Config', []);
 
     for (const row of rows) {
       data[row.key] = row.value;

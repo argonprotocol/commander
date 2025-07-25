@@ -29,6 +29,7 @@ export type IBlock = {
 };
 
 export const useBlockchainStore = defineStore('blockchain', () => {
+  const clientPromise = getMainchainClient();
   const miningSeatCount = Vue.ref(0);
   const aggregatedBidCosts = Vue.ref(0n);
   const aggregatedBlockRewards = Vue.ref({ microgons: 0n, micronots: 0n });
@@ -65,7 +66,7 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     const newBlock: IBlock = {
       number: block.block.header.number.toNumber(),
       hash: block.block.header.hash.toHex(),
-      author: block.author?.toHex() || '',
+      author: block.author?.toHuman() || '',
       extrinsics: block.block.extrinsics.length,
       microgons,
       micronots,
@@ -76,7 +77,7 @@ export const useBlockchainStore = defineStore('blockchain', () => {
   }
 
   async function fetchBlocks(lastBlockNumber: number | null, endingFrameId: number | null, maxBlockCount: number) {
-    const client = await getMainchainClient();
+    const client = await clientPromise;
     const blocks: IBlock[] = [];
 
     if (!lastBlockNumber) {

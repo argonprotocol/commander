@@ -107,8 +107,8 @@ export class Config {
         configData[key] = defaultValue;
         if (key !== dbFields.biddingRules && key !== dbFields.vaultingRules) {
           fieldsToSave.add(key);
+          fieldsSerialized[key as keyof typeof fieldsSerialized] = jsonStringifyWithBigInts(defaultValue, null, 2);
         }
-        fieldsSerialized[key as keyof typeof fieldsSerialized] = jsonStringifyWithBigInts(defaultValue, null, 2);
         continue;
       }
 
@@ -122,8 +122,8 @@ export class Config {
     await db.configTable.insertOrReplace(dataToSave);
 
     this.isLoaded = true;
-    this._stringified = fieldsSerialized;
     this._db = db;
+    this._stringified = fieldsSerialized;
     this._unstringified = configData as IConfig;
     this._loadedDeferred.resolve();
   }
@@ -328,12 +328,6 @@ export class Config {
     this._fieldsToSave = new Set();
     if (Object.keys(dataToSave).length === 0) return;
 
-    const dataToLog = Object.keys(dataToSave).reduce<Partial<IConfig>>((acc, key) => {
-      const typedKey = key as keyof IConfig;
-      (acc as any)[typedKey] = this._unstringified[typedKey];
-      return acc;
-    }, {});
-    // console.log('Saving Config', this._fieldsToSave, dataToLog);
     await this._db.configTable.insertOrReplace(dataToSave);
   }
 
@@ -393,15 +387,15 @@ const dbFields = {
 const defaults: IConfigDefaults = {
   requiresPassword: () => false,
   security: () => {
-    const walletMnemonic = mnemonicGenerate();
     const sessionMnemonic = mnemonicGenerate();
-    const seedAccount = new Keyring({ type: 'sr25519' }).createFromUri(walletMnemonic);
-    const miningAccount = seedAccount.derive(`//mng`);
-    const walletJson = jsonStringifyWithBigInts(miningAccount.toJson(''), null, 2);
+    const walletMnemonic = mnemonicGenerate();
+    const walletAccount = new Keyring({ type: 'sr25519' }).createFromUri(walletMnemonic);
+    const walletMiningAccount = walletAccount.derive(`//mng`);
+    const walletMiningJson = jsonStringifyWithBigInts(walletMiningAccount.toJson(''), null, 2);
     return {
       walletMnemonic,
       sessionMnemonic,
-      walletJson,
+      walletJson: walletMiningJson,
     };
   },
   serverDetails: async () => {

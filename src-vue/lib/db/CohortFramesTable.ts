@@ -13,7 +13,7 @@ export class CohortFramesTable extends BaseTable {
     microgonsMined: bigint,
     microgonsMinted: bigint,
   ): Promise<void> {
-    await this.db.sql.execute(
+    await this.db.execute(
       'INSERT OR REPLACE INTO CohortFrames (frameId, cohortId, blocksMined, micronotsMined, microgonsMined, microgonsMinted) VALUES (?, ?, ?, ?, ?, ?)',
       [
         frameId,
@@ -27,14 +27,14 @@ export class CohortFramesTable extends BaseTable {
   }
 
   async fetchActiveCohortFrames(currentFrameId: number): Promise<ICohortFrameRecord[]> {
-    const records = await this.db.sql.select<ICohortFrameRecord[]>('SELECT * FROM CohortFrames WHERE frameId >= ?', [
+    const records = await this.db.select<ICohortFrameRecord[]>('SELECT * FROM CohortFrames WHERE frameId >= ?', [
       currentFrameId - 10,
     ]);
     return convertSqliteBigInts(records, this.bigIntFields);
   }
 
   public async fetchGlobalStats(): Promise<ICohortFrameStats> {
-    const [rawResults] = await this.db.sql.select<[any]>(
+    const [rawResults] = await this.db.select<[any]>(
       `SELECT 
         COALESCE(sum(blocksMined), 0) as totalBlocksMined,
         COALESCE(sum(micronotsMined), 0) as totalMicronotsMined,
@@ -53,7 +53,7 @@ export class CohortFramesTable extends BaseTable {
   }
 
   public async fetchCohortStats(cohortId: number): Promise<ICohortFrameStats> {
-    const [rawResults] = await this.db.sql.select<[any]>(
+    const [rawResults] = await this.db.select<[any]>(
       `SELECT 
         COALESCE(sum(blocksMined), 0) as totalBlocksMined,
         COALESCE(sum(micronotsMined), 0) as totalMicronotsMined,
