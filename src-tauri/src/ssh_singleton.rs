@@ -13,14 +13,14 @@ lazy_static! {
     static ref LOCAL_PORT: Mutex<Option<u16>> = Mutex::new(None);
 }
 
-pub async fn replace_ssh_connection(ssh: SSH) -> Result<()> {
+pub async fn replace_ssh_singleton_connection(ssh: SSH) -> Result<()> {
     let mut ssh_connection = SSH_CONNECTION.lock().await;
     *ssh_connection = Some(ssh);
 
     Ok(())
 }
 
-pub async fn close_ssh_connection() -> Result<()> {
+pub async fn close_ssh_singleton_connection() -> Result<()> {
     let mut ssh_connection = SSH_CONNECTION.lock().await;
     if let Some(ssh) = ssh_connection.take() {
         log::info!("Closing existing SSH connection");
@@ -33,7 +33,12 @@ pub async fn close_ssh_connection() -> Result<()> {
     Ok(())
 }
 
-pub async fn try_open_ssh_connection(ssh_config: &SSHConfig) -> Result<SSH> {
+pub async fn get_ssh_singleton_connection() -> Result<Option<SSH>> {
+    let ssh_connection = SSH_CONNECTION.lock().await;
+    Ok(ssh_connection.as_ref().cloned())
+}
+
+pub async fn test_opne_ssh_connection(ssh_config: &SSHConfig) -> Result<SSH> {
     let mut ssh_connection = SSH_CONNECTION.lock().await;
 
     let needs_new_connection = match &*ssh_connection {
@@ -65,9 +70,4 @@ pub async fn try_open_ssh_connection(ssh_config: &SSHConfig) -> Result<SSH> {
     ssh_connection.as_ref()
         .ok_or_else(|| anyhow::anyhow!("Failed to create or retrieve SSH connection"))
         .map(|ssh| ssh.clone())
-}
-
-pub async fn get_ssh_connection() -> Result<Option<SSH>> {
-    let ssh_connection = SSH_CONNECTION.lock().await;
-    Ok(ssh_connection.as_ref().cloned())
 }
