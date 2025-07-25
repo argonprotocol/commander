@@ -17,8 +17,6 @@ use tauri::AppHandle;
 use tokio::runtime::Handle;
 use tokio::sync::Mutex;
 
-pub mod singleton;
-
 #[derive(Clone)]
 pub struct SSH {
     client: Arc<Mutex<client::Handle<ClientHandler>>>,

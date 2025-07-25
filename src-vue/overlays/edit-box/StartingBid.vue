@@ -1,7 +1,7 @@
 <!-- prettier-ignore -->
 <template>
   <p class="text-md mb-3">
-    This is your bot's starting bid. Don't put it too low or you'll pay unneeded rebidding fees, but if you're too high, you might overpay.
+    This is your bot's minimum bid. Don't put it too low or you'll pay unneeded rebidding fees, but if you're too high, you might overpay.
   </p>
 
   <label class="font-bold opacity-60 mb-0.5">
@@ -15,7 +15,7 @@
     <label class="mt-3 font-bold opacity-60 mb-0.5">
       Value
     </label>
-    <InputArgon v-model="config.biddingRules.minimumBidCustom" :min="0" class="min-w-60" />
+    <InputArgon v-model="config.biddingRules.minimumBidCustom" :min="0n" class="min-w-60" />
   </template>
   <template v-else>
     <label class="mt-3 font-bold opacity-60 mb-0.5">
@@ -25,9 +25,13 @@
       <InputMenu v-model="config.biddingRules.minimumBidAdjustmentType" :options="[
         { name: BidAmountAdjustmentType.Absolute, value: BidAmountAdjustmentType.Absolute }, 
         { name: BidAmountAdjustmentType.Relative, value: BidAmountAdjustmentType.Relative }
-      ]" class="w-1/2" />
-      <InputArgon v-if="isAbsoluteType" v-model="config.biddingRules.minimumBidAdjustAbsolute" class="min-w-60 w-1/2" />
-      <InputNumber v-else v-model="config.biddingRules.minimumBidAdjustRelative" :min="-100" :dragBy="0.01" format="percent" class="w-1/2" />
+      ]" class="w-1/3" />
+      <InputArgon v-if="isAbsoluteType" v-model="config.biddingRules.minimumBidAdjustAbsolute" class="w-1/3" />
+      <InputNumber v-else v-model="config.biddingRules.minimumBidAdjustRelative" :min="-100" :dragBy="0.01" format="percent" class="w-1/3" />
+      <div> = </div>
+      <div class="border border-slate-400 rounded-md px-2 py-1 border-dashed w-1/3">
+        {{ currency.symbol }}{{ microgonToArgonNm(calculator.minimumBidAmount).format('0,0.00') }}
+      </div>
     </div>
   </template>
 </template>
@@ -40,9 +44,14 @@ import InputNumber from '../../components/InputNumber.vue';
 import InputArgon from '../../components/InputArgon.vue';
 import { getCalculator } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
+import { useCurrency } from '../../stores/currency';
+import { createNumeralHelpers } from '../../lib/numeral';
 
 const config = useConfig();
 const calculator = getCalculator();
+const currency = useCurrency();
+
+const { microgonToArgonNm } = createNumeralHelpers(currency);
 
 const bidAmount = Vue.ref<bigint>(0n);
 

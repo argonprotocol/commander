@@ -1,4 +1,4 @@
-import { IBidsFile, IWinningBid } from '@argonprotocol/commander-bot/src/storage';
+import { type IBidsFile, type IWinningBid } from '@argonprotocol/commander-bot';
 import { IDashboardStats } from '../interfaces/IStats';
 import { Db } from './Db';
 import { Config } from './Config';
@@ -8,6 +8,7 @@ import { botEmitter } from './Bot';
 import { createDeferred, ensureOnlyOneInstance } from './Utils';
 import IDeferred from '../interfaces/IDeferred';
 import { MiningFrames } from '@argonprotocol/commander-calculator/src/MiningFrames';
+import BigNumber from 'bignumber.js';
 
 interface IMyMiningSeats {
   seatCount: number;
@@ -17,6 +18,7 @@ interface IMyMiningSeats {
   micronotsMined: bigint;
   microgonsMinted: bigint;
   microgonsToBeMined: bigint;
+  microgonsToBeMinted: bigint;
   micronotsToBeMined: bigint;
 }
 
@@ -75,6 +77,7 @@ export class Stats {
       micronotsMined: 0n,
       microgonsMinted: 0n,
       microgonsToBeMined: 0n,
+      microgonsToBeMinted: 0n,
       micronotsToBeMined: 0n,
     };
 
@@ -155,9 +158,9 @@ export class Stats {
       }
 
       if (this.isSubscribedToActivity) {
-        await this.updateBitcoinActivity();
-        await this.updateArgonActivity();
-        await this.updateBiddingActivity();
+        await this.updateBitcoinActivities();
+        await this.updateArgonActivities();
+        await this.updateBotActivities();
         this.activityHasUpdates = false;
       } else {
         this.activityHasUpdates = true;
@@ -170,7 +173,7 @@ export class Stats {
 
     botEmitter.on('updated-bitcoin-activity', async () => {
       if (this.isSubscribedToActivity) {
-        await this.updateBitcoinActivity();
+        await this.updateBitcoinActivities();
         this.activityHasUpdates = false;
       } else {
         this.activityHasUpdates = true;
@@ -179,7 +182,7 @@ export class Stats {
 
     botEmitter.on('updated-argon-activity', async () => {
       if (this.isSubscribedToActivity) {
-        await this.updateArgonActivity();
+        await this.updateArgonActivities();
         this.activityHasUpdates = false;
       } else {
         this.activityHasUpdates = true;
@@ -188,7 +191,7 @@ export class Stats {
 
     botEmitter.on('updated-bidding-activity', async () => {
       if (this.isSubscribedToActivity) {
-        await this.updateBiddingActivity();
+        await this.updateBotActivities();
         this.activityHasUpdates = false;
       } else {
         this.activityHasUpdates = true;
@@ -223,7 +226,7 @@ export class Stats {
 
     if (this.activityHasUpdates) {
       this.activityHasUpdates = false;
-      await Promise.all([this.updateBitcoinActivity(), this.updateArgonActivity(), this.updateBiddingActivity()]);
+      await Promise.all([this.updateBitcoinActivities(), this.updateArgonActivities(), this.updateBotActivities()]);
     }
   }
 
@@ -253,16 +256,16 @@ export class Stats {
     this.myMiningSeats = await this.fetchMiningSeatsFromDb();
   }
 
-  private async updateBitcoinActivity(): Promise<void> {
+  private async updateBitcoinActivities(): Promise<void> {
     this.bitcoinActivity = await this.db.bitcoinActivitiesTable.fetchLastFiveRecords();
   }
 
-  private async updateArgonActivity(): Promise<void> {
+  private async updateArgonActivities(): Promise<void> {
     this.argonActivity = await this.db.argonActivitiesTable.fetchLastFiveRecords();
   }
 
-  private async updateBiddingActivity(): Promise<void> {
-    this.biddingActivity = await this.db.biddingActivitiesTable.fetchLastFiveRecords();
+  private async updateBotActivities(): Promise<void> {
+    this.biddingActivity = await this.db.botActivitiesTable.fetchRecentRecords(15);
   }
 
   private async updateMiningBids(): Promise<void> {
@@ -277,7 +280,7 @@ export class Stats {
       };
     });
 
-    const myWinningBids = this.allWinningBids.filter(bid => bid.subAccountIndex !== undefined);
+    const myWinningBids = this.allWinningBids.filter(bid => typeof bid.subAccountIndex === 'number');
     this.myMiningBids.bidCount = myWinningBids.length;
     this.myMiningBids.microgonsBid = myWinningBids.reduce((acc, bid) => acc + (bid.microgonsBid || 0n), 0n);
   }
@@ -290,6 +293,7 @@ export class Stats {
     let micronotsMined = 0n;
     let microgonsMinted = 0n;
     let microgonsToBeMined = 0n;
+    let microgonsToBeMinted = 0n;
     let micronotsToBeMined = 0n;
 
     const activeCohorts = await this.db.cohortsTable.fetchActiveCohorts(this.latestFrameId);
@@ -297,13 +301,14 @@ export class Stats {
     for (const cohort of activeCohorts) {
       // Scale factor to preserve precision (cohort.progress has 3 decimal places)
       // factor = (100 - progress) / 100, scaled by 100000 for 3 decimal precision
-      const remainingRewards = this.calculateRemainingRewardsToBeMined(cohort);
+      const remainingRewardsPerSeat = this.calculateRemainingRewardsExpectedPerSeat(cohort);
 
       seatCount += cohort.seatsWon;
       microgonsBid += cohort.microgonsBid * BigInt(cohort.seatsWon);
       micronotsStaked += cohort.micronotsStaked * BigInt(cohort.seatsWon);
-      microgonsToBeMined += remainingRewards.microgons * BigInt(cohort.seatsWon);
-      micronotsToBeMined += remainingRewards.micronots * BigInt(cohort.seatsWon);
+      microgonsToBeMined += remainingRewardsPerSeat.microgonsToBeMined * BigInt(cohort.seatsWon);
+      microgonsToBeMinted += remainingRewardsPerSeat.microgonsToBeMinted * BigInt(cohort.seatsWon);
+      micronotsToBeMined += remainingRewardsPerSeat.micronotsToBeMined * BigInt(cohort.seatsWon);
     }
 
     const activeCohortFrames = await this.db.cohortFramesTable.fetchActiveCohortFrames(this.latestFrameId);
@@ -322,23 +327,33 @@ export class Stats {
       micronotsMined,
       microgonsMinted,
       microgonsToBeMined,
+      microgonsToBeMinted,
       micronotsToBeMined,
     };
   }
 
-  private calculateRemainingRewardsToBeMined(cohort: ICohortRecord): { microgons: bigint; micronots: bigint } {
-    const baseMicrogons = bigIntMax(cohort.microgonsBid, cohort.microgonsToBeMined);
-    const extraMicrogons = cohort.microgonsToBeMined - baseMicrogons;
+  private calculateRemainingRewardsExpectedPerSeat(cohort: ICohortRecord): {
+    microgonsToBeMined: bigint;
+    microgonsToBeMinted: bigint;
+    micronotsToBeMined: bigint;
+  } {
+    const microgonsExpected = bigIntMax(cohort.microgonsBid, cohort.microgonsToBeMined);
+    const microgonsExpectedToBeMinted = microgonsExpected - cohort.microgonsToBeMined;
 
-    const factorNumerator = BigInt(Math.floor((100 - cohort.progress) * 1_000));
-    const factorDenominator = 100_000n;
+    const factorBn = BigNumber(100 - cohort.progress).dividedBy(100);
 
-    const microgonsToBeMinedPerSeat = (cohort.microgonsToBeMined * factorNumerator) / factorDenominator;
-    const micronotsToBeMinedPerSeat = (cohort.micronotsToBeMined * factorNumerator) / factorDenominator;
+    const microgonsToBeMinedBn = BigNumber(cohort.microgonsToBeMined).multipliedBy(factorBn);
+    const micronotsToBeMinedBn = BigNumber(cohort.micronotsToBeMined).multipliedBy(factorBn);
+    const microgonsToBeMintedBn = BigNumber(microgonsExpectedToBeMinted).multipliedBy(factorBn);
+
+    const microgonsToBeMined = BigInt(microgonsToBeMinedBn.integerValue().toString());
+    const microgonsToBeMinted = BigInt(microgonsToBeMintedBn.integerValue().toString());
+    const micronotsToBeMined = BigInt(micronotsToBeMinedBn.integerValue().toString());
 
     return {
-      microgons: microgonsToBeMinedPerSeat,
-      micronots: micronotsToBeMinedPerSeat,
+      microgonsToBeMined,
+      microgonsToBeMinted,
+      micronotsToBeMined,
     };
   }
 
@@ -352,15 +367,6 @@ export class Stats {
     } catch (error) {
       console.error('Error fetching dashboard from db', error);
       throw error;
-    }
-  }
-
-  private async fetchLatestCohortIdFromDb(): Promise<number | null> {
-    try {
-      const id = await this.db.cohortsTable.fetchLatestActiveId();
-      return id || null;
-    } catch {
-      return null;
     }
   }
 
@@ -386,6 +392,7 @@ export class Stats {
     if (!cohort) return null;
 
     const cohortStats = await this.db.cohortFramesTable.fetchCohortStats(cohort.id);
+    const remainingRewardsPerSeat = this.calculateRemainingRewardsExpectedPerSeat(cohort);
 
     return {
       cohortId: cohort.id,
@@ -401,6 +408,9 @@ export class Stats {
       micronotsMined: cohortStats.totalMicronotsMined,
       microgonsMined: cohortStats.totalMicrogonsMined,
       microgonsMinted: cohortStats.totalMicrogonsMinted,
+      microgonsToBeMined: remainingRewardsPerSeat.microgonsToBeMined,
+      microgonsToBeMinted: remainingRewardsPerSeat.microgonsToBeMinted,
+      micronotsToBeMined: remainingRewardsPerSeat.micronotsToBeMined,
     };
   }
 }

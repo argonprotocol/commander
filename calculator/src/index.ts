@@ -6,7 +6,13 @@ import BiddingCalculatorData from './BiddingCalculatorData.js';
 import { Mainchain, type MainchainClient } from './Mainchain.js';
 import { MiningFrames, TICKS_PER_COHORT } from './MiningFrames.js';
 
-export { jsonStringifyWithBigInts, jsonParseWithBigInts, convertBigIntStringToNumber } from './utils.js';
+export {
+  jsonStringifyWithBigInts,
+  jsonStringifyWithBigIntsEnhanced,
+  jsonParseWithBigInts,
+  jsonParseWithBigIntsEnhanced,
+  convertBigIntStringToNumber,
+} from './utils.js';
 
 export default BiddingCalculator;
 export {

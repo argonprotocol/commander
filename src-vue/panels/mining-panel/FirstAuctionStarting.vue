@@ -2,7 +2,7 @@
 <template>
   <div class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center m-3 overflow-hidden">
     <ConfettiIcon class="absolute top-[10px] left-[10px]" style="width: calc(100% - 20px)" />
-    <div class="relative mx-auto inline-block w-6/10">
+    <div class="relative mx-auto block w-6/10">
       <h1 class="text-6xl font-bold text-argon-600 text-center mt-28 mb-10 whitespace-nowrap">YOUR BIDDING BOT</h1>
 
       <div class="text-center mt-6 mb-5 uppercase text-base flex flex-row justify-center items-center">
@@ -13,9 +13,7 @@
       <div class="flex flex-col items-center justify-center min-h-[75px] fade-in-out">
         <div class="text-6xl text-center text-argon-600 font-bold">FIRST-EVER MINING BID</div>
       </div>
-      <p
-        class="text-center text-lg mt-6 border-t border-b border-gray-300 pt-8 pb-7 font-light leading-7.5 inline-block"
-      >
+      <p class="text-center text-lg mt-6 border-t border-b border-gray-300 pt-8 pb-7 font-light leading-7.5 inline-block">
         Your bidding bot has successfully connected. It's now trying to win
         {{ maxSeatCount }} mining seat{{ maxSeatCount === 1 ? '' : 's' }} with a
         <span @click="openBiddingBudgetOverlay" class="text-argon-600 underline cursor-pointer underline-offset-2">
@@ -30,7 +28,7 @@
               @tick="handleAuctionClosingTick"
               v-slot="{ hours, minutes, seconds }"
             >
-              <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},</template>
+              <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},&nbsp;</template>
               <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and</template>
               {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
             </CountdownClock>
@@ -40,7 +38,7 @@
           The current auction will begin closing in
           <div class="font-bold py-5 text-2xl opacity-70">
             <CountdownClock :time="startOfNextCohort" v-slot="{ hours, minutes, seconds }">
-              <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},</template>
+              <template v-if="hours">{{ hours }} hour{{ hours > 1 ? 's' : '' }},&nbsp;</template>
               <template v-if="minutes">{{ minutes }} minute{{ minutes > 1 ? 's' : '' }} and</template>
               {{ seconds }} second{{ seconds > 1 ? 's' : '' }}
             </CountdownClock>
@@ -50,7 +48,7 @@
       </p>
       <div class="flex flex-row justify-center items-center space-x-6">
         <ActiveBidsOverlayButton />
-        <ActiveBidsActivityOverlayButton />
+        <BotHistoryOverlayButton />
       </div>
     </div>
   </div>
@@ -64,7 +62,7 @@ import { useConfig } from '../../stores/config';
 import CountdownClock from '../../components/CountdownClock.vue';
 import ConfettiIcon from '../../assets/confetti.svg?component';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
-import ActiveBidsActivityOverlayButton from '../../overlays/ActiveBidsActivityOverlayButton.vue';
+import BotHistoryOverlayButton from '../../overlays/BotHistoryOverlayButton.vue';
 import BiddingCalculator, {
   type IBiddingRules,
   BiddingCalculatorData,

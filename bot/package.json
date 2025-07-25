@@ -4,7 +4,7 @@
   "version": "0.0.1-rc7",
   "description": "An api for integration with commander",
   "scripts": {
-    "start": "tsx src/index.ts",
+    "start": "tsx src/server.ts",
     "test:local": "ARGON_PROJECT_ROOT=../../mainchain vitest --run"
   },
   "type": "module",

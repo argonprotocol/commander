@@ -66,7 +66,7 @@
       </p>
       <div class="flex flex-row justify-center items-center space-x-6">
         <ActiveBidsOverlayButton />
-        <ActiveBidsActivityOverlayButton />
+        <BotHistoryOverlayButton />
       </div>
     </div>
   </div>
@@ -83,11 +83,11 @@ import BiddingCalculator, {
   BiddingCalculatorData,
   BiddingParamsHelper,
 } from '@argonprotocol/commander-calculator';
-import { type IWinningBid } from '@argonprotocol/commander-bot/src/storage.ts';
+import { type IWinningBid } from '@argonprotocol/commander-bot';
 import CountdownClock from '../../components/CountdownClock.vue';
 import ConfettiIcon from '../../assets/confetti.svg?component';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
-import ActiveBidsActivityOverlayButton from '../../overlays/ActiveBidsActivityOverlayButton.vue';
+import BotHistoryOverlayButton from '../../overlays/BotHistoryOverlayButton.vue';
 import { getMainchain } from '../../stores/mainchain';
 import { useStats } from '../../stores/stats';
 import { createNumeralHelpers } from '../../lib/numeral';

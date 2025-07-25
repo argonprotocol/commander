@@ -22,6 +22,9 @@ export default class BiddingCalculator {
 
   public biddingRules: IBiddingRules;
 
+  public ensureMinimumBidIsAtOrBelow: null | 'MaximumBid' | number = null;
+  public ensureMaximumBidIsAtOrAbove: null | 'MinimumBid' | number = null;
+
   constructor(calculatorData: BiddingCalculatorData, biddingRules: IBiddingRules) {
     this.data = calculatorData;
     this.biddingRules = biddingRules;
@@ -37,13 +40,20 @@ export default class BiddingCalculator {
 
   public get minimumBidAmount(): bigint {
     const minimumBidDetails = this.extractBidDetails('minimum');
-    const minimumBidAmount = this.calculateFormulaPrice(minimumBidDetails);
+    const formulaPrice = this.calculateFormulaPrice(minimumBidDetails);
+    const minimumBidAmount = this.adjustFormulaPrice(formulaPrice, minimumBidDetails);
+
+    if (minimumBidAmount <= this.maximumBidAmount) {
+      return minimumBidAmount;
+    }
+
     return bigIntMin(minimumBidAmount, this.maximumBidAmount);
   }
 
   public get maximumBidAmount(): bigint {
     const maximumBidDetails = this.extractBidDetails('maximum');
-    return this.calculateFormulaPrice(maximumBidDetails);
+    const formulaPrice = this.calculateFormulaPrice(maximumBidDetails);
+    return this.adjustFormulaPrice(formulaPrice, maximumBidDetails);
   }
 
   public get minimumBidAtSlowGrowthAPY(): number {
@@ -102,6 +112,10 @@ export default class BiddingCalculator {
       throw new Error(`Invalid price formula type: ${bidDetails.formulaType}`);
     }
 
+    return price;
+  }
+
+  private adjustFormulaPrice(price: bigint, bidDetails: IBidDetails): bigint {
     if (bidDetails.formulaType === BidAmountFormulaType.Custom) {
       price = bidDetails.custom;
     } else if (bidDetails.adjustmentType === BidAmountAdjustmentType.Absolute) {

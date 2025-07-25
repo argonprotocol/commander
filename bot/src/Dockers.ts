@@ -28,6 +28,24 @@ export class Dockers {
     });
   }
 
+  static async isArgonMinerReady(): Promise<boolean> {
+    return new Promise(resolve => {
+      exec('docker exec deploy-argon-miner-1 iscomplete.sh', (error, stdout, stderr) => {
+        if (error) {
+          console.error(`isArgonMinerReady Error: ${error.message}`);
+          resolve(false);
+          return;
+        }
+        if (stderr) {
+          console.error(`isArgonMinerReady Stderr: ${stderr}`);
+          resolve(false);
+          return;
+        }
+        resolve(stdout.trim() === 'true');
+      });
+    });
+  }
+
   static async getBitcoinBlockNumbers(): Promise<IBlockNumbers> {
     return new Promise(resolve => {
       exec('docker exec deploy-bitcoin-1 latestblocks.sh', (error, stdout, stderr) => {

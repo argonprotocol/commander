@@ -1,6 +1,13 @@
 import { invoke } from '@tauri-apps/api/core';
 import { Config, DEPLOY_ENV_FILE } from './Config';
 import { IConfigServerDetails } from '../interfaces/IConfig';
+import { jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
+
+class InvokeTimeout extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
 
 export class SSH {
   private static config: Config;
@@ -32,8 +39,7 @@ export class SSH {
       throw new Error(`HTTP GET command failed with status ${result[1]}`);
     }
 
-    const httpResponse: { status: number; data?: T; error?: string } = JSON.parse(result[0]);
-    console.log('HTTP result:', httpResponse.data || httpResponse.error || httpResponse.status);
+    const httpResponse: { status: number; data?: T; error?: string } = jsonParseWithBigInts(result[0]);
 
     if (httpResponse.status !== 200) {
       throw new Error(httpResponse.error);
@@ -48,9 +54,14 @@ export class SSH {
   public static async runCommand(command: string, retries = 0): Promise<[string, number]> {
     this.isConnected || (await this.openConnection());
     try {
-      const response = await invoke('ssh_run_command', { command });
+      const response = await this.invokeWithTimeout('ssh_run_command', { command }, 60 * 1e3);
       return response as [string, number];
     } catch (e) {
+      if (e instanceof InvokeTimeout) {
+        console.error('SSH command timed out, retrying...', command);
+        await this.closeConnection();
+        return this.runCommand(command, retries);
+      }
       if (e === 'SSHCommandMissingExitStatus' && retries < 2) {
         console.error(`Failed to run command... retrying (${retries + 1}/2): % ${command}: ${e}`);
         return this.runCommand(command, retries + 1);
@@ -61,12 +72,20 @@ export class SSH {
 
   public static async uploadFile(contents: string, remotePath: string): Promise<void> {
     this.isConnected || (await this.openConnection());
-    await invoke('ssh_upload_file', { contents, remotePath });
+    try {
+      await this.invokeWithTimeout('ssh_upload_file', { contents, remotePath }, 60 * 1e3);
+    } catch (e) {
+      if (e instanceof InvokeTimeout) {
+        await this.closeConnection();
+        return this.uploadFile(contents, remotePath);
+      }
+      throw e;
+    }
   }
 
   public static async uploadDirectory(app: any, localRelativeDir: string, remoteDir: string): Promise<void> {
     this.isConnected || (await this.openConnection());
-    await invoke('ssh_upload_directory', { app, localRelativeDir, remoteDir });
+    await this.invokeWithTimeout('ssh_upload_directory', { app, localRelativeDir, remoteDir }, 120 * 1e3);
   }
 
   public static async stopMiningDockers(): Promise<void> {
@@ -87,6 +106,16 @@ export class SSH {
   }
 
   // PRIVATE METHODS //////////////////////////////
+
+  private static invokeWithTimeout<T>(cmd: string, args: Record<string, any>, timeoutMs: number): Promise<T> {
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new InvokeTimeout('Invoke timed out')), timeoutMs),
+    );
+
+    const invocation = invoke<T>(cmd, args);
+
+    return Promise.race([invocation, timeout]);
+  }
 
   private static async openConnection(): Promise<void> {
     if (this.isConnectingPromise) {

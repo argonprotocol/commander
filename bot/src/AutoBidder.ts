@@ -1,7 +1,8 @@
 import { type Accountset, MiningBids } from '@argonprotocol/mainchain';
 import { createBidderParams, type IBiddingRules } from '@argonprotocol/commander-calculator';
-import { type CohortStorage } from './storage.ts';
+import { type Storage } from './Storage.ts';
 import { CohortBidder } from './CohortBidder.ts';
+import type { History } from './History.ts';
 
 /**
  * Creates a bidding process. Between each cohort, it will ask the callback for parameters for the next cohort.
@@ -11,19 +12,16 @@ import { CohortBidder } from './CohortBidder.ts';
  */
 export class AutoBidder {
   public readonly miningBids: MiningBids;
-  public activeBidder: CohortBidder | undefined;
+  private cohortBidder: CohortBidder | undefined;
   private unsubscribe?: () => void;
 
   constructor(
     readonly accountset: Accountset,
-    readonly storage: CohortStorage,
+    readonly storage: Storage,
+    readonly history: History,
     private biddingRules: IBiddingRules,
   ) {
     this.miningBids = new MiningBids(accountset.client);
-  }
-
-  get bidHistory(): CohortBidder['bidHistory'] {
-    return this.activeBidder?.bidHistory || [];
   }
 
   async start(localRpcUrl: string): Promise<void> {
@@ -35,28 +33,20 @@ export class AutoBidder {
     this.unsubscribe = unsubscribe;
   }
 
-  async restart() {
-    if (this.activeBidder) {
-      const cohortActivatingFrameId = this.activeBidder.cohortStartingFrameId;
-      await this.stopBidder();
-      await this.onBiddingStart(cohortActivatingFrameId);
-    }
-  }
-
   async stop() {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
-    await this.stopBidder();
+    await this.stopCohortBidding();
   }
 
   private async onBiddingEnd(cohortActivatingFrameId: number): Promise<void> {
     console.log(`Bidding for frame ${cohortActivatingFrameId} ended`);
-    if (this.activeBidder?.cohortStartingFrameId !== cohortActivatingFrameId) return;
-    await this.stopBidder();
+    if (this.cohortBidder?.cohortStartingFrameId !== cohortActivatingFrameId) return;
+    await this.stopCohortBidding();
   }
 
   private async onBiddingStart(cohortActivatingFrameId: number) {
-    if (this.activeBidder?.cohortStartingFrameId === cohortActivatingFrameId) return;
+    if (this.cohortBidder?.cohortStartingFrameId === cohortActivatingFrameId) return;
     const params = await createBidderParams(cohortActivatingFrameId, await this.accountset.client, this.biddingRules);
     if (params.maxSeats === 0) return;
 
@@ -88,17 +78,17 @@ export class AutoBidder {
       subaccounts.push(...added);
     }
 
-    const activeBidder = new CohortBidder(this.accountset, cohortActivatingFrameId, subaccounts, params);
-    this.activeBidder = activeBidder;
-    await activeBidder.start();
+    const cohortBidder = new CohortBidder(this.accountset, this.history, cohortActivatingFrameId, subaccounts, params);
+    this.cohortBidder = cohortBidder;
+    await cohortBidder.start();
   }
 
-  private async stopBidder() {
-    const activeBidder = this.activeBidder;
-    if (!activeBidder) return;
-    this.activeBidder = undefined;
-    const cohortActivatingFrameId = activeBidder.cohortStartingFrameId;
-    const stats = await activeBidder.stop();
-    console.log('Bidding stopped', { cohortActivatingFrameId, ...stats });
+  private async stopCohortBidding() {
+    const cohortBidder = this.cohortBidder;
+    if (!cohortBidder) return;
+    this.cohortBidder = undefined;
+    const cohortActivatingFrameId = cohortBidder.cohortStartingFrameId;
+    await cohortBidder.stop();
+    console.log('Bidding stopped', { cohortActivatingFrameId });
   }
 }

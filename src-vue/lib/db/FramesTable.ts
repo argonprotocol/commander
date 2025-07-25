@@ -1,11 +1,11 @@
 import { IFrameRecord } from '../../interfaces/db/IFrameRecord';
 import { BaseTable, IFieldTypes } from './BaseTable';
-import { convertSqliteFields, toSqlParams } from '../Utils';
+import { convertFromSqliteFields, toSqlParams } from '../Utils';
 
 export class FramesTable extends BaseTable {
-  private fields: IFieldTypes = {
-    booleanFields: ['isProcessed'],
-    bigintJsonFields: ['microgonToUsd', 'microgonToBtc', 'microgonToArgonot'],
+  private fieldTypes: IFieldTypes = {
+    boolean: ['isProcessed'],
+    bigintJson: ['microgonToUsd', 'microgonToBtc', 'microgonToArgonot'],
   };
 
   async insertOrUpdate(
@@ -20,7 +20,7 @@ export class FramesTable extends BaseTable {
     progress: number,
     isProcessed: boolean,
   ): Promise<void> {
-    await this.db.sql.execute(
+    await this.db.execute(
       'INSERT OR REPLACE INTO Frames (id, firstTick, lastTick, firstBlockNumber, lastBlockNumber, microgonToUsd, microgonToBtc, microgonToArgonot, progress, isProcessed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       toSqlParams([
         id,
@@ -49,7 +49,7 @@ export class FramesTable extends BaseTable {
     progress: number,
     isProcessed: boolean,
   ): Promise<void> {
-    await this.db.sql.execute(
+    await this.db.execute(
       'UPDATE Frames SET firstTick = ?, lastTick = ?, firstBlockNumber = ?, lastBlockNumber = ?, microgonToUsd = ?, microgonToBtc = ?, microgonToArgonot = ?, progress = ?, isProcessed = ? WHERE id = ?',
       toSqlParams([
         firstTick,
@@ -67,23 +67,21 @@ export class FramesTable extends BaseTable {
   }
 
   async fetchById(id: number): Promise<IFrameRecord> {
-    const [rawRecord] = await this.db.sql.select<[any]>('SELECT * FROM Frames WHERE id = ?', [id]);
+    const [rawRecord] = await this.db.select<[any]>('SELECT * FROM Frames WHERE id = ?', [id]);
     if (!rawRecord) throw new Error(`Frame ${id} not found`);
 
-    return convertSqliteFields(rawRecord, this.fields) as IFrameRecord;
+    return convertFromSqliteFields(rawRecord, this.fieldTypes) as IFrameRecord;
   }
 
   async fetchProcessedCount(): Promise<number> {
-    const [result] = await this.db.sql.select<[{ count: number }]>(
+    const [result] = await this.db.select<[{ count: number }]>(
       'SELECT COUNT(*) as count FROM Frames WHERE isProcessed = 1',
     );
     return result.count;
   }
 
   async latestId(): Promise<number> {
-    const [rawRecord] = await this.db.sql.select<[{ maxId: number }]>(
-      'SELECT COALESCE(MAX(id), 0) as maxId FROM Frames',
-    );
+    const [rawRecord] = await this.db.select<[{ maxId: number }]>('SELECT COALESCE(MAX(id), 0) as maxId FROM Frames');
     return rawRecord.maxId;
   }
 }

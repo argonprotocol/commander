@@ -69,9 +69,11 @@ import { useWallets } from '../stores/wallets';
 import AlertIcon from '../assets/alert.svg?component';
 import basicEmitter from '../emitters/basicEmitter';
 import { useStats } from '../stores/stats';
+import { useBot } from '../stores/bot';
 
 const stats = useStats();
 const config = useConfig();
+const bot = useBot();
 const wallets = useWallets();
 
 const hasLowFunds = Vue.computed(() => {
@@ -81,11 +83,11 @@ const hasLowFunds = Vue.computed(() => {
     return false;
   }
 
-  if (wallets.miningWallet.availableMicrogons < config.biddingRules.requiredArgons) {
+  if (wallets.miningWallet.availableMicrogons < config.biddingRules.requiredMicrogons) {
     return true;
   }
 
-  if (wallets.miningWallet.availableMicronots < config.biddingRules.requiredArgonots) {
+  if (wallets.miningWallet.availableMicronots < config.biddingRules.requiredMicronots) {
     return true;
   }
 
@@ -100,7 +102,7 @@ const hasInsufficientFunds = Vue.computed(() => {
 
 const maxBudgetIsTooLow = Vue.computed(() => {
   if (!wallets.isLoaded) return false;
-  return !stats.maxSeatsPossible && stats.maxSeatsReductionReason === 'MaxBudgetTooLow';
+  return !bot.maxSeatsPossible && bot.maxSeatsReductionReason === 'MaxBudgetTooLow';
 });
 
 const maxBidIsTooLow = Vue.computed(() => {

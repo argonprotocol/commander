@@ -1,9 +1,11 @@
+import { BotActivityType } from '@argonprotocol/commander-bot';
+
 export interface IBotActivityRecord {
-  blockNumber: number;
+  id: number;
   tick: number;
-  address: string;
-  bidAmount: bigint;
-  bidPosition: number;
-  prevPosition: number;
+  blockNumber?: number;
+  frameId?: number;
+  type: BotActivityType;
+  data: any;
   insertedAt: string;
 }

@@ -32,7 +32,8 @@ export class InstallerCheck {
       while (true) {
         await this.updateInstallStatus();
         if (this.hasError) {
-          reject(new Error('Install process has error'));
+          console.log('InstallerCheck has error', this.config.installDetails.errorMessage);
+          resolve();
           return;
         }
 
@@ -85,11 +86,11 @@ export class InstallerCheck {
       const stepNewData = installDetailsPending[stepKey] as IConfigInstallStep;
       const stepOldData = this.config.installDetails[stepKey] as IConfigInstallStep;
       const prevStepHasCompleted = !prevStep || prevStep.status === InstallStepStatus.Completed;
-      const statusOnServer = this.extractFilenameStatus(stepKey, stepOldData, filenames);
+      const filenameStatus = this.extractFilenameStatus(stepKey, stepOldData, filenames);
 
       if (installDetailsPending.errorType) {
         stepNewData.status = InstallStepStatus.Hidden;
-      } else if (prevStepHasCompleted && statusOnServer === 'Finished') {
+      } else if (prevStepHasCompleted && filenameStatus === 'Finished') {
         stepNewData.startDate = stepOldData.startDate || dayjs.utc().toISOString();
         stepNewData.progress = stepOldData.progress;
         if (this.installer.isRunning) {
@@ -102,10 +103,11 @@ export class InstallerCheck {
         } else {
           stepNewData.status = InstallStepStatus.Working;
         }
-      } else if (prevStepHasCompleted && statusOnServer === 'Failed') {
+      } else if (prevStepHasCompleted && filenameStatus === 'Failed') {
         stepNewData.status = InstallStepStatus.Failed;
         stepNewData.progress = stepOldData.progress;
         installDetailsPending.errorType = stepKey as unknown as InstallStepErrorType;
+        installDetailsPending.errorMessage = await this.extractFailedStepErrorMessage(stepKey);
       } else if (prevStepHasCompleted && this.installer.isRunning) {
         stepNewData.status = InstallStepStatus.Working;
         stepNewData.startDate = stepOldData.startDate || dayjs.utc().toISOString();
@@ -167,12 +169,12 @@ export class InstallerCheck {
     stepPending: IConfigInstallStep,
     estimatedMinutes: number,
   ): Promise<number> {
-    if (stepName === InstallStepKey.MiningLaunch) {
-      const progress = await InstallerCheck.fetchMiningLaunchProgress();
-      console.log('MiningLaunch PROGRESS', progress);
-      return progress;
-    } else if (stepName === InstallStepKey.FileUpload) {
+    if (stepName === InstallStepKey.FileUpload) {
       return this.installer.fileUploadProgress;
+    } else if (stepName === InstallStepKey.BitcoinInstall) {
+      return await InstallerCheck.fetchBitcoinInstallProgress();
+    } else if (stepName === InstallStepKey.ArgonInstall) {
+      return await InstallerCheck.fetchArgonInstallProgress();
     }
 
     const startDate = dayjs.utc(stepPending.startDate);
@@ -197,18 +199,14 @@ export class InstallerCheck {
     return progress;
   }
 
-  private static async fetchMiningLaunchProgress(): Promise<number> {
-    // Run commands sequentially instead of concurrently
-    const [argonOutput] = await SSH.runCommand('docker exec deploy-argon-miner-1 syncstatus.sh');
-    const [bitcoinOutput] = await SSH.runCommand('docker exec deploy-bitcoin-1 syncstatus.sh');
+  private static async fetchBitcoinInstallProgress(): Promise<number> {
+    const [output] = await SSH.runCommand('docker exec deploy-bitcoin-1 syncstatus.sh');
+    return parseFloat(output.trim().replace('%', '')) || 0.0;
+  }
 
-    console.log('MiningLaunch PROGRESS', 'argonOutput:', argonOutput, 'bitcoinOutput:', bitcoinOutput);
-
-    const argonProgress = parseFloat(argonOutput.trim().replace('%', '')) || 0.0;
-    const bitcoinProgress = parseFloat(bitcoinOutput.trim().replace('%', '')) || 0.0;
-    const progress = (argonProgress + bitcoinProgress) / 2.0;
-
-    return progress;
+  private static async fetchArgonInstallProgress(): Promise<number> {
+    const [output] = await SSH.runCommand('docker exec deploy-argon-miner-1 syncstatus.sh');
+    return parseFloat(output.trim().replace('%', '')) || 0.0;
   }
 
   private async fetchLogFilenames(): Promise<string[]> {
@@ -228,5 +226,14 @@ export class InstallerCheck {
     } catch {
       return [];
     }
+  }
+
+  private async extractFailedStepErrorMessage(stepKey: InstallStepKey): Promise<string> {
+    const stepName = InstallStepKey[stepKey];
+    const [output, code] = await SSH.runCommand(`cat ~/install-logs/${stepName}.failed`);
+    if (code === 0) {
+      return output.trim();
+    }
+    return '';
   }
 }

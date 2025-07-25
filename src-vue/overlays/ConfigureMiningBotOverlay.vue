@@ -8,7 +8,7 @@
           ref="dialogPanel"
           class="absolute top-[40px] left-3 right-3 bottom-3 flex flex-col rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all"
           style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255, 255, 255, 1);">
-          <BgOverlay v-if="showEditBoxOverlay" @close="showEditBoxOverlay = null" :showWindowControls="false" class="z-40 rounded-md" />
+          <BgOverlay v-if="showEditBoxOverlay" @close="showEditBoxOverlay = null" :showWindowControls="false" rounded="md" class="z-40" />
           <div v-if="isLoaded" class="flex flex-col h-full w-full">
             <h2
               class="relative text-3xl font-bold text-left border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 text-[#672D73]"
@@ -39,32 +39,30 @@
                   </div>
                 </div>
                 <div class="flex flex-col items-center justify-center text-3xl mx-2 text-center">
-                  <span class="relative -top-5 opacity-50">
+                  <span class="relative -top-1 opacity-50">
                     =
                   </span>
                 </div>
                 <div class="w-1/2 flex flex-col grow">
                   <div @mouseenter="showTooltip($event, tooltip.estimatedAPYRange, { width: 'parent' })" @mouseleave="hideTooltip" class="flex flex-col grow group">
-                    <header StatHeader class="bg-[#FAF9FA] border border-[#DDDCDD] rounded-t-lg relative z-10">Estimated APYs</header>
-                    <div PrimaryStat class="grow flex flex-col border border-slate-500/30 rounded-lg mt-2 shadow-sm w-full">
-                      <table class="w-full h-full relative z-50">
-                        <thead>
-                          <tr class="h-1/3">
-                            <th></th>
-                            <th class="font-light font-sans">Slow Growth</th>
-                            <th class="font-light font-sans">Fast Growth</th>
-                          </tr>
-                        </thead>
+                    <header StatHeader class="bg-[#FAF9FA] border border-[#DDDCDD] rounded-t-lg relative z-10">Annual Percentage Yields (APY)</header>
+                    <div PrimaryStat class="grow flex flex-col border border-slate-500/30 rounded-lg mt-2 shadow-sm w-full px-4">
+                      <table class="w-full h-full table-fixed relative z-50 whitespace-nowrap -mt-1">
                         <tbody>
-                          <tr class="font-bold font-mono text-argon-600 h-1/3">
-                            <td class="font-light font-sans">Maximum Bid</td>
-                            <td>{{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</td>
-                            <td>{{ numeral(maximumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</td>
+                          <tr class="text-argon-600 h-1/3">
+                            <td class="w-3/12"></td>
+                            <td class="font-light font-sans text-argon-800/40 w-5/12">Slow Growth</td>
+                            <td class="font-light font-sans text-argon-800/40 w-5/12">Fast Growth</td>
                           </tr>
                           <tr class="font-bold font-mono text-argon-600 h-1/3">
-                            <td class="font-light font-sans">Minimum Bid</td>
-                            <td>{{ numeral(minimumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</td>
-                            <td>{{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 9_999) }}%</td>
+                            <td class="font-light font-sans text-argon-800/40 border-t border-dashed border-slate-300 text-left pl-2">Maximum Bid</td>
+                            <td class="text-lg border-t border-dashed border-slate-300">{{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</td>
+                            <td class="text-lg border-t border-dashed border-slate-300">{{ numeral(maximumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</td>
+                          </tr>
+                          <tr class="font-bold font-mono text-argon-600 h-1/3">
+                            <td class="font-light font-sans text-argon-800/40 border-t border-dashed border-slate-300 text-left pl-2">Starting Bid</td>
+                            <td class="text-lg border-t border-dashed border-slate-300">{{ numeral(minimumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</td>
+                            <td class="text-lg border-t border-dashed border-slate-300">{{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</td>
                           </tr>
                         </tbody>
                       </table>
@@ -366,7 +364,6 @@ function cancelOverlay() {
   if (showEditBoxOverlay.value) return;
   isOpen.value = false;
   hideTooltip();
-  console.log('SHOW OVERLAY', isOpen.value);
 
   if (previousBiddingRules) {
     config.biddingRules = jsonParseWithBigInts(previousBiddingRules) as IBiddingRules;

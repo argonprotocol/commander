@@ -11,13 +11,15 @@ import {
   type SpRuntimeDispatchError,
   type Vec,
 } from '@argonprotocol/mainchain';
-import { CohortBidderHistory } from './CohortBidderHistory.ts';
-import { type CohortStorage, type IWinningBid, type IBotState, type IBotStateFile, JsonStore } from './storage.ts';
+import { type Storage } from './Storage.ts';
+import type { IBotState, IBotStateFile } from './interfaces/IBotStateFile.ts';
+import type { IWinningBid } from './interfaces/IBidsFile.ts';
+import { JsonStore } from './JsonStore.ts';
 import { MiningFrames, Mainchain } from '@argonprotocol/commander-calculator';
 import { Dockers } from './Dockers.ts';
 import type Bot from './Bot.ts';
 import type { AutoBidder } from './AutoBidder.ts';
-import { getClient } from './utils.ts';
+import { CohortBidder } from './CohortBidder.ts';
 
 const defaultCohort = {
   blocksMined: 0,
@@ -33,18 +35,10 @@ export interface ILastProcessed {
   blockNumber: number;
 }
 
-/**
- * Monitor the accountset for new cohorts and earnings. Store the earnings and bidding to files.
- * @param accountset
- * @param storage
- * @param archiveUrl - a url to an archive server in case we need to sync history
- */
 export class BlockSync {
   queue: Header[] = [];
   lastProcessed?: ILastProcessed;
   accountMiners!: AccountMiners;
-  archiveClient!: ArgonClient;
-  localClient!: ArgonClient;
   latestFinalizedHeader!: Header;
   scheduleTimer?: NodeJS.Timeout;
   botStateFile: JsonStore<IBotStateFile>;
@@ -69,8 +63,9 @@ export class BlockSync {
     public bot: Bot,
     public autobidder: AutoBidder,
     public accountset: Accountset,
-    public storage: CohortStorage,
-    public archiveUrl: string,
+    public storage: Storage,
+    public localClient: ArgonClient,
+    public archiveClient: ArgonClient,
     private oldestFrameIdToSync?: number,
   ) {
     this.scheduleNext = this.scheduleNext.bind(this);
@@ -81,13 +76,6 @@ export class BlockSync {
     this.isStopping = false;
     this.localClient = await this.accountset.client;
     this.mainchain = new Mainchain(this.accountset.client);
-
-    try {
-      this.archiveClient = await getClient(this.archiveUrl);
-    } catch (error) {
-      console.error('Error initializing archive client', error);
-      throw error;
-    }
 
     const finalizedHash = await this.localClient.rpc.chain.getFinalizedHead();
     this.latestFinalizedHeader = await this.localClient.rpc.chain.getHeader(finalizedHash);
@@ -121,11 +109,14 @@ export class BlockSync {
     const loadAt = this.queue.at(0) ?? this.latestFinalizedHeader;
     const api = await this.getRpcClient(loadAt).at(loadAt.hash);
     const startingMinerState = await this.accountset.loadRegisteredMiners(api);
+    const registeredMiners = startingMinerState
+      .filter(x => x.seat !== undefined)
+      .map((x: any) => ({
+        ...x,
+        startingFrameId: x.seat.frameId,
+      }));
 
-    this.accountMiners = new AccountMiners(
-      this.accountset,
-      startingMinerState.filter(x => x.seat !== undefined) as any,
-    );
+    this.accountMiners = new AccountMiners(this.accountset, registeredMiners as any);
 
     // catchup now
     while (this.queue.length) {
@@ -149,7 +140,6 @@ export class BlockSync {
 
   async state(): Promise<IBotState> {
     const botStateData = (await this.botStateFile.get())!;
-    const latestBidHistory = this.autobidder.bidHistory[0];
     const [argonBlockNumbers, bitcoinBlockNumbers] = await Promise.all([
       Dockers.getArgonBlockNumbers(),
       Dockers.getBitcoinBlockNumbers(),
@@ -171,8 +161,8 @@ export class BlockSync {
       currentFrameProgress: this.calculateProgress(this.currentTick, this.currentFrameTickRange),
       syncProgress: await this.calculateSyncProgress(),
       queueDepth: this.queue.length,
-      maxSeatsPossible: latestBidHistory?.maxSeatsInPlay ?? 10, // TODO: instead of hardcoded 10, fetch from chain
-      maxSeatsReductionReason: latestBidHistory?.maxSeatsReductionReason ?? '',
+      maxSeatsPossible: this.bot.history.maxSeatsInPlay ?? 10, // TODO: instead of hardcoded 10, fetch from chain
+      maxSeatsReductionReason: this.bot.history.maxSeatsReductionReason ?? '',
     };
   }
 
@@ -389,10 +379,9 @@ export class BlockSync {
           return false;
         }
         if (!x.microgonsToBeMinedPerBlock) {
-          const data = await CohortBidderHistory.getStartingData(api as any);
-          x.micronotsStakedPerSeat = data.argonotsPerSeat;
-          x.argonotsUsdPrice = data.argonotUsdPrice;
-          x.microgonsToBeMinedPerBlock = data.cohortArgonsPerBlock;
+          const data = await CohortBidder.getStartingData(api as any);
+          x.micronotsStakedPerSeat = data.micronotsStakedPerSeat;
+          x.microgonsToBeMinedPerBlock = data.microgonsToBeMinedPerBlock;
         }
         x.frameBiddingProgress = this.calculateProgress(headerTick, this.currentFrameTickRange);
         x.lastBlockNumber = blockNumber;

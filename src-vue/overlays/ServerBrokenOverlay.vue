@@ -52,16 +52,16 @@
 import * as Vue from 'vue';
 import { TransitionChild, TransitionRoot } from '@headlessui/vue';
 import BgOverlay from '../components/BgOverlay.vue';
-import { useStats } from '../stores/stats';
+import { useBot } from '../stores/bot';
 
-const stats = useStats();
+const bot = useBot();
 
 const isOpen = Vue.ref(true);
 const isRestarting = Vue.ref(false);
 
 const restart = async () => {
   isRestarting.value = true;
-  await stats.restartBot();
+  await bot.restart();
   isRestarting.value = false;
 };
 </script>

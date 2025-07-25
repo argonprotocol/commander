@@ -9,6 +9,7 @@ export type { Stats };
 
 export function useStats(): Vue.Reactive<Stats> {
   if (!stats) {
+    console.log('Initializing stats');
     const dbPromise = getDbPromise();
     const config = useConfig();
     stats = Vue.reactive(new Stats(dbPromise, config as Config));

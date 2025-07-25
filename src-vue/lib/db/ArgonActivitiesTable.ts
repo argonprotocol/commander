@@ -8,16 +8,16 @@ export class ArgonActivitiesTable {
     this.db = db;
   }
 
-  async insert(localhostBlock: number, mainchainBlock: number): Promise<IArgonActivityRecord> {
-    const [rawRecord] = await this.db.sql.select<IArgonActivityRecord[]>(
-      'INSERT INTO ArgonActivities (localNodeBlockNumber, mainNodeBlockNumber) VALUES (?1, ?2) RETURNING *',
-      [localhostBlock, mainchainBlock],
+  async insert(frameId: number, localhostBlock: number, mainchainBlock: number): Promise<IArgonActivityRecord> {
+    const [rawRecord] = await this.db.select<IArgonActivityRecord[]>(
+      'INSERT INTO ArgonActivities (frameId, localNodeBlockNumber, mainNodeBlockNumber) VALUES (?1, ?2, ?3) RETURNING *',
+      [frameId, localhostBlock, mainchainBlock],
     );
     return rawRecord;
   }
 
   async latest(): Promise<IArgonActivityRecord | null> {
-    const rawRecords = await this.db.sql.select<IArgonActivityRecord[]>(
+    const rawRecords = await this.db.select<IArgonActivityRecord[]>(
       'SELECT * FROM ArgonActivities ORDER BY insertedAt DESC LIMIT 1',
       [],
     );
@@ -25,7 +25,7 @@ export class ArgonActivitiesTable {
   }
 
   async fetchLastFiveRecords(): Promise<IArgonActivityRecord[]> {
-    return await this.db.sql.select<IArgonActivityRecord[]>(
+    return await this.db.select<IArgonActivityRecord[]>(
       'SELECT * FROM ArgonActivities ORDER BY insertedAt DESC LIMIT 5',
       [],
     );
