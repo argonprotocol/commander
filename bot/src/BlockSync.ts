@@ -2,12 +2,12 @@ import {
   AccountMiners,
   type Accountset,
   type ArgonClient,
+  FrameCalculator,
   type FrameSystemEventRecord,
   type GenericEvent,
   getAuthorFromHeader,
   getTickFromHeader,
   type Header,
-  FrameCalculator,
   type SpRuntimeDispatchError,
   type Vec,
 } from '@argonprotocol/mainchain';
@@ -15,7 +15,7 @@ import { type Storage } from './Storage.ts';
 import type { IBotState, IBotStateFile } from './interfaces/IBotStateFile.ts';
 import type { IWinningBid } from './interfaces/IBidsFile.ts';
 import { JsonStore } from './JsonStore.ts';
-import { MiningFrames, Mainchain } from '@argonprotocol/commander-calculator';
+import { Mainchain, MiningFrames } from '@argonprotocol/commander-calculator';
 import { Dockers } from './Dockers.ts';
 import type Bot from './Bot.ts';
 import type { AutoBidder } from './AutoBidder.ts';
@@ -58,6 +58,7 @@ export class BlockSync {
   private mainchain!: Mainchain;
   private lastExchangeRateDate?: Date;
   private lastExchangeRateFrameId?: number;
+  private tickDurationMillis: number = 60000; // 1 minute in milliseconds
 
   constructor(
     public bot: Bot,
@@ -80,6 +81,7 @@ export class BlockSync {
     const finalizedHash = await this.localClient.rpc.chain.getFinalizedHead();
     this.latestFinalizedHeader = await this.localClient.rpc.chain.getHeader(finalizedHash);
     this.latestTick = getTickFromHeader(this.localClient, this.latestFinalizedHeader) ?? 0;
+    this.tickDurationMillis = (await this.localClient.query.ticks.genesisTicker()).tickDurationMillis.toNumber();
     this.earliestQueuedTick = this.latestTick;
     await this.setOldestFrameIdIfNeeded();
 
@@ -116,7 +118,7 @@ export class BlockSync {
         startingFrameId: x.seat.frameId,
       }));
 
-    this.accountMiners = new AccountMiners(this.accountset, registeredMiners as any);
+    this.accountMiners = new AccountMiners(this.accountset, registeredMiners);
 
     // catchup now
     while (this.queue.length) {
@@ -238,7 +240,7 @@ export class BlockSync {
       { tick, author },
       events.map(x => x.event),
     );
-    const tickDate = new Date(tick * 60000);
+    const tickDate = new Date(tick * this.tickDurationMillis);
 
     if (this.lastProcessed?.frameId !== currentFrameId) {
       this.currentFrameTickRange = await MiningFrames.getTickRangeForFrame(this.localClient, currentFrameId);

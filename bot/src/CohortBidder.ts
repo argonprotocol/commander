@@ -2,10 +2,12 @@ import type { Accountset } from '@argonprotocol/mainchain';
 import {
   type ArgonClient,
   type ArgonPrimitivesBlockSealMiningRegistration,
+  Bool,
   ExtrinsicError,
   formatArgons,
+  u64,
+  Vec,
 } from '@argonprotocol/mainchain';
-import { Bool, u64, Vec } from '@polkadot/types-codec';
 import { History, SeatReductionReason } from './History.ts';
 
 export class CohortBidder {
@@ -108,7 +110,7 @@ export class CohortBidder {
     const tick = await api.query.ticks.currentTick().then(x => x.toNumber());
     const bids = await api.query.miningSlot.bidsForNextSlotCohort();
     const blockNumber = header.number.toNumber();
-    this.history.handleIncomingBids(tick, blockNumber, bids);
+    await this.history.handleIncomingBids(tick, blockNumber, bids);
 
     console.log('Bidder stopped', {
       cohortStartingFrameId: this.cohortStartingFrameId,

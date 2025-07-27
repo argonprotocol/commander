@@ -1,12 +1,10 @@
-import { ExtrinsicError, JsonExt } from '@argonprotocol/mainchain';
-import { type AccountId } from '@polkadot/types/interfaces/runtime';
-import { Compact, u128 } from '@polkadot/types-codec';
+import { type AccountId, Compact, ExtrinsicError, JsonExt, u128 } from '@argonprotocol/mainchain';
 import { MiningFrames } from '@argonprotocol/commander-calculator';
 import {
   BotActivityType,
-  type IHistoryFile,
   type IBotActivity,
   type IBotActivityBidReceived,
+  type IHistoryFile,
 } from './interfaces/IHistoryFile.ts';
 import type { Storage } from './Storage.ts';
 

@@ -251,9 +251,9 @@
                   <header v-if="!config.hasSavedBiddingRules">Create Personal Mining Bot</header>
                   <header v-else>Update Personal Mining Bot</header>
                   <p>
-                    Set bid pricing and other required
+                    Set lock fees and securitization
                     <br />
-                    parameters for upcoming mining auctions
+                    parameters for a new bitcoin vault
                   </p>
                 </li>
                 <li divider class="bg-slate-400/30 h-[1px] w-full my-1"></li>

@@ -37,12 +37,15 @@ export function isBigIntString(value: any): boolean {
 
 export function toSqlParams(
   params: (bigint | number | string | Uint8Array | boolean | object | undefined)[],
-): (string | number | Uint8Array | undefined)[] {
+): (string | number | Uint8Array | null)[] {
   return params.map(param => {
+    if (param === undefined || param === null) {
+      return null; // SQLite uses null for undefined values
+    }
     if (typeof param === 'boolean') {
       return toSqliteBoolean(param);
     } else if (typeof param === 'bigint') {
-      return toSqliteBigInt(param);
+      return param.toString();
     } else if (typeof param === 'object') {
       return jsonStringifyWithBigIntsEnhanced(param);
     }
@@ -110,18 +113,18 @@ export function convertFromSqliteFields(obj: any, fields: Partial<Record<keyof I
   for (const [type, fieldNames] of Object.entries(fields)) {
     for (const fieldName of fieldNames) {
       if (!(fieldName in obj)) continue;
+      const value = obj[fieldName];
+      if (value === null || value === undefined) continue;
       if (type === 'bigint') {
-        obj[fieldName] = fromSqliteBigInt(obj[fieldName]);
+        obj[fieldName] = fromSqliteBigInt(value);
       } else if (type === 'boolean') {
-        obj[fieldName] = fromSqliteBoolean(obj[fieldName]);
+        obj[fieldName] = fromSqliteBoolean(value);
       } else if (type === 'bigintJson') {
-        obj[fieldName] = BigInt(obj[fieldName]);
-      } else if (type === 'bigintJson') {
-        obj[fieldName] = jsonParseWithBigIntsEnhanced(obj[fieldName]);
+        obj[fieldName] = jsonParseWithBigIntsEnhanced(value);
       } else if (type === 'json') {
-        obj[fieldName] = JsonExt.parse(obj[fieldName]);
+        obj[fieldName] = JsonExt.parse(value);
       } else if (type === 'date') {
-        obj[fieldName] = new Date(obj[fieldName]);
+        obj[fieldName] = new Date(value);
       } else {
         throw new Error(`${fieldName} has unknown type: ${type}`);
       }

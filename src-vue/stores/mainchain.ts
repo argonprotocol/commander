@@ -20,6 +20,10 @@ export function getMainchainClient(): Promise<MainchainClient> {
   return client;
 }
 
+export function setMainchainClient(newClient: Promise<MainchainClient>) {
+  client = newClient;
+}
+
 export function getMainchain(): Mainchain {
   mainchain ??= new Mainchain(getMainchainClient());
   return mainchain;

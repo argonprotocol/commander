@@ -76,7 +76,7 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { useCurrency } from '../stores/currency';
-import { getBitcoinPrices, getBitcoinFees } from '../stores/bitcoin';
+import { getBitcoinFees, getBitcoinPrices } from '../stores/bitcoin';
 import Chart from '../components/Chart.vue';
 import Vault from '../lib/LlbVault';
 import VaultSnapshot from '../lib/LlbVaultSnapshot';
@@ -84,6 +84,7 @@ import BitcoinFees from '../lib/BitcoinFees';
 import NibSlider from '../components/NibSlider.vue';
 import { getMainchain } from '../stores/mainchain';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
+import { useVaults } from '../stores/vaults.ts';
 
 const mainchain = getMainchain();
 const currency = useCurrency();
@@ -130,10 +131,11 @@ function loadChartData() {
   liquidLockingAPR.value = snapshot.vaulterProfit * 100;
 }
 
+const vaults = useVaults();
 Vue.onMounted(async () => {
-  const vaults = await mainchain.fetchVaults();
-  bitcoinLocked.value = vaults.reduce((acc, vault) => acc + vault.bitcoinLocked, 0);
-  liquidityRealized.value = currency.btcToMicrogon(vaults.reduce((acc, vault) => acc + vault.bitcoinLocked, 0));
+  await vaults.load(true);
+  vaults.getTotalLiquidityRealized().then(x => (liquidityRealized.value = x));
+  bitcoinLocked.value = currency.satsToBtc(vaults.getTotalSatoshisLocked());
   loadChartData();
   isLoaded.value = true;
 });

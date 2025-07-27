@@ -32,6 +32,11 @@ function updateTime() {
     setTimeout(updateTime, 1000);
   }
 }
-
+Vue.watch(
+  () => props.time,
+  () => {
+    updateTime();
+  },
+);
 Vue.onMounted(updateTime);
 </script>

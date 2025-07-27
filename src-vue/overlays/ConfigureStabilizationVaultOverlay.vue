@@ -22,7 +22,7 @@
 
             <div class="flex flex-col grow relative w-full">
               <p class="opacity-80 font-light py-6 pl-10 pr-[6%]">
-                Vaults are special holding mechanisms within Argon that helps stabilize its stablecoin and provide liquidity to the network. 
+                Vaults are special holding mechanisms within Argon that help stabilize its stablecoin and provide liquidity to the network.
               </p>
 
               <section class="flex flex-row border-t border-b border-slate-300 text-center space-x-10 pt-10 pb-12 px-5 mx-5">
@@ -109,7 +109,7 @@
                   </div>
 
                   <div class="w-[1px] bg-slate-300 mx-2"></div>
-                  
+
                   <div class="flex flex-col items-center justify-center relative w-1/3">
                     <EditBoxOverlay
                       id="externalProfitSharing"
@@ -157,7 +157,7 @@
                   </div>
 
                   <div class="w-[1px] bg-slate-300 mx-2"></div>
-                  
+
                   <div class="flex flex-col items-center justify-center relative w-1/3">
                     <EditBoxOverlay
                       id="btcVariableFee"
@@ -168,7 +168,7 @@
                     <div MainWrapper @mouseenter="showTooltip($event, tooltip.btcVariableFee, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('btcVariableFee')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
                       <div StatHeader>Ecosystem Growth</div>
                       <div MainRule class="w-full">
-                        
+
                       </div>
                       <div class="text-gray-500/60 text-md font-mono">
                         Of Value Locked
@@ -177,7 +177,7 @@
                   </div>
 
                   <div class="w-[1px] bg-slate-300 mx-2"></div>
-                  
+
                   <div class="flex flex-col items-center justify-center relative w-1/3">
                     <EditBoxOverlay
                       id="personalBtc"
@@ -222,18 +222,19 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import basicEmitter from '../emitters/basicEmitter';
-import { Dialog, DialogPanel, TransitionRoot, TransitionChild } from '@headlessui/vue';
+import { Dialog, DialogPanel, TransitionRoot } from '@headlessui/vue';
 import { useConfig } from '../stores/config';
 import { getMainchain } from '../stores/mainchain';
 import { useCurrency } from '../stores/currency';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
 import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
-import { showTooltip, hideTooltip } from '../lib/TooltipUtils';
+import { hideTooltip, showTooltip } from '../lib/TooltipUtils';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForVault } from './EditBoxOverlay.vue';
 import BigNumber from 'bignumber.js';
 import IVaultingRules from '../interfaces/IVaultingRules';
 import { jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
+import { MyVault } from '../lib/MyVault.ts';
 
 const mainchain = getMainchain();
 const config = useConfig();
@@ -308,6 +309,22 @@ async function saveRules() {
   isSaving.value = true;
 
   if (rules.value) {
+    // validate the personal btc fits into the securitization space
+    const { microgonsForSecuritization } = MyVault.getMicrogoonSplit(rules.value);
+    const availableBtcSpace = BigInt(
+      BigNumber(microgonsForSecuritization).dividedBy(rules.value.securitizationRatio).integerValue().toNumber(),
+    );
+    // TODO: determine how the UI should handle things like this
+    // TODO: don't allow personal btc to exceed the liquidity space either
+    if (rules.value.personalBtcValue > availableBtcSpace) {
+      alert(
+        `Your personal BTC value (${currency.symbol}${microgonToMoneyNm(rules.value.personalBtcValue).format('0,0.[00000000]')}) exceeds the available securitization space (${currency.symbol}${microgonToMoneyNm(microgonsForSecuritization).format('0,0.[00000000]')}). Please adjust your settings.`,
+      );
+      rules.value.personalBtcValue = availableBtcSpace;
+
+      return;
+    }
+
     await config.saveVaultingRules();
   }
 
