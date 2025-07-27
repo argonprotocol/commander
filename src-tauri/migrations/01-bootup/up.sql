@@ -146,6 +146,7 @@ CREATE TABLE BitcoinLocks (
   satoshis INTEGER NOT NULL,
   lockPrice INTEGER NOT NULL,
   ratchets JSON NOT NULL,
+  cosignVersion TEXT NOT NULL,
   lockDetails JSON NOT NULL,
   requestedReleaseAtHeight INTEGER,
   releaseBitcoinNetworkFee INTEGER,
@@ -176,7 +177,11 @@ CREATE TABLE Vaults (
   hdPath TEXT NOT NULL,
   createdAtBlockHeight INTEGER NOT NULL,
   lastTermsUpdateHeight INTEGER,
-  isClosed BOOLEAN NOT NULL DEFAULT 0,
+  lastCollectTick INTEGER,
+  personalUtxoId INTEGER,
+  prebondedMicrogonsIncludingFee TEXT,
+  prebondedMicrogonsAtTick INTEGER,
+  isClosed INTEGER NOT NULL DEFAULT 0,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );

@@ -3,7 +3,7 @@
   <div class="flex flex-col h-full w-full p-3">
     <div class="grow relative bg-[#FCF9FD] rounded border border-[#CCCEDA] shadow">
       <div class="relative px-[15%]">
-        <div :class="[isLaunchingVault ? 'opacity-30 pointer-events-none' : '']">
+        <div>
           <h1 class="text-[40px] font-bold text-left mt-20 mb-4 whitespace-nowrap">
             You're Almost Ready to Start Vaulting!
           </h1>
@@ -57,18 +57,16 @@
             </div>
           </section>
         </div>
-
         <button
           @click="createVault"
           :class="[
-            walletIsFullyFunded && config.serverDetails.ipAddress
+            walletIsFullyFunded
               ? 'text-white'
-              : 'text-white/70 pointer-events-none opacity-30',
-            isLaunchingVault ? 'opacity-30 pointer-events-none' : '',
+              : 'text-white/70 pointer-events-none opacity-30'
           ]"
           class="bg-argon-button border border-argon-button-hover mt-8 text-2xl font-bold px-4 py-4 rounded-md w-full cursor-pointer hover:bg-argon-button-hover hover:inner-button-shadow"
         >
-          {{ isLaunchingVault ? 'Launching Stabilization Vault...' : 'Launch Stabilization Vault' }}
+          Launch Stabilization Vault
         </button>
       </div>
     </div>
@@ -84,7 +82,6 @@ import { useConfig } from '../../stores/config';
 import { useWallets } from '../../stores/wallets';
 import { useCurrency } from '../../stores/currency';
 import Checkbox from '../../components/Checkbox.vue';
-import { useInstaller } from '../../stores/installer';
 import { createNumeralHelpers } from '../../lib/numeral';
 
 dayjs.extend(utc);
@@ -95,22 +92,21 @@ const currency = useCurrency();
 
 const { microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
 
-const isLaunchingVault = Vue.ref(false);
-
 const walletIsPartiallyFunded = Vue.computed(() => {
-  return (wallets.miningWallet.availableMicrogons || wallets.miningWallet.availableMicronots) > 0;
+  return (wallets.vaultingWallet.availableMicrogons || wallets.vaultingWallet.availableMicronots) > 0;
 });
 
 const walletIsFullyFunded = Vue.computed(() => {
+  console.log('Checking if wallet is fully funded', walletIsPartiallyFunded.value);
   if (!walletIsPartiallyFunded.value) {
     return false;
   }
 
-  if (wallets.miningWallet.availableMicrogons < (config.vaultingRules?.requiredMicrogons || 0n)) {
+  if (wallets.vaultingWallet.availableMicrogons < (config.vaultingRules?.requiredMicrogons || 0n)) {
     return false;
   }
 
-  if (wallets.miningWallet.availableMicronots < (config.vaultingRules?.requiredMicronots || 0n)) {
+  if (wallets.vaultingWallet.availableMicronots < (config.vaultingRules?.requiredMicronots || 0n)) {
     return false;
   }
 
@@ -126,12 +122,8 @@ function openFundMiningAccountOverlay() {
 }
 
 async function createVault() {
-  if (isLaunchingVault.value) {
-    return;
-  }
-  isLaunchingVault.value = true;
-
-  isLaunchingVault.value = false;
+  config.isVaultReadyToCreate = true;
+  config.save();
 }
 </script>
 

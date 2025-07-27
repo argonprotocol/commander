@@ -264,6 +264,7 @@ import BotHistoryOverlayButton from '../../overlays/BotHistoryOverlayButton.vue'
 import { getMainchainClient } from '../../stores/mainchain';
 import { Accountset, Keyring } from '@argonprotocol/mainchain';
 import { useConfig } from '../../stores/config';
+import { TICK_MILLIS } from '../../lib/Config.ts';
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
@@ -333,7 +334,7 @@ const cohortStartDate = Vue.computed(() => {
   if (!tickRange[0]) {
     return '-----';
   }
-  const date = dayjs.utc(tickRange[0] * 60e3);
+  const date = dayjs.utc(tickRange[0] * TICK_MILLIS);
   return date.local().format('MMMM D');
 });
 
@@ -342,7 +343,7 @@ const cohortEndDate = Vue.computed(() => {
   if (!tickRange[1]) {
     return '-----';
   }
-  const date = dayjs.utc(tickRange[1] * 60e3);
+  const date = dayjs.utc(tickRange[1] * TICK_MILLIS);
   return date.local().format('MMMM D');
 });
 

@@ -44,12 +44,12 @@ export class BitcoinLocksTable extends BaseTable {
   async insert(
     lock: Omit<IBitcoinLockRecord, 'createdAt' | 'updatedAt' | 'txid' | 'vout'>,
   ): Promise<IBitcoinLockRecord> {
-    const [record] = await this.db.select<IBitcoinLockRecord[]>(
+    const result = await this.db.execute(
       `INSERT INTO BitcoinLocks (
         utxoId, status, satoshis, lockPrice, cosignVersion, lockDetails, network, hdPath, vaultId, ratchets
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-      ) RETURNING *`,
+      )`,
       toSqlParams([
         lock.utxoId,
         lock.status || 'initialized',
@@ -63,15 +63,22 @@ export class BitcoinLocksTable extends BaseTable {
         lock.ratchets,
       ]),
     );
+    if (!result || result.rowsAffected === 0) {
+      throw new Error(`Failed to insert Bitcoin lock with utxoId ${lock.utxoId}`);
+    }
+    const record = await this.get(lock.utxoId);
+    if (!record) {
+      throw new Error(`Failed to insert Bitcoin lock with utxoId ${lock.utxoId}`);
+    }
     return record;
   }
 
   async getNextVaultHdKeyIndex(vaultId: number): Promise<number> {
-    const { latestIndex } = await this.db.select<{ latestIndex: number }>(
+    const [{ latestIndex }] = await this.db.select<{ latestIndex: number }[]>(
       `INSERT INTO BitcoinLockVaultHdSeq (vaultId, latestIndex) VALUES ($1, $2)
        ON CONFLICT (vaultId) DO UPDATE SET latestIndex = BitcoinLockVaultHdSeq.latestIndex + 1
        RETURNING latestIndex`,
-      [vaultId, 0],
+      toSqlParams([vaultId, 0]),
     );
 
     return latestIndex;
@@ -96,6 +103,15 @@ export class BitcoinLocksTable extends BaseTable {
         lock.releaseBitcoinNetworkFee,
       ]),
     );
+  }
+
+  async get(utxoId: number): Promise<IBitcoinLockRecord | undefined> {
+    const rawRecords = await this.db.select<IBitcoinLockRecord[]>(
+      'SELECT * FROM BitcoinLocks WHERE utxoId = $1',
+      toSqlParams([utxoId]),
+    );
+    if (rawRecords.length === 0) return undefined;
+    return convertFromSqliteFields(rawRecords[0], this.fieldTypes);
   }
 
   async fetchAll(): Promise<IBitcoinLockRecord[]> {

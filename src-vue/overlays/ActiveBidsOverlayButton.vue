@@ -59,6 +59,7 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { useStats } from '../stores/stats';
 import { type IBidsFile } from '@argonprotocol/commander-bot';
 import { createNumeralHelpers } from '../lib/numeral';
+import { TICK_MILLIS } from '../lib/Config.ts';
 
 dayjs.extend(utc);
 dayjs.extend(relativeTime);
@@ -107,7 +108,7 @@ function formatMicrogonsBid(microgonsBid: bigint | undefined): string {
 
 function lastBidAtTickFromNow(lastBidAtTick: number | undefined): string {
   if (!lastBidAtTick) return '---';
-  return dayjs.utc(lastBidAtTick * 60_000).fromNow();
+  return dayjs.utc(lastBidAtTick * TICK_MILLIS).fromNow();
 }
 
 Vue.onMounted(async () => {

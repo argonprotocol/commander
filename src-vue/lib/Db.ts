@@ -10,6 +10,8 @@ import { CohortAccountsTable } from './db/CohortAccountsTable';
 import { INSTANCE_NAME } from './Config';
 import { ensureOnlyOneInstance } from './Utils';
 import { FrameBidsTable } from './db/FrameBidsTable';
+import { VaultsTable } from './db/VaultsTable.ts';
+import { BitcoinLocksTable } from './db/BitcoinLocksTable.ts';
 
 export class Db {
   public sql: PluginSql;
@@ -22,6 +24,8 @@ export class Db {
   public configTable: ConfigTable;
   public framesTable: FramesTable;
   public frameBidsTable: FrameBidsTable;
+  public vaultsTable: VaultsTable;
+  public bitcoinLocksTable: BitcoinLocksTable;
 
   constructor(sql: PluginSql) {
     ensureOnlyOneInstance(this.constructor);
@@ -36,6 +40,8 @@ export class Db {
     this.configTable = new ConfigTable(this);
     this.framesTable = new FramesTable(this);
     this.frameBidsTable = new FrameBidsTable(this);
+    this.vaultsTable = new VaultsTable(this);
+    this.bitcoinLocksTable = new BitcoinLocksTable(this);
   }
 
   static async load(): Promise<Db> {

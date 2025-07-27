@@ -10,6 +10,7 @@ pub fn get_migrations() -> Vec<Migration> {
             let dir_name = dir.path().file_stem()?.to_str()?;
             let file_path = format!("{}/up.sql", dir.path().display());            
             let file = MIGRATIONS_DIR.get_file(&file_path)?;
+            println!("Processing migration file: {} {}", file_path, file.contents_utf8()?);
             let mut parts = dir_name.splitn(2, '-');
             let version = parts.next()?.parse::<i64>().ok()?;
             let description = parts.next()?;

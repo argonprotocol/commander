@@ -1,4 +1,12 @@
-import { type ArgonClient, convertFixedU128ToBigNumber, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
+import {
+  type ArgonClient,
+  BTreeMap,
+  convertFixedU128ToBigNumber,
+  convertPermillToBigNumber,
+  MICROGONS_PER_ARGON,
+  type PalletLiquidityPoolsLiquidityPool,
+  u32,
+} from '@argonprotocol/mainchain';
 import BigNumber from 'bignumber.js';
 import { bigIntMin } from './utils.ts';
 import { type IWinningBid } from '@argonprotocol/commander-bot';
@@ -217,24 +225,6 @@ export class Mainchain {
     return tickAtStartOfNextCohort - 1_440n;
   }
 
-  public async fetchVaults() {
-    const client = await this.client;
-    const vaultEntries = await client.query.vaults.vaultsById.entries();
-
-    const vaults: IVault[] = [];
-    for (const [idxRaw, vaultRaw] of vaultEntries) {
-      const idx = idxRaw.args[0].toNumber();
-      const vaultData = vaultRaw.unwrap();
-      const satoshiLocked = 15_000_000; //vaultData.bitcoinLocked.toNumber()
-      vaults.push({
-        idx,
-        bitcoinLocked: satoshiLocked / 100_000_000,
-      });
-    }
-
-    return vaults;
-  }
-
   public async fetchWinningBids(): Promise<IWinningBid[]> {
     const client = await this.client;
     const nextCohort = await client.query.miningSlot.bidsForNextSlotCohort();
@@ -271,6 +261,127 @@ export class Mainchain {
     }
   }
 
+  public async forEachFrame<T>(
+    iterateByEpoch: boolean,
+    callback: (
+      justEndedFrameId: number,
+      api: MainchainClient,
+      meta: {
+        blockNumber: number;
+        specVersion: number;
+      },
+      abortController: AbortController,
+    ) => Promise<T>,
+  ): Promise<T[]> {
+    const client = await this.client;
+    let frameStartBlockNumbers = await this.getFrameStartBlockNumbers();
+    const abortController = new AbortController();
+    const seenFrames = new Set<number>();
+    const results: T[] = [];
+    for (let i = 0; i < frameStartBlockNumbers.length; i++) {
+      const startBlockNumber = frameStartBlockNumbers[i];
+      const blockHash = await client.rpc.chain.getBlockHash(startBlockNumber);
+      const api = await client.at(blockHash);
+      const specVersion = api.runtimeVersion.specVersion.toNumber();
+      if (specVersion < 124) {
+        // frameStartBlockNumbers is not available in versions < 124
+        break;
+      }
+      const justEndedFrameId = await api.query.miningSlot.nextFrameId().then(x => x.toNumber() - 2);
+      if (seenFrames.has(justEndedFrameId)) {
+        continue; // Skip already seen frames
+      }
+      seenFrames.add(justEndedFrameId);
+      const result = await callback(
+        justEndedFrameId,
+        api as any,
+        { blockNumber: startBlockNumber, specVersion },
+        abortController,
+      );
+      results.push(result);
+      if (abortController.signal.aborted || justEndedFrameId <= 1) {
+        break; // Stop processing if the abort signal is triggered
+      }
+      if (iterateByEpoch && i === 0) {
+        // Jump to the oldest frame available
+        i = frameStartBlockNumbers.length - 2; // Skip to the last frame
+        continue;
+      }
+      if (i === frameStartBlockNumbers.length - 1) {
+        console.log(`Reloading frame start block numbers at recently ended frame ${justEndedFrameId}`);
+        frameStartBlockNumbers = await api.query.miningSlot
+          .frameStartBlockNumbers()
+          .then(frs => frs.map(x => x.toNumber()));
+        i = -1;
+      }
+    }
+    return results;
+  }
+
+  public async getLiquidityPoolCapitalByVault(): ReturnType<(typeof Mainchain)['getLiquidityPoolCapitalByVaultAtApi']> {
+    return Mainchain.getLiquidityPoolCapitalByVaultAtApi(await this.client);
+  }
+
+  public static async getLiquidityPoolCapitalByVaultAtApi(api: ArgonClient): Promise<{
+    [vaultId: number]: {
+      contributedCapital: bigint;
+      contributorProfit: bigint;
+      vaultProfit: bigint;
+      byFrame: ({
+        frameId: number;
+      } & ILiquidityPoolDetails)[];
+    };
+  }> {
+    const vaultPoolsByFrame = await api.query.liquidityPools.vaultPoolsByFrame.entries();
+    const result = {} as Awaited<ReturnType<(typeof Mainchain)['getLiquidityPoolCapitalByVaultAtApi']>>;
+    for (const [frameIdRaw, vaultPools] of vaultPoolsByFrame) {
+      const frameId = frameIdRaw.args[0].toNumber();
+      const details = this.translateFrameLiquidityPools(vaultPools);
+      for (const [id, pool] of Object.entries(details)) {
+        const vaultId = parseInt(id, 10);
+        result[vaultId] ??= { contributedCapital: 0n, contributorProfit: 0n, vaultProfit: 0n, byFrame: [] };
+        result[vaultId].byFrame.push({
+          frameId,
+          ...pool,
+        });
+        result[vaultId].contributorProfit += pool.contributorProfit;
+        result[vaultId].contributedCapital += pool.contributedCapital;
+        result[vaultId].vaultProfit += pool.vaultProfit;
+      }
+    }
+    return result;
+  }
+
+  public static translateFrameLiquidityPools(vaultPools: BTreeMap<u32, PalletLiquidityPoolsLiquidityPool>): {
+    [vaultId: number]: ILiquidityPoolDetails;
+  } {
+    const result = {} as ReturnType<(typeof Mainchain)['translateFrameLiquidityPools']>;
+    for (const [vaultIdRaw, pool] of vaultPools.entries()) {
+      const vaultId = vaultIdRaw.toNumber();
+      const contributors: { [address: string]: bigint } = {};
+      let totalCapital = 0n;
+      for (const [accountId, contributed] of pool.contributorBalances) {
+        const address = accountId.toHuman();
+        const balance = contributed.toBigInt();
+        contributors[address] = balance;
+        totalCapital += balance;
+      }
+      const distributed = pool.distributedProfits.unwrapOrDefault().toBigInt();
+      const sharingPercent = convertPermillToBigNumber(pool.vaultSharingPercent.toBigInt()).toNumber();
+      const vaultProfit = BigInt(Number(distributed) * (1 - sharingPercent));
+      const contributorProfit = distributed - vaultProfit;
+      result[vaultId] = {
+        sharingPercent,
+        contributedCapital: totalCapital,
+        contributorProfit,
+        vaultProfit,
+        distributedProfits: distributed,
+        contributors,
+      };
+    }
+    return result;
+  }
+
   private calculateExchangeRateInMicrogons(usdAmount: BigNumber, usdForArgon: BigNumber): bigint {
     const oneArgonInMicrogons = BigInt(1 * MICROGONS_PER_ARGON);
     if (usdAmount.isZero() || usdForArgon.isZero()) return oneArgonInMicrogons;
@@ -280,7 +391,11 @@ export class Mainchain {
   }
 }
 
-export interface IVault {
-  idx: number;
-  bitcoinLocked: number;
+export interface ILiquidityPoolDetails {
+  sharingPercent: number;
+  contributedCapital: bigint;
+  contributorProfit: bigint;
+  vaultProfit: bigint;
+  distributedProfits: bigint;
+  contributors: { [address: string]: bigint };
 }

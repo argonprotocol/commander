@@ -3,10 +3,10 @@ import { Db } from './Db';
 import {
   IConfig,
   IConfigDefaults,
-  IConfigStringified,
   IConfigInstallStep,
-  InstallStepStatus,
+  IConfigStringified,
   InstallStepKey,
+  InstallStepStatus,
 } from '../interfaces/IConfig';
 import { SSH } from './SSH';
 import { Keyring, type KeyringPair, MICROGONS_PER_ARGON, mnemonicGenerate } from '@argonprotocol/mainchain';
@@ -21,12 +21,16 @@ import {
 import { createDeferred, ensureOnlyOneInstance } from './Utils';
 import IDeferred from '../interfaces/IDeferred';
 import { CurrencyKey } from './Currency';
+import { bip39 } from '@argonprotocol/bitcoin';
 
-export const env = (import.meta as any).env;
-export const NETWORK_NAME = env.VITE_NETWORK_NAME || 'mainnet';
-export const NETWORK_URL = env.VITE_NETWORK_URL || 'wss://rpc.argon.network';
+export const env = (import.meta as any).env ?? {};
+export let NETWORK_NAME = env.VITE_NETWORK_NAME || 'mainnet';
+export let NETWORK_URL = env.VITE_NETWORK_URL || 'wss://rpc.argon.network';
 export const INSTANCE_NAME = env.VITE_INSTANCE_NAME || 'default';
-export const DEPLOY_ENV_FILE = NETWORK_NAME === 'testnet' ? '.env.testnet' : '.env.mainnet';
+export const TICK_MILLIS = env.VITE_TICK_MILLIS || 60e3;
+export const DEPLOY_ENV_FILE =
+  { testnet: '.env.testnet', mainnet: '.env.mainnet', local: '.env.localnet' }[NETWORK_NAME as string] ??
+  '.env.mainnet';
 
 export class Config {
   public readonly version: string = packageJson.version;
@@ -141,6 +145,10 @@ export class Config {
   get vaultingAccount(): KeyringPair {
     this._throwErrorIfNotLoaded();
     return (this._vaultingAccount ||= this.seedAccount.derive(`//vlt`));
+  }
+
+  get bitcoinXprivSeed(): Uint8Array {
+    return bip39.mnemonicToSeedSync(this.security.walletMnemonic);
   }
 
   //////////////////////////////
@@ -474,8 +482,8 @@ const defaults: IConfigDefaults = {
       profitSharingPct: 10,
       btcFlatFee: 2n * BigInt(MICROGONS_PER_ARGON),
       btcPctFee: 10,
-      personalBtcValue: 500n * BigInt(MICROGONS_PER_ARGON),
-      requiredMicrogons: 2_000n * BigInt(MICROGONS_PER_ARGON),
+      personalBtcValue: 50n * BigInt(MICROGONS_PER_ARGON),
+      requiredMicrogons: 100n * BigInt(MICROGONS_PER_ARGON),
       requiredMicronots: 0n,
     };
   },

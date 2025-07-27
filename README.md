@@ -50,8 +50,25 @@ Activities:
 - Cosign Bitcoin Lock release-requests
 - Monitor Liquidity Pool returns
 
-> This part of the tool is still under construction
+#### Testing Vaults
+You can run the docker-compose file that's in the mainchain repository to access bitcoin liquidity to test with (locally). Run the docker per instructions in the [Argon Mainchain repository](https://github.com/argon-network/mainchain/tree/main/README.md#running-from-docker).
 
+You will need the following commands to run against the cli locally:
+
+```bash
+# Send bitcoin to the cosign address (replace with your address/amount)
+docker compose --profile tooling run --rm btc-cli sendtoaddress bcrt1qwyf38ct4yzdd4vqfwa0mtr2qw49n62y8me970737nfea3a7asmhqjcwjfc 0.00039045
+
+# Get a destination address for released bitcoin
+docker compose --profile tooling run --rm btc-cli getnewaddress
+
+# Broadcast the released bitcoin
+docker compose --profile tooling run --rm btc-cli sendrawtransaction 020000000001016aa1e38d96312ee99386a13c443bcc38e2c8cb84d55ed779d62...
+
+# Check the status of the bitcoin transaction
+docker compose --profile tooling run --rm btc-cli gettransaction 020000000001016aa1e38d96312ee99386a13c443bcc38e2c8cb84d55ed779d62...
+
+```
 ## Installation
 
 This project has an automated action to build from the source of the project for each release. The action is triggered
