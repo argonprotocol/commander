@@ -12,6 +12,7 @@
   "dependencies": {
     "@argonprotocol/commander-calculator": "workspace:*",
     "@argonprotocol/mainchain": "1.3.4",
+    "bignumber.js": "^9.1.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "tiny-lru": "^11.2.11",

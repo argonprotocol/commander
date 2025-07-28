@@ -12,6 +12,7 @@ export {
   jsonParseWithBigInts,
   jsonParseWithBigIntsEnhanced,
   convertBigIntStringToNumber,
+  bigNumberToBigInt,
 } from './utils.js';
 
 export default BiddingCalculator;

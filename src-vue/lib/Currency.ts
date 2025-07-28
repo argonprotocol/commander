@@ -1,10 +1,10 @@
+import BigNumber from 'bignumber.js';
 import { getMainchain } from '../stores/mainchain';
 import { MICROGONS_PER_ARGON, SATS_PER_BTC } from '@argonprotocol/mainchain';
-import BigNumber from 'bignumber.js';
+import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
 import IDeferred from '../interfaces/IDeferred';
 import { createDeferred } from './Utils';
 import { Config } from './Config';
-import { save } from '@tauri-apps/plugin-dialog';
 
 export const SATOSHIS_PER_BITCOIN = SATS_PER_BTC;
 export { MICROGONS_PER_ARGON };
@@ -136,7 +136,7 @@ export class Currency {
     } else {
       throw new Error(`Invalid currency key: ${this.record.key}`);
     }
-    return BigInt(BigNumber(value).multipliedBy(exchangeRate).integerValue().toString());
+    return bigNumberToBigInt(BigNumber(value).multipliedBy(exchangeRate));
   }
 
   public micronotToMicrogon(micronots: bigint): bigint {
@@ -184,6 +184,6 @@ export class Currency {
   private otherExchangeRateToMicrogons(otherExchangeRate: number): bigint {
     const dollarsRequiredBn = BigNumber(1).dividedBy(otherExchangeRate);
     const microgonsRequiredBn = dollarsRequiredBn.multipliedBy(this.microgonExchangeRateTo.USD);
-    return BigInt(microgonsRequiredBn.integerValue().toString());
+    return bigNumberToBigInt(microgonsRequiredBn);
   }
 }

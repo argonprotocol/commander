@@ -8,7 +8,7 @@
         </span>
       </slot>
     </PopoverButton>
-    <PopoverPanel as="div" :class="panelPositioningClasses" class="absolute cursor-default w-160 h-120 text-center text-lg font-bold mt-10 bg-white rounded-lg shadow-lg border border-gray-300">
+    <PopoverPanel as="div" :class="panelPositioningClasses" class="absolute cursor-default w-160 h-120 z-100 text-center text-lg font-bold mt-10 bg-white rounded-lg shadow-lg border border-gray-300">
       <div :class="arrowPositioningClasses" class="absolute w-[30px] h-[15px] overflow-hidden">
         <div class="relative top-[5px] left-[5px] w-[20px] h-[20px] rotate-45 bg-white ring-1 ring-gray-900/20"></div>
       </div>

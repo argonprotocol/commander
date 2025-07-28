@@ -1,66 +1,74 @@
 <!-- prettier-ignore -->
 <template>
-  <TransitionRoot as="template" :show="isOpen" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100">
-    <Dialog @close="closeOverlay">
-      <DialogPanel class="flex items-center justify-center absolute top-0 left-0 right-0 bottom-0 z-10 pointer-events-none">
-        <BgOverlay @close="closeOverlay" />
-        <div class="absolute top-12 bottom-3 bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl w-9/12 overflow-scroll">
-          <Receive v-if="activeScreen === 'receive'" @navigate="navigate" :walletId="walletId" />
-          <div v-else>
-            <div
-              class="flex flex-row justify-between items-center w-full px-3 py-3 space-x-4 text-5xl font-bold border-b border-black/20"
-            >
-              <h2 class="text-2xl font-bold">{{ walletName }} Resources</h2>
-              <CopyToClipboard :content="wallet.address" class="relative text-2xl font-normal grow cursor-pointer">
-                <span class="opacity-50">
-                  {{ abreviateAddress(wallet.address) }}
-                  <CopyIcon class="w-5 h-5 ml-1 inline-block" />
-                </span>
-                <template #copied>
-                  <div class="absolute top-0 left-0 w-full h-full pointer-events-none">
-                    {{ abreviateAddress(wallet.address) }}
-                    <CopyIcon class="w-5 h-5 ml-1 inline-block" />
+  <DialogRoot :open="isOpen">
+    <DialogPortal>
+      <AnimatePresence>
+        <DialogOverlay asChild>
+          <Motion asChild :initial="{ opacity: 0 }" :animate="{ opacity: 1 }" :exit="{ opacity: 0 }">
+            <BgOverlay @close="closeOverlay" />
+          </Motion>
+        </DialogOverlay>
+        
+        <DialogContent asChild @escapeKeyDown="handleEscapeKeyDown" :aria-describedby="undefined">    
+          <Motion asChild :initial="{ opacity: 0, top: '0' }" :animate="{ opacity: 1, top: '48px' }" :exit="{ opacity: 0, top: '0' }">
+            <div class="absolute top-12 bottom-3 left-1/2 -translate-x-1/2 z-20 bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl w-9/12 overflow-scroll">
+              <Receive v-if="activeScreen === 'receive'" @navigate="navigate" :walletId="walletId" />               
+              <div v-else>
+                <div class="flex flex-row justify-between items-center w-full px-3 py-3 space-x-4 text-5xl font-bold border-b border-black/20">
+                  <DialogTitle class="text-2xl font-bold">{{ walletName }} Resources</DialogTitle>
+                  <CopyToClipboard :content="wallet.address" class="relative text-2xl font-normal grow cursor-pointer">
+                    <span class="opacity-50">
+                      {{ abreviateAddress(wallet.address) }}
+                      <CopyIcon class="w-5 h-5 ml-1 inline-block" />
+                    </span>
+                    <template #copied>
+                      <div class="absolute top-0 left-0 w-full h-full pointer-events-none">
+                        {{ abreviateAddress(wallet.address) }}
+                        <CopyIcon class="w-5 h-5 ml-1 inline-block" />
+                      </div>
+                    </template>
+                  </CopyToClipboard>
+                  <div
+                    @click="closeOverlay"
+                    class="mr-1 z-10 flex items-center justify-center text-sm/6 font-semibold cursor-pointer border rounded-md w-[30px] h-[30px] focus:outline-none border-slate-400/60 hover:border-slate-500/60 hover:bg-[#f1f3f7]"
+                  >
+                    <XMarkIcon class="w-5 h-5 text-[#B74CBA] stroke-4" />
                   </div>
-                </template>
-              </CopyToClipboard>
-              <div
-                @click="closeOverlay"
-                class="mr-1 z-10 flex items-center justify-center text-sm/6 font-semibold cursor-pointer border rounded-md w-[30px] h-[30px] focus:outline-none border-slate-400/60 hover:border-slate-500/60 hover:bg-[#f1f3f7]"
-              >
-                <XMarkIcon class="w-5 h-5 text-[#B74CBA] stroke-4" />
-              </div>
-            </div>
-            <div class="w-full flex flex-col items-center py-10 border-b border-black/20">
-              <div class="w-full text-center text-5xl font-bold">
-                <span>{{ currency.symbol }}{{ microgonToMoneyNm(totalValue).format('0,0.00').split('.')[0] }}</span>
-                <span class="opacity-50">.{{ microgonToMoneyNm(totalValue).format('0.00').split('.')[1] }}</span>
-              </div>
-              <div class="w-full text-center pt-2">Total Value of {{ walletName }} Resources</div>
-            </div>
-            <div
-              class="flex flex-row justify-between items-center w-full text-center pt-5 pb-2 px-3 space-x-4 font-bold"
-            >
-              <ul class="flex flex-row space-x-4 grow">
-                <li @click="navigate({ tab: 'tokens' })" class="cursor-pointer">Resources</li>
-                <li @click="navigate({ tab: 'activity' })" class="cursor-pointer">Activity</li>
-              </ul>
-              <ul class="flex flex-row">
-                <li @click="navigate({ screen: 'receive' })" class="cursor-pointer">Transfer Funds</li>
-              </ul>
-            </div>
+                </div>
+                <div class="w-full flex flex-col items-center py-10 border-b border-black/20">
+                  <div class="w-full text-center text-5xl font-bold">
+                    <span>{{ currency.symbol }}{{ microgonToMoneyNm(totalValue).format('0,0.00').split('.')[0] }}</span>
+                    <span class="opacity-50">.{{ microgonToMoneyNm(totalValue).format('0.00').split('.')[1] }}</span>
+                  </div>
+                  <div class="w-full text-center pt-2">Total Value of {{ walletName }} Resources</div>
+                </div>
+                <div
+                  class="flex flex-row justify-between items-center w-full text-center pt-5 pb-2 px-3 space-x-4 font-bold"
+                >
+                  <ul class="flex flex-row space-x-4 grow">
+                    <li @click="navigate({ tab: 'tokens' })" class="cursor-pointer">Resources</li>
+                    <li @click="navigate({ tab: 'activity' })" class="cursor-pointer">Activity</li>
+                  </ul>
+                  <ul class="flex flex-row">
+                    <li @click="navigate({ screen: 'receive' })" class="cursor-pointer">Transfer Funds</li>
+                  </ul>
+                </div>
 
-            <Resources v-if="activeTab === 'tokens'" :walletId="walletId" @navigate="navigate" />
-            <Activity v-else-if="activeTab === 'activity'" :walletId="walletId" />
-          </div>
-        </div>
-      </DialogPanel>
-    </Dialog>
-  </TransitionRoot>
+                <Resources v-if="activeTab === 'tokens'" :walletId="walletId" @navigate="navigate" />
+                <Activity v-else-if="activeTab === 'activity'" :walletId="walletId" />
+              </div>
+            </div>
+          </Motion>
+        </DialogContent>
+      </AnimatePresence>
+    </DialogPortal>
+  </DialogRoot>
 </template>
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { TransitionRoot, Dialog, DialogPanel } from '@headlessui/vue';
+import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui';
+import { AnimatePresence, Motion } from 'motion-v';
 import basicEmitter from '../emitters/basicEmitter';
 import { useCurrency } from '../stores/currency';
 import { useWallets } from '../stores/wallets';
@@ -141,5 +149,9 @@ basicEmitter.on('openWalletOverlay', async (data: any) => {
 function closeOverlay() {
   isOpen.value = false;
   isLoaded.value = false;
+}
+
+function handleEscapeKeyDown() {
+  closeOverlay();
 }
 </script>

@@ -247,7 +247,7 @@
               class="flex flex-col shrink rounded bg-argon-menu-bg text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
             >
               <ul AccountMenu>
-                <li @click="() => openConfigureMiningBotOverlay(close)" class="pt-3 pb-3">
+                <li @click="() => openBotOverlay(close)" class="pt-3 pb-3">
                   <header v-if="!config.hasSavedBiddingRules">Create Personal Mining Bot</header>
                   <header v-else>Update Personal Mining Bot</header>
                   <p>
@@ -333,8 +333,8 @@ function openConfigureStabilizationVaultOverlay(close: () => void) {
   }
 }
 
-function openConfigureMiningBotOverlay(close: () => void) {
-  basicEmitter.emit('openConfigureMiningBotOverlay');
+function openBotOverlay(close: () => void) {
+  basicEmitter.emit('openBotOverlay');
   if (close) {
     close();
   }

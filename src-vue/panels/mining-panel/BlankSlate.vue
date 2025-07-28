@@ -13,7 +13,7 @@
       </p>
     </div>
     <button
-      @click="openConfigureMiningBotOverlay"
+      @click="openBotOverlay"
       class="bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow text-2xl font-bold text-white px-12 py-2 rounded-md mx-auto block mt-10 cursor-pointer"
     >
       Create Personal Mining Bot
@@ -164,8 +164,8 @@ function updateTimeSinceBlock() {
   setTimeout(() => updateTimeSinceBlock(), 1000);
 }
 
-function openConfigureMiningBotOverlay() {
-  basicEmitter.emit('openConfigureMiningBotOverlay');
+function openBotOverlay() {
+  basicEmitter.emit('openBotOverlay');
 }
 
 Vue.onMounted(async () => {

@@ -13,7 +13,7 @@
           </p>
 
           <section
-            @click="openConfigureMiningBotOverlay"
+            @click="openBotOverlay"
             class="flex flex-row cursor-pointer mt-8 border-t border-[#CCCEDA] py-6 hover:bg-argon-menu-hover"
           >
             <Checkbox :isChecked="true" />
@@ -175,8 +175,8 @@ const walletIsFullyFunded = Vue.computed(() => {
   return true;
 });
 
-function openConfigureMiningBotOverlay() {
-  basicEmitter.emit('openConfigureMiningBotOverlay');
+function openBotOverlay() {
+  basicEmitter.emit('openBotOverlay');
 }
 
 function openFundMiningAccountOverlay() {

@@ -1,41 +1,56 @@
 <!-- prettier-ignore -->
 <template>
-  <TransitionRoot as="template" :show="isOpen" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100">
-    <Dialog @close="cancelOverlay" :initialFocus="dialogPanel">
-      <DialogPanel class="ConfigureMiningBotOverlay absolute top-0 left-0 right-0 bottom-0 z-10 cursor-default">
+  <DialogRoot class="absolute inset-0 z-10" :open="isOpen">
+    <DialogPortal>
+      <DialogOverlay asChild>
         <BgOverlay @close="cancelOverlay" />
+      </DialogOverlay>
+
+      <DialogContent @escapeKeyDown="cancelOverlay">
+        <EditBoxOverlay
+            :id="editBoxOverlayId"
+            :position="editBoxOverlayPosition"
+            v-if="editBoxOverlayId"
+            @close="editBoxOverlayId = null"
+            @update:data="updateAPYs"
+          />
         <div
           ref="dialogPanel"
-          class="absolute top-[40px] left-3 right-3 bottom-3 flex flex-col rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all"
+          class="BotOverlay absolute top-[40px] left-3 right-3 bottom-3 flex flex-col rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left z-20 transition-all cursor-default"
           style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255, 255, 255, 1);">
-          <BgOverlay v-if="showEditBoxOverlay" @close="showEditBoxOverlay = null" :showWindowControls="false" rounded="md" class="z-40" />
-          <div v-if="isLoaded" class="flex flex-col h-full w-full">
+          <BgOverlay v-if="editBoxOverlayId" @close="editBoxOverlayId = null" :showWindowControls="false" rounded="md" class="z-100" />
+          <div class="flex flex-col h-full w-full">
             <h2
               class="relative text-3xl font-bold text-left border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 text-[#672D73]"
               style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)"
             >
-              {{ isBrandNew ? 'Create' : 'Update' }} Personal Mining Bot
+              <DialogTitle as="div" class="relative z-10">{{ isBrandNew ? 'Create' : 'Update' }} Personal Mining Bot</DialogTitle>
               <div @click="cancelOverlay" class="absolute top-[22px] right-[0px] z-10 flex items-center justify-center text-sm/6 font-semibold cursor-pointer border rounded-md w-[30px] h-[30px] focus:outline-none border-slate-400/60 hover:border-slate-500/70 hover:bg-[#D6D9DF]">
                 <XMarkIcon class="w-5 h-5 text-[#B74CBA] stroke-4" />
               </div>
             </h2>
 
-            <div class="flex flex-col grow relative w-full">
-              <p class="opacity-80 font-light py-6 pl-10 pr-[6%]">
+            <div v-if="isLoaded" class="flex flex-col grow relative w-full">
+              <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
                 Commander uses an automated bidding bot to maximize your chance of winning seats. This screen allows you to 
                 configure the rules for how your bot should make decisions and place bids.
-              </p>
+              </DialogDescription>
 
               <section class="flex flex-row border-t border-b border-slate-300 text-center pt-8 pb-8 px-5 mx-5 justify-stretch">
                 <div class="w-1/2 flex flex-col grow">
                   <div @mouseenter="showTooltip($event, tooltip.capitalToCommit, { width: 'parent' })" @mouseleave="hideTooltip" class="flex flex-col grow group">
                     <header StatHeader class="bg-[#FAF9FA] border border-[#DDDCDD] rounded-t-lg group-hover:text-argon-600/70 relative z-10">Capital to Commit</header>
                     <div PrimaryStat class="grow relative border border-slate-500/30 rounded-lg mt-2 pb-12 pt-10 text-5xl font-bold font-mono text-argon-600 shadow-sm">
-                      <InputArgon v-model="rules.requiredMicrogons" :min="10_000_000n" :alwaysShowDecimals="false" />
+                      <AlertIcon v-if="probableMinSeats < rules.seatGoalCount" class="w-10 h-10 text-yellow-700 inline-block relative -top-2 mr-2" />
+                      <InputArgon v-model="rules.requiredMicrogons" :min="10_000_000n" :minDecimals="0" />
                     </div>
                   </div>
-                  <div class="pt-3 text-argon-600/70 cursor-pointer text-md">
-                    View Seat Probabilities (between {{ probableMinSeats }} and {{ probableMaxSeats }} seats)
+                  <div class="pt-3 text-argon-600/70 text-md">
+                    <span class="cursor-pointer">
+                      View Seat Probabilities 
+                      <template v-if="probableMinSeats === probableMaxSeats">({{ probableMinSeats }} seats)</template>
+                      <template v-else>(between {{ probableMinSeats }} and {{ probableMaxSeats }} seats)</template>
+                    </span>
                   </div>
                 </div>
                 <div class="flex flex-col items-center justify-center text-3xl mx-2 text-center">
@@ -50,7 +65,7 @@
                       <table class="w-full h-full table-fixed relative z-50 whitespace-nowrap -mt-1">
                         <tbody>
                           <tr class="text-argon-600 h-1/3">
-                            <td class="w-3/12"></td>
+                            <td class="w-4/12"></td>
                             <td class="font-light font-sans text-argon-800/40 w-5/12">Slow Growth</td>
                             <td class="font-light font-sans text-argon-800/40 w-5/12">Fast Growth</td>
                           </tr>
@@ -68,23 +83,24 @@
                       </table>
                     </div>
                   </div>
-                  <div class="pt-3 text-argon-600/70 cursor-pointer text-md">View Risk Analysis (it's 99% from server ops)</div>
+                  <div class="pt-3 text-argon-600/70 text-md">
+                    <span class="cursor-pointer">View Risk Analysis (it's 99% from server ops)</span>
+                  </div>
                 </div>
               </section>
 
               <div class="flex flex-col relative grow px-5 text-lg">
                 <section class="flex flex-row h-1/2 my-2">
 
-                  <div class="flex flex-col items-center justify-center relative w-1/3">
-                    <EditBoxOverlay
-                      id="minimumBid"
-                      v-if="showEditBoxOverlay === 'minimumBid'"
-                      @close="showEditBoxOverlay = null"
-                      class="-top-5 left-0"
-                    />
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.minimumBid, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('minimumBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
+                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.minimumBid, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'minimumBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
                       <div StatHeader>Starting Bid</div>
-                      <div MainRule class="w-full">
+                      <div v-if="minimumBidAmountOverride" MainRule class="w-full flex flex-row items-center justify-center space-x-2">
+                        <AlertIcon class="w-5 h-5 text-yellow-700 inline-block relative -top-0.5" />
+                        <span class="line-through text-gray-500/60">{{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }}</span>
+                        <span>{{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmountOverride).format('0,0.00') }}</span>
+                      </div>
+                      <div v-else MainRule class="w-full">
                         {{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }}
                       </div>
                       <div class="text-gray-500/60 text-md">
@@ -111,16 +127,15 @@
                   
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
-                  <div class="flex flex-col items-center justify-center relative w-1/3">
-                    <EditBoxOverlay
-                      id="maximumBid"
-                      v-if="showEditBoxOverlay === 'maximumBid'"
-                      @close="showEditBoxOverlay = null"
-                      class="-top-5 left-1/2 -translate-x-1/2"
-                    />
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.maximumBid, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('maximumBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
+                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.maximumBid, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'maximumBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
                       <div StatHeader>Maximum Bid</div>
-                      <div MainRule class="w-full">
+                      <div v-if="maximumBidAmountOverride" MainRule class="w-full flex flex-row items-center justify-center space-x-2">
+                        <AlertIcon class="w-5 h-5 text-yellow-700 inline-block relative -top-0.5" />
+                        <span class="line-through text-gray-500/60">{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}</span>
+                        <span>{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmountOverride).format('0,0.00') }}</span>
+                      </div>
+                      <div v-else MainRule class="w-full">
                         {{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}
                       </div>
                       <div class="text-gray-500/60 text-md">
@@ -143,14 +158,8 @@
 
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
-                  <div class="flex flex-col items-center justify-center relative w-1/3">
-                    <EditBoxOverlay
-                      id="rebiddingStrategy"
-                      v-if="showEditBoxOverlay === 'rebiddingStrategy'"
-                      @close="showEditBoxOverlay = null"
-                      class="-top-5 right-0"
-                    />
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.rebiddingStrategy, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('rebiddingStrategy')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
+                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.rebiddingStrategy, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'rebiddingStrategy')" class="flex flex-col w-full h-full items-center justify-center px-8">
                       <div StatHeader>Rebidding Strategy</div>
                       <div MainRule class="w-full">
                         +{{ currency.symbol }}{{ microgonToMoneyNm(rules.rebiddingIncrementBy).format('0.00') }}
@@ -172,14 +181,8 @@
                 </div>
 
                 <section class="flex flex-row h-1/2 my-2">
-                  <div class="flex flex-col items-center justify-center relative w-1/3">
-                    <EditBoxOverlay
-                      id="seatGoals"
-                      v-if="showEditBoxOverlay === 'seatGoals'"
-                      @close="showEditBoxOverlay = null"
-                      class="bottom-[-10px] left-0"
-                    />
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.seatGoals, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('seatGoals')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
+                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.seatGoals, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'seatGoals')" class="flex flex-col w-full h-full items-center justify-center px-8">
                       <div StatHeader>Seating Goal</div>
                       <div MainRule v-if="rules.seatGoalType === SeatGoalType.Max && rules.seatGoalCount === 0" class="w-full">
                         Disabled
@@ -195,14 +198,8 @@
 
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
-                  <div class="flex flex-col items-center justify-center relative w-1/3">
-                    <EditBoxOverlay
-                      id="expectedGrowth"
-                      v-if="showEditBoxOverlay === 'expectedGrowth'"
-                      @close="showEditBoxOverlay = null"
-                      class="bottom-[-10px] left-1/2 -translate-x-1/2"
-                    />
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.expectedGrowth, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('expectedGrowth')" class="flex flex-col w-full h-full items-center justify-center">
+                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
+                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.expectedGrowth, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'expectedGrowth')" class="flex flex-col w-full h-full items-center justify-center">
                       <div StatHeader>Ecosystem Growth</div>
                       <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
                         <div MainRule class="flex flex-row items-center justify-center w-5/12">
@@ -231,27 +228,21 @@
                   
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
                   
-                  <div class="flex flex-col items-center justify-center relative w-1/3">
-                    <EditBoxOverlay
-                      id="cloudMachine"
-                      v-if="showEditBoxOverlay === 'cloudMachine'"
-                      :hideSaveButton="true"
-                      @close="showEditBoxOverlay = null"
-                      class="bottom-[-10px] right-0"
-                    />
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.cloudMachine, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay('cloudMachine')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
+                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.cloudMachine, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'cloudMachine')" class="flex flex-col w-full h-full items-center justify-center px-8">
                       <div StatHeader>Cloud Machine</div>
                       <div MainRule class="tracking-widest w-full">
-                        0.0.0.0
+                        {{ config.serverDetails.ipAddress || '0.0.0.0' }}
                       </div>
                       <div class="text-gray-500/60 text-md font-mono">
-                        New Server
+                        {{ config.isServerInstalled ? 'Existing Server' : 'New Server' }}
                       </div>
                     </div>
                   </div>
                 </section>
               </div>
             </div>
+            <div v-else>Loading...</div>
 
             <div class="flex flex-row justify-end border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
               <div class="flex flex-row space-x-4 justify-center items-center">
@@ -268,22 +259,23 @@
               </div>
             </div>
           </div>
-          <div v-else>Loading...</div>
         </div>
-      </DialogPanel>
-    </Dialog>
-  </TransitionRoot>
+      </DialogContent>
+    </DialogPortal>
+  </DialogRoot>
 </template>
 
 <script setup lang="ts">
 import * as Vue from 'vue';
+import BigNumber from 'bignumber.js';
+import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogDescription } from 'reka-ui';
 import basicEmitter from '../emitters/basicEmitter';
-import { Dialog, DialogPanel, TransitionRoot, TransitionChild } from '@headlessui/vue';
 import { useConfig } from '../stores/config';
 import { useCurrency } from '../stores/currency';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
 import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
+import AlertIcon from '../assets/alert.svg?component';
 import { showTooltip as showTooltipOriginal, hideTooltip } from '../lib/TooltipUtils';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForMining } from './EditBoxOverlay.vue';
 import { type IBiddingRules } from '@argonprotocol/commander-calculator';
@@ -296,7 +288,6 @@ import {
   SeatGoalType,
 } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
 import { bigIntAbs } from '@argonprotocol/commander-calculator/src/utils';
-import BigNumber from 'bignumber.js';
 import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
 import InputArgon from '../components/InputArgon.vue';
 
@@ -318,15 +309,17 @@ const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
 
-const showEditBoxOverlay = Vue.ref<IEditBoxOverlayTypeForMining | null>(null);
-
+const editBoxOverlayId = Vue.ref<IEditBoxOverlayTypeForMining | null>(null);
+const editBoxOverlayPosition = Vue.ref<{ top?: number; left?: number; width?: number } | undefined>(undefined);
 const dialogPanel = Vue.ref(null);
 
 const probableMinSeats = Vue.ref(0);
 const probableMaxSeats = Vue.ref(0);
 
 const minimumBidAmount = Vue.ref(0n);
+const minimumBidAmountOverride = Vue.ref<bigint | null>(null);
 const maximumBidAmount = Vue.ref(0n);
+const maximumBidAmountOverride = Vue.ref<bigint | null>(null);
 
 const minimumBidAtSlowGrowthAPY = Vue.ref(0);
 const minimumBidAtFastGrowthAPY = Vue.ref(0);
@@ -356,12 +349,19 @@ const tooltip = {
   saveRules: `Let's go! You can modify these settings later.`,
 };
 
-function openEditBoxOverlay(type: IEditBoxOverlayTypeForMining) {
-  showEditBoxOverlay.value = type;
+function openEditBoxOverlay($event: MouseEvent, type: IEditBoxOverlayTypeForMining) {
+  const parent = ($event.target as HTMLElement).closest('[MainWrapperParent]');
+  const rect = parent?.getBoundingClientRect() as DOMRect;
+  editBoxOverlayPosition.value = {
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+  };
+  editBoxOverlayId.value = type;
 }
 
 function cancelOverlay() {
-  if (showEditBoxOverlay.value) return;
+  if (editBoxOverlayId.value) return;
   isOpen.value = false;
   hideTooltip();
 
@@ -403,15 +403,19 @@ function showTooltip(
   label: string | Vue.ComputedRef<string>,
   flags: { width?: 'parent'; widthPlus?: number } = {},
 ) {
-  if (showEditBoxOverlay.value) return;
+  if (editBoxOverlayId.value) return;
   showTooltipOriginal(event, label, flags);
 }
 
 function updateAPYs() {
   calculator.updateBiddingRules(rules.value);
+  calculator.calculateBidAmounts();
 
   minimumBidAmount.value = calculator.minimumBidAmount;
+  minimumBidAmountOverride.value = calculator.minimumBidAmountOverride;
+
   maximumBidAmount.value = calculator.maximumBidAmount;
+  maximumBidAmountOverride.value = calculator.maximumBidAmountOverride;
 
   minimumBidAtSlowGrowthAPY.value = calculator.minimumBidAtSlowGrowthAPY;
   minimumBidAtFastGrowthAPY.value = calculator.minimumBidAtFastGrowthAPY;
@@ -419,15 +423,18 @@ function updateAPYs() {
   maximumBidAtFastGrowthAPY.value = calculator.maximumBidAtFastGrowthAPY;
 
   const probableMinSeatsBn = BigNumber(rules.value.requiredMicrogons).dividedBy(calculator.maximumBidAmount);
-  probableMinSeats.value = Math.max(probableMinSeatsBn.integerValue().toNumber(), 0);
+  probableMinSeats.value = Math.max(probableMinSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(), 0);
 
   const probableMaxSeatsBn = BigNumber(rules.value.requiredMicrogons).dividedBy(calculator.minimumBidAmount);
-  probableMaxSeats.value = Math.min(probableMaxSeatsBn.integerValue().toNumber(), calculatorData.miningSeatCount);
+  probableMaxSeats.value = Math.min(
+    probableMaxSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(),
+    calculatorData.miningSeatCount,
+  );
 }
 
 Vue.watch(rules, updateAPYs, { deep: true });
 
-basicEmitter.on('openConfigureMiningBotOverlay', async () => {
+basicEmitter.on('openBotOverlay', async () => {
   if (isOpen.value) return;
   isLoaded.value = false;
   isOpen.value = true;
@@ -444,7 +451,7 @@ basicEmitter.on('openConfigureMiningBotOverlay', async () => {
 <style>
 @reference "../main.css";
 
-.ConfigureMiningBotOverlay {
+.BotOverlay {
   h2 {
     position: relative;
     &:before {
@@ -530,6 +537,9 @@ basicEmitter.on('openConfigureMiningBotOverlay', async () => {
         position: absolute;
         top: -2px;
         right: 0;
+      }
+      span {
+        @apply relative z-10;
       }
     }
   }

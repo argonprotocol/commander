@@ -23,7 +23,7 @@
       <ServerRemoveOverlay />
       <ServerConfigureOverlay />
       <SecuritySettingsOverlay />
-      <ConfigureMiningBotOverlay />
+      <BotOverlay />
       <ConfigureStabilizationVaultOverlay />
       <!-- <ProvisioningCompleteOverlay /> -->
       <TooltipOverlay />
@@ -37,7 +37,7 @@ import MiningPanel from './panels/MiningPanel.vue';
 import VaultingPanel from './panels/VaultingPanel.vue';
 import LiquidLockingPanel from './panels/LiquidLockingPanel.vue';
 import ServerConnectOverlay from './overlays/ServerConnectOverlay.vue';
-import ConfigureMiningBotOverlay from './overlays/ConfigureMiningBotOverlay.vue';
+import BotOverlay from './overlays/BotOverlay.vue';
 import ConfigureStabilizationVaultOverlay from './overlays/ConfigureStabilizationVaultOverlay.vue';
 import WalletOverlay from './overlays/WalletOverlay.vue';
 import ServerRemoveOverlay from './overlays/ServerRemoveOverlay.vue';

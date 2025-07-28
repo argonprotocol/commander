@@ -1,14 +1,14 @@
-import {
-  type ArgonClient,
-  BTreeMap,
-  convertFixedU128ToBigNumber,
-  convertPermillToBigNumber,
-  MICROGONS_PER_ARGON,
-  type PalletLiquidityPoolsLiquidityPool,
-  u32,
-} from '@argonprotocol/mainchain';
 import BigNumber from 'bignumber.js';
-import { bigIntMin } from './utils.ts';
+import {
+  u32,
+  BTreeMap,
+  MICROGONS_PER_ARGON,
+  convertFixedU128ToBigNumber,
+  type ArgonClient,
+  type PalletLiquidityPoolsLiquidityPool,
+  convertPermillToBigNumber,
+} from '@argonprotocol/mainchain';
+import { bigIntMin, bigNumberToBigInt } from './utils.ts';
 import { type IWinningBid } from '@argonprotocol/commander-bot';
 import { MiningFrames } from './MiningFrames.ts';
 
@@ -54,7 +54,7 @@ export class Mainchain {
     }
 
     const totalPoolRewardsBn = BigNumber(totalMicrogonsBid).multipliedBy(0.8);
-    const totalPoolRewards = BigInt(totalPoolRewardsBn.integerValue().toString());
+    const totalPoolRewards = bigNumberToBigInt(totalPoolRewardsBn);
 
     return {
       totalPoolRewards, //: 100_000 * MICROGONS_PER_ARGON,
@@ -384,10 +384,12 @@ export class Mainchain {
 
   private calculateExchangeRateInMicrogons(usdAmount: BigNumber, usdForArgon: BigNumber): bigint {
     const oneArgonInMicrogons = BigInt(1 * MICROGONS_PER_ARGON);
-    if (usdAmount.isZero() || usdForArgon.isZero()) return oneArgonInMicrogons;
+    const usdAmountBn = BigNumber(usdAmount);
+    const usdForArgonBn = BigNumber(usdForArgon);
+    if (usdAmountBn.isZero() || usdForArgonBn.isZero()) return oneArgonInMicrogons;
 
-    const argonsRequired = usdAmount.dividedBy(usdForArgon);
-    return BigInt(argonsRequired.multipliedBy(MICROGONS_PER_ARGON).integerValue().toString());
+    const argonsRequired = usdAmountBn.dividedBy(usdForArgonBn);
+    return bigNumberToBigInt(argonsRequired.multipliedBy(MICROGONS_PER_ARGON));
   }
 }
 

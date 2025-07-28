@@ -14,7 +14,7 @@ declare module 'numeral' {
 
 export { Numeral } from 'numeral';
 
-type ICondition = string | ((value: number) => boolean);
+type ICondition = boolean | string | ((value: number) => boolean);
 
 export default function numeral(input?: any): Numeral {
   if (typeof input === 'bigint') {
@@ -78,6 +78,10 @@ export function createNumeralHelpers(currency: Currency | Vue.Reactive<Currency>
 }
 
 function chooseIfElseFormat(condition: ICondition, ifFormat: string, elseFormat: string, value: number) {
+  if (typeof condition === 'boolean') {
+    return condition ? ifFormat : elseFormat;
+  }
+
   if (typeof condition === 'function') {
     return condition(value) ? ifFormat : elseFormat;
   }

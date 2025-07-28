@@ -1,3 +1,5 @@
+import BigNumber from 'bignumber.js';
+
 export function formatArgonots(x: bigint | number): number {
   const isNegative = x < 0;
   const [whole, decimal] = (Math.abs(Number(x)) / 1e6).toFixed(2).split('.');
@@ -8,18 +10,22 @@ export function formatArgonots(x: bigint | number): number {
   return Number(`${isNegative ? '-' : ''}${wholeNumber}.${decimal}`);
 }
 
-export function bigIntMin(...args: bigint[]): bigint {
+export function bigIntMin(...args: Array<bigint | null>): bigint {
   if (args.length === 0) throw new Error('minBigInt requires at least one argument');
-  return args.reduce((min, current) => (current < min ? current : min));
+  return args.filter(x => x !== null).reduce((min, current) => (current < min ? current : min));
 }
 
-export function bigIntMax(...args: bigint[]): bigint {
+export function bigIntMax(...args: Array<bigint | null>): bigint {
   if (args.length === 0) throw new Error('bigIntMax requires at least one argument');
-  return args.reduce((max, current) => (current > max ? current : max));
+  return args.filter(x => x !== null).reduce((max, current) => (current > max ? current : max));
 }
 
 export function bigIntAbs(x: bigint): bigint {
   return x < 0n ? -x : x;
+}
+
+export function bigNumberToBigInt(bn: BigNumber): bigint {
+  return BigInt(bn.integerValue(BigNumber.ROUND_DOWN).toString());
 }
 
 export function bigIntMultiplyNumber(x: bigint, y: number): bigint {
