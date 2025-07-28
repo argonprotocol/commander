@@ -8,7 +8,7 @@
         hasFocus ? 'inner-input-shadow outline-2 -outline-offset-2 outline-argon-button' : '',
         [!hasFocus && !props.disabled ? 'hover:bg-white' : ''],
       ]"
-      class="min-w-20 font-mono text-md flex flex-row w-full text-left py-[3px] border border-slate-700/50 rounded-md text-gray-800"
+      class="min-w-20 font-mono text-sm flex flex-row w-full text-left py-[3px] border border-slate-700/50 rounded-md text-gray-800 cursor-text"
     >
       <span class="select-none pl-[10px] py-[1px]">{{ prefix }}</span>
       <div
@@ -23,9 +23,9 @@
         :class="[props.disabled ? 'opacity-70' : '']"
         class="inline-block w-auto focus:outline-none py-[1px]"
       ></div>
-      <span Suffix :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']" class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-default py-[1px]">
+      <span Suffix :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']" class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-text py-[1px]">
         <span v-if="suffix" class="inline-block">{{ suffix }}</span>
-        <span @click="moveCursorToEnd" @dblclick="selectAllText" class="absolute top-0 left-0 w-full h-full cursor-text" />
+        <span @click="moveCursorToEnd" @dblclick="selectAllText" class="absolute top-0 left-0 w-full h-full" />
       </span>
 
       <Menu v-if="props.options.length > 0">
@@ -33,7 +33,7 @@
           as="button"
           @click="toggleMenu"
           :class="[showMenu ? 'text-gray-900' : 'text-gray-400']"
-          class="mr-2 text-md font-semibold focus:outline-none cursor-pointer hover:text-gray-900"
+          class="mr-2 text-sm font-semibold focus:outline-none cursor-pointer hover:text-gray-900"
         >
           <LightBulbIcon class="size-[18px] text-inherit" />
         </MenuButton>
@@ -58,7 +58,7 @@
                 :value="option.value"
                 @click.stop="selectItem(option)"
                 :class="option.description ? 'border-b border-gray-500/20 last:border-b-0' : ''"
-                class="text-md font-mono text-left font-bold text-gray-800 py-1 first:rounded-t last:rounded-b"
+                class="text-sm font-mono text-left font-bold text-gray-800 py-1 first:rounded-t last:rounded-b"
               >
                 <div :class="[isActive ? 'bg-argon-button text-white' : '']" class="flex flex-col pr-3 pl-2 py-0 cursor-pointer">
                   <div class="flex flex-row justify-between items-center">
@@ -80,21 +80,18 @@
       </Menu>
 
       <div NumArrows v-if="!props.disabled" class="flex flex-col mr-2">
-        <!-- @pointerdown="handlePointerDown"
-        @pointerup="handlePointerUp"
-        @pointermove="emitDrag"
-        @pointercancel="handlePointerUp" -->
-
         <NumArrow NumArrowUp
-          @mousedown="startContinuousIncrement"
-          @mouseup="stopContinuousUpdates"
-          @mouseleave="stopContinuousUpdates"
+          @pointerdown="handlePointerDown"
+          @pointerup="handlePointerUp"
+          @pointermove="emitDrag"
+          @pointercancel="handlePointerUp"
           class="relative top-[1px] size-[12px] text-gray-300 cursor-pointer hover:text-gray-600"
         />
         <NumArrow NumArrowDown
-          @mousedown="startContinuousDecrement"
-          @mouseup="stopContinuousUpdates"
-          @mouseleave="stopContinuousUpdates"
+          @pointerdown="handlePointerDown"
+          @pointerup="handlePointerUp"
+          @pointermove="emitDrag"
+          @pointercancel="handlePointerUp"
           class="relative top-[-1px] size-[12px] text-gray-300 rotate-180 cursor-pointer hover:text-gray-600"
         />
       </div>
@@ -106,6 +103,7 @@
 import * as Vue from 'vue';
 import { LightBulbIcon } from '@heroicons/vue/24/outline';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
+import { BigNumber } from '@argonprotocol/commander-calculator';
 import NumArrow from '../assets/num-arrow.svg?component';
 import { useCurrency } from '../stores/currency';
 import numeral from '../lib/numeral';
@@ -123,8 +121,9 @@ const props = withDefaults(
     disabled?: boolean;
     prefix?: string;
     suffix?: string;
-    alwaysShowDecimals?: boolean;
-    format?: 'percent' | 'integer' | 'minutes';
+    minDecimals?: number;
+    maxDecimals?: number;
+    format?: 'percent' | 'number' | 'minutes';
   }>(),
   {
     options: () => [],
@@ -133,12 +132,15 @@ const props = withDefaults(
     prefix: '',
     suffix: '',
     disabled: false,
-    format: 'integer',
+    format: 'number',
+    minDecimals: 0,
+    maxDecimals: 2,
   },
 );
 
 let loginValueOriginal = props.modelValue;
 let loginValueConverted = originalToConverted(props.modelValue);
+let lastValueBeforeMinIncrease = loginValueConverted;
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: number): void;
@@ -156,13 +158,18 @@ const initialDelay = 500; // Initial delay before starting continuous updates
 const updateInterval = 50; // Interval between updates once continuous mode starts
 
 const suffix = Vue.computed(() => {
+  let sfx = '';
   if (props.format === 'percent') {
-    return '%';
+    sfx = '%';
   } else if (props.format === 'minutes') {
-    return loginValueConverted === 1 ? ' minute' : ' minutes';
-  } else {
-    return props.suffix || '';
+    sfx = loginValueConverted === 1 ? ' minute' : ' minutes';
   }
+
+  if (props.suffix) {
+    sfx += props.suffix;
+  }
+
+  return sfx;
 });
 
 function originalToConverted(valueOriginal: number): number {
@@ -173,7 +180,7 @@ function convertedToOriginal(convertedValue: number): number {
   return convertedValue;
 }
 
-function updateInputValue(valueConverted: number) {
+function updateInputValue(valueConverted: number, setAsLastValueBeforeMinIncrease: boolean = false) {
   let valueOriginal = convertedToOriginal(valueConverted);
 
   if (props.max !== undefined && valueOriginal > props.max) {
@@ -187,6 +194,10 @@ function updateInputValue(valueConverted: number) {
 
   loginValueOriginal = valueOriginal;
   loginValueConverted = valueConverted;
+
+  if (setAsLastValueBeforeMinIncrease) {
+    lastValueBeforeMinIncrease = valueConverted;
+  }
 
   emit('update:modelValue', valueOriginal);
   insertIntoInputElem(valueConverted);
@@ -204,8 +215,11 @@ function insertIntoInputElem(convertedValue: number) {
 }
 
 function formatFn(value: number) {
-  const hasDecimals = value.toString().split('.')[1]?.length > 0;
-  return numeral(value).formatIfElse(x => hasDecimals || props.alwaysShowDecimals, '0,0.00', '0,0');
+  let decimalCount = value.toString().split('.')[1]?.length || 0;
+  decimalCount = Math.min(decimalCount, props.maxDecimals);
+  decimalCount = Math.max(decimalCount, props.minDecimals);
+  const decimals = ''.padEnd(decimalCount, '0');
+  return numeral(value).formatIfElse(!!decimals, `0,0.${decimals}`, '0,0');
 }
 
 function moveCursorToEnd() {
@@ -246,6 +260,10 @@ let isDragging = false;
 let minStepsUp: number = 0;
 let minStepsDown: number = 0;
 let stepsDownUntilDragBy: number = 0;
+let startPointerX: number | null = null;
+let startPointerY: number | null = null;
+let isContinuousMode = false;
+let continuousTimer: number | null = null;
 
 function handlePointerDown(event: PointerEvent) {
   const button = event.currentTarget as HTMLButtonElement;
@@ -262,6 +280,9 @@ function handlePointerDown(event: PointerEvent) {
   button.setPointerCapture(event.pointerId);
   startDragY = event.clientY;
   startValue = loginValueConverted;
+  startPointerX = event.clientX;
+  startPointerY = event.clientY;
+  isContinuousMode = false;
 
   // Calculate steps needed to reach nearest integers
   if (startValue % 1 !== 0) {
@@ -282,69 +303,103 @@ function handlePointerDown(event: PointerEvent) {
   } else {
     stepsDownUntilDragBy = 0;
   }
+
+  // Start a timer to check if we should enter continuous mode
+  continuousTimer = window.setTimeout(() => {
+    if (startPointerX !== null && startPointerY !== null && !isDragging) {
+      isContinuousMode = true;
+      // Determine which arrow was clicked and start appropriate continuous function
+      const isUpArrow = button.classList.contains('rotate-180') === false;
+      if (isUpArrow) {
+        startContinuousIncrement();
+      } else {
+        startContinuousDecrement();
+      }
+    }
+  }, 500); // 500ms delay before starting continuous mode
 }
 
 function emitDrag(event: PointerEvent) {
-  if (startDragY === null) return;
+  if (startDragY === null || startPointerX === null || startPointerY === null) return;
 
   const currentY = event.clientY;
+  const currentX = event.clientX;
   const deltaY = startDragY - currentY; // Inverted to make dragging up increase value
-  const direction = Math.sign(deltaY);
-  const totalSteps = Math.abs(deltaY);
+  const deltaX = currentX - startPointerX;
 
-  let newValue = startValue;
-  let remainingSteps = totalSteps;
+  // Check if movement is more than 3 pixels in any direction
+  const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-  const minStep = props.dragByMin || props.dragBy;
-  const stepsToInteger = direction > 0 ? minStepsUp : minStepsDown;
+  if (totalMovement > 3) {
+    // Cancel continuous mode if we're moving significantly
+    if (continuousTimer !== null) {
+      window.clearTimeout(continuousTimer);
+      continuousTimer = null;
+    }
+    if (isContinuousMode) {
+      stopContinuousUpdates();
+      isContinuousMode = false;
+    }
 
-  if (remainingSteps <= stepsToInteger) {
-    // Still in decimal territory, use min steps
-    newValue += direction * remainingSteps * minStep;
-    remainingSteps = 0;
-  } else {
-    // Cross into integer territory
-    newValue += direction * stepsToInteger * minStep;
-    remainingSteps -= stepsToInteger;
-  }
-
-  let remainingSmallSteps = 0;
-  // Handle remaining steps with normal step size
-  if (direction < 0 && remainingSteps > stepsDownUntilDragBy) {
-    remainingSmallSteps = remainingSteps - stepsDownUntilDragBy;
-    remainingSteps = stepsDownUntilDragBy;
-  }
-
-  if (remainingSteps) {
-    let stepSize = props.dragBy;
-    newValue += direction * remainingSteps * stepSize;
-  }
-
-  if (remainingSmallSteps) {
-    let stepSize = props.dragByMin || props.dragBy;
-    newValue += direction * remainingSmallSteps * stepSize;
-  }
-
-  // Apply min/max constraints
-  if (props.min !== undefined && newValue < props.min) {
-    newValue = props.min;
-  }
-  if (props.max !== undefined && newValue > props.max) {
-    newValue = props.max;
-  }
-
-  // Update visual feedback
-  if (newValue > loginValueConverted) {
-    document.body.classList.add('isDraggingIncrease');
-    document.body.classList.remove('isDraggingDecrease');
-  } else if (newValue < loginValueConverted) {
-    document.body.classList.add('isDraggingDecrease');
-    document.body.classList.remove('isDraggingIncrease');
-  }
-
-  if (newValue !== loginValueConverted) {
+    // Enter drag mode
     isDragging = true;
-    updateInputValue(newValue);
+
+    const direction = Math.sign(deltaY);
+    const totalSteps = Math.abs(deltaY);
+
+    let newValue = startValue;
+    let remainingSteps = totalSteps;
+
+    const minStep = props.dragByMin || props.dragBy;
+    const stepsToInteger = direction > 0 ? minStepsUp : minStepsDown;
+
+    if (remainingSteps <= stepsToInteger) {
+      // Still in decimal territory, use min steps
+      newValue += direction * remainingSteps * minStep;
+      remainingSteps = 0;
+    } else {
+      // Cross into integer territory
+      newValue += direction * stepsToInteger * minStep;
+      remainingSteps -= stepsToInteger;
+    }
+
+    let remainingSmallSteps = 0;
+    // Handle remaining steps with normal step size
+    if (direction < 0 && remainingSteps > stepsDownUntilDragBy) {
+      remainingSmallSteps = remainingSteps - stepsDownUntilDragBy;
+      remainingSteps = stepsDownUntilDragBy;
+    }
+
+    if (remainingSteps) {
+      let stepSize = props.dragBy;
+      newValue += direction * remainingSteps * stepSize;
+    }
+
+    if (remainingSmallSteps) {
+      let stepSize = props.dragByMin || props.dragBy;
+      newValue += direction * remainingSmallSteps * stepSize;
+    }
+
+    // Apply min/max constraints
+    if (props.min !== undefined && newValue < props.min) {
+      newValue = props.min;
+    }
+    if (props.max !== undefined && newValue > props.max) {
+      newValue = props.max;
+    }
+
+    // Update visual feedback
+    if (newValue > loginValueConverted) {
+      document.body.classList.add('isDraggingIncrease');
+      document.body.classList.remove('isDraggingDecrease');
+    } else if (newValue < loginValueConverted) {
+      document.body.classList.add('isDraggingDecrease');
+      document.body.classList.remove('isDraggingIncrease');
+    }
+
+    if (newValue !== loginValueConverted) {
+      updateInputValue(newValue, true);
+    }
   }
 }
 
@@ -355,7 +410,32 @@ function handlePointerUp(event: PointerEvent) {
   button.releasePointerCapture(event.pointerId);
   document.body.classList.remove('isDraggingIncrease');
   document.body.classList.remove('isDraggingDecrease');
+
+  // Clear continuous timer
+  if (continuousTimer !== null) {
+    window.clearTimeout(continuousTimer);
+    continuousTimer = null;
+  }
+
+  // Stop continuous updates if active
+  if (isContinuousMode) {
+    stopContinuousUpdates();
+    isContinuousMode = false;
+  }
+
+  // If we didn't drag and didn't enter continuous mode, do a single increment/decrement
+  if (!isDragging && !isContinuousMode && startPointerX !== null && startPointerY !== null) {
+    const isUpArrow = button.classList.contains('rotate-180') === false;
+    if (isUpArrow) {
+      incrementValue();
+    } else {
+      decrementValue();
+    }
+  }
+
   startDragY = null;
+  startPointerX = null;
+  startPointerY = null;
   setTimeout(() => {
     isDragging = false;
   }, 100);
@@ -364,7 +444,7 @@ function handlePointerUp(event: PointerEvent) {
 function selectItem(item: any) {
   showMenu.value = false;
   if (item.value !== undefined) {
-    updateInputValue(item.value);
+    updateInputValue(item.value, true);
   }
 }
 
@@ -378,8 +458,11 @@ function toggleMenu() {
 
 function handleBeforeInput(event: InputEvent) {
   if (event.inputType === 'insertText') {
+    const caretPosition = getCaretPosition();
     const char = event.data;
-    if (char && !/[\d,.]/.test(char)) {
+    if (caretPosition === 0 && char === '-') {
+      return;
+    } else if (char && !/[\d,.]/.test(char)) {
       event.preventDefault();
     }
   }
@@ -420,7 +503,7 @@ function handlePaste(event: ClipboardEvent) {
 
   const numericValue = Number(finalValue.replace(/,/g, ''));
   if (!isNaN(numericValue)) {
-    updateInputValue(numericValue);
+    updateInputValue(numericValue, true);
   }
 }
 
@@ -428,7 +511,7 @@ function handleInput() {
   const currentText = inputElem.value?.textContent || '';
   const numericValue = Number(currentText.replace(/,/g, ''));
   if (!isNaN(numericValue)) {
-    updateInputValue(numericValue);
+    updateInputValue(numericValue, true);
   }
 }
 
@@ -471,8 +554,8 @@ function incrementValue() {
   } else if (startValue % 1 !== 0) {
     incrementBy = props.dragByMin || props.dragBy;
   }
-  const newValue = startValue + incrementBy;
-  updateInputValue(newValue);
+  const newValue = BigNumber(startValue).plus(incrementBy).toNumber();
+  updateInputValue(newValue, true);
   setCaretPosition(caretPosition);
 }
 
@@ -486,16 +569,13 @@ function decrementValue() {
   } else if (startValue % 1 !== 0) {
     decrementBy = props.dragByMin || props.dragBy;
   }
-  const newValue = startValue - decrementBy;
-  updateInputValue(newValue);
+  const newValue = BigNumber(startValue).minus(decrementBy).toNumber();
+  updateInputValue(newValue, true);
   setCaretPosition(caretPosition);
 }
 
 function startContinuousIncrement() {
-  // Clear any existing timers
   stopContinuousUpdates();
-
-  // Initial increment
   incrementValue();
 
   // Start continuous updates after initial delay
@@ -542,6 +622,10 @@ function stopContinuousUpdates() {
     window.clearInterval(decrementTimer.value);
     decrementTimer.value = null;
   }
+  if (continuousTimer !== null) {
+    window.clearTimeout(continuousTimer);
+    continuousTimer = null;
+  }
 }
 
 function handleKeyDown(event: KeyboardEvent) {
@@ -585,8 +669,13 @@ Vue.watch(
   () => props.min,
   newMin => {
     const newMinValue = Number(newMin);
-    if (newMinValue !== undefined && loginValueConverted < newMinValue) {
+    if (newMinValue === undefined) return;
+
+    if (loginValueConverted < newMinValue) {
+      lastValueBeforeMinIncrease = Math.min(loginValueConverted, lastValueBeforeMinIncrease);
       updateInputValue(newMinValue);
+    } else if (loginValueConverted > newMinValue && loginValueConverted > lastValueBeforeMinIncrease) {
+      updateInputValue(Math.max(newMinValue, lastValueBeforeMinIncrease));
     }
   },
   { immediate: true },

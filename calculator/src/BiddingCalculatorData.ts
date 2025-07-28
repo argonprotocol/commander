@@ -7,7 +7,7 @@ import {
 } from './Mainchain.js';
 import { TICKS_PER_COHORT } from './MiningFrames.js';
 import { bigIntMax, bigIntMin } from './utils.js';
-import BigNumber from 'bignumber.js';
+import { BigNumber } from './index.ts';
 
 export default class BiddingCalculatorData {
   public isInitialized: Promise<void>;
@@ -43,7 +43,7 @@ export default class BiddingCalculatorData {
       this.previousDayHighBid = previousDayWinningBids.length > 0 ? bigIntMax(...previousDayWinningBids) : 0n;
       this.previousDayLowBid = previousDayWinningBids.length > 0 ? bigIntMin(...previousDayWinningBids) : 0n;
       this.previousDayMidBid = BigInt(
-        BigNumber(this.previousDayHighBid).plus(this.previousDayLowBid).dividedBy(2).integerValue().toString(),
+        BigNumber(this.previousDayHighBid).plus(this.previousDayLowBid).dividedBy(2).floor().toString(),
       );
 
       const microgonsMinedPerBlock = await mainchain.fetchMicrogonsMinedPerBlockDuringNextCohort();

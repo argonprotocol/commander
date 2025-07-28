@@ -1,5 +1,3 @@
-import BigNumber from 'bignumber.js';
-
 export interface IFrameRecord {
   id: number;
   progress: number;

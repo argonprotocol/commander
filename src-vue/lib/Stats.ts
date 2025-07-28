@@ -8,7 +8,7 @@ import { botEmitter } from './Bot';
 import { createDeferred, ensureOnlyOneInstance } from './Utils';
 import IDeferred from '../interfaces/IDeferred';
 import { MiningFrames } from '@argonprotocol/commander-calculator/src/MiningFrames';
-import BigNumber from 'bignumber.js';
+import { BigNumber } from '@argonprotocol/commander-calculator';
 
 interface IMyMiningSeats {
   seatCount: number;
@@ -346,9 +346,9 @@ export class Stats {
     const micronotsToBeMinedBn = BigNumber(cohort.micronotsToBeMined).multipliedBy(factorBn);
     const microgonsToBeMintedBn = BigNumber(microgonsExpectedToBeMinted).multipliedBy(factorBn);
 
-    const microgonsToBeMined = BigInt(microgonsToBeMinedBn.integerValue().toString());
-    const microgonsToBeMinted = BigInt(microgonsToBeMintedBn.integerValue().toString());
-    const micronotsToBeMined = BigInt(micronotsToBeMinedBn.integerValue().toString());
+    const microgonsToBeMined = BigInt(microgonsToBeMinedBn.floor().toString());
+    const microgonsToBeMinted = BigInt(microgonsToBeMintedBn.floor().toString());
+    const micronotsToBeMined = BigInt(micronotsToBeMinedBn.floor().toString());
 
     return {
       microgonsToBeMined,

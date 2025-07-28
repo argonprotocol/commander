@@ -1,14 +1,15 @@
 <template>
   <InputNumber
     v-bind="$attrs"
-    format="integer"
+    format="number"
     :prefix="prefix"
     :dragBy="dragBy"
     :dragByMin="dragByMin"
     :disabled="props.disabled"
     :min="min"
     :max="max"
-    :alwaysShowDecimals="props.alwaysShowDecimals"
+    :minDecimals="props.minDecimals"
+    :maxDecimals="props.maxDecimals"
     :options="props.options"
     :model-value="modelValue"
     @update:model-value="handleUpdate"
@@ -19,7 +20,7 @@
 import * as Vue from 'vue';
 import { useCurrency } from '../stores/currency';
 import InputNumber from './InputNumber.vue';
-import BigNumber from 'bignumber.js';
+import { BigNumber } from '@argonprotocol/commander-calculator';
 import { MICROGONS_PER_ARGON } from '@argonprotocol/commander-calculator/src/Mainchain';
 
 const currency = useCurrency();
@@ -33,7 +34,8 @@ const props = withDefaults(
     dragBy?: bigint;
     dragByMin?: bigint;
     disabled?: boolean;
-    alwaysShowDecimals?: boolean;
+    minDecimals?: number;
+    maxDecimals?: number;
     prefix?: string;
   }>(),
   {
@@ -41,7 +43,8 @@ const props = withDefaults(
     dragBy: () => 1n * BigInt(MICROGONS_PER_ARGON),
     dragByMin: () => BigInt(Math.floor(0.01 * MICROGONS_PER_ARGON)),
     disabled: false,
-    alwaysShowDecimals: true,
+    minDecimals: 2,
+    maxDecimals: 2,
     prefix: '',
   },
 );
@@ -78,6 +81,6 @@ const emit = defineEmits(['update:modelValue']);
 
 const handleUpdate = (value: number) => {
   const valueBn = BigNumber(value).multipliedBy(MICROGONS_PER_ARGON);
-  emit('update:modelValue', BigInt(valueBn.integerValue().toString()));
+  emit('update:modelValue', BigInt(valueBn.floor().toString()));
 };
 </script>

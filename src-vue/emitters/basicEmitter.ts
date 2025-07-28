@@ -3,7 +3,7 @@ import { ComputedRef } from 'vue';
 
 type IBasicEmitter = {
   openWalletOverlay: { walletId: string; screen: string };
-  openConfigureMiningBotOverlay: void;
+  openBotOverlay: void;
   openServerRemoveOverlay: void;
   openSecuritySettingsOverlay: void;
   openConfigureStabilizationVaultOverlay: void;
