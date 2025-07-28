@@ -40,13 +40,18 @@ export default class BiddingCalculator {
 
   public pivotPoint: null | 'ExpectedGrowth' | 'MinimumBid' | 'MaximumBid' = null;
 
+  public isInitialized: Promise<void>;
+
   constructor(calculatorData: BiddingCalculatorData, biddingRules: IBiddingRules) {
     this.data = calculatorData;
     this.biddingRules = biddingRules;
-  }
-
-  public get isInitialized(): Promise<void> {
-    return this.data.isInitialized;
+    this.isInitialized = this.data.isInitialized
+      .then(() => {
+        this.calculateBidAmounts();
+      })
+      .catch(error => {
+        console.error('Error initializing bidding calculator', error);
+      });
   }
 
   public get minimumBidAmountOverride(): bigint | null {
