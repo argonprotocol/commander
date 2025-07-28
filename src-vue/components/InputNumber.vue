@@ -101,9 +101,9 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
+import BigNumber from 'bignumber.js';
 import { LightBulbIcon } from '@heroicons/vue/24/outline';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
-import { BigNumber } from '@argonprotocol/commander-calculator';
 import NumArrow from '../assets/num-arrow.svg?component';
 import { useCurrency } from '../stores/currency';
 import numeral from '../lib/numeral';

@@ -1,3 +1,5 @@
+import BigNumber from 'bignumber.js';
+
 export function formatArgonots(x: bigint | number): number {
   const isNegative = x < 0;
   const [whole, decimal] = (Math.abs(Number(x)) / 1e6).toFixed(2).split('.');
@@ -20,6 +22,10 @@ export function bigIntMax(...args: Array<bigint | null>): bigint {
 
 export function bigIntAbs(x: bigint): bigint {
   return x < 0n ? -x : x;
+}
+
+export function bigNumberToBigInt(bn: BigNumber): bigint {
+  return BigInt(bn.integerValue(BigNumber.ROUND_DOWN).toString());
 }
 
 export function bigIntMultiplyNumber(x: bigint, y: number): bigint {

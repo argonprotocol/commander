@@ -18,9 +18,10 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
+import BigNumber from 'bignumber.js';
 import { useCurrency } from '../stores/currency';
 import InputNumber from './InputNumber.vue';
-import { BigNumber } from '@argonprotocol/commander-calculator';
+import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
 import { MICROGONS_PER_ARGON } from '@argonprotocol/commander-calculator/src/Mainchain';
 
 const currency = useCurrency();
@@ -81,6 +82,6 @@ const emit = defineEmits(['update:modelValue']);
 
 const handleUpdate = (value: number) => {
   const valueBn = BigNumber(value).multipliedBy(MICROGONS_PER_ARGON);
-  emit('update:modelValue', BigInt(valueBn.floor().toString()));
+  emit('update:modelValue', bigNumberToBigInt(valueBn));
 };
 </script>

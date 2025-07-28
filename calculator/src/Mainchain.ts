@@ -1,12 +1,14 @@
+import BigNumber from 'bignumber.js';
 import {
   u32,
   BTreeMap,
   MICROGONS_PER_ARGON,
+  convertFixedU128ToBigNumber,
   type ArgonClient,
   type PalletLiquidityPoolsLiquidityPool,
+  convertPermillToBigNumber,
 } from '@argonprotocol/mainchain';
-import { BigNumber } from './index.ts';
-import { bigIntMin } from './utils.ts';
+import { bigIntMin, bigNumberToBigInt } from './utils.ts';
 import { type IWinningBid } from '@argonprotocol/commander-bot';
 import { MiningFrames } from './MiningFrames.ts';
 
@@ -52,7 +54,7 @@ export class Mainchain {
     }
 
     const totalPoolRewardsBn = BigNumber(totalMicrogonsBid).multipliedBy(0.8);
-    const totalPoolRewards = BigInt(totalPoolRewardsBn.floor().toString());
+    const totalPoolRewards = bigNumberToBigInt(totalPoolRewardsBn);
 
     return {
       totalPoolRewards, //: 100_000 * MICROGONS_PER_ARGON,
@@ -93,7 +95,7 @@ export class Mainchain {
   public async getCurrentArgonTargetPrice(): Promise<number> {
     const client = await this.client;
     const argonPrice = (await client.query.priceIndex.current()).unwrapOrDefault();
-    return BigNumber.fromFixedU128(argonPrice.argonUsdTargetPrice.toBigInt()).toNumber();
+    return convertFixedU128ToBigNumber(argonPrice.argonUsdTargetPrice.toBigInt()).toNumber();
   }
 
   public async getMiningSeatCount(): Promise<number> {
@@ -181,9 +183,9 @@ export class Mainchain {
     }
 
     const priceIndex = priceIndexRaw.value;
-    const usdForArgon = BigNumber.fromFixedU128(priceIndex.argonUsdPrice.toBigInt());
-    const usdForArgnot = BigNumber.fromFixedU128(priceIndex.argonotUsdPrice.toBigInt());
-    const usdForBtc = BigNumber.fromFixedU128(priceIndex.btcUsdPrice.toBigInt());
+    const usdForArgon = convertFixedU128ToBigNumber(priceIndex.argonUsdPrice.toBigInt());
+    const usdForArgnot = convertFixedU128ToBigNumber(priceIndex.argonotUsdPrice.toBigInt());
+    const usdForBtc = convertFixedU128ToBigNumber(priceIndex.btcUsdPrice.toBigInt());
 
     // These exchange rates should be relative to the argon
     const microgonsForUsd = this.calculateExchangeRateInMicrogons(BigNumber(1), usdForArgon);
@@ -365,7 +367,7 @@ export class Mainchain {
         totalCapital += balance;
       }
       const distributed = pool.distributedProfits.unwrapOrDefault().toBigInt();
-      const sharingPercent = BigNumber.fromPermill(pool.vaultSharingPercent.toBigInt()).toNumber();
+      const sharingPercent = convertPermillToBigNumber(pool.vaultSharingPercent.toBigInt()).toNumber();
       const vaultProfit = BigInt(Number(distributed) * (1 - sharingPercent));
       const contributorProfit = distributed - vaultProfit;
       result[vaultId] = {
@@ -387,7 +389,7 @@ export class Mainchain {
     if (usdAmountBn.isZero() || usdForArgonBn.isZero()) return oneArgonInMicrogons;
 
     const argonsRequired = usdAmountBn.dividedBy(usdForArgonBn);
-    return BigInt(argonsRequired.multipliedBy(MICROGONS_PER_ARGON).floor().toString());
+    return bigNumberToBigInt(argonsRequired.multipliedBy(MICROGONS_PER_ARGON));
   }
 }
 

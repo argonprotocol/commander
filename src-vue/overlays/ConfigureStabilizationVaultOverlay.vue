@@ -221,6 +221,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
+import BigNumber from 'bignumber.js';
 import basicEmitter from '../emitters/basicEmitter';
 import { Dialog, DialogPanel, TransitionRoot } from '@headlessui/vue';
 import { useConfig } from '../stores/config';
@@ -231,7 +232,7 @@ import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import { hideTooltip, showTooltip } from '../lib/TooltipUtils';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForVault } from './EditBoxOverlay.vue';
-import { BigNumber } from '@argonprotocol/commander-calculator';
+import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
 import IVaultingRules from '../interfaces/IVaultingRules';
 import { jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
 import { MyVault } from '../lib/MyVault.ts';
@@ -264,7 +265,7 @@ const btcSpaceAvailable = Vue.computed(() => {
     .multipliedBy(rules.value.capitalForSecuritizationPct / 100)
     .toNumber();
   const btcSpaceInMicrogonsBn = BigNumber(microgonsForSecuritization).dividedBy(rules.value.securitizationRatio);
-  const btcSpaceInMicrogons = BigInt(btcSpaceInMicrogonsBn.floor().toString());
+  const btcSpaceInMicrogons = bigNumberToBigInt(btcSpaceInMicrogonsBn);
   return currency.microgonToBtc(btcSpaceInMicrogons);
 });
 
@@ -351,34 +352,34 @@ basicEmitter.on('openConfigureStabilizationVaultOverlay', async () => {
   const myTotalPoolCapitalBn = BigNumber(rules.value.requiredMicrogons).multipliedBy(
     rules.value.capitalForSecuritizationPct / 100,
   );
-  const myTotalPoolCapital = BigInt(myTotalPoolCapitalBn.floor().toString());
+  const myTotalPoolCapital = bigNumberToBigInt(myTotalPoolCapitalBn);
 
   const totalPoolCapital = liquidityPoolPayout.totalActivatedCapital + myTotalPoolCapital;
   const myPctOfPool = BigNumber(myTotalPoolCapitalBn).dividedBy(totalPoolCapital).toNumber();
   const totalPoolRewards = liquidityPoolPayout.totalPoolRewards || 1n;
 
   const vaultRevenueFromPoolBn = BigNumber(totalPoolRewards).multipliedBy(myPctOfPool);
-  const vaultRevenueFromPool = BigInt(vaultRevenueFromPoolBn.floor().toString());
+  const vaultRevenueFromPool = bigNumberToBigInt(vaultRevenueFromPoolBn);
 
   const capitalPctFromFunding = 50 - rules.value.capitalForLiquidityPct;
 
   const capitalPayoutToContributorsBn = BigNumber(vaultRevenueFromPool)
     .multipliedBy(capitalPctFromFunding / 100)
     .multipliedBy(rules.value.profitSharingPct / 100);
-  const capitalPayoutToContributors = BigInt(capitalPayoutToContributorsBn.floor().toString());
+  const capitalPayoutToContributors = bigNumberToBigInt(capitalPayoutToContributorsBn);
   const retainedRevenueFromPool = vaultRevenueFromPool - capitalPayoutToContributors;
   optimisticRevenue += retainedRevenueFromPool;
 
   const totalBtcSpaceBn = BigNumber(rules.value.requiredMicrogons).multipliedBy(
     rules.value.capitalForSecuritizationPct / 100,
   );
-  const totalBtcSpace = BigInt(totalBtcSpaceBn.floor().toString());
+  const totalBtcSpace = bigNumberToBigInt(totalBtcSpaceBn);
 
   const availableBtcSpace = BigNumber(totalBtcSpace).minus(rules.value.personalBtcValue).toNumber();
   const revenueFromBtcBn = BigNumber(availableBtcSpace).multipliedBy(rules.value.btcPctFee / 100);
-  const revenueFromBtc = BigInt(revenueFromBtcBn.floor().toString());
+  const revenueFromBtc = bigNumberToBigInt(revenueFromBtcBn);
 
-  const appliedRevenueFromBtc = BigInt(BigNumber(revenueFromBtc).dividedBy(36.5).floor().toString());
+  const appliedRevenueFromBtc = bigNumberToBigInt(BigNumber(revenueFromBtc).dividedBy(36.5));
 
   optimisticRevenue += appliedRevenueFromBtc;
   optimisticRevenue += availableBtcSpace > 0n ? rules.value.btcFlatFee : 0n;
@@ -391,7 +392,7 @@ basicEmitter.on('openConfigureStabilizationVaultOverlay', async () => {
   const myPctOfProfitsFromBtc = BigNumber(poolCapitalFromBtc).dividedBy(totalPoolCapital).toNumber();
 
   const minimumRevenueFromBtcBn = BigNumber(liquidityPoolPayout.totalPoolRewards).multipliedBy(myPctOfProfitsFromBtc);
-  minimumRevenue += BigInt(minimumRevenueFromBtcBn.floor().toString());
+  minimumRevenue += bigNumberToBigInt(minimumRevenueFromBtcBn);
 
   optimisticAPY.value = calculateAPY(
     rules.value.requiredMicrogons,

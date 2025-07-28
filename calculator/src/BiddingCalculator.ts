@@ -1,6 +1,6 @@
+import BigNumber from 'bignumber.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
-import { bigIntMax, bigIntMin, bigIntMultiplyNumber } from './utils.js';
-import { BigNumber } from './index.ts';
+import { bigIntMax, bigIntMin, bigIntMultiplyNumber, bigNumberToBigInt } from './utils.js';
 import { BidAmountAdjustmentType, BidAmountFormulaType, type IBiddingRules } from './IBiddingRules.ts';
 import { MICROGONS_PER_ARGON } from '@argonprotocol/commander-calculator/src/Mainchain.ts';
 
@@ -246,7 +246,7 @@ export default class BiddingCalculator {
 
     const microgonsToMintThisEpochBn = BigNumber(microgonsInCirculation).multipliedBy(epochMultiplier - 1);
     const microgonsToMintThisSeatBn = microgonsToMintThisEpochBn.dividedBy(this.data.miningSeatCount);
-    const microgonsToMintThisSeat = BigInt(microgonsToMintThisSeatBn.floor().toString());
+    const microgonsToMintThisSeat = bigNumberToBigInt(microgonsToMintThisSeatBn);
 
     return microgonsToMintThisSeat;
   }

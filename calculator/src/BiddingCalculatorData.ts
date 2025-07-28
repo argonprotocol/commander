@@ -1,13 +1,13 @@
+import BigNumber from 'bignumber.js';
 import {
   BLOCK_REWARD_INCREASE_PER_INTERVAL,
   BLOCK_REWARD_INTERVAL,
   BLOCK_REWARD_MAX,
   MICROGONS_PER_ARGON,
   Mainchain,
-} from './Mainchain.js';
-import { TICKS_PER_COHORT } from './MiningFrames.js';
-import { bigIntMax, bigIntMin } from './utils.js';
-import { BigNumber } from './index.ts';
+} from './Mainchain.ts';
+import { TICKS_PER_COHORT } from './MiningFrames.ts';
+import { bigIntMax, bigIntMin, bigNumberToBigInt } from './utils.ts';
 
 export default class BiddingCalculatorData {
   public isInitialized: Promise<void>;
@@ -42,8 +42,8 @@ export default class BiddingCalculatorData {
       const previousDayWinningBids = await mainchain.fetchPreviousDayWinningBidAmounts();
       this.previousDayHighBid = previousDayWinningBids.length > 0 ? bigIntMax(...previousDayWinningBids) : 0n;
       this.previousDayLowBid = previousDayWinningBids.length > 0 ? bigIntMin(...previousDayWinningBids) : 0n;
-      this.previousDayMidBid = BigInt(
-        BigNumber(this.previousDayHighBid).plus(this.previousDayLowBid).dividedBy(2).floor().toString(),
+      this.previousDayMidBid = bigNumberToBigInt(
+        BigNumber(this.previousDayHighBid).plus(this.previousDayLowBid).dividedBy(2),
       );
 
       const microgonsMinedPerBlock = await mainchain.fetchMicrogonsMinedPerBlockDuringNextCohort();

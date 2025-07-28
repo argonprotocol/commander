@@ -267,6 +267,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
+import BigNumber from 'bignumber.js';
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogDescription } from 'reka-ui';
 import basicEmitter from '../emitters/basicEmitter';
 import { useConfig } from '../stores/config';
@@ -287,7 +288,6 @@ import {
   SeatGoalType,
 } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
 import { bigIntAbs } from '@argonprotocol/commander-calculator/src/utils';
-import { BigNumber } from '@argonprotocol/commander-calculator';
 import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
 import InputArgon from '../components/InputArgon.vue';
 
@@ -423,10 +423,13 @@ function updateAPYs() {
   maximumBidAtFastGrowthAPY.value = calculator.maximumBidAtFastGrowthAPY;
 
   const probableMinSeatsBn = BigNumber(rules.value.requiredMicrogons).dividedBy(calculator.maximumBidAmount);
-  probableMinSeats.value = Math.max(probableMinSeatsBn.floor().toNumber(), 0);
+  probableMinSeats.value = Math.max(probableMinSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(), 0);
 
   const probableMaxSeatsBn = BigNumber(rules.value.requiredMicrogons).dividedBy(calculator.minimumBidAmount);
-  probableMaxSeats.value = Math.min(probableMaxSeatsBn.floor().toNumber(), calculatorData.miningSeatCount);
+  probableMaxSeats.value = Math.min(
+    probableMaxSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(),
+    calculatorData.miningSeatCount,
+  );
 }
 
 Vue.watch(rules, updateAPYs, { deep: true });

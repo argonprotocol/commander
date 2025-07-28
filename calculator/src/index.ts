@@ -5,7 +5,6 @@ import { type IBidderParams } from './IBidderParams.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
 import { Mainchain, type MainchainClient } from './Mainchain.js';
 import { MiningFrames, TICKS_PER_COHORT } from './MiningFrames.js';
-import BigNumber from './BigNumber.ts';
 
 export {
   jsonStringifyWithBigInts,
@@ -13,12 +12,12 @@ export {
   jsonParseWithBigInts,
   jsonParseWithBigIntsEnhanced,
   convertBigIntStringToNumber,
+  bigNumberToBigInt,
 } from './utils.js';
 
 export default BiddingCalculator;
 export {
   TICKS_PER_COHORT,
-  BigNumber,
   BiddingParamsHelper,
   BiddingCalculatorData,
   type IBiddingRules,
