@@ -35,7 +35,16 @@
   },
   "bundle": {
     "active": true,
-    "resources": ["../bot/", "../calculator/", "../deploy/", "../scripts/"],
+    "resources": [
+      "../bot/src/**/*",
+      "../bot/package.json",
+      "../bot/tsconfig.json",
+      "../calculator/src/**/*",
+      "../calculator/package.json",
+      "../calculator/tsconfig.json",
+      "../deploy/**/*",
+      "../scripts/**/*"
+    ],
     "category": "DeveloperTool",
     "createUpdaterArtifacts": true,
     "targets": "all",

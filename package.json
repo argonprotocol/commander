@@ -75,10 +75,5 @@
     "vite-svg-loader": "^5.1.0",
     "vue-tsc": "^2.1.10"
   },
-  "resolutions": {
-    "@argonprotocol/mainchain": "portal:../mainchain/client/nodejs",
-    "@argonprotocol/testing": "portal:../mainchain/testing/nodejs",
-    "@argonprotocol/bitcoin": "portal:../mainchain/bitcoin/nodejs"
-  },
   "packageManager": "yarn@4.9.1"
 }
