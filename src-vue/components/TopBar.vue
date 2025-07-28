@@ -271,9 +271,16 @@
                   <header>Security Settings</header>
                 </li>
                 <li divider class="bg-slate-400/30 h-[1px] w-full my-1"></li>
-                <li class="py-2">
-                  <header>How to Live Forever</header>
+                <li @click="() => openJurisdictionOverlay(close)" class="py-2">
+                  <header>Jurisdictional Region</header>
                 </li>
+                <li divider class="bg-slate-400/30 h-[1px] w-full my-1"></li>
+                <li @click="() => openAboutOverlay(close)" class="py-2">
+                  <header>About Argon Commander</header>
+                </li>
+                <!-- <li class="py-2">
+                  <header>How to Live Forever</header>
+                </li> -->
               </ul>
             </div>
           </PopoverPanel>
@@ -342,6 +349,20 @@ function openBotOverlay(close: () => void) {
 
 function openSecuritySettingsOverlay(close: () => void) {
   basicEmitter.emit('openSecuritySettingsOverlay');
+  if (close) {
+    close();
+  }
+}
+
+function openAboutOverlay(close: () => void) {
+  basicEmitter.emit('openAboutOverlay');
+  if (close) {
+    close();
+  }
+}
+
+function openJurisdictionOverlay(close: () => void) {
+  basicEmitter.emit('openJurisdictionOverlay');
   if (close) {
     close();
   }

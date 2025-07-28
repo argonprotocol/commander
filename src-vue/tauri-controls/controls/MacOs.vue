@@ -3,7 +3,7 @@ import { twMerge } from 'tailwind-merge';
 import { ref } from 'vue';
 import Button from '../components/Button.vue';
 import Icons from '../components/Icons.vue';
-import { closeWindow, fullscreenWindow, maximizeWindow, minimizeWindow, isWindowFullscreen } from '../utils/window';
+import { closeWindow, fullscreenWindow, maximizeWindow, minimizeWindow, isWindowFullscreen } from '../utils/os';
 
 const winBtns = ref(null);
 const isMouseOver = ref(false);

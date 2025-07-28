@@ -1,4 +1,4 @@
-use tauri::{App, AppHandle, Manager, Runtime};
+use tauri::{App, AppHandle, Manager, Runtime, Emitter};
 use tauri::menu::{MenuBuilder, SubmenuBuilder, MenuItemBuilder};
 
 pub fn create_menu<R: Runtime>(app: &App<R>) -> Result<tauri::menu::Menu<R>, tauri::Error> {
@@ -45,8 +45,8 @@ pub fn create_menu<R: Runtime>(app: &App<R>) -> Result<tauri::menu::Menu<R>, tau
 pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: &tauri::menu::MenuEvent) {
     match event.id().0.as_str() {
         "about" => {
-            // TODO: Implement About Commander dialog
-            println!("About Commander clicked");
+            // Emit event to frontend to open About overlay
+            app.emit("openAboutOverlay", ()).unwrap();
         }
         "check-updates" => {
             // TODO: Implement Check for Updates functionality

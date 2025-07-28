@@ -23,6 +23,8 @@ type IBasicEmitter = {
   openServerConnectOverlay: void;
   closeAllOverlays: void;
   openServerConfigureOverlay: void;
+  openAboutOverlay: void;
+  openJurisdictionOverlay: void;
 };
 
 const basicEmitter: Emitter<IBasicEmitter> = mitt<IBasicEmitter>();
