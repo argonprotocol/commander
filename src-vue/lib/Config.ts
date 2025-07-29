@@ -22,6 +22,7 @@ import { createDeferred, ensureOnlyOneInstance } from './Utils';
 import IDeferred from '../interfaces/IDeferred';
 import { CurrencyKey } from './Currency';
 import { bip39 } from '@argonprotocol/bitcoin';
+import Countries from './Countries';
 
 export const env = (import.meta as any).env ?? {};
 export let NETWORK_NAME = env.VITE_NETWORK_NAME || 'mainnet';
@@ -94,6 +95,15 @@ export class Config {
       biddingRules: Config.getDefault(dbFields.biddingRules) as IConfig['biddingRules'],
       vaultingRules: Config.getDefault(dbFields.vaultingRules) as IConfig['vaultingRules'],
       defaultCurrencyKey: Config.getDefault(dbFields.defaultCurrencyKey) as CurrencyKey,
+      userJurisdiction: {
+        ipAddress: '',
+        city: '',
+        region: '',
+        countryName: '',
+        countryCode: '',
+        latitude: '',
+        longitude: '',
+      },
     };
   }
 
@@ -316,6 +326,22 @@ export class Config {
     this._unstringified.defaultCurrencyKey = value;
   }
 
+  get userJurisdiction(): IConfig['userJurisdiction'] {
+    this._throwErrorIfNotLoaded();
+    return this._unstringified.userJurisdiction;
+  }
+
+  set userJurisdiction(value: IConfig['userJurisdiction']) {
+    this._throwErrorIfNotLoaded();
+    this._tryFieldsToSave(dbFields.userJurisdiction, value);
+    this._unstringified.userJurisdiction = value;
+  }
+
+  get isValidJurisdiction(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this.userJurisdiction.countryCode === 'KY';
+  }
+
   public async saveBiddingRules() {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.biddingRules, this.biddingRules);
@@ -390,6 +416,7 @@ const dbFields = {
   biddingRules: 'biddingRules',
   vaultingRules: 'vaultingRules',
   defaultCurrencyKey: 'defaultCurrencyKey',
+  userJurisdiction: 'userJurisdiction',
 } as const;
 
 const defaults: IConfigDefaults = {
@@ -488,4 +515,23 @@ const defaults: IConfigDefaults = {
     };
   },
   defaultCurrencyKey: () => CurrencyKey.ARGN,
+  userJurisdiction: async () => {
+    const ipResponse = await fetch('https://api.ipify.org?format=json');
+    const { ip: ipAddress } = await ipResponse.json();
+
+    const geoResponse = await fetch(`https://api.hackertarget.com/geoip/?q=${ipAddress}&output=json`);
+    const { city, region, state, country: countryStr, latitude, longitude } = await geoResponse.json();
+    const country = Countries.closestMatch(countryStr) || ({} as any);
+    console.log('country', countryStr, country);
+
+    return {
+      ipAddress,
+      city,
+      region: region || state,
+      countryName: country.name || countryStr,
+      countryCode: country.value || '',
+      latitude,
+      longitude,
+    };
+  },
 };

@@ -271,12 +271,12 @@
                   <header>Security Settings</header>
                 </li>
                 <li divider class="bg-slate-400/30 h-[1px] w-full my-1"></li>
-                <li @click="() => openJurisdictionOverlay(close)" class="py-2">
-                  <header>Jurisdictional Region</header>
+                <li @click="() => openComplianceOverlay(close)" class="py-2">
+                  <header>Jurisdictional Compliance</header>
                 </li>
                 <li divider class="bg-slate-400/30 h-[1px] w-full my-1"></li>
                 <li @click="() => openAboutOverlay(close)" class="py-2">
-                  <header>About Argon Commander</header>
+                  <header>About Commander</header>
                 </li>
                 <!-- <li class="py-2">
                   <header>How to Live Forever</header>
@@ -361,8 +361,8 @@ function openAboutOverlay(close: () => void) {
   }
 }
 
-function openJurisdictionOverlay(close: () => void) {
-  basicEmitter.emit('openJurisdictionOverlay');
+function openComplianceOverlay(close: () => void) {
+  basicEmitter.emit('openComplianceOverlay');
   if (close) {
     close();
   }

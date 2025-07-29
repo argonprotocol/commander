@@ -55,7 +55,7 @@
     style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
   >
     <AlertIcon class="w-4 h-4 text-white relative left-1 inline-block" />
-    <div class="font-bold grow">WARNING. Your mining wallet is low on funds which may inhibit bidding.</div>
+    <div class="font-bold grow">WARNING. Your mining wallet is low on usable argons which may inhibit bidding.</div>
     <span class="cursor-pointer font-bold inline-block rounded-full bg-argon-700 hover:bg-black/90 px-3">
       Add Funds
     </span>

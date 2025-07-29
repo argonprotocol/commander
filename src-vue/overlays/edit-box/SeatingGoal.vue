@@ -12,7 +12,7 @@
     <InputMenu v-model="config.biddingRules.seatGoalInterval" :options="[
         { name: `Per ${SeatGoalInterval.Epoch}`, value: SeatGoalInterval.Epoch },
         { name: `Per ${SeatGoalInterval.Frame}`, value: SeatGoalInterval.Frame }
-      ]" class="w-1/2" />
+      ]" :selectFirst="true" class="w-1/2" />
   </div>
 
   <label class="mt-3 font-bold opacity-60 mb-0.5">
@@ -22,7 +22,7 @@
     <InputMenu v-model="config.biddingRules.seatGoalType" :options="[
         { name: `Get As Many Seats As Possible`, value: SeatGoalType.Min },
         { name: `Stop Biding After Goal Reached`, value: SeatGoalType.Max }
-      ]" class="w-full" />
+      ]" :selectFirst="true" class="w-full" />
   </div>
 </template>
 

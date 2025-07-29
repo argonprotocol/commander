@@ -31,8 +31,12 @@
               <div>OS: {{ platformName }} {{ platformVersion }}</div>
             </div>
             <div class="flex justify-center gap-2 mt-4">
-              <button @click="closeOverlay" class="w-1/2 bg-slate-600/20 text-black px-4 py-1 rounded-lg">Okay</button>
-              <button @click="copyDetails" class="w-1/2 bg-slate-600/20 text-black px-4 py-1 rounded-lg">Copy</button>
+              <button @click="copyDetails" class="w-1/2 cursor-pointer bg-slate-600/20 hover:bg-slate-600/15 border border-slate-900/10 inner-button-shadow text-slate-900 px-4 py-1 rounded-lg focus:outline-none">
+                {{ wasCopied ? 'Copied!' : 'Copy' }}
+              </button>
+              <button @click="closeOverlay" class="w-1/2 cursor-pointer bg-slate-600/20 hover:bg-slate-600/15 border border-slate-900/10 inner-button-shadow text-slate-900 px-4 py-1 rounded-lg focus:outline-none">
+                Close
+              </button>
             </div>
             <div class="mt-4 italic text-black/50">
               Open source. Zero rights reserved.
@@ -57,6 +61,7 @@ import { platformName, platformVersion } from '../tauri-controls/utils/os';
 const config = useConfig();
 
 const isOpen = Vue.ref(false);
+const wasCopied = Vue.ref(false);
 const modalRef = Vue.ref<{ $el: HTMLElement } | null>(null);
 const draggable = Vue.reactive(new Draggable());
 
@@ -72,5 +77,9 @@ function closeOverlay() {
 function copyDetails() {
   const details = `Version: ${config.version}\nOS: ${platformName} ${platformVersion}`;
   navigator.clipboard.writeText(details);
+  wasCopied.value = true;
+  setTimeout(() => {
+    wasCopied.value = false;
+  }, 2000);
 }
 </script>

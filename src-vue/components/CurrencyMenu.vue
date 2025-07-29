@@ -38,12 +38,7 @@
           <a
             v-for="(record, key) of currency.records as Record<ICurrencyKey, ICurrencyRecord>"
             :key="key"
-            @click="
-              () => {
-                currency.setCurrencyKey(key);
-                close();
-              }
-            "
+            @click="setCurrencyKey(key, close)"
             :class="currency.record.key === key ? '!text-indigo-500' : '!text-gray-500'"
             class="group/item flex flex-row justify-between py-1 px-2 border-b last:border-b-0 border-argon-menu-hover hover:!text-indigo-600 hover:bg-argon-menu-hover cursor-pointer"
           >
@@ -64,13 +59,15 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { useCurrency } from '../stores/currency';
-import { ICurrencyRecord, type ICurrencyKey } from '../lib/Currency';
+import { CurrencyKey, ICurrencyRecord, type ICurrencyKey } from '../lib/Currency';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import ArgonSign from '../assets/currencies/argon.svg?component';
 import DollarSign from '../assets/currencies/dollar.svg?component';
 import EuroSign from '../assets/currencies/euro.svg?component';
 import PoundSign from '../assets/currencies/pound.svg?component';
 import RupeeSign from '../assets/currencies/rupee.svg?component';
+import basicEmitter from '../emitters/basicEmitter';
+import { useConfig } from '../stores/config';
 
 const props = defineProps({
   isDark: {
@@ -87,6 +84,17 @@ const buttonBorderProperty = props.isDark ? 'border-slate-500/70' : 'border-slat
 const buttonBgProperty = props.isDark ? 'bg-[#D6D9DF]' : 'bg-transparent';
 
 const currency = useCurrency();
+const config = useConfig();
+
+function setCurrencyKey(key: ICurrencyKey, closeFn: () => void) {
+  if (key === CurrencyKey.ARGN || config.isValidJurisdiction) {
+    currency.setCurrencyKey(key);
+  } else {
+    basicEmitter.emit('openComplianceOverlay');
+  }
+
+  closeFn();
+}
 
 Vue.watch(
   () => popoverElem.value?.el,

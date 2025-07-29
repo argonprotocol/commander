@@ -12,6 +12,10 @@
       <span>{{ mnemonic }}</span>
     </li>
   </ol>
+
+  <button @click="copyToClipboard" class="w-full bg-slate-600/20 hover:bg-slate-600/15 border border-slate-900/10 inner-button-shadow text-slate-900 px-4 py-1 rounded-lg focus:outline-none">
+    {{ isCopied ? 'Copied!' : 'Copy to Clipboard' }}
+  </button>
 </template>
 
 <script setup lang="ts">
@@ -20,6 +24,7 @@ import { useConfig } from '../../stores/config';
 
 const config = useConfig();
 const mnemonics = Vue.computed(() => config.security.walletMnemonic.split(' '));
+const isCopied = Vue.ref(false);
 
 const emit = defineEmits(['close', 'goto']);
 
@@ -27,7 +32,11 @@ function closeOverlay() {
   emit('close');
 }
 
-function goBack() {
-  emit('goto', 'overview');
+function copyToClipboard() {
+  navigator.clipboard.writeText(config.security.walletMnemonic);
+  isCopied.value = true;
+  setTimeout(() => {
+    isCopied.value = false;
+  }, 2000);
 }
 </script>

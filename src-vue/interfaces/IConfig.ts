@@ -95,6 +95,15 @@ export const ConfigSchema = z.object({
   vaultingRules: VaultingRulesSchema,
 
   defaultCurrencyKey: z.nativeEnum(CurrencyKey),
+  userJurisdiction: z.object({
+    ipAddress: z.string(),
+    city: z.string(),
+    region: z.string(),
+    countryName: z.string(),
+    countryCode: z.string(),
+    latitude: z.string(),
+    longitude: z.string(),
+  }),
 });
 
 // ---- Optional Type Inference ---- //
@@ -126,4 +135,5 @@ export interface IConfigDefaults {
   biddingRules: () => IConfig['biddingRules'];
   vaultingRules: () => IConfig['vaultingRules'];
   defaultCurrencyKey: () => IConfig['defaultCurrencyKey'];
+  userJurisdiction: () => Promise<IConfig['userJurisdiction']>;
 }

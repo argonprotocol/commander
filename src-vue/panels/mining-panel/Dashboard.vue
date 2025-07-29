@@ -41,7 +41,7 @@
 
       <section box class="flex flex-col text-center px-2">
         <header class="text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30">
-          YOUR CLOUD MACHINE {{ bot.isReady ? 'IS LIVE' : '' }}
+          YOUR MINING BOT {{ bot.isReady ? 'IS LIVE' : '' }}
         </header>
         <div class="flex flex-row pt-2 pb-1">
           <div class="flex flex-row w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">

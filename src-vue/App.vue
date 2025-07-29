@@ -28,6 +28,7 @@
       <!-- <ProvisioningCompleteOverlay /> -->
       <TooltipOverlay />
       <AboutOverlay />
+      <ComplianceOverlay />
     </template>
   </div>
 </template>
@@ -57,6 +58,7 @@ import { waitForLoad } from '@argonprotocol/mainchain';
 import TooltipOverlay from './overlays/TooltipOverlay.vue';
 import { hideTooltip } from './lib/TooltipUtils';
 import AboutOverlay from './overlays/AboutOverlay.vue';
+import ComplianceOverlay from './overlays/ComplianceOverlay.vue';
 
 const controller = useController();
 const config = useConfig();

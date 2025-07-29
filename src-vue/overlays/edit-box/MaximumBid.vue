@@ -25,7 +25,7 @@
       Formula Type
     </label>
     <div v-if="options.length" class="flex flex-row items-center justify-between">
-      <InputMenu v-model="config.biddingRules.maximumBidFormulaType" :options="options" />
+      <InputMenu v-model="config.biddingRules.maximumBidFormulaType" :options="options" :selectFirst="true" />
     </div>
 
     <template v-if="config.biddingRules.maximumBidFormulaType === BidAmountFormulaType.Custom">
@@ -42,7 +42,7 @@
         <InputMenu v-model="config.biddingRules.maximumBidAdjustmentType" :options="[
           { name: BidAmountAdjustmentType.Absolute, value: BidAmountAdjustmentType.Absolute }, 
           { name: BidAmountAdjustmentType.Relative, value: BidAmountAdjustmentType.Relative }
-        ]" class="w-1/2" />
+        ]" :selectFirst="true" class="w-1/2" />
         <InputArgon v-if="isAbsoluteType" v-model="config.biddingRules.maximumBidAdjustAbsolute" class="min-w-60 w-1/2" />
         <InputNumber v-else v-model="config.biddingRules.maximumBidAdjustRelative" :min="-100" :dragBy="0.01" format="percent" class="w-1/2" />
         <div> = </div>
