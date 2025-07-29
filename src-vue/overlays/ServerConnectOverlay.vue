@@ -6,16 +6,16 @@
         <BgOverlay @close="closeOverlay" />
         <div
           ref="dialogPanel"
-          class="absolute top-[40px] left-3 right-3 bottom-3 flex flex-col overflow-hidden rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all"
+          class="absolute top-[40px] left-3 right-3 bottom-3 z-20 flex flex-col overflow-hidden rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all"
           style="
             box-shadow:
               0px -1px 2px 0 rgba(0, 0, 0, 0.1),
               inset 0 2px 0 rgba(255, 255, 255, 1);
           "
         >
-          <div v-if="isLoaded" class="flex flex-col h-full w-full">
+          <div v-if="isLoaded" class="flex flex-col h-full w-full cursor-default">
             <h2
-              class="relative text-3xl font-bold text-center border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 cursor-pointer text-[#672D73]"
+              class="relative text-3xl font-bold text-center border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 text-[#672D73]"
               style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)"
             >
               Connect Your Cloud Machine

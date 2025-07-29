@@ -245,7 +245,7 @@ export class BotSyncer {
         didWinSeats = !!cohort.seatsWon;
       } else {
         const bidsFile = await this.fetchBidsFileFromCache(frameIdToCheck);
-        didWinSeats = !!bidsFile.winningBids.filter(x => x.subAccountIndex !== undefined).length;
+        didWinSeats = !!bidsFile.winningBids.filter(x => typeof x.subAccountIndex === 'number').length;
       }
 
       if (didWinSeats) {
@@ -305,7 +305,7 @@ export class BotSyncer {
     await this.db.cohortAccountsTable.deleteForCohort(cohortActivatingFrameId);
 
     for (const subaccount of bidsFile.winningBids) {
-      if (subaccount.subAccountIndex === undefined) return;
+      if (typeof subaccount.subAccountIndex !== 'number') return;
       await this.db.cohortAccountsTable.insert(
         subaccount.subAccountIndex,
         cohortActivatingFrameId,

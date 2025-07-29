@@ -205,20 +205,4 @@ async function launchMiningBot() {
 section:hover {
   background: linear-gradient(to right, transparent 0%, #f7edf8 10%, #f7edf8 90%, transparent 100%);
 }
-
-@keyframes pulseEffect {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(0.95);
-  }
-}
-
-[isClosing] {
-  animation: pulseEffect 1.5s ease-in-out infinite;
-}
 </style>

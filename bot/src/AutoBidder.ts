@@ -60,7 +60,7 @@ export class AutoBidder {
     if (bidsFileData && bidsFileData.winningBids.length) {
       const miningAccounts = await this.accountset.loadRegisteredMiners(await this.accountset.client);
       for (const winningBid of bidsFileData.winningBids) {
-        if (winningBid.subAccountIndex === undefined) continue;
+        if (typeof winningBid.subAccountIndex !== 'number') continue;
         const account = miningAccounts.find(x => x.address === winningBid.address);
         if (account) {
           subaccounts.push({

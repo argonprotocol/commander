@@ -17,7 +17,7 @@
         Your bidding bot has successfully connected. It's now trying to win
         {{ maxSeatCount }} mining seat{{ maxSeatCount === 1 ? '' : 's' }} with a
         <span @click="openBiddingBudgetOverlay" class="text-argon-600 underline cursor-pointer underline-offset-2">
-          budget cap of {{ currency.symbol }}{{ microgonToMoneyNm(maxBidPerSeat).format('0,0.[00000000]') }} per seat
+          budget cap of {{ currency.symbol }}{{ microgonToMoneyNm(maxBidPerSeat).format('0,0.[00]') }} per seat
         </span>
         .
         <template v-if="auctionIsClosing && startOfAuctionClosing">
@@ -46,7 +46,7 @@
         </template>
         This page will update automatically when a successful bid is confirmed.
       </p>
-      <div class="flex flex-row justify-center items-center space-x-6">
+      <div class="flex flex-row justify-center items-center space-x-6 mt-10">
         <ActiveBidsOverlayButton />
         <BotHistoryOverlayButton />
       </div>
@@ -92,7 +92,7 @@ const calculatorData = new BiddingCalculatorData(getMainchain());
 const calculator = new BiddingCalculator(calculatorData, config.biddingRules);
 const biddingParamsHelper = new BiddingParamsHelper(config.biddingRules as IBiddingRules, calculator);
 
-const maxBidPerSeat = Vue.computed(() => config.biddingRules?.maximumBidAdjustAbsolute || 0n);
+const maxBidPerSeat = Vue.ref(0n);
 
 function handleAuctionClosingTick(totalSecondsRemaining: number) {
   if (totalSecondsRemaining <= 0) {
@@ -107,7 +107,9 @@ function openBiddingBudgetOverlay() {
 Vue.onMounted(async () => {
   if (!config.biddingRules) return;
 
+  await calculator.isInitializedPromise;
   maxSeatCount.value = await biddingParamsHelper.getMaxSeats();
+  maxBidPerSeat.value = await calculator.maximumBidAmount;
 
   if (!startOfAuctionClosing.value || !startOfNextCohort.value) {
     const tickAtStartOfAuctionClosing = await mainchain.getTickAtStartOfAuctionClosing();
