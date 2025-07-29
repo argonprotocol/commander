@@ -11,8 +11,8 @@ use utils::Utils;
 use window_vibrancy::*;
 
 mod env;
-mod migrations;
 mod menu;
+mod migrations;
 mod ssh;
 mod ssh_singleton;
 mod utils;
@@ -58,12 +58,10 @@ async fn open_ssh_connection(
     log::info!("ensure_ssh_connection");
     let (host, port) = Utils::extract_host_port(host);
     let ssh_config = ssh::SSHConfig::new(&host, port, username, private_key).unwrap();
-    test_opne_ssh_connection(&ssh_config)
-        .await
-        .map_err(|e| {
-            log::error!("Error connecting to SSH: {:#}", e);
-            e.to_string()
-        })?;
+    test_open_ssh_connection(&ssh_config).await.map_err(|e| {
+        log::error!("Error connecting to SSH: {:#}", e);
+        e.to_string()
+    })?;
 
     Ok("success".to_string())
 }
@@ -209,6 +207,7 @@ pub fn run() {
     let migrations = migrations::get_migrations();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
         .setup(move |app| {
             log::info!("Starting Commander with instance name: {}", instance_name);
             let window = app.get_webview_window("main").unwrap();

@@ -4,7 +4,7 @@ import Gnome from './controls/linux/Gnome.vue';
 import MacOs from './controls/MacOs.vue';
 import Windows from './controls/Windows.vue';
 import type { WindowControlsProps } from './types';
-import { platformType } from './utils/window';
+import { platformType } from './utils/os';
 
 defineOptions({
   inheritAttrs: false,

@@ -409,9 +409,9 @@ export class Stats {
       micronotsMined: cohortStats.totalMicronotsMined,
       microgonsMined: cohortStats.totalMicrogonsMined,
       microgonsMinted: cohortStats.totalMicrogonsMinted,
-      microgonsToBeMined: remainingRewardsPerSeat.microgonsToBeMined,
-      microgonsToBeMinted: remainingRewardsPerSeat.microgonsToBeMinted,
-      micronotsToBeMined: remainingRewardsPerSeat.micronotsToBeMined,
+      microgonsToBeMined: remainingRewardsPerSeat.microgonsToBeMined * BigInt(cohort.seatsWon),
+      microgonsToBeMinted: remainingRewardsPerSeat.microgonsToBeMinted * BigInt(cohort.seatsWon),
+      micronotsToBeMined: remainingRewardsPerSeat.micronotsToBeMined * BigInt(cohort.seatsWon),
     };
   }
 }

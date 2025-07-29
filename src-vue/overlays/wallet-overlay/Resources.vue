@@ -4,7 +4,7 @@
     <li
       v-for="resource of resourceList"
       :key="resource.name"
-      class="flex flex-row justify-between items-center w-full border-t border-black/10 first:border-black/30 pb-3 cursor-pointer hover:bg-slate-200/30 py-4 px-2"
+      class="flex flex-row justify-between items-center w-full border-t border-black/10 first:border-black/30 pb-3 py-4 px-2"
     >
       <div class="flex flex-row justify-between items-center pr-6">
         <component :is="resource.icon" class="w-14 text-argon-600" />
@@ -17,7 +17,8 @@
         <div class="font-bold">
           {{ currency.symbol }}{{ microgonToMoneyNm(resource.microgonValue).format('0,0.00') }}
         </div>
-        <div class="">0.00%</div>
+        <div v-if="resource.uniswapUrl" class="text-argon-600/80 hover:text-argon-600 cursor-pointer" @click="openUniswapMarket(resource.uniswapUrl)">Open Uniswap Market</div>
+        <div v-else class="text-slate-700/50">Not Transferable</div>
       </div>
     </li>
   </ul>
@@ -25,6 +26,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
+import { open } from '@tauri-apps/plugin-shell';
 import { useCurrency } from '../../stores/currency';
 import { useWallets } from '../../stores/wallets';
 import ArgonToken from '../../assets/resources/argon.svg?component';
@@ -34,6 +36,8 @@ import MiningSeatToken from '../../assets/resources/mining-seat.svg?component';
 import MiningBidToken from '../../assets/resources/mining-bid.svg?component';
 import { useStats } from '../../stores/stats';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
+import basicEmitter from '../../emitters/basicEmitter';
+import { useConfig } from '../../stores/config';
 
 const props = defineProps<{
   walletId: 'mining' | 'vaulting';
@@ -42,6 +46,7 @@ const props = defineProps<{
 const stats = useStats();
 const currency = useCurrency();
 const wallets = useWallets();
+const config = useConfig();
 
 const { microgonToArgonNm, micronotToArgonotNm, microgonToMoneyNm } = createNumeralHelpers(currency);
 const miningWallet = Vue.computed(() => wallets.miningWallet);
@@ -57,6 +62,15 @@ interface IResource {
   microgonValue: bigint;
   diff: number;
   uniswapUrl?: string | null;
+}
+
+async function openUniswapMarket(uniswapUrl: string) {
+  if (config.isValidJurisdiction) {
+    await open(uniswapUrl);
+  } else {
+    emit('navigate', { close: true });
+    basicEmitter.emit('openComplianceOverlay');
+  }
 }
 
 const resources: Record<'mining' | 'vaulting', Vue.ComputedRef<IResource[]>> = {
@@ -78,7 +92,7 @@ const resources: Record<'mining' | 'vaulting', Vue.ComputedRef<IResource[]>> = {
         itemCountLabel: 'ARGNOTs',
         microgonValue: currency.micronotToMicrogon(miningWallet.value.availableMicronots),
         diff: 0,
-        uniswapUrl: 'https://app.uniswap.org/explore/tokens/ethereum/0x6a9143639d8b70d50b031ffad55d4cc65ea55155',
+        uniswapUrl: 'https://app.uniswap.org/explore/tokens/ethereum/0x64cbd3aa07d427e385cb55330406508718e55f01',
       },
       {
         name: 'Locked Argonots',
@@ -87,7 +101,6 @@ const resources: Record<'mining' | 'vaulting', Vue.ComputedRef<IResource[]>> = {
         itemCountLabel: 'ARGNOTs',
         microgonValue: currency.micronotToMicrogon(miningWallet.value.reservedMicronots),
         diff: 0,
-        uniswapUrl: 'https://app.uniswap.org/explore/tokens/ethereum/0x6a9143639d8b70d50b031ffad55d4cc65ea55155',
       },
       {
         name: 'Mining Bids',

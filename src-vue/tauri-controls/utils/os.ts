@@ -1,6 +1,6 @@
 import type { window } from '@tauri-apps/api';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { platform as getPlatform } from '@tauri-apps/plugin-os';
+import { platform as getPlatform, version as getVersion } from '@tauri-apps/plugin-os';
 import { ref } from 'vue';
 
 // Throttle utility function
@@ -22,6 +22,8 @@ export const appWindow = ref<window.Window | null>(null);
 export const isWindowMaximized = ref(false);
 export const isWindowFullscreen = ref(false);
 export const platformType = getPlatformType();
+export const platformName = getPlatformName();
+export const platformVersion = getVersion();
 
 appWindow.value = getCurrentWindow();
 appWindow.value.onResized(
@@ -65,5 +67,16 @@ function getPlatformType() {
       return 'gnome';
     default:
       return 'windows';
+  }
+}
+
+function getPlatformName() {
+  switch (getPlatform()) {
+    case 'macos':
+      return 'MacOS';
+    case 'linux':
+      return 'Linux';
+    default:
+      return 'Windows';
   }
 }

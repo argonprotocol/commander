@@ -40,9 +40,8 @@
               </DialogClose>
             </h2>
 
-            <SecuritySettingsOverview v-if="currentScreen === 'overview'" @close="closeOverlay" @goto="goto" />
-            <SecuritySettingsEncrypt v-if="currentScreen === 'encrypt'" @close="closeOverlay" @goto="goto" />
-            <SecuritySettingsMnemonics v-if="currentScreen === 'mnemonics'" @close="closeOverlay" @goto="goto" />
+            <JurisdictionalOverview v-if="currentScreen === 'overview'" @close="closeOverlay" @goto="goto" />
+            <FixJurisdiction v-if="currentScreen === 'fixJurisdiction'" @close="closeOverlay" @goto="goto" />
           </Motion>
         </DialogContent>
       </AnimatePresence>
@@ -54,9 +53,8 @@
 import * as Vue from 'vue';
 import basicEmitter from '../emitters/basicEmitter';
 import BgOverlay from '../components/BgOverlay.vue';
-import SecuritySettingsOverview from './security-settings/Overview.vue';
-import SecuritySettingsEncrypt from './security-settings/Encrypt.vue';
-import SecuritySettingsMnemonics from './security-settings/Mnemonics.vue';
+import JurisdictionalOverview from './compliance/Overview.vue';
+import FixJurisdiction from './compliance/FixJurisdiction.vue';
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogClose } from 'reka-ui';
 import { AnimatePresence, Motion } from 'motion-v';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
@@ -64,22 +62,20 @@ import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
 import Draggable from './helpers/Draggable.ts';
 
 const isOpen = Vue.ref(false);
-const currentScreen = Vue.ref<'overview' | 'encrypt' | 'mnemonics'>('overview');
+const currentScreen = Vue.ref<'overview' | 'fixJurisdiction'>('overview');
 
 const modalRef = Vue.ref<HTMLElement | { $el: HTMLElement } | null>(null);
 const draggable = Vue.reactive(new Draggable());
 
 const title = Vue.computed(() => {
   if (currentScreen.value === 'overview') {
-    return 'Security Settings';
-  } else if (currentScreen.value === 'encrypt') {
-    return 'Encryption Passphrase';
-  } else {
-    return 'Wallet Recovery Mnemonic';
+    return 'Jurisdictional Compliance';
+  } else if (currentScreen.value === 'fixJurisdiction') {
+    return 'Fix Your Country of Residence';
   }
 });
 
-basicEmitter.on('openSecuritySettingsOverlay', async (data: any) => {
+basicEmitter.on('openComplianceOverlay', async (data: any) => {
   isOpen.value = true;
   currentScreen.value = 'overview';
   draggable.modalPosition.x = 0;
@@ -90,7 +86,7 @@ function closeOverlay() {
   isOpen.value = false;
 }
 
-function goto(screen: 'overview' | 'encrypt' | 'mnemonics') {
+function goto(screen: 'overview' | 'fixJurisdiction') {
   currentScreen.value = screen;
 }
 </script>

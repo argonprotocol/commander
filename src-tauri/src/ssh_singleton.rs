@@ -1,5 +1,5 @@
-use crate::ssh::SSHConfig;
 use crate::ssh::SSH;
+use crate::ssh::SSHConfig;
 use anyhow::Result;
 use lazy_static::lazy_static;
 use log;
@@ -38,7 +38,7 @@ pub async fn get_ssh_singleton_connection() -> Result<Option<SSH>> {
     Ok(ssh_connection.as_ref().cloned())
 }
 
-pub async fn test_opne_ssh_connection(ssh_config: &SSHConfig) -> Result<SSH> {
+pub async fn test_open_ssh_connection(ssh_config: &SSHConfig) -> Result<SSH> {
     let mut ssh_connection = SSH_CONNECTION.lock().await;
 
     let needs_new_connection = match &*ssh_connection {
@@ -67,7 +67,8 @@ pub async fn test_opne_ssh_connection(ssh_config: &SSHConfig) -> Result<SSH> {
         *ssh_connection = Some(new_ssh.clone());
     }
 
-    ssh_connection.as_ref()
+    ssh_connection
+        .as_ref()
         .ok_or_else(|| anyhow::anyhow!("Failed to create or retrieve SSH connection"))
         .map(|ssh| ssh.clone())
 }

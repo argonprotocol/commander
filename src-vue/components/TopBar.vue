@@ -271,9 +271,16 @@
                   <header>Security Settings</header>
                 </li>
                 <li divider class="bg-slate-400/30 h-[1px] w-full my-1"></li>
-                <li class="py-2">
-                  <header>How to Live Forever</header>
+                <li @click="() => openComplianceOverlay(close)" class="py-2">
+                  <header>Jurisdictional Compliance</header>
                 </li>
+                <li divider class="bg-slate-400/30 h-[1px] w-full my-1"></li>
+                <li @click="() => openAboutOverlay(close)" class="py-2">
+                  <header>About Commander</header>
+                </li>
+                <!-- <li class="py-2">
+                  <header>How to Live Forever</header>
+                </li> -->
               </ul>
             </div>
           </PopoverPanel>
@@ -342,6 +349,20 @@ function openBotOverlay(close: () => void) {
 
 function openSecuritySettingsOverlay(close: () => void) {
   basicEmitter.emit('openSecuritySettingsOverlay');
+  if (close) {
+    close();
+  }
+}
+
+function openAboutOverlay(close: () => void) {
+  basicEmitter.emit('openAboutOverlay');
+  if (close) {
+    close();
+  }
+}
+
+function openComplianceOverlay(close: () => void) {
+  basicEmitter.emit('openComplianceOverlay');
   if (close) {
     close();
   }

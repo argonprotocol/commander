@@ -10,21 +10,23 @@
         <span v-if="selectedOption?.microgons" class="text-right opacity-50 pl-5">{{ currency.symbol }}{{ microgonToMoneyNm(selectedOption.microgons).format('0,0.00') }}</span>
       </SelectValue>
       <div class="relative size-4">
-        <ChevronUpIcon v-if="showMenu" class="size-4 text-gray-400" />
-        <ChevronDownIcon v-else class="size-4 text-gray-400" />
+        <ChevronDownIcon v-if="!showMenu" class="size-4 text-gray-400" />
       </div>
     </SelectTrigger>
 
     <SelectPortal>
       <SelectContent
-        class="bg-white cursor-default data-[side=bottom]:rounded-b-md data-[side=top]:rounded-t-md data-[side=bottom]:border-t-gray-400 data-[side=top]:border-b-gray-400 border border-slate-700/50 shadow-sm will-change-[opacity,transform] data-[side=top]:animate-slideDownAndFade data-[side=right]:animate-slideLeftAndFade data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade z-[100]"
+        class="bg-white py-2 cursor-default data-[side=bottom]:rounded-b-md data-[side=top]:rounded-t-md data-[side=bottom]:border-t-gray-400 data-[side=top]:border-b-gray-400 border border-slate-700/50 shadow-sm will-change-[opacity,transform] data-[side=top]:animate-slideDownAndFade data-[side=right]:animate-slideLeftAndFade data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade z-[100]"
         position="popper"
-        :style="{ minWidth: menuWidth }"
+        :style="{ minWidth: menuWidth, maxHeight: 'var(--reka-select-content-available-height)' }"
         :avoidCollisions="true"
+        :bodyLock="true"
+        :collisionPadding="10"
         :sideOffset="-3"
+        :sticky="'always'"
       >
-        <SelectScrollUpButton class="flex items-center justify-center h-[25px] bg-white text-violet11 cursor-default">
-          <!-- <Icon icon="radix-icons:chevron-up" /> -->
+        <SelectScrollUpButton class="absolute top-0 left-0 right-0 z-10 flex items-center justify-center h-[25px] bg-gradient-to-b from-[10px] from-white to-transparent cursor-default">
+          <ChevronUpIcon class="size-5 text-gray-400" />
         </SelectScrollUpButton>
 
         <SelectViewport class="p-[5px]">
@@ -44,8 +46,8 @@
           </SelectItem>
         </SelectViewport>
 
-        <SelectScrollDownButton class="flex items-center justify-center h-[25px] bg-white text-violet11 cursor-default">
-          <!-- <Icon icon="radix-icons:chevron-down" /> -->
+        <SelectScrollDownButton class="absolute bottom-0 left-0 right-0 flex items-center justify-center h-[25px] bg-gradient-to-t from-[10px] from-white to-transparent cursor-default">
+          <ChevronDownIcon class="size-5 text-gray-400" />
         </SelectScrollDownButton>
       </SelectContent>
     </SelectPortal>
@@ -59,16 +61,13 @@ import { useCurrency } from '../stores/currency';
 import { createNumeralHelpers } from '../lib/numeral';
 import {
   SelectContent,
-  SelectGroup,
   SelectItem,
   SelectItemIndicator,
   SelectItemText,
-  SelectLabel,
   SelectPortal,
   SelectRoot,
   SelectScrollDownButton,
   SelectScrollUpButton,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
   SelectViewport,
@@ -83,9 +82,11 @@ const props = withDefaults(
     modelValue?: string;
     options: IOption[];
     disabled?: boolean;
+    selectFirst?: boolean;
   }>(),
   {
     disabled: false,
+    selectFirst: false,
   },
 );
 
@@ -98,11 +99,9 @@ const triggerInstance = Vue.ref<any>(null);
 
 const menuWidth = Vue.ref('auto');
 
-const selectedOption: Vue.Ref<IOption> = Vue.ref(
-  props.options.find(option => option.value === props.modelValue) || props.options[0],
+const selectedOption: Vue.Ref<IOption | undefined> = Vue.ref(
+  props.options.find(x => x.value === props.modelValue) || (props.selectFirst ? props.options[0] : undefined),
 );
-// const longestOption = options.reduce((x, option) => (x.name.length >= option.name.length ? x : option), options[0]);
-// const hasPrices = options.some(option => option.microgons !== undefined);
 
 const value = Vue.computed({
   get: () => props.modelValue,

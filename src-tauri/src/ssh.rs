@@ -159,9 +159,7 @@ impl SSH {
             }
         }
         let _ = channel.close().await;
-        let code = code.ok_or_else(|| {
-            anyhow::anyhow!("SSHCommandMissingExitStatus")
-        })?;
+        let code = code.ok_or_else(|| anyhow::anyhow!("SSHCommandMissingExitStatus"))?;
 
         Ok((output, code))
     }

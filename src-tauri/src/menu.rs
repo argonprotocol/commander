@@ -1,8 +1,7 @@
-use tauri::{App, AppHandle, Manager, Runtime};
-use tauri::menu::{MenuBuilder, SubmenuBuilder, MenuItemBuilder};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+use tauri::{App, AppHandle, Emitter, Manager, Runtime};
 
 pub fn create_menu<R: Runtime>(app: &App<R>) -> Result<tauri::menu::Menu<R>, tauri::Error> {
-    
     let quit_item = MenuItemBuilder::new("Quit Commander")
         .id("quit")
         .accelerator("CmdOrCtrl+Q")
@@ -34,7 +33,7 @@ pub fn create_menu<R: Runtime>(app: &App<R>) -> Result<tauri::menu::Menu<R>, tau
     let window_menu = SubmenuBuilder::new(app, "Window")
         .item(&reload_item)
         .build()?;
-    
+
     let menu = MenuBuilder::new(app)
         .items(&[&commander_menu, &edit_menu, &window_menu])
         .build()?;
@@ -45,8 +44,8 @@ pub fn create_menu<R: Runtime>(app: &App<R>) -> Result<tauri::menu::Menu<R>, tau
 pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: &tauri::menu::MenuEvent) {
     match event.id().0.as_str() {
         "about" => {
-            // TODO: Implement About Commander dialog
-            println!("About Commander clicked");
+            // Emit event to frontend to open About overlay
+            app.emit("openAboutOverlay", ()).unwrap();
         }
         "check-updates" => {
             // TODO: Implement Check for Updates functionality
@@ -60,4 +59,4 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: &tauri::menu::Me
         }
         _ => {}
     }
-} 
+}
