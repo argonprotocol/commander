@@ -31,37 +31,37 @@ export class Vaults {
         this.vaultsById[id] = new Vault(id, vaultRaw.unwrap(), this.tickDuration);
       }
 
-      const { synchedToFrame, vaultsById } =
+      const { synchedToFrame, vaultsById }: IAllVaultStats =
         this.network === 'mainnet' ? mainnetVaultRevenueHistory : testnetVaultRevenueHistory;
       if (!this.stats) {
         this.stats = { synchedToFrame, vaultsById: {} };
         for (const [vaultId, entry] of Object.entries(vaultsById)) {
-          const { revenueByFrame, openedTick, baseline } = entry;
+          const { changesByFrame, openedTick, baseline } = entry;
           const id = parseInt(vaultId, 10);
           this.stats.vaultsById[id] = {
             openedTick,
             baseline: {
               bitcoinLocks: baseline.bitcoinLocks,
-              feeRevenue: convertBigIntStringToNumber(baseline.feeRevenue) ?? 0n,
-              microgonLiquidityRealized: convertBigIntStringToNumber(baseline.microgonLiquidityRealized) ?? 0n,
-              satoshis: convertBigIntStringToNumber(baseline.satoshis) ?? 0n,
+              feeRevenue: convertBigIntStringToNumber(baseline.feeRevenue as any) ?? 0n,
+              microgonLiquidityRealized: convertBigIntStringToNumber(baseline.microgonLiquidityRealized as any) ?? 0n,
+              satoshis: convertBigIntStringToNumber(baseline.satoshis as any) ?? 0n,
             },
-            changesByFrame: revenueByFrame.map(change => ({
+            changesByFrame: changesByFrame.map(change => ({
               frameId: change.frameId,
-              satoshisAdded: convertBigIntStringToNumber(change.satoshisAdded) ?? 0n,
+              satoshisAdded: convertBigIntStringToNumber(change.satoshisAdded as any) ?? 0n,
               bitcoinLocksCreated: change.bitcoinLocksCreated,
-              microgonLiquidityAdded: convertBigIntStringToNumber(change.microgonLiquidityAdded) ?? 0n,
-              feeRevenue: convertBigIntStringToNumber(change.feeRevenue) ?? 0n,
+              microgonLiquidityAdded: convertBigIntStringToNumber(change.microgonLiquidityAdded as any) ?? 0n,
+              feeRevenue: convertBigIntStringToNumber(change.feeRevenue as any) ?? 0n,
               isFrameInProgress: change.isFrameInProgress,
-              securitization: convertBigIntStringToNumber(change.securitization) ?? 0n,
-              securitizationActivated: convertBigIntStringToNumber(change.securitizationActivated) ?? 0n,
+              securitization: convertBigIntStringToNumber(change.securitization as any) ?? 0n,
+              securitizationActivated: convertBigIntStringToNumber(change.securitizationActivated as any) ?? 0n,
               liquidityPool: {
                 sharingPercent: change.liquidityPool.sharingPercent,
-                contributedCapital: convertBigIntStringToNumber(change.liquidityPool.contributedCapital) ?? 0n,
+                contributedCapital: convertBigIntStringToNumber(change.liquidityPool.contributedCapital as any) ?? 0n,
                 contributedCapitalByVaultOperator:
-                  convertBigIntStringToNumber(change.liquidityPool.contributedCapitalByVaultOperator) ?? 0n,
-                contributorProfit: convertBigIntStringToNumber(change.liquidityPool.contributorProfit) ?? 0n,
-                vaultProfit: convertBigIntStringToNumber(change.liquidityPool.vaultProfit) ?? 0n,
+                  convertBigIntStringToNumber(change.liquidityPool.contributedCapitalByVaultOperator as any) ?? 0n,
+                contributorProfit: convertBigIntStringToNumber(change.liquidityPool.contributorProfit as any) ?? 0n,
+                vaultProfit: convertBigIntStringToNumber(change.liquidityPool.vaultProfit as any) ?? 0n,
               },
             })),
           };
