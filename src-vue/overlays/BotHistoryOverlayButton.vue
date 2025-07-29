@@ -143,14 +143,14 @@ function extractMessage(activity: IBotActivityRecord): string {
     const { bidPosition, previousBidPosition, microgonsBid, previousMicrogonsBid } =
       activity.data as IBotActivityBidReceived;
     if (previousBidPosition === undefined || previousBidPosition === null) {
-      return `A new bid of ${currency.symbol}${microgonToMoneyNm(microgonsBid).format('0,0.00')} was inserted at position #${bidPosition}`;
+      return `A new bid of ${currency.symbol}${microgonToMoneyNm(microgonsBid).format('0,0.00')} was inserted at position #${(bidPosition || 0) + 1}`;
     } else if (bidPosition === undefined || bidPosition === null) {
-      return `An existing bid #${previousBidPosition} (${currency.symbol}${microgonToMoneyNm(previousMicrogonsBid ?? 0n).format('0,0.00')}) fell off the list`;
+      return `An existing bid #${previousBidPosition + 1} (${currency.symbol}${microgonToMoneyNm(microgonsBid ?? 0n).format('0,0.00')}) fell off the list`;
     } else if (bidPosition > previousBidPosition) {
-      return `An existing bid #${previousBidPosition} (${currency.symbol}${microgonToMoneyNm(previousMicrogonsBid ?? 0n).format('0,0.00')}) rose to position #${bidPosition}`;
+      return `An existing bid #${previousBidPosition + 1} (${currency.symbol}${microgonToMoneyNm(microgonsBid ?? 0n).format('0,0.00')}) rose to position #${bidPosition + 1}`;
     } else {
       // bidPosition < previousBidPosition
-      return `An existing bid #${previousBidPosition} (${currency.symbol}${microgonToMoneyNm(previousMicrogonsBid ?? 0n).format('0,0.00')}) fell to position #${bidPosition}`;
+      return `An existing bid #${previousBidPosition + 1} (${currency.symbol}${microgonToMoneyNm(previousMicrogonsBid ?? 0n).format('0,0.00')}) fell to position #${bidPosition + 1}`;
     }
   } else if (activity.type === BotActivityType.BidsSubmitted) {
     const { microgonsPerSeat, txFeePlusTip, submittedCount } = activity.data as IBotActivityBidsSubmitted;

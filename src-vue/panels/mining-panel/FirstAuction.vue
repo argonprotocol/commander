@@ -2,7 +2,6 @@
 <template>
   <div class="flex flex-col h-full w-full cursor-default">
     <AlertBars />
-
     <FirstAuctionFailed v-if="!bot.maxSeatsPossible" />
     <FirstAuctionWinning v-else-if="config.hasMiningBids" />
     <FirstAuctionStarting v-else />

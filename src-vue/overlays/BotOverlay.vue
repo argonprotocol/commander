@@ -440,7 +440,7 @@ basicEmitter.on('openBotOverlay', async () => {
   isOpen.value = true;
 
   isBrandNew.value = !config.hasSavedBiddingRules;
-  calculatorData.isInitialized.then(() => {
+  calculatorData.isInitializedPromise.then(() => {
     previousBiddingRules = jsonStringifyWithBigInts(config.biddingRules);
     updateAPYs();
     isLoaded.value = true;

@@ -19,7 +19,7 @@
         {{ config.userJurisdiction.countryName }}
         <span class="font-light">(</span>
         <span @click="fixJurisdiction" class="text-argon-500 hover:text-argon-600 cursor-pointer inline">
-          change jurisdiction
+          {{ config.isValidJurisdiction ? 'change' : 'fix' }} jurisdiction
         </span>
         <span class="font-light">)</span>
       </div>

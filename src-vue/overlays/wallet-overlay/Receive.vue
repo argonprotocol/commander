@@ -42,14 +42,14 @@
                 <td>{{ microgonToArgonNm(wallet.availableMicrogons).format('0,0.[00000000]') }} ARGN</td>
                 <td v-if="!requiredMicrogons" class="text-right">--</td>
                 <td v-else-if="wallet.availableMicrogons >= requiredMicrogons" class="text-right text-green-700 font-bold">success</td>
-                <td v-else class="text-right text-red-700 font-bold">waiting</td>
+                <td v-else class="fade-in-out text-right text-red-700 font-bold">waiting</td>
               </tr>
               <tr>
                 <td>{{ micronotToArgonotNm(requiredMicronots).format('0,0.[00000000]') }} ARGNOT</td>
                 <td>{{ micronotToArgonotNm(wallet.availableMicronots).format('0,0.[00000000]') }} ARGNOT</td>
                 <td v-if="!requiredMicronots" class="text-right">--</td>
                 <td v-else-if="wallet.availableMicronots >= requiredMicronots" class="text-right text-green-700 font-bold">success</td>
-                <td v-else class="text-right text-red-700 font-bold">waiting</td>
+                <td v-else class="fade-in-out text-right text-red-700 font-bold">waiting</td>
               </tr>
             </tbody>
           </table>
@@ -189,5 +189,22 @@ table {
 
 span[tag] {
   @apply text-xs uppercase px-2 rounded-full text-white font-bold ml-1;
+}
+
+.fade-in-out {
+  animation: fadeInOut 1s ease-in-out infinite;
+  animation-delay: 0s;
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.3;
+  }
 }
 </style>

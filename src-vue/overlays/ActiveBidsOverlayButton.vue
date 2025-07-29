@@ -29,7 +29,7 @@
               <td class="text-left">{{ lastBidAtTickFromNow(bid.lastBidAtTick) }}</td>
               <td class="text-right relative">
                 {{ bid.address.slice(0, 10) }}...{{ bid.address.slice(-7) }}
-                <span v-if="bid.subAccountIndex !== undefined" class="absolute right-0 top-1/2 -translate-y-1/2 bg-argon-600 text-white px-1.5 pb-0.25 rounded text-sm">
+                <span v-if="typeof bid.subAccountIndex === 'number'" class="absolute right-0 top-1/2 -translate-y-1/2 bg-argon-600 text-white px-1.5 pb-0.25 rounded text-sm">
                   YOU
                   <span class="absolute top-0 -left-3 inline-block h-full bg-gradient-to-r from-transparent to-white w-3"></span>
                 </span>

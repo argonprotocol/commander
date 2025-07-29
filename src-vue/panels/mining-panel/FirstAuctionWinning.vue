@@ -16,7 +16,7 @@
       </div>
       <div class="flex flex-col items-center justify-center min-h-[75px] fade-in-out">
         <div v-if="bidPositions.length" :class="[priceTextSize, 'text-center text-argon-600 font-bold']">
-          {{
+          {{bidPositions.length == 1 ? '#' : ''}}{{
             bidPositions.slice(0, -1).join(', ') +
             (bidPositions.length > 1 ? ' & ' : '') +
             bidPositions[bidPositions.length - 1]
@@ -27,13 +27,13 @@
       <div class="text-center mt-6 mb-5 uppercase text-base flex flex-row justify-center items-center">
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
         <div class="whitespace-nowrap px-5 text-gray-500">
-          AT A {{ bidPositions.length ? 'COMBINED' : 'TOTAL' }} PRICE OF
+          AT A {{ bidPositions.length > 1 ? 'COMBINED' : 'TOTAL' }} PRICE OF
         </div>
         <div class="h-[1px] bg-gray-300 w-1/2"></div>
       </div>
       <div class="flex flex-col items-center justify-center min-h-[75px] fade-in-out">
         <div v-if="bidPositions.length" :class="[priceTextSize, 'text-center text-argon-600 font-bold']">
-          {{ currency.symbol }}{{ microgonToMoneyNm(currentBidPrice).format('0,0') }}
+          {{ currency.symbol }}{{ microgonToMoneyNm(stats.myMiningBids.microgonsBid).format('0,0.00') }}
         </div>
         <div v-else class="text-center text-7xl text-argon-600 font-bold">{{ currency.symbol }}--.--</div>
       </div>
@@ -61,10 +61,10 @@
           </CountdownClock>
           <br />
           Your account allows for a total bidding budget of {{ currency.symbol
-          }}{{ microgonToMoneyNm(totalBiddingBudget).format('0,0') }} if needed.
+          }}{{ microgonToMoneyNm(totalBiddingBudget).format('0,0.00') }} if needed.
         </template>
       </p>
-      <div class="flex flex-row justify-center items-center space-x-6">
+      <div class="flex flex-row justify-center items-center space-x-6 mt-10">
         <ActiveBidsOverlayButton />
         <BotHistoryOverlayButton />
       </div>
@@ -91,11 +91,14 @@ import BotHistoryOverlayButton from '../../overlays/BotHistoryOverlayButton.vue'
 import { getMainchain } from '../../stores/mainchain';
 import { useStats } from '../../stores/stats';
 import { createNumeralHelpers } from '../../lib/numeral';
+import { useWallets } from '../../stores/wallets';
+import { bigIntMin } from '@argonprotocol/commander-calculator/src/utils';
 
 dayjs.extend(utc);
 
 const mainchain = getMainchain();
 
+const wallets = useWallets();
 const stats = useStats();
 const config = useConfig();
 
@@ -104,19 +107,16 @@ const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
 const auctionIsClosing = Vue.ref(false);
 
-const totalBiddingBudget = Vue.ref(0n);
-const seatCount = Vue.ref(100);
+const maxPossibleBiddingBudget = Vue.ref(0n);
 
-const currentBidPrice = Vue.computed(() => {
-  const myBids = stats.allWinningBids.filter((bid: IWinningBid) => bid.subAccountIndex !== undefined);
-  const total = myBids.reduce((acc: bigint, bid: IWinningBid) => acc + (bid.microgonsBid ?? 0n), 0n);
-  return total / BigInt(seatCount.value);
+const totalBiddingBudget = Vue.computed(() => {
+  const availableMicrogons = wallets.miningWallet.availableMicrogons + stats.myMiningBids.microgonsBid;
+  return bigIntMin(maxPossibleBiddingBudget.value, availableMicrogons);
 });
 
 const bidPositions = Vue.computed(() => {
-  console.log('stats.winningBids', stats.allWinningBids);
-  const myBids = stats.allWinningBids.filter((bid: IWinningBid) => bid.subAccountIndex !== undefined);
-  return myBids.map((bid: IWinningBid) => (bid.bidPosition ?? 0) + 1);
+  const myBids = stats.allWinningBids.filter((bid: IWinningBid) => typeof bid.subAccountIndex === 'number');
+  return myBids.map((bid: IWinningBid) => (bid.bidPosition ?? 0) + 1).sort((a, b) => a - b);
 });
 
 const priceTextSize = Vue.computed(() => {
@@ -139,6 +139,8 @@ function handleAuctionClosingTick(totalSecondsRemaining: number) {
 Vue.onMounted(async () => {
   if (!config.biddingRules) return;
 
+  await calculator.isInitializedPromise;
+
   if (!startOfAuctionClosing.value || !startOfNextCohort.value) {
     const tickAtStartOfAuctionClosing = await mainchain.getTickAtStartOfAuctionClosing();
     const tickAtStartOfNextCohort = await mainchain.getTickAtStartOfNextCohort();
@@ -146,8 +148,8 @@ Vue.onMounted(async () => {
     startOfNextCohort.value = dayjs.utc(Number(tickAtStartOfNextCohort) * 60 * 1000);
   }
 
-  seatCount.value = await biddingParamsHelper.getMaxSeats();
-  totalBiddingBudget.value = config.biddingRules.maximumBidAdjustAbsolute * BigInt(seatCount.value);
+  const seatCount = await biddingParamsHelper.getMaxSeats();
+  maxPossibleBiddingBudget.value = calculator.maximumBidAmount * BigInt(seatCount);
 });
 </script>
 

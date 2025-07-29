@@ -10,7 +10,7 @@ import { TICKS_PER_COHORT } from './MiningFrames.ts';
 import { bigIntMax, bigIntMin, bigNumberToBigInt } from './utils.ts';
 
 export default class BiddingCalculatorData {
-  public isInitialized: Promise<void>;
+  public isInitializedPromise: Promise<void>;
 
   public microgonsMinedThisNextYear: bigint = 0n;
   public microgonsToMineThisSeat: bigint = 0n;
@@ -30,7 +30,7 @@ export default class BiddingCalculatorData {
   public miningSeatCount: number = 0;
 
   constructor(mainchain: Mainchain) {
-    this.isInitialized = this.initialize(mainchain);
+    this.isInitializedPromise = this.initialize(mainchain);
   }
 
   private async initialize(mainchain: Mainchain) {
