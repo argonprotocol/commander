@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <div class="h-screen w-screen flex flex-col overflow-hidden">
+  <div class="h-screen w-screen flex flex-col overflow-hidden cursor-default">
     <TopBar />
     <main v-if="controller.isLoaded" class="flex-grow relative">
       <MiningPanel v-if="showMiningPanel" />

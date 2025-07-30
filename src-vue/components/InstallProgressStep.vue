@@ -4,7 +4,7 @@
     v-if="!['Hidden', 'Failed'].includes(stepStatus)"
     :status="stepStatus"
     :style="{ height: `${stepHeightPct}%`, opacity: hasError ? '0.7' : '1' }"
-    class="Component InstallProgressStep max-h-24 relative flex flex-row items-center border-t border-slate-300 text-black/30 whitespace-nowrap w-full"
+    class="Component InstallProgressStep max-h-24 relative flex flex-row items-center border-t border-dashed border-slate-300 text-black/30 whitespace-nowrap w-full"
   >
     <div v-if="stepStatus === 'Working'" spinner />
     <CheckboxGray

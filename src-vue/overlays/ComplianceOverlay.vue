@@ -11,11 +11,11 @@
 
         <DialogContent asChild @escapeKeyDown="closeOverlay" :aria-describedby="undefined">
           <Motion
-            ref="modalRef"
+            :ref="draggable.setModalRef"
             :initial="{ opacity: 0 }"
             :animate="{ opacity: 1 }"
             :exit="{ opacity: 0 }"
-            class="absolute z-50 bg-white border border-black/40 px-3 pt-6 pb-4 rounded-lg shadow-xl w-160 min-h-60 overflow-scroll cursor-default"
+            class="absolute z-50 bg-white border border-black/40 px-3 pt-6 pb-4 rounded-lg shadow-xl w-160 min-h-60 overflow-scroll"
             :style="{
               top: `calc(50% + ${draggable.modalPosition.y}px)`,
               left: `calc(50% + ${draggable.modalPosition.x}px)`,
@@ -26,7 +26,7 @@
             <h2
               :class="[currentScreen === 'overview' ? 'pb-4 mb-5 px-3' : 'pb-3 pl-2 pr-3 mb-6']"
               class="flex flex-row justify-between items-center text-2xl font-bold text-slate-800/70 border-b border-slate-300 select-none"
-              @mousedown="draggable.onMouseDown($event, modalRef)"
+              @mousedown="draggable.onMouseDown($event)"
             >
               <div v-if="currentScreen !== 'overview'" class="flex flex-row items-center hover:bg-[#f1f3f7] rounded-md p-1 pl-0 mr-2 cursor-pointer">
                 <ChevronLeftIcon @click="goto('overview')" class="w-6 h-6 cursor-pointer relative -top-0.25" />
@@ -63,8 +63,6 @@ import Draggable from './helpers/Draggable.ts';
 
 const isOpen = Vue.ref(false);
 const currentScreen = Vue.ref<'overview' | 'fixJurisdiction'>('overview');
-
-const modalRef = Vue.ref<HTMLElement | { $el: HTMLElement } | null>(null);
 const draggable = Vue.reactive(new Draggable());
 
 const title = Vue.computed(() => {

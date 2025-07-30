@@ -5,8 +5,8 @@
   "identifier": "com.argon.commander",
   "build": {
     "beforeDevCommand": "yarn run dev",
-    "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "yarn run build",
+    "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
   },
   "app": {

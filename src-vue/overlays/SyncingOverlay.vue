@@ -24,9 +24,16 @@
         leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
       >
         <div
+          :ref="draggable.setModalRef"
+          :style="{
+            top: `calc(50% + ${draggable.modalPosition.y}px)`,
+            left: `calc(50% + ${draggable.modalPosition.x}px)`,
+            transform: 'translate(-50%, -50%)',
+            cursor: draggable.isDragging ? 'grabbing' : 'default',
+          }"
           class="flex flex-col w-6/12 bg-white border border-black/40 px-7 pb-8 rounded-lg pointer-events-auto shadow-xl relative overflow-scroll"
         >
-          <h2 class="text-2xl font-bold text-slate-800/70 border-b border-slate-300 pt-6 pb-3 mb-3">
+          <h2 @mousedown="draggable.onMouseDown($event)" class="text-2xl font-bold text-slate-800/70 border-b border-slate-300 pt-6 pb-3 mb-3">
             Syncing Your Cloud Machine
           </h2>
           <div v-if="syncErrorType" class="flex flex-row items-center gap-x-2">
@@ -53,10 +60,13 @@ import BgOverlay from '../components/BgOverlay.vue';
 import ProgressBar from '../components/ProgressBar.vue';
 import AlertIcon from '../assets/alert.svg?component';
 import { useBot } from '../stores/bot';
+import Draggable from './helpers/Draggable.ts';
 
 const isOpen = Vue.ref(true);
 const isRetrying = Vue.ref(false);
 const bot = useBot();
+
+const draggable = Vue.reactive(new Draggable());
 
 const syncErrorType = Vue.ref<string | null>(null);
 

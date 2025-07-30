@@ -18,8 +18,8 @@ fn main() {
     }
 
     // Set default values if not present
-    if env::var("VITE_NETWORK_URL").is_err() {
-        println!("cargo:rustc-env=VITE_NETWORK_URL=wss://rpc.argon.network");
+    if env::var("ARGON_NETWORK_URL").is_err() {
+        println!("cargo:rustc-env=ARGON_NETWORK_URL=wss://rpc.argon.network");
     }
 
     tauri_build::build()

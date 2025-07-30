@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <div class="flex flex-col h-full w-full cursor-default">
+  <div class="flex flex-col h-full w-full">
     <AlertBars />
     <FirstAuctionFailed v-if="!bot.maxSeatsPossible" />
     <FirstAuctionWinning v-else-if="config.hasMiningBids" />

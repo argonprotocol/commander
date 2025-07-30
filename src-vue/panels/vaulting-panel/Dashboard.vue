@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <div class="flex flex-col h-full cursor-default">
+  <div class="flex flex-col h-full">
     <AlertBars />
 
     <div

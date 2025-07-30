@@ -4,7 +4,7 @@
     <div
       InputFieldWrapper
       :class="[
-        props.disabled ? 'border-dashed cursor-default' : '',
+        props.disabled ? 'border-dashed' : '',
         hasFocus ? 'inner-input-shadow outline-2 -outline-offset-2 outline-argon-button' : '',
         [!hasFocus && !props.disabled ? 'hover:bg-white' : ''],
       ]"
@@ -138,9 +138,8 @@ const props = withDefaults(
   },
 );
 
-let loginValueOriginal = props.modelValue;
-let loginValueConverted = originalToConverted(props.modelValue);
-let lastValueBeforeMinIncrease = loginValueConverted;
+let currentInputValue = props.modelValue;
+let lastValueBeforeMinIncrease = currentInputValue;
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: number): void;
@@ -151,9 +150,14 @@ const $el = Vue.ref<HTMLElement | null>(null);
 const inputElem = Vue.ref<HTMLInputElement | null>(null);
 const hasFocus = Vue.ref(false);
 
-// Add timer refs for continuous updates
-const incrementTimer = Vue.ref<number | null>(null);
-const decrementTimer = Vue.ref<number | null>(null);
+let incrementTimerId: number | null = null;
+let decrementTimerId: number | null = null;
+let minMaxInputValueTimeoutId: number | null = null;
+
+// Add this after other module-level variables
+let pendingCaretPosition: number | null = null;
+
+// Configuration for continuous increment/decrement
 const initialDelay = 500; // Initial delay before starting continuous updates
 const updateInterval = 50; // Interval between updates once continuous mode starts
 
@@ -162,7 +166,7 @@ const suffix = Vue.computed(() => {
   if (props.format === 'percent') {
     sfx = '%';
   } else if (props.format === 'minutes') {
-    sfx = loginValueConverted === 1 ? ' minute' : ' minutes';
+    sfx = currentInputValue === 1 ? ' minute' : ' minutes';
   }
 
   if (props.suffix) {
@@ -172,46 +176,108 @@ const suffix = Vue.computed(() => {
   return sfx;
 });
 
-function originalToConverted(valueOriginal: number): number {
-  return Number(valueOriginal);
-}
+function updateInputValue(inputValue: number, setAsLastValueBeforeMinIncrease: boolean = false) {
+  const boundedInputValue = calculateBoundedInputValue(inputValue);
+  currentInputValue = inputValue;
 
-function convertedToOriginal(convertedValue: number): number {
-  return convertedValue;
-}
-
-function updateInputValue(valueConverted: number, setAsLastValueBeforeMinIncrease: boolean = false) {
-  let valueOriginal = convertedToOriginal(valueConverted);
-
-  if (props.max !== undefined && valueOriginal > props.max) {
-    valueOriginal = props.max;
-    valueConverted = originalToConverted(valueOriginal);
+  if (minMaxInputValueTimeoutId) {
+    window.clearTimeout(minMaxInputValueTimeoutId);
   }
-  if (props.min !== undefined && valueOriginal < props.min) {
-    valueOriginal = props.min;
-    valueConverted = originalToConverted(valueOriginal);
-  }
-
-  loginValueOriginal = valueOriginal;
-  loginValueConverted = valueConverted;
+  minMaxInputValueTimeoutId = null;
 
   if (setAsLastValueBeforeMinIncrease) {
-    lastValueBeforeMinIncrease = valueConverted;
+    lastValueBeforeMinIncrease = inputValue;
   }
 
-  emit('update:modelValue', valueOriginal);
-  insertIntoInputElem(valueConverted);
+  if (boundedInputValue !== inputValue) {
+    minMaxInputValueTimeoutId = window.setTimeout(() => {
+      if (inputValue !== currentInputValue) return;
+      updateInputValue(boundedInputValue);
+    }, 1_000);
+  }
+
+  emit('update:modelValue', boundedInputValue);
+  insertIntoInputElem(inputValue);
 }
 
-function insertIntoInputElem(convertedValue: number) {
+function calculateBoundedInputValue(inputValue: number) {
+  if (props.max !== undefined && inputValue > props.max) {
+    inputValue = props.max;
+  }
+  if (props.min !== undefined && inputValue < props.min) {
+    inputValue = props.min;
+  }
+  return inputValue;
+}
+
+function insertIntoInputElem(rawValue: number) {
   if (!inputElem.value) return;
 
   const hasFocus = document.activeElement === inputElem.value;
-  const caretPosition = hasFocus ? getCaretPosition() : 0;
-  inputElem.value.textContent = formatFn(convertedValue);
-  if (hasFocus) {
-    setCaretPosition(caretPosition);
+  const oldValue = inputElem.value.textContent || '';
+  const newValue = formatFn(rawValue);
+  if (oldValue === newValue) {
+    return;
   }
+
+  const oldCaretPosition = hasFocus ? getCaretPosition() : 0;
+
+  if (hasFocus) {
+    // Use execCommand to preserve undo/redo stack
+    const selection = window.getSelection();
+    if (selection) {
+      // Select all content
+      const range = document.createRange();
+      range.selectNodeContents(inputElem.value);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      // Insert the new text (this creates undo history)
+      const result = document.execCommand('insertText', false, newValue);
+
+      // Set caret position
+      let newCaretPosition;
+      if (pendingCaretPosition !== null) {
+        newCaretPosition = pendingCaretPosition;
+        pendingCaretPosition = null;
+      } else {
+        newCaretPosition = calculateAdjustedCaretPosition(oldValue, newValue, oldCaretPosition);
+      }
+      setCaretPosition(newCaretPosition);
+    }
+  } else {
+    // If not focused, just set the content directly
+    inputElem.value.textContent = newValue;
+  }
+}
+
+function calculateAdjustedCaretPosition(oldText: string, newText: string, oldPosition: number): number {
+  // If the cursor was at the end of the old text, keep it at the end of the new text
+  if (oldPosition >= oldText.length) {
+    return newText.length;
+  }
+
+  // Count numeric characters (digits and decimal points) up to the old position
+  let numericCharsBeforeOldPosition = 0;
+  for (let i = 0; i < Math.min(oldPosition, oldText.length); i++) {
+    if (/[\d.]/.test(oldText[i])) {
+      numericCharsBeforeOldPosition++;
+    }
+  }
+
+  // Find the position in the new text that corresponds to the same number of numeric characters
+  let numericCharsFound = 0;
+  for (let i = 0; i < newText.length; i++) {
+    if (/[\d.]/.test(newText[i])) {
+      numericCharsFound++;
+      if (numericCharsFound > numericCharsBeforeOldPosition) {
+        return i;
+      }
+    }
+  }
+
+  // If we haven't found enough numeric characters, position at the end
+  return newText.length;
 }
 
 function formatFn(value: number) {
@@ -250,12 +316,15 @@ function handleBlur() {
   if (showMenu.value) return;
   if (!activeElement || !$el.value?.contains(activeElement)) {
     hasFocus.value = false;
-    updateInputValue(loginValueConverted);
+    const boundedInputValue = calculateBoundedInputValue(currentInputValue);
+    if (boundedInputValue !== currentInputValue) {
+      updateInputValue(boundedInputValue);
+    }
   }
 }
 
 let startDragY: number | null = null;
-let startValue: number = loginValueConverted;
+let startValue: number = currentInputValue;
 let isDragging = false;
 let minStepsUp: number = 0;
 let minStepsDown: number = 0;
@@ -279,7 +348,7 @@ function handlePointerDown(event: PointerEvent) {
 
   button.setPointerCapture(event.pointerId);
   startDragY = event.clientY;
-  startValue = loginValueConverted;
+  startValue = currentInputValue;
   startPointerX = event.clientX;
   startPointerY = event.clientY;
   isContinuousMode = false;
@@ -389,15 +458,15 @@ function emitDrag(event: PointerEvent) {
     }
 
     // Update visual feedback
-    if (newValue > loginValueConverted) {
+    if (newValue > currentInputValue) {
       document.body.classList.add('isDraggingIncrease');
       document.body.classList.remove('isDraggingDecrease');
-    } else if (newValue < loginValueConverted) {
+    } else if (newValue < currentInputValue) {
       document.body.classList.add('isDraggingDecrease');
       document.body.classList.remove('isDraggingIncrease');
     }
 
-    if (newValue !== loginValueConverted) {
+    if (newValue !== currentInputValue) {
       updateInputValue(newValue, true);
     }
   }
@@ -456,6 +525,83 @@ function toggleMenu() {
   setTimeout(() => $el.value?.focus(), 0);
 }
 
+function handlePaste(event: ClipboardEvent) {
+  event.preventDefault();
+  const pastedText = event.clipboardData?.getData('text') || '';
+  const sanitizedText = pastedText.replace(/[^\d,.]/g, '');
+
+  const target = event.target as HTMLElement;
+  if (!target) return;
+
+  // Get current selection and cursor position
+  const selection = window.getSelection();
+  const range = selection?.getRangeAt(0);
+
+  if (!selection || !range) return;
+
+  // Get the start and end positions of the selection
+  const startOffset = range.startOffset;
+  const endOffset = range.endOffset;
+  const hasSelection = startOffset !== endOffset;
+
+  // Get the current text content
+  const currentText = target.textContent || '';
+
+  let newText: string;
+  let newCursorPos: number;
+
+  if (hasSelection) {
+    // Replace the selected text with the pasted text
+    newText = currentText.slice(0, startOffset) + sanitizedText + currentText.slice(endOffset);
+    newCursorPos = startOffset + sanitizedText.length;
+  } else {
+    // Insert at cursor position (no selection)
+    newText = currentText.slice(0, startOffset) + sanitizedText + currentText.slice(startOffset);
+    newCursorPos = startOffset + sanitizedText.length;
+  }
+
+  // Ensure only one decimal point
+  const parts = newText.split('.');
+  const finalValue = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : newText;
+
+  // Set the pending caret position to after the pasted text (in terms of numeric chars)
+  // We'll use this in insertIntoInputElem after formatting
+  const numericValue = Number(finalValue.replace(/,/g, ''));
+  const formatted = formatFn(numericValue);
+
+  // Calculate the caret position
+  let calculatedCaretPosition: number;
+  // If the paste was at the end of the input, set caret to the end
+  if (newCursorPos >= finalValue.length) {
+    calculatedCaretPosition = formatted.length;
+  } else {
+    // Otherwise, count numeric chars up to newCursorPos in the unformatted string
+    let numericChars = 0;
+    for (let i = 0; i < Math.min(newCursorPos, finalValue.length); i++) {
+      if (/\d|\./.test(finalValue[i])) numericChars++;
+    }
+    // Now, find the position in the formatted string after the same number of numeric chars
+    let found = 0;
+    calculatedCaretPosition = formatted.length; // Default to end
+    for (let i = 0; i < formatted.length; i++) {
+      if (/\d|\./.test(formatted[i])) {
+        found++;
+        if (found === numericChars) {
+          // Place caret after the last pasted char
+          calculatedCaretPosition = i + 1;
+          break;
+        }
+      }
+    }
+  }
+
+  pendingCaretPosition = calculatedCaretPosition;
+
+  if (!isNaN(numericValue)) {
+    updateInputValue(numericValue, true);
+  }
+}
+
 function handleBeforeInput(event: InputEvent) {
   if (event.inputType === 'insertText') {
     const caretPosition = getCaretPosition();
@@ -465,45 +611,6 @@ function handleBeforeInput(event: InputEvent) {
     } else if (char && !/[\d,.]/.test(char)) {
       event.preventDefault();
     }
-  }
-}
-
-function handlePaste(event: ClipboardEvent) {
-  event.preventDefault();
-  const pastedText = event.clipboardData?.getData('text') || '';
-  const sanitizedText = pastedText.replace(/[^\d,.]/g, '');
-
-  const target = event.target as HTMLElement;
-  if (!target) return;
-
-  // Get current cursor position
-  const selection = window.getSelection();
-  const range = selection?.getRangeAt(0);
-  const cursorOffset = range?.startOffset || 0;
-
-  // Insert the sanitized text at cursor position
-  const currentText = target.textContent || '';
-  const newText = currentText.slice(0, cursorOffset) + sanitizedText + currentText.slice(cursorOffset);
-
-  // Ensure only one decimal point
-  const parts = newText.split('.');
-  const finalValue = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : newText;
-
-  target.textContent = finalValue;
-
-  // Set cursor position after the pasted text
-  if (selection && range) {
-    const newCursorPos = cursorOffset + sanitizedText.length;
-    const newRange = document.createRange();
-    newRange.setStart(target.firstChild || target, newCursorPos);
-    newRange.setEnd(target.firstChild || target, newCursorPos);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
-  }
-
-  const numericValue = Number(finalValue.replace(/,/g, ''));
-  if (!isNaN(numericValue)) {
-    updateInputValue(numericValue, true);
   }
 }
 
@@ -545,8 +652,7 @@ function setCaretPosition(position: number) {
 }
 
 function incrementValue() {
-  const startValue = loginValueConverted;
-  const caretPosition = getCaretPosition();
+  const startValue = currentInputValue;
 
   let incrementBy = props.dragBy;
   if (startValue < props.dragBy) {
@@ -556,12 +662,10 @@ function incrementValue() {
   }
   const newValue = BigNumber(startValue).plus(incrementBy).toNumber();
   updateInputValue(newValue, true);
-  setCaretPosition(caretPosition);
 }
 
 function decrementValue() {
-  const startValue = loginValueConverted;
-  const caretPosition = getCaretPosition();
+  const startValue = currentInputValue;
 
   let decrementBy = props.dragBy;
   if (startValue <= props.dragBy) {
@@ -571,40 +675,32 @@ function decrementValue() {
   }
   const newValue = BigNumber(startValue).minus(decrementBy).toNumber();
   updateInputValue(newValue, true);
-  setCaretPosition(caretPosition);
 }
 
 function startContinuousIncrement() {
   stopContinuousUpdates();
   incrementValue();
 
-  // Start continuous updates after initial delay
-  incrementTimer.value = window.setTimeout(() => {
+  incrementTimerId = window.setTimeout(() => {
     const intervalId = window.setInterval(() => {
       incrementValue();
     }, updateInterval);
 
-    // Store the interval ID in the timer ref
-    incrementTimer.value = intervalId;
+    incrementTimerId = intervalId;
   }, initialDelay);
 }
 
 function startContinuousDecrement() {
   try {
-    // Clear any existing timers
     stopContinuousUpdates();
-
-    // Initial decrement
     decrementValue();
 
-    // Start continuous updates after initial delay
-    decrementTimer.value = window.setTimeout(() => {
+    decrementTimerId = window.setTimeout(() => {
       const intervalId = window.setInterval(() => {
         decrementValue();
       }, updateInterval);
 
-      // Store the interval ID in the timer ref
-      decrementTimer.value = intervalId;
+      decrementTimerId = intervalId;
     }, initialDelay);
   } catch (error) {
     console.error('Error starting continuous decrement:', error);
@@ -612,15 +708,15 @@ function startContinuousDecrement() {
 }
 
 function stopContinuousUpdates() {
-  if (incrementTimer.value !== null) {
-    window.clearTimeout(incrementTimer.value);
-    window.clearInterval(incrementTimer.value);
-    incrementTimer.value = null;
+  if (incrementTimerId !== null) {
+    window.clearTimeout(incrementTimerId);
+    window.clearInterval(incrementTimerId);
+    incrementTimerId = null;
   }
-  if (decrementTimer.value !== null) {
-    window.clearTimeout(decrementTimer.value);
-    window.clearInterval(decrementTimer.value);
-    decrementTimer.value = null;
+  if (decrementTimerId !== null) {
+    window.clearTimeout(decrementTimerId);
+    window.clearInterval(decrementTimerId);
+    decrementTimerId = null;
   }
   if (continuousTimer !== null) {
     window.clearTimeout(continuousTimer);
@@ -631,6 +727,12 @@ function stopContinuousUpdates() {
 function handleKeyDown(event: KeyboardEvent) {
   const target = event.target as HTMLElement;
   if (!target) return;
+
+  // Allow undo/redo shortcuts to work
+  if ((event.metaKey || event.ctrlKey) && (event.key === 'z' || event.key === 'y')) {
+    // Don't prevent default - let the browser handle it
+    return;
+  }
 
   if (event.key === 'ArrowDown') {
     event.preventDefault();
@@ -657,10 +759,9 @@ function selectAllText() {
 
 Vue.watch(
   () => props.modelValue,
-  newModelValue => {
-    const valueConverted = originalToConverted(Number(newModelValue));
-    if (valueConverted !== loginValueConverted) {
-      updateInputValue(valueConverted);
+  (x: number) => {
+    if (x !== currentInputValue) {
+      updateInputValue(x);
     }
   },
 );
@@ -671,10 +772,10 @@ Vue.watch(
     const newMinValue = Number(newMin);
     if (newMinValue === undefined) return;
 
-    if (loginValueConverted < newMinValue) {
-      lastValueBeforeMinIncrease = Math.min(loginValueConverted, lastValueBeforeMinIncrease);
+    if (currentInputValue < newMinValue) {
+      lastValueBeforeMinIncrease = Math.min(currentInputValue, lastValueBeforeMinIncrease);
       updateInputValue(newMinValue);
-    } else if (loginValueConverted > newMinValue && loginValueConverted > lastValueBeforeMinIncrease) {
+    } else if (currentInputValue > newMinValue && currentInputValue > lastValueBeforeMinIncrease) {
       updateInputValue(Math.max(newMinValue, lastValueBeforeMinIncrease));
     }
   },
@@ -682,6 +783,6 @@ Vue.watch(
 );
 
 Vue.onMounted(() => {
-  insertIntoInputElem(loginValueConverted);
+  insertIntoInputElem(currentInputValue);
 });
 </script>

@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <SelectRoot v-model="selectedOption" @update:open="handleToggleOpen" @update:modelValue="handleUpdateModelValue" class="cursor-default">
+  <SelectRoot v-model="selectedOption" @update:open="handleToggleOpen" @update:modelValue="handleUpdateModelValue">
     <SelectTrigger
       ref="triggerInstance"
       class="inline-flex min-w-[160px] w-full items-center justify-between rounded-md px-[10px] text-xs leading-none h-[30px] gap-[5px] bg-white hover:bg-stone-50 border border-slate-700/50 data-[placeholder]:text-gray-600 outline-none"
@@ -16,7 +16,7 @@
 
     <SelectPortal>
       <SelectContent
-        class="bg-white py-2 cursor-default data-[side=bottom]:rounded-b-md data-[side=top]:rounded-t-md data-[side=bottom]:border-t-gray-400 data-[side=top]:border-b-gray-400 border border-slate-700/50 shadow-sm will-change-[opacity,transform] data-[side=top]:animate-slideDownAndFade data-[side=right]:animate-slideLeftAndFade data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade z-[100]"
+        class="bg-white py-2 data-[side=bottom]:rounded-b-md data-[side=top]:rounded-t-md data-[side=bottom]:border-t-gray-400 data-[side=top]:border-b-gray-400 border border-slate-700/50 shadow-sm will-change-[opacity,transform] data-[side=top]:animate-slideDownAndFade data-[side=right]:animate-slideLeftAndFade data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade z-[100]"
         position="popper"
         :style="{ minWidth: menuWidth, maxHeight: 'var(--reka-select-content-available-height)' }"
         :avoidCollisions="true"
@@ -25,7 +25,7 @@
         :sideOffset="-3"
         :sticky="'always'"
       >
-        <SelectScrollUpButton class="absolute top-0 left-0 right-0 z-10 flex items-center justify-center h-[25px] bg-gradient-to-b from-[10px] from-white to-transparent cursor-default">
+        <SelectScrollUpButton class="absolute top-0 left-0 right-0 z-10 flex items-center justify-center h-[25px] bg-gradient-to-b from-[10px] from-white to-transparent">
           <ChevronUpIcon class="size-5 text-gray-400" />
         </SelectScrollUpButton>
 
@@ -46,7 +46,7 @@
           </SelectItem>
         </SelectViewport>
 
-        <SelectScrollDownButton class="absolute bottom-0 left-0 right-0 flex items-center justify-center h-[25px] bg-gradient-to-t from-[10px] from-white to-transparent cursor-default">
+        <SelectScrollDownButton class="absolute bottom-0 left-0 right-0 flex items-center justify-center h-[25px] bg-gradient-to-t from-[10px] from-white to-transparent">
           <ChevronDownIcon class="size-5 text-gray-400" />
         </SelectScrollDownButton>
       </SelectContent>

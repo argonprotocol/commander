@@ -4,7 +4,7 @@ use serde;
 use ssh::SSH;
 use ssh_singleton::*;
 use std;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use utils::Utils;
@@ -150,12 +150,12 @@ async fn create_shasum(app: AppHandle, dir_name: String) -> Result<String, Strin
 
 ////////////////////////////////////////////////////////////
 
-fn init_logger(instance_name: &String) -> tauri_plugin_log::Builder {
+fn init_logger(network_name: &String, instance_name: &String) -> tauri_plugin_log::Builder {
     let mut logger = tauri_plugin_log::Builder::new()
         .clear_targets()
         .target(tauri_plugin_log::Target::new(
             tauri_plugin_log::TargetKind::LogDir {
-                file_name: Some(format!("{}", instance_name)),
+                file_name: Some(format!("{}-{}", network_name, instance_name)),
             },
         ))
         .target(tauri_plugin_log::Target::new(
@@ -180,11 +180,10 @@ fn init_logger(instance_name: &String) -> tauri_plugin_log::Builder {
     logger
 }
 
-fn init_config_instance_dir(app: &AppHandle) -> Result<(), tauri::Error> {
-    let instance_name = Utils::get_instance_name();
+fn init_config_instance_dir(app: &AppHandle, relative_config_dir: &PathBuf) -> Result<(), tauri::Error> {
     let config_instance_dir = app
         .path()
-        .resolve(instance_name, tauri::path::BaseDirectory::AppConfig)?;
+        .resolve(relative_config_dir, tauri::path::BaseDirectory::AppConfig)?;
     if !config_instance_dir.exists() {
         trace!(
             "Creating config directory at: {}",
@@ -201,19 +200,25 @@ pub fn run() {
 
     color_backtrace::install();
 
+    let network_name = Utils::get_network_name();
     let instance_name = Utils::get_instance_name();
-    let logger = init_logger(&instance_name);
-    let db_url = format!("sqlite:{}/database.sqlite", instance_name);
+    let logger = init_logger(&network_name, &instance_name);
+
+    let relative_config_dir = Utils::get_relative_config_instance_dir();
+    let db_relative_path = relative_config_dir.join("database.sqlite");
+    let db_url = format!("sqlite:{}", db_relative_path.display());
     let migrations = migrations::get_migrations();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(move |app| {
-            log::info!("Starting Commander with instance name: {}", instance_name);
+            log::info!("Starting instance '{}' on network '{}'", instance_name, network_name);
+            log::info!("Database URL = {}", db_relative_path.display());
+
             let window = app.get_webview_window("main").unwrap();
             let handle = app.handle();
 
-            init_config_instance_dir(&handle)?;
+            init_config_instance_dir(&handle, &relative_config_dir)?;
 
             #[cfg(target_os = "macos")]
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(16.0))

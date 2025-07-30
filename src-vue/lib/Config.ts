@@ -24,11 +24,13 @@ import { CurrencyKey } from './Currency';
 import { bip39 } from '@argonprotocol/bitcoin';
 import Countries from './Countries';
 
+export let NETWORK_NAME = __ARGON_NETWORK_NAME__ || 'mainnet';
+export let NETWORK_URL = __ARGON_NETWORK_URL__ || 'wss://rpc.argon.network';
+export const [INSTANCE_NAME, INSTANCE_PORT] = (__COMMANDER_INSTANCE__ || 'default:1420').split(':');
+
 export const env = (import.meta as any).env ?? {};
-export let NETWORK_NAME = env.VITE_NETWORK_NAME || 'mainnet';
-export let NETWORK_URL = env.VITE_NETWORK_URL || 'wss://rpc.argon.network';
-export const INSTANCE_NAME = env.VITE_INSTANCE_NAME || 'default';
 export const TICK_MILLIS = env.VITE_TICK_MILLIS || 60e3;
+
 export const DEPLOY_ENV_FILE =
   { testnet: '.env.testnet', mainnet: '.env.mainnet', local: '.env.localnet' }[NETWORK_NAME as string] ??
   '.env.mainnet';

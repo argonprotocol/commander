@@ -9,7 +9,7 @@
       <WindowControls />
       <div class="text-xl font-bold">
         Argon Commander
-        <span class="font-light">({{ NETWORK_NAME }})</span>
+        <span class="font-light text-lg">({{ NETWORK_NAME }}<template v-if="INSTANCE_NAME !== 'default'">, {{ INSTANCE_NAME.slice(0, 5) }}<template v-if="INSTANCE_NAME.length > 5">...</template></template>)</span>
       </div>
     </div>
 
@@ -308,6 +308,7 @@ import CopyIcon from '../assets/copy.svg?component';
 import ConfigIcon from '../assets/config.svg?component';
 import CopyToClipboard from './CopyToClipboard.vue';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
+import { INSTANCE_NAME } from '../lib/Config';
 
 const controller = useController();
 const config = useConfig();

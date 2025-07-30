@@ -119,7 +119,7 @@ export class SSH {
 
   private static async openConnection(): Promise<void> {
     if (this.isConnectingPromise) {
-      return await this.isConnectingPromise;
+      return this.isConnectingPromise;
     }
 
     this.isConnectingPromise = new Promise(async resolve => {
@@ -137,6 +137,8 @@ export class SSH {
       resolve();
       this.isConnectingPromise = undefined;
     });
+
+    return this.isConnectingPromise;
   }
 }
 

@@ -5,17 +5,17 @@ import { MiningFrames } from '@argonprotocol/commander-calculator';
 import type { IBotStateFile } from './interfaces/IBotStateFile.ts';
 import type { IEarningsFile } from './interfaces/IEarningsFile.ts';
 import type { IBidsFile } from './interfaces/IBidsFile.ts';
-import { JsonStore } from './JsonStore.ts';
 import type { IHistoryFile } from './interfaces/IHistoryFile.ts';
+import { JsonStore } from './JsonStore.ts';
 
 export class Storage {
   private lruCache = new LRU<JsonStore<any>>(100);
 
   constructor(private basedir: string) {
     fs.mkdirSync(this.basedir, { recursive: true });
-    fs.mkdirSync(Path.join(this.basedir, 'bids'), { recursive: true });
-    fs.mkdirSync(Path.join(this.basedir, 'earnings'), { recursive: true });
-    fs.mkdirSync(Path.join(this.basedir, 'history'), { recursive: true });
+    fs.mkdirSync(Path.join(this.basedir, 'bot-bids'), { recursive: true });
+    fs.mkdirSync(Path.join(this.basedir, 'bot-earnings'), { recursive: true });
+    fs.mkdirSync(Path.join(this.basedir, 'bot-history'), { recursive: true });
   }
 
   public botStateFile(): JsonStore<IBotStateFile> {
@@ -50,7 +50,7 @@ export class Storage {
    * @param frameId - the frame id of the last block mined
    */
   public earningsFile(frameId: number): JsonStore<IEarningsFile> {
-    const key = `earnings/frame-${frameId}.json`;
+    const key = `bot-earnings/frame-${frameId}.json`;
     let entry = this.lruCache.get(key);
     if (!entry) {
       entry = new JsonStore<IEarningsFile>(Path.join(this.basedir, key), () => {
@@ -75,7 +75,7 @@ export class Storage {
 
   public bidsFile(cohortActivatingFrameId: number): JsonStore<IBidsFile> {
     const cohortBiddingFrameId = cohortActivatingFrameId - 1;
-    const key = `bids/frame-${cohortBiddingFrameId}-${cohortActivatingFrameId}.json`;
+    const key = `bot-bids/frame-${cohortBiddingFrameId}-${cohortActivatingFrameId}.json`;
     let entry = this.lruCache.get(key);
     if (!entry) {
       entry = new JsonStore<IBidsFile>(Path.join(this.basedir, key), () => ({
@@ -96,7 +96,7 @@ export class Storage {
   }
 
   public historyFile(frameId: number): JsonStore<IHistoryFile> {
-    const key = `history/frame-${frameId}.json`;
+    const key = `bot-history/frame-${frameId}.json`;
     let entry = this.lruCache.get(key);
     if (!entry) {
       entry = new JsonStore<IHistoryFile>(Path.join(this.basedir, key), () => {
