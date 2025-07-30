@@ -11,8 +11,8 @@
 
         <DialogContent asChild @escapeKeyDown="closeOverlay" :aria-describedby="undefined">
           <Motion
-            ref="modalRef"
-            @mousedown="draggable.onMouseDown($event, modalRef)"
+            :ref="draggable.setModalRef"
+            @mousedown="draggable.onMouseDown($event)"
             :initial="{ opacity: 0 }"
             :animate="{ opacity: 1 }"
             :exit="{ opacity: 0 }"
@@ -22,7 +22,7 @@
               transform: 'translate(-50%, -50%)',
               cursor: draggable.isDragging ? 'grabbing' : 'default',
             }"
-            class="absolute z-50 bg-white text-md border border-black/40 px-4 pt-6 pb-4 rounded-lg text-center shadow-xl w-80 overflow-scroll cursor-default"
+            class="absolute z-50 bg-white text-md border border-black/40 px-4 pt-6 pb-4 rounded-lg text-center shadow-xl w-80 overflow-scroll"
             >
             <img src="/app-icon.png" class="w-14 h-14 rounded-lg mx-auto" />
             <div class="font-bold mt-4">Argon Commander</div>
@@ -66,7 +66,6 @@ const config = useConfig();
 
 const isOpen = Vue.ref(false);
 const wasCopied = Vue.ref(false);
-const modalRef = Vue.ref<{ $el: HTMLElement } | null>(null);
 const draggable = Vue.reactive(new Draggable());
 
 basicEmitter.on('openAboutOverlay', async (data: any) => {

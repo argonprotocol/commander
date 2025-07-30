@@ -61,7 +61,7 @@
           </CountdownClock>
           <br />
           Your account allows for a total bidding budget of {{ currency.symbol
-          }}{{ microgonToMoneyNm(totalBiddingBudget).format('0,0.00') }} if needed.
+          }}{{ microgonToMoneyNm(totalBiddingBudget).format('0,0.00') }}.
         </template>
       </p>
       <div class="flex flex-row justify-center items-center space-x-6 mt-10">

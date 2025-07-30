@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <div class="flex flex-col h-full cursor-default">
+  <div class="flex flex-col h-full">
     <AlertBars />
 
     <div
@@ -72,12 +72,12 @@
               <template v-if="!isNull">{{ seconds }}s ago</template>
               <template v-else>-- ----</template>
             </CountupClock>
-            <ActiveBidsOverlayButton :position="'left'" class="ml-1.5 z-50">
+            <ActiveBidsOverlayButton :position="'left'" class="ml-1.5">
               <span class="group inline-block border border-transparent hover:border-argon-200 rounded cursor-pointer pt-0.5 pb-1 px-1 relative top-0.5">
                 <AuctionIcon class="w-5.5 h-5.5 group-hover:text-argon-600" />
               </span>
             </ActiveBidsOverlayButton>
-            <BotHistoryOverlayButton :position="'left'" class="z-50">
+            <BotHistoryOverlayButton :position="'left'">
               <span class="group inline-block border border-transparent hover:border-argon-200 rounded cursor-pointer pt-1 pb-0.5 px-1 relative top-0.5">
                 <ActivityIcon class="w-5.5 h-5.5 group-hover:text-argon-600" />
               </span>

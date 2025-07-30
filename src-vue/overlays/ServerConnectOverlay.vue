@@ -13,7 +13,7 @@
               inset 0 2px 0 rgba(255, 255, 255, 1);
           "
         >
-          <div v-if="isLoaded" class="flex flex-col h-full w-full cursor-default">
+          <div v-if="isLoaded" class="flex flex-col h-full w-full">
             <h2
               class="relative text-3xl font-bold text-center border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 text-[#672D73]"
               style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)"
@@ -94,7 +94,7 @@
                       <div>
                         <p>
                           You should use all the default options when creating your new droplet, including Digital
-                          Ocean's default image. It should be set to Ubuntu version 24.10 x64.
+                          Ocean's default image. It should be using Ubuntu version 24.10 or higher.
                         </p>
                         <p>Keep on scrolling.</p>
                       </div>

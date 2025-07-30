@@ -5,7 +5,7 @@ export default class Draggable {
   public isDragging: boolean;
   public dragStart: { x: number; y: number };
   public mouseStart: { x: number; y: number };
-  public modalRef: HTMLElement | { $el: HTMLElement } | null;
+  public modalRef: Element | Vue.ComponentPublicInstance | null;
 
   constructor() {
     this.modalPosition = { x: 0, y: 0 };
@@ -13,10 +13,20 @@ export default class Draggable {
     this.dragStart = { x: 0, y: 0 };
     this.mouseStart = { x: 0, y: 0 };
     this.modalRef = null;
+
+    // Bind setModalRef to this to ensure proper context when used as a callback
+    this.setModalRef = this.setModalRef.bind(this);
   }
 
-  onMouseDown(event: MouseEvent, modelRef: HTMLElement | { $el: HTMLElement } | null) {
-    this.modalRef = modelRef;
+  public setModalRef(el: Element | Vue.ComponentPublicInstance | null) {
+    this.modalRef = el;
+  }
+
+  public onMouseDown(event: MouseEvent) {
+    if (!this.modalRef) {
+      console.error('Draggable: modalRef is not set');
+      return;
+    }
     this.isDragging = true;
     this.mouseStart = { x: event.clientX, y: event.clientY };
     this.dragStart = { ...this.modalPosition };
@@ -24,7 +34,7 @@ export default class Draggable {
     window.addEventListener('mouseup', this.onDragEnd.bind(this));
   }
 
-  onDragMove(e: MouseEvent) {
+  private onDragMove(e: MouseEvent) {
     if (!this.isDragging) return;
 
     const dx = e.clientX - this.mouseStart.x;
@@ -55,7 +65,7 @@ export default class Draggable {
     this.modalPosition = { x: newX, y: newY };
   }
 
-  onDragEnd() {
+  private onDragEnd() {
     console.log('onDragEnd');
 
     this.isDragging = false;
