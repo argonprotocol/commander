@@ -150,15 +150,6 @@ export class Mainchain {
     return (await client.query.balances.totalIssuance()).toBigInt();
   }
 
-  private async fetchMicrogonsInCirculationMinusBitcoinLocked(): Promise<bigint> {
-    const client = await this.client;
-
-    const argonsInCirculation = await this.fetchMicrogonsInCirculation();
-    const bitcoinArgons = (await client.query.mint.mintedBitcoinArgons()).toBigInt();
-
-    return argonsInCirculation - bitcoinArgons;
-  }
-
   public async fetchMicrogonsMinedPerBlockDuringNextCohort(): Promise<bigint> {
     const client = await this.client;
     return await client.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
