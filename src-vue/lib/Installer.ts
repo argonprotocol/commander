@@ -14,6 +14,8 @@ import utc from 'dayjs/plugin/utc';
 import { jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
 import { createDeferred, ensureOnlyOneInstance, resetOnlyOneInstance } from './Utils';
 import IDeferred from '../interfaces/IDeferred';
+import { message as tauriMessage } from '@tauri-apps/plugin-dialog';
+import { exit as tauriExit } from '@tauri-apps/plugin-process';
 
 dayjs.extend(utc);
 
@@ -65,6 +67,18 @@ export default class Installer {
 
   public async load(): Promise<void> {
     await this.config.isLoadedPromise;
+
+    const uploadedWalletAddress = await this.fetchUploadedWalletAddress();
+    if (uploadedWalletAddress && uploadedWalletAddress !== this.config.miningAccount.address) {
+      await tauriMessage(
+        'The wallet address on the server does not match the wallet address in the local database. This app will shutdown.',
+        {
+          title: 'Wallet Address Mismatch',
+          kind: 'error',
+        },
+      );
+      await tauriExit(0);
+    }
 
     const isRunning = await this.calculateIsRunning();
     const isReadyToRun = !isRunning && (await this.calculateIsReadyToRun(false));
@@ -122,8 +136,14 @@ export default class Installer {
     let errorMessage = '';
 
     try {
+      const uploadedWalletAddress = await this.fetchUploadedWalletAddress();
+      if (!uploadedWalletAddress) {
+        await this.deleteRemoteBotData();
+      }
+
       if (this.remoteFilesNeedUpdating) {
         console.info('Uploading sha256');
+        await this.uploadWalletAddress();
         await this.uploadSha256();
 
         console.info('Uploading core files');
@@ -247,6 +267,10 @@ export default class Installer {
     }
 
     await this.config.save();
+  }
+
+  private async deleteRemoteBotData(): Promise<void> {
+    await SSH.runCommand('rm -rf ~/data/bot-*');
   }
 
   private async calculateIsReadyToRun(waitForLoaded: boolean = true): Promise<boolean> {
@@ -379,7 +403,6 @@ export default class Installer {
   }
 
   private async activateInstallerCheck(waitForLoaded: boolean = true): Promise<void> {
-    console.log('activateInstallerCheck', waitForLoaded);
     if (waitForLoaded) {
       await this.isLoadedPromise;
     }
@@ -480,6 +503,16 @@ export default class Installer {
   private async serverHasSha256File(): Promise<boolean> {
     const [, code] = await SSH.runCommand('test -f ~/SHASUMS256');
     return code === 0;
+  }
+
+  private async fetchUploadedWalletAddress(): Promise<string> {
+    const [walletAddress] = await SSH.runCommand('cat ~/address 2>/dev/null || true');
+    return walletAddress.trim();
+  }
+
+  private async uploadWalletAddress(): Promise<void> {
+    const walletAddress = this.config.miningAccount.address;
+    await SSH.uploadFile(walletAddress, '~/address');
   }
 
   private async uploadSha256(): Promise<void> {
