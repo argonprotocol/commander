@@ -9,7 +9,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "tauri:dev": "sh -c 'TAURI_PORT=${COMMANDER_INSTANCE##*:}; TAURI_PORT=${TAURI_PORT:-${COMMANDER_INSTANCE_PORT}}; yarn tauri dev --config=\"{\\\"build\\\":{\\\"devUrl\\\":\\\"http://localhost:${TAURI_PORT:-1420}\\\"}}\"'",
+    "tauri:dev": "sh -c 'TAURI_PORT=${COMMANDER_INSTANCE##*:}; yarn tauri dev --config=\"{\\\"build\\\":{\\\"devUrl\\\":\\\"http://localhost:${TAURI_PORT:-1420}\\\"}}\"'",
     "lint": "prettier -w bot calculator src-vue",
     "test": "vitest --run",
     "typecheck": "vue-tsc --noEmit && yarn workspaces foreach --all run tsc --noEmit",

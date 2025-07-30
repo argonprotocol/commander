@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import svgLoader from 'vite-svg-loader';
 import wasm from 'vite-plugin-wasm';
 import vitePluginTopLevelAwait from 'vite-plugin-top-level-await';
+import { createServer } from 'node:net';
 
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -13,22 +14,42 @@ const requre = createRequire(__filename);
 
 const defaultPortString = '1420';
 
+// Function to check if a port is available
+function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = createServer();
+    
+    server.listen(port, () => {
+      server.once('close', () => {
+        resolve(true);
+      });
+      server.close();
+    });
+    
+    server.on('error', () => {
+      resolve(false);
+    });
+  });
+}
+
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ mode }) => {
 
   const envFile = loadEnv(mode, process.cwd(), ''); 
   const host = envFile.TAURI_DEV_HOST;
 
-  const instanceFromEnvFile = (envFile.COMMANDER_INSTANCE || '').split(':');
-  const portFromEnvFile = parseInt(envFile.COMMANDER_INSTANCE_PORT || instanceFromEnvFile[1] || defaultPortString, 10);
-
   const instance = (process.env.COMMANDER_INSTANCE || '').split(':');
-  const instancePort = parseInt(process.env.COMMANDER_INSTANCE_PORT || instance[1] || defaultPortString, 10);
-  const instanceName = process.env.COMMANDER_INSTANCE_NAME || instance[0] || instanceFromEnvFile[0] || 'default';
+  const instancePort = parseInt(instance[1] || defaultPortString, 10);
+  const instanceName = instance[0] || 'default';
 
-  if (portFromEnvFile !== instancePort) {
-    const envName = envFile.COMMANDER_INSTANCE_PORT ? 'COMMANDER_INSTANCE_PORT' : 'COMMANDER_INSTANCE';
-    throw new Error(`${envName} must be set on the command line not from inside a .env file`);
+  if (envFile.COMMANDER_INSTANCE && envFile.COMMANDER_INSTANCE !== process.env.COMMANDER_INSTANCE) {
+    throw new Error(`⚠️ COMMANDER_INSTANCE must be set on the command line not from inside a .env file`);
+  }
+
+  // Check if the port is available
+  const portAvailable = await isPortAvailable(instancePort);
+  if (!portAvailable) {
+    throw new Error(`⚠️ Port ${instancePort} is already in use. The server may fail to start.`);
   }
 
   return {
@@ -63,8 +84,7 @@ export default defineConfig(({ mode }) => {
       'process.env': {},
       __ARGON_NETWORK_NAME__: JSON.stringify(envFile.ARGON_NETWORK_NAME || ''),
       __ARGON_NETWORK_URL__: JSON.stringify(process.env.ARGON_NETWORK_URL || ''),
-      __COMMANDER_INSTANCE_NAME__: JSON.stringify(instanceName || ''),
-      __COMMANDER_INSTANCE_PORT__: JSON.stringify(instancePort || ''),
+      __COMMANDER_INSTANCE__: JSON.stringify(`${instanceName}:${instancePort}`),
     },
     // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
     //

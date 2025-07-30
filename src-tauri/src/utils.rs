@@ -19,12 +19,6 @@ pub struct Utils;
 
 impl Utils {
     pub fn get_instance_name() -> String {
-        // First try COMMANDER_INSTANCE_NAME
-        if let Ok(name) = std_env::var("COMMANDER_INSTANCE_NAME") {
-            return name;
-        }
-        
-        // If not found, try COMMANDER_INSTANCE and split for name:port
         if let Ok(instance) = std_env::var("COMMANDER_INSTANCE") {
             if let Some(name) = instance.split(':').next() {
                 return name.to_string();
@@ -33,6 +27,17 @@ impl Utils {
         
         // Default fallback
         "default".to_string()
+    }
+
+    pub fn get_network_name() -> String {
+        std_env::var("ARGON_NETWORK_NAME")
+            .unwrap_or_else(|_| "mainnet".to_string())
+    }
+
+    pub fn get_relative_config_instance_dir() -> PathBuf {
+        let instance_name = Self::get_instance_name();
+        let network_name = Self::get_network_name();
+        PathBuf::from(network_name).join(instance_name)
     }
 
     pub fn get_embedded_path(app: &AppHandle, path: impl AsRef<Path>) -> anyhow::Result<PathBuf> {

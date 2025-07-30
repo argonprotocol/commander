@@ -7,7 +7,7 @@ import { ArgonActivitiesTable } from './db/ArgonActivitiesTable';
 import { BitcoinActivitiesTable } from './db/BitcoinActivitiesTable';
 import { BotActivitiesTable } from './db/BotActivitiesTable';
 import { CohortAccountsTable } from './db/CohortAccountsTable';
-import { INSTANCE_NAME } from './Config';
+import { INSTANCE_NAME, NETWORK_NAME } from './Config';
 import { ensureOnlyOneInstance } from './Utils';
 import { FrameBidsTable } from './db/FrameBidsTable';
 import { VaultsTable } from './db/VaultsTable.ts';
@@ -45,7 +45,7 @@ export class Db {
   }
 
   static async load(): Promise<Db> {
-    const sql = await PluginSql.load(`sqlite:${INSTANCE_NAME}/database.sqlite`);
+    const sql = await PluginSql.load(`sqlite:${NETWORK_NAME}/${INSTANCE_NAME}/database.sqlite`);
     return new Db(sql);
   }
 
