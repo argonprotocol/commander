@@ -29,6 +29,9 @@
             <div class="flex flex-col gap-2 border-y border-black/10 py-4 mt-4">
               <div>Version: {{ config.version }}</div>
               <div>OS: {{ platformName }} {{ platformVersion }}</div>
+              <div>Instance Name: {{ INSTANCE_NAME }}</div>
+              <div>Internal Tauri Port: {{ INSTANCE_PORT }}</div>
+              <div>Argon Network: {{ NETWORK_NAME }}</div>
             </div>
             <div class="flex justify-center gap-2 mt-4">
               <button @click="copyDetails" class="w-1/2 cursor-pointer bg-slate-600/20 hover:bg-slate-600/15 border border-slate-900/10 inner-button-shadow text-slate-900 px-4 py-1 rounded-lg focus:outline-none">
@@ -57,6 +60,7 @@ import { AnimatePresence, Motion } from 'motion-v';
 import { useConfig } from '../stores/config';
 import Draggable from './helpers/Draggable';
 import { platformName, platformVersion } from '../tauri-controls/utils/os';
+import { INSTANCE_NAME, INSTANCE_PORT, NETWORK_NAME } from '../lib/Config';
 
 const config = useConfig();
 
