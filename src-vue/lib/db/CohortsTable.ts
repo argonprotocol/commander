@@ -1,6 +1,8 @@
 import { ICohortRecord } from '../../interfaces/db/ICohortRecord';
 import { BaseTable } from './BaseTable';
 import { convertSqliteBigInts, fromSqliteBigInt, toSqlParams } from '../Utils';
+import BigNumber from 'bignumber.js';
+import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
 
 export class CohortsTable extends BaseTable {
   private bigIntFields: string[] = [
@@ -44,8 +46,10 @@ export class CohortsTable extends BaseTable {
   }
 
   public async fetchGlobalStats(currentFrameId: number): Promise<{
-    totalActiveCohorts: number;
-    totalActiveSeats: number;
+    totalSeats: number;
+    framesMined: number;
+    framesRemaining: number;
+    framedCost: bigint;
     totalTransactionFees: bigint;
     totalMicrogonsBid: bigint;
   }> {
@@ -53,25 +57,33 @@ export class CohortsTable extends BaseTable {
       const [rawTotalStats] = await this.db.select<[any]>(
         `SELECT 
         COALESCE(sum(transactionFees), 0) as totalTransactionFees, 
-        COALESCE(sum(microgonsBid), 0) as totalMicrogonsBid
+        COALESCE(sum(microgonsBid), 0) as totalMicrogonsBid,
+        COALESCE(sum((microgonsBid + transactionFees) * seatsWon * (progress / 100)), 0) as framedCost
       FROM Cohorts`,
       );
 
-      const oldestActiveFrameId = Math.max(1, currentFrameId - 10);
+      // const oldestActiveFrameId = Math.max(1, currentFrameId - 10);
       const [rawActiveStats] = await this.db.select<[any]>(
         `SELECT 
-        COALESCE(count(id), 0) as activeCohorts,
-        COALESCE(sum(seatsWon), 0) as activeSeats
-      FROM Cohorts WHERE id >= ? AND seatsWon > 0`,
-        [oldestActiveFrameId],
+        count(*) as cohortCount,
+        COALESCE(sum(progress * seatsWon), 0.0) as totalFlooredProgress,
+        COALESCE(sum(seatsWon), 0) as totalSeats
+      FROM Cohorts WHERE seatsWon > 0`,
+        [],
       );
 
       const totalStats = rawTotalStats;
       const activeStats = rawActiveStats;
 
+      const framesExpectedBn = BigNumber(activeStats.cohortCount).multipliedBy(10).multipliedBy(activeStats.totalSeats);
+      const framesMined = BigNumber(activeStats.totalFlooredProgress).dividedBy(10).toNumber();
+      const framesRemaining = framesExpectedBn.minus(framesMined).toNumber();
+
       return {
-        totalActiveCohorts: activeStats.activeCohorts,
-        totalActiveSeats: activeStats.activeSeats,
+        totalSeats: activeStats.totalSeats,
+        framesMined,
+        framesRemaining,
+        framedCost: fromSqliteBigInt(totalStats.framedCost),
         totalTransactionFees: fromSqliteBigInt(totalStats.totalTransactionFees),
         totalMicrogonsBid: fromSqliteBigInt(totalStats.totalMicrogonsBid),
       };
@@ -79,6 +91,27 @@ export class CohortsTable extends BaseTable {
       console.error('Error fetching global stats', e);
       throw e;
     }
+  }
+
+  async fetchActiveSeatData(
+    frameId: number,
+    frameProgress: number,
+  ): Promise<{ activeSeatCount: number; totalSeatCost: bigint }> {
+    const [rawActiveStats] = await this.db.select<[any]>(
+      `SELECT 
+        COALESCE(sum(seatsWon), 0) as seatCount,
+        COALESCE(sum(microgonsBid * seatsWon), 0) as totalSeatCost
+      FROM Cohorts WHERE id >= ?`,
+      [frameId - 9],
+    );
+
+    const frameProgressBn = BigNumber(frameProgress).dividedBy(100);
+    const totalSeatCostBn = BigNumber(fromSqliteBigInt(rawActiveStats.totalSeatCost)).multipliedBy(frameProgressBn);
+
+    return {
+      activeSeatCount: rawActiveStats.seatCount,
+      totalSeatCost: bigNumberToBigInt(totalSeatCostBn),
+    };
   }
 
   async fetchActiveCohorts(currentFrameId: number): Promise<ICohortRecord[]> {

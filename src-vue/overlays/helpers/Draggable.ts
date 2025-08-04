@@ -66,8 +66,6 @@ export default class Draggable {
   }
 
   private onDragEnd() {
-    console.log('onDragEnd');
-
     this.isDragging = false;
     window.removeEventListener('mousemove', this.onDragMove);
     window.removeEventListener('mouseup', this.onDragEnd);

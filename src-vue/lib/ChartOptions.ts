@@ -16,11 +16,32 @@ import { getRelativePosition } from 'chart.js/helpers';
   return items;
 };
 
-export function createChartOptions(chartPoints: any[], pointRadius: number[], onTooltipFn: any) {
+export function createFillerPoints(chartPoints: any[]) {
+  if (chartPoints.length === 0 || chartPoints.length >= 365) return [];
+
+  const startDate = dayjs('2025-01-01').valueOf();
+  const fillerPoints = [{ x: startDate, y: 0 }];
+  fillerPoints.push({ x: chartPoints[0].x, y: 0 });
+  return fillerPoints;
+}
+
+export function createChartOptions(fillerPoints: any[], chartPoints: any[], pointRadius: number[], onTooltipFn: any) {
   return {
     type: 'line',
     data: {
       datasets: [
+        {
+          data: fillerPoints,
+          borderColor: '#F8E7FB',
+          borderWidth: 5,
+          pointBorderColor: '#F8E7FB',
+          pointBorderWidth: 0,
+          pointBackgroundColor: '#F8E7FB',
+          pointHoverRadius: 0,
+          pointHoverBackgroundColor: '#F8E7FB',
+          pointRadius: 0,
+          lineTension: 1,
+        },
         {
           data: chartPoints,
           borderColor: '#A600D4',
@@ -28,7 +49,7 @@ export function createChartOptions(chartPoints: any[], pointRadius: number[], on
           pointBorderColor: 'white',
           pointBorderWidth: 1,
           pointBackgroundColor: '#A600D4',
-          pointHoverRadius: 5,
+          pointHoverRadius: 0,
           pointHoverBackgroundColor: '#A600D4',
           pointRadius: pointRadius,
           lineTension: 1,
@@ -58,8 +79,8 @@ export function createChartOptions(chartPoints: any[], pointRadius: number[], on
       maintainAspectRatio: false,
       layout: {
         padding: {
-          left: 25,
-          right: 25,
+          left: 0,
+          right: 0,
           top: 0,
           bottom: 0,
         },
@@ -76,8 +97,8 @@ export function createChartOptions(chartPoints: any[], pointRadius: number[], on
         },
         y: {
           display: false,
-          min: 0,
-          max: 150_000,
+          min: -100,
+          max: 210,
         },
       },
       clip: false,

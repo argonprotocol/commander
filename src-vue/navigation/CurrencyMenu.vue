@@ -1,0 +1,73 @@
+<!-- prettier-ignore -->
+<template>
+  <HoverCardRoot :openDelay="0" :closeDelay="0" class="relative pointer-events-auto" v-model:open="isOpen">
+    <HoverCardTrigger
+      class="flex flex-row items-center justify-center text-sm/6 font-semibold text-gray-900 cursor-pointer hover:bg-slate-400/10 px-3 h-[30px] focus:outline-none"
+      :class="[
+        isOpen
+          ? `${buttonBorderProperty} ${buttonBgProperty}`
+          : `border-transparent hover:${buttonBorderProperty} hover:${buttonBgProperty}`,
+      ]"
+    >
+      <ArgonSign v-if="currency?.record?.key === 'ARGN'" class="h-[14px]" />
+      <DollarSign v-else-if="currency?.record?.key === 'USD'" class="h-[18px]" />
+      <EuroSign v-else-if="currency?.record?.key === 'EUR'" class="h-[18px]" />
+      <PoundSign v-else-if="currency?.record?.key === 'GBP'" class="h-[18px]" />
+      <RupeeSign v-else-if="currency?.record?.key === 'INR'" class="h-[18px]" />
+      <div v-else class="h-[18px] w-[14px]"></div>
+    </HoverCardTrigger>
+
+    <HoverCardPortal>
+      <HoverCardContent :align="'end'" :alignOffset="-6" :sideOffset="0" class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad data-[state=open]:transition-all">
+        <div class="flex flex-col p-1 shrink rounded bg-white text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20">
+          <a
+            v-for="(record, key) of currency?.records as Record<ICurrencyKey, ICurrencyRecord>"
+            :key="key"
+            @click="setCurrencyKey(key)"
+            :class="currency?.record?.key === key ? '!text-indigo-500' : '!text-gray-500'"
+            class="group/item flex flex-row justify-between py-1 px-2 border-b last:border-b-0 border-argon-menu-hover hover:!text-indigo-600 hover:bg-argon-menu-hover cursor-pointer"
+          >
+            <span
+              :class="currency?.record?.key === key ? 'opacity-100' : 'opacity-80'"
+              class="font-medium group-hover/item:opacity-100 mr-4"
+            >
+              {{ record.name }}
+            </span>
+            <span class="w-8 text-center" v-html="record.symbol"></span>
+          </a>
+        </div>
+        <HoverCardArrow :width="18" :height="10" class="fill-white stroke-gray-300 mt-[0px]" />
+      </HoverCardContent>
+    </HoverCardPortal>
+  </HoverCardRoot>
+</template>
+
+<script setup lang="ts">
+import * as Vue from 'vue';
+import { HoverCardArrow, HoverCardContent, HoverCardPortal, HoverCardRoot, HoverCardTrigger } from 'reka-ui';
+import { useCurrency } from '../stores/currency';
+import { CurrencyKey, ICurrencyRecord, type ICurrencyKey } from '../lib/Currency';
+import ArgonSign from '../assets/currencies/argon.svg?component';
+import DollarSign from '../assets/currencies/dollar.svg?component';
+import EuroSign from '../assets/currencies/euro.svg?component';
+import PoundSign from '../assets/currencies/pound.svg?component';
+import RupeeSign from '../assets/currencies/rupee.svg?component';
+import basicEmitter from '../emitters/basicEmitter';
+import { useConfig } from '../stores/config';
+
+const isOpen = Vue.ref(false);
+
+const buttonBorderProperty = 'border-slate-400/50';
+const buttonBgProperty = 'bg-transparent';
+
+const currency = useCurrency();
+const config = useConfig();
+
+function setCurrencyKey(key: ICurrencyKey) {
+  if (key === CurrencyKey.ARGN || config.isValidJurisdiction) {
+    currency.setCurrencyKey(key);
+  } else {
+    basicEmitter.emit('openComplianceOverlay');
+  }
+}
+</script>

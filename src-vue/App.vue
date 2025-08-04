@@ -49,7 +49,7 @@ import ProvisioningCompleteOverlay from './overlays/ProvisioningCompleteOverlay.
 import UpgradeOverlay from './overlays/UpgradeOverlay.vue';
 import SyncingOverlay from './overlays/SyncingOverlay.vue';
 import ServerBrokenOverlay from './overlays/ServerBrokenOverlay.vue';
-import TopBar from './components/TopBar.vue';
+import TopBar from './navigation/TopBar.vue';
 import { useController } from './stores/controller';
 import { useConfig } from './stores/config';
 import { useBot } from './stores/bot';

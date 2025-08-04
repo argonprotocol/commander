@@ -1,20 +1,23 @@
 <!-- prettier-ignore -->
 <template>
-  <!-- <ChartOpaque :style="chartOpaqueStyle" class="absolute top-0 bottom-[47px]" /> -->
   <div
     ref="$el"
     SelectedLine
     @pointerdown="onPointerDown"
     @pointerup="onPointerUp"
-    :style="`left: ${posLeft}px; top: ${posTopPct}%`"
+    :style="`left: ${posLeft}px`"
     :class="lineClasses"
-    class="absolute bottom-3 cursor-col-resize z-1"
+    class="absolute bottom-1 cursor-col-resize z-1 -top-1 rounded-t-md"
   >
     <div class="Selected"></div>
-    <div NibWrapper class="absolute left-1/2 bottom-0.5 ml-[1.5px] w-[26.5px] h-6 -translate-x-1/2 translate-y-1/2">
+    <div NibWrapper class="absolute left-1/2 -bottom-0 ml-[1.5px] w-[26.5px] h-6 -translate-x-1/2 translate-y-1/2">
       <TriangleNib class="absolute left-0 bottom-0 w-[24.5px] h-6 cursor-grab" />
       <TriangleNibBasic class="Selected absolute left-[2.5px] bottom-1 w-[18px] h-4 pointer-events-none" />
     </div>
+
+    <!-- <div nib-handle :style="{ left: `${percentOfYear}%` }" class="absolute -top-1 -bottom-1 w-2 bg-white rounded-full border border-slate-400/50 shadow-md z-10">
+      <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full border border-slate-400/50 shadow-md"></div>
+    </div> -->
   </div>
 </template>
 
@@ -22,7 +25,6 @@
 import * as Vue from 'vue';
 import TriangleNib from '../assets/triangle-nib.svg?component';
 import TriangleNibBasic from '../assets/triangle-nib-basic.svg?component';
-// import ChartOpaque from './ChartOpaque.vue';
 
 const props = defineProps<{
   position: 'left' | 'right';
@@ -97,8 +99,10 @@ defineExpose({ $el });
 
 <style lang="scss" scoped>
 [SelectedLine] {
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1) 50px);
+  background: rgba(255, 255, 255, 1);
   width: 4px;
+  border-top: 1px solid rgba(30, 41, 59, 0.4);
+
   &:before {
     content: '';
     position: absolute;
@@ -106,7 +110,7 @@ defineExpose({ $el });
     bottom: 0;
     left: -2px;
     width: 1px;
-    background: linear-gradient(to bottom, rgba(30, 41, 59, 0), rgba(30, 41, 59, 0.4) 50px);
+    background: rgba(30, 41, 59, 0.4);
   }
   &:after {
     content: '';
@@ -115,7 +119,7 @@ defineExpose({ $el });
     bottom: 0;
     right: -2px;
     width: 1px;
-    background: linear-gradient(to bottom, rgba(30, 41, 59, 0), rgba(30, 41, 59, 0.4) 50px);
+    background: rgba(30, 41, 59, 0.4);
     z-index: -1;
   }
   div.Selected {
@@ -125,7 +129,7 @@ defineExpose({ $el });
     left: 1px;
     top: 0;
     height: 100%;
-    background: linear-gradient(to bottom, rgba(204, 136, 255, 0), rgb(204, 136, 255) 50px);
+    background: rgb(204, 136, 255);
   }
 
   svg.Selected {

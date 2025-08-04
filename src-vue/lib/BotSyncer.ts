@@ -12,6 +12,7 @@ import { getMainchain } from '../stores/mainchain';
 import { BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors';
 import { IBotEmitter } from './Bot';
 import Installer from './Installer';
+import { activeAnimations } from 'motion-v';
 
 export enum BotStatus {
   Starting = 'Starting',
@@ -44,7 +45,7 @@ export class BotSyncer {
 
   private mainchain = getMainchain();
 
-  private bidsFileCacheByActivatingFrameId: Record<number, [number, IBidsFile]> = {};
+  private bidsFileCacheByActivationFrameId: Record<number, [number, IBidsFile]> = {};
 
   constructor(config: Config, db: Db, installer: Installer, botFn: IBotFns) {
     this.config = config;
@@ -200,20 +201,35 @@ export class BotSyncer {
     const processedCohorts: Set<number> = new Set([frameId]);
 
     const cohortEarningsByFrameId = await this.injectMissingCohortEarnings(
-      earningsFile.byCohortActivatingFrameId,
+      earningsFile.byCohortActivationFrameId,
       frameId,
     );
     const cohortEarningsEntries = Object.entries(cohortEarningsByFrameId) as [string, IEarningsFileCohort][];
 
-    for (const [cohortActivatingFrameIdStr, cohortEarningsDuringFrame] of cohortEarningsEntries) {
-      const cohortActivatingFrameId = parseInt(cohortActivatingFrameIdStr, 10);
-      if (!processedCohorts.has(cohortActivatingFrameId)) {
-        await this.syncDbCohort(cohortActivatingFrameId);
-        processedCohorts.add(cohortActivatingFrameId);
+    let blocksMined = 0;
+    let micronotsMined = 0n;
+    let microgonsMined = 0n;
+    let microgonsMinted = 0n;
+
+    for (const [cohortActivationFrameIdStr, cohortEarningsDuringFrame] of cohortEarningsEntries) {
+      const cohortActivationFrameId = parseInt(cohortActivationFrameIdStr, 10);
+      if (!processedCohorts.has(cohortActivationFrameId)) {
+        await this.syncDbCohort(cohortActivationFrameId);
+        processedCohorts.add(cohortActivationFrameId);
       }
-      await this.syncDbCohortFrame(cohortActivatingFrameId, frameId, cohortEarningsDuringFrame);
+      await this.syncDbCohortFrame(cohortActivationFrameId, frameId, cohortEarningsDuringFrame);
+      blocksMined += cohortEarningsDuringFrame.blocksMined;
+      micronotsMined += cohortEarningsDuringFrame.micronotsMined;
+      microgonsMined += cohortEarningsDuringFrame.microgonsMined;
+      microgonsMinted += cohortEarningsDuringFrame.microgonsMinted;
     }
 
+    const { activeSeatCount, totalSeatCost } = await this.db.cohortsTable.fetchActiveSeatData(
+      frameId,
+      earningsFile.frameProgress,
+    );
+
+    console.log('UPDATING FRAME', frameId, blocksMined, earningsFile.frameProgress);
     const isProcessed = earningsFile.frameProgress === 100.0;
     await this.db.framesTable.update(
       frameId,
@@ -224,6 +240,14 @@ export class BotSyncer {
       earningsFile.microgonToUsd,
       earningsFile.microgonToBtc,
       earningsFile.microgonToArgonot,
+
+      activeSeatCount,
+      totalSeatCost,
+      blocksMined,
+      micronotsMined,
+      microgonsMined,
+      microgonsMinted,
+
       earningsFile.frameProgress,
       isProcessed,
     );
@@ -244,7 +268,7 @@ export class BotSyncer {
       if (cohort) {
         didWinSeats = !!cohort.seatsWon;
       } else {
-        const bidsFile = await this.fetchBidsFileFromCache(frameIdToCheck);
+        const bidsFile = await this.fetchBidsFileFromCache({ cohortActivationFrameId: frameIdToCheck });
         didWinSeats = !!bidsFile.winningBids.filter(x => typeof x.subAccountIndex === 'number').length;
       }
 
@@ -262,15 +286,15 @@ export class BotSyncer {
     return cohortEarningsByFrameId;
   }
 
-  private async syncDbCohort(cohortActivatingFrameId: number): Promise<void> {
-    const bidsFile = await this.fetchBidsFileFromCache(cohortActivatingFrameId);
+  private async syncDbCohort(cohortActivationFrameId: number): Promise<void> {
+    const bidsFile = await this.fetchBidsFileFromCache({ cohortActivationFrameId });
     if (bidsFile.frameBiddingProgress < 100.0) return;
 
     try {
       const mainchainClient = await this.mainchain.client;
-      const [cohortStartingTick] = await MiningFrames.getTickRangeForFrame(mainchainClient, cohortActivatingFrameId);
+      const [cohortStartingTick] = await MiningFrames.getTickRangeForFrame(mainchainClient, cohortActivationFrameId);
       const cohortEndingTick = cohortStartingTick + TICKS_PER_COHORT;
-      const framesCompleted = Math.min(this.botState.currentFrameId - cohortActivatingFrameId, 10);
+      const framesCompleted = Math.min(this.botState.currentFrameId - cohortActivationFrameId, 10);
       const miningSeatCount = BigInt(await this.mainchain.getMiningSeatCount());
       const progress = Math.min((framesCompleted * 100 + this.botState.currentFrameProgress) / 10, 100);
       const micronotsStaked = bidsFile.micronotsStakedPerSeat * BigInt(bidsFile.seatsWon);
@@ -284,7 +308,7 @@ export class BotSyncer {
       const micronotsToBeMinedPerSeat = micronotsToBeMinedDuringCohort / miningSeatCount;
 
       await this.db.cohortsTable.insertOrUpdate(
-        cohortActivatingFrameId,
+        cohortActivationFrameId,
         progress,
         bidsFile.transactionFees,
         micronotsStaked,
@@ -294,21 +318,21 @@ export class BotSyncer {
         micronotsToBeMinedPerSeat,
       );
 
-      await this.updateDbCohortAccounts(cohortActivatingFrameId, bidsFile);
+      await this.updateDbCohortAccounts(cohortActivationFrameId, bidsFile);
     } catch (e) {
       console.error('Error syncing cohort:', e);
       throw e;
     }
   }
 
-  private async updateDbCohortAccounts(cohortActivatingFrameId: number, bidsFile: IBidsFile): Promise<void> {
-    await this.db.cohortAccountsTable.deleteForCohort(cohortActivatingFrameId);
+  private async updateDbCohortAccounts(cohortActivationFrameId: number, bidsFile: IBidsFile): Promise<void> {
+    await this.db.cohortAccountsTable.deleteForCohort(cohortActivationFrameId);
 
     for (const subaccount of bidsFile.winningBids) {
       if (typeof subaccount.subAccountIndex !== 'number') return;
       await this.db.cohortAccountsTable.insert(
         subaccount.subAccountIndex,
-        cohortActivatingFrameId,
+        cohortActivationFrameId,
         subaccount.address,
         subaccount.microgonsBid ?? 0n,
         subaccount.bidPosition ?? 0,
@@ -317,13 +341,13 @@ export class BotSyncer {
   }
 
   private async syncDbCohortFrame(
-    cohortActivatingFrameId: number,
+    cohortActivationFrameId: number,
     frameId: number,
     cohortEarningsDuringFrame: IEarningsFileCohort,
   ): Promise<void> {
     await this.db.cohortFramesTable.insertOrUpdate(
       frameId,
-      cohortActivatingFrameId,
+      cohortActivationFrameId,
       cohortEarningsDuringFrame.blocksMined,
       cohortEarningsDuringFrame.micronotsMined,
       cohortEarningsDuringFrame.microgonsMined,
@@ -331,25 +355,27 @@ export class BotSyncer {
     );
   }
 
-  private async fetchBidsFileFromCache(cohortActivatingFrameId: number): Promise<IBidsFile> {
-    let [timeoutId, bidsFile] = this.bidsFileCacheByActivatingFrameId[cohortActivatingFrameId] || [];
+  // I'm using a hash to call out which frame ID is being used to fetch the bids file
+  private async fetchBidsFileFromCache(id: { cohortActivationFrameId: number }): Promise<IBidsFile> {
+    const { cohortActivationFrameId } = id;
+    let [timeoutId, bidsFile] = this.bidsFileCacheByActivationFrameId[cohortActivationFrameId] || [];
 
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
 
     if (!bidsFile) {
-      bidsFile = await BotFetch.fetchBidsFile(cohortActivatingFrameId);
+      bidsFile = await BotFetch.fetchBidsFile(cohortActivationFrameId);
     }
 
-    const isCurrentFrame = cohortActivatingFrameId === this.botState.currentFrameId;
+    const isCurrentFrame = cohortActivationFrameId === this.botState.currentFrameId;
     const millisecondsToCache = isCurrentFrame ? 1_000 : 600_000;
 
     timeoutId = setTimeout(() => {
-      delete this.bidsFileCacheByActivatingFrameId[cohortActivatingFrameId];
+      delete this.bidsFileCacheByActivationFrameId[cohortActivationFrameId];
     }, millisecondsToCache) as unknown as number;
 
-    this.bidsFileCacheByActivatingFrameId[cohortActivatingFrameId] = [timeoutId, bidsFile];
+    this.bidsFileCacheByActivationFrameId[cohortActivationFrameId] = [timeoutId, bidsFile];
 
     return bidsFile;
   }

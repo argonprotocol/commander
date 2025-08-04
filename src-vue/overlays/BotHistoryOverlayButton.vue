@@ -16,7 +16,7 @@
         <h2 class="text-left text-2xl font-bold mb-2">Recent Bidding Activity</h2>
         <table class="w-full grow font-mono text-md">
           <tbody class="font-light text-left">
-            <tr v-for="activity of activities" :key="activity.id">
+            <tr v-for="activity of activities" :key="activity.id" class="whitespace-nowrap">
               <td class="text-left">
                 <ActivityArrowIcon v-if="activity.type === 'bidUp'" class="w-5 h-5 text-green-500" />
                 <ActivityArrowIcon v-if="activity.type === 'bidDown'" class="w-5 h-5 rotate-180 text-red-500" />
@@ -28,9 +28,9 @@
               </td>
               <template v-if="['bidUp', 'bidDown'].includes(activity.type)">
                 <td class="pl-[5%]">{{ activity.message }}</td>
-                <td class="text-left relative pl-[5%] opacity-50">
+                <td class="text-left relative pl-[5%] opacity-80">
                   <div v-if="activity.bidderAddress">
-                    {{ activity.bidderAddress.slice(0, 10) }}&nbsp;
+                    <span class="opacity-60">{{ activity.bidderAddress.slice(0, 10) }}&nbsp;</span>
                     <span v-if="activity.isMine" class="absolute right-0 top-1/2 -translate-y-1/2 bg-argon-600 text-white px-1.5 pb-0.25 rounded text-sm">
                       YOU
                       <span class="absolute top-0 -left-3 inline-block h-full bg-gradient-to-r from-transparent to-white w-3"></span>

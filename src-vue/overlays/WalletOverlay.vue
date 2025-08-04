@@ -42,20 +42,18 @@
                   </div>
                   <div class="w-full text-center pt-2">Total Value of {{ walletName }} Resources</div>
                 </div>
-                <div
-                  class="flex flex-row justify-between items-center w-full text-center pt-5 pb-2 px-3 space-x-4 font-bold"
-                >
-                  <ul class="flex flex-row space-x-4 grow">
-                    <li @click="navigate({ tab: 'tokens' })" class="cursor-pointer">Resources</li>
-                    <li @click="navigate({ tab: 'activity' })" class="cursor-pointer">Activity</li>
+                <div class="flex flex-row justify-between items-center w-full text-center px-3 space-x-4 font-bold">
+                  <ul class="flex flex-row space-x-6 grow mt-3">
+                    <li @click="navigate({ tab: 'tokens' })" :class="[activeTab === 'tokens' ? 'border-argon-500' : 'border-transparent']" class="border-b-2 cursor-pointer pb-2">Balance Sheet</li>
+                    <li @click="navigate({ tab: 'activity' })" :class="[activeTab === 'activity' ? 'border-argon-500' : 'border-transparent']" class="border-b-2 cursor-pointer pb-2">Transactions</li>
                   </ul>
                   <ul class="flex flex-row">
-                    <li @click="navigate({ screen: 'receive' })" class="cursor-pointer">Transfer Funds</li>
+                    <li @click="navigate({ screen: 'receive' })" class="cursor-pointer border border-argon-500 rounded-md px-2">Receive Funds</li>
                   </ul>
                 </div>
 
-                <Resources v-if="activeTab === 'tokens'" :walletId="walletId" @navigate="navigate" />
-                <Activity v-else-if="activeTab === 'activity'" :walletId="walletId" />
+                <Resources :class="[activeTab === 'tokens' ? 'visible' : 'invisible']" :walletId="walletId" @navigate="navigate" />
+                <Activity :class="[activeTab === 'activity' ? 'visible' : 'invisible']" :walletId="walletId" />
               </div>
             </div>
           </Motion>

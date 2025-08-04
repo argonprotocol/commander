@@ -44,8 +44,8 @@ it('can create bidder params', async () => {
     "requiredMicrogons": "10000000n",
     "requiredMicronots": "1000000n"
   }`) as IBiddingRules;
-  const cohortActivatingFrameId = MiningFrames.calculateCurrentFrameIdFromSystemTime();
-  const bidderParams = await createBidderParams(cohortActivatingFrameId, client, biddingRules);
+  const cohortActivationFrameId = MiningFrames.calculateCurrentFrameIdFromSystemTime();
+  const bidderParams = await createBidderParams(cohortActivationFrameId, client, biddingRules);
 
   expect(bidderParams.minBid).toBe(0n);
   expect(bidderParams.maxBid).toBe(215_904_808n);
