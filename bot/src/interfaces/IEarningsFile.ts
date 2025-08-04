@@ -10,8 +10,8 @@ export interface IEarningsFile extends ILastModifiedAt {
   microgonToUsd: bigint[];
   microgonToBtc: bigint[];
   microgonToArgonot: bigint[];
-  byCohortActivatingFrameId: {
-    [cohortActivatingFrameId: number]: IEarningsFileCohort;
+  byCohortActivationFrameId: {
+    [cohortActivationFrameId: number]: IEarningsFileCohort;
   };
 }
 
