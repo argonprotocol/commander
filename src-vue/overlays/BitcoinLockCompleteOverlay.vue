@@ -110,7 +110,7 @@ onMounted(async () => {
     throw new Error('Failed to format P2WSH address');
   }
   const btcAmount = numeral(Number(props.lock.satoshis) / Number(SATS_PER_BTC)).format('0,0.[00000000]');
-  const label = encodeURIComponent(`Argon Vault #${props.lock.utxoId}`);
+  const label = encodeURIComponent(`Argon Vault #${props.lock.vaultId} (utxo id=${props.lock.utxoId})`);
   const message = encodeURIComponent(
     `Personal BTC funding for Vault #${props.lock.vaultId}, Utxo Id #${props.lock.utxoId}`,
   );

@@ -14,7 +14,14 @@ export interface IRatchet {
 
 export interface IBitcoinLockRecord {
   utxoId: number;
-  status: 'initialized' | 'verificationFailed' | 'pendingMint' | 'minted' | 'releaseRequested' | 'vaultCosigned';
+  status:
+    | 'initialized'
+    | 'verificationFailed'
+    | 'pendingMint'
+    | 'minted'
+    | 'releaseRequested'
+    | 'vaultCosigned'
+    | 'released';
   txid?: string;
   vout?: number;
   satoshis: bigint;
@@ -27,6 +34,8 @@ export interface IBitcoinLockRecord {
   releaseToDestinationAddress?: string;
   releaseCosignSignature?: Uint8Array;
   releaseCosignHeight?: number;
+  releasedAtHeight?: number;
+  releasedTxId?: string;
   network: string;
   hdPath: string;
   vaultId: number;
@@ -151,6 +160,13 @@ export class BitcoinLocksTable extends BaseTable {
     await this.db.execute(
       'UPDATE BitcoinLocks SET status = $1, txid = $2, vout = $3 WHERE utxoId = $4',
       toSqlParams([lock.status, lock.txid, lock.vout, lock.utxoId]),
+    );
+  }
+
+  async recordReleaseTxid(lock: IBitcoinLockRecord): Promise<void> {
+    await this.db.execute(
+      'UPDATE BitcoinLocks SET status = $1, releasedAtHeight = $2, releasedTxId = $3 WHERE utxoId = $4',
+      toSqlParams([lock.status, lock.releasedAtHeight, lock.releasedTxId, lock.utxoId]),
     );
   }
 }

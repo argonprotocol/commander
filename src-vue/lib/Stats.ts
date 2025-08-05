@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js';
 import { type IBidsFile, type IWinningBid } from '@argonprotocol/commander-bot';
-import { IDashboardGlobalStats, IDashboardFrameStats } from '../interfaces/IStats';
+import { IDashboardFrameStats, IDashboardGlobalStats } from '../interfaces/IStats';
 import { Db } from './Db';
 import { Config } from './Config';
 import { bigIntMax } from '@argonprotocol/commander-calculator/src/utils';
@@ -365,7 +365,7 @@ export class Stats {
     };
   }
 
-  private async fetchFramesFromDb(): Promise<IFramesOverTime[]> {
+  private async fetchFramesFromDb(): Promise<IDashboardFrameStats[]> {
     const lastYear = await this.db.framesTable.fetchLastYear();
     let maxApr = Math.max(...lastYear.map(x => x.apr));
     maxApr = Math.min(maxApr, 9_999);

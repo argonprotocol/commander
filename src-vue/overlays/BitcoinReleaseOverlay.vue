@@ -3,7 +3,7 @@
     <div class="bg-white rounded-xl p-6 max-w-lg w-full mx-4">
       <div class="text-red-700 mb-6" v-if="errorMessage">{{ errorMessage }}</div>
       <!-- Step 1: Confirmation -->
-      <div v-if="lock.status !== 'releaseRequested' && lock.status !== 'vaultCosigned'" class="space-y-6">
+      <div v-if="lock.status !== 'vaultCosigned'" class="space-y-6">
         <template v-if="canAfford">
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-xl font-bold">Release Bitcoin</h2>
@@ -98,52 +98,7 @@
         </template>
       </div>
 
-      <!-- Step 2: Processing -->
-      <div v-else-if="lock.status === 'releaseRequested'" class="text-center py-8">
-        <div class="mb-6">
-          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-blue-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
-            </svg>
-          </div>
-
-          <h3 class="text-lg font-semibold mb-2">Processing Release</h3>
-
-          <ProgressBar :progress="releaseProgress" :has-error="errorMessage != ''" class="inline-block w-24 h-4 mr-2" />
-          <div class="text-left space-y-4">
-            <div class="flex items-center gap-3">
-              <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                <svg class="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fill-rule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clip-rule="evenodd"
-                  ></path>
-                </svg>
-              </div>
-            </div>
-            <div class="flex items-center gap-3">
-              <!-- Show the details of what was requested -->
-              <span class="text-sm">
-                <strong>Destination:</strong>
-                {{ shortenAddress(destinationAddress) }}
-              </span>
-              <span class="text-sm">
-                <strong>Fee rate:</strong>
-                {{ selectedFeeRate }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Step 3: Vault Cosigned -->
-      <div v-else-if="lock.status === 'vaultCosigned'" class="text-center py-8">
+      <div v-else class="text-center py-8">
         <div class="mb-6">
           <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -188,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, onUnmounted } from 'vue';
 import { abreviateAddress } from '../lib/Utils';
 import { IBitcoinLockRecord } from '../lib/db/BitcoinLocksTable.ts';
 import { useBitcoinLocks } from '../stores/bitcoin.ts';
@@ -272,6 +227,32 @@ onMounted(async () => {
       };
     });
   }
+
+  if (props.lock.status === 'vaultCosigned') {
+    await checkReleaseStatus();
+  }
+});
+
+let waitForReleasedUtxoId: string | null = null;
+let releasedUtxoCheckInterval: ReturnType<typeof setInterval> | null = null;
+async function checkReleaseStatus() {
+  const utxo = props.lock;
+  console.log(utxo.status, waitForReleasedUtxoId);
+  if (!waitForReleasedUtxoId) return;
+  if (utxo.status === 'vaultCosigned') {
+    const status = await bitcoinLocks.checkTxidStatus(utxo, waitForReleasedUtxoId);
+    if (status.isConfirmed) {
+      if (releasedUtxoCheckInterval) clearInterval(releasedUtxoCheckInterval);
+      emit('close');
+    }
+  }
+}
+
+onUnmounted(() => {
+  if (releasedUtxoCheckInterval) {
+    clearInterval(releasedUtxoCheckInterval);
+  }
+  waitForReleasedUtxoId = null;
 });
 
 async function cosignReleaseAsNeeded() {
@@ -289,7 +270,9 @@ async function cosignReleaseAsNeeded() {
         toScriptPubkey: props.lock.releaseToDestinationAddress!,
         bitcoinNetworkFee: props.lock.releaseBitcoinNetworkFee!,
         progressCallback(progress: number) {
-          releaseProgress.value = 50 + progress * 0.25;
+          if (props.lock.status === 'releaseRequested') {
+            releaseProgress.value = 50 + progress * 0.25;
+          }
         },
       });
       if (result) {
@@ -309,9 +292,12 @@ async function cosignReleaseAsNeeded() {
       isLoading.value = true;
       errorMessage.value = '';
 
-      releasedTxBytes.value = await bitcoinLocks.cosignAndGenerateTxBytes(props.lock, config.bitcoinXprivSeed);
+      const { txid, bytes } = await bitcoinLocks.cosignAndGenerateTxBytes(props.lock, config.bitcoinXprivSeed);
+      releasedTxBytes.value = bytes;
+      waitForReleasedUtxoId = txid;
       releasedTxHex.value = u8aToHex(releasedTxBytes.value, undefined, false);
       console.log('Generated PSBT:', releasedTxHex.value);
+      releasedUtxoCheckInterval = setInterval(checkReleaseStatus, 5000);
     }
   } catch (error) {
     console.error('Failed to cosign and generate transaction:', error);
@@ -339,7 +325,9 @@ async function sendReleaseRequest() {
       toScriptPubkey,
       argonKeyring: config.vaultingAccount,
       txProgressCallback(progress: number) {
-        releaseProgress.value = progress * 0.5; // 0-50% for request, 50-100% for cosign
+        if (props.lock.status === 'releaseRequested') {
+          releaseProgress.value = progress * 0.5; // 0-50% for request, 50-100% for cosign
+        }
       },
     });
   } catch (error) {

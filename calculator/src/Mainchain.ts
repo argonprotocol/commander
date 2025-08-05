@@ -1,13 +1,5 @@
 import BigNumber from 'bignumber.js';
-import {
-  u32,
-  BTreeMap,
-  MICROGONS_PER_ARGON,
-  convertFixedU128ToBigNumber,
-  type ArgonClient,
-  type PalletLiquidityPoolsLiquidityPool,
-  convertPermillToBigNumber,
-} from '@argonprotocol/mainchain';
+import { type ArgonClient, convertFixedU128ToBigNumber, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
 import { bigIntMin, bigNumberToBigInt } from './utils.ts';
 import { type IWinningBid } from '@argonprotocol/commander-bot';
 import { MiningFrames } from './MiningFrames.ts';
@@ -252,6 +244,12 @@ export class Mainchain {
     }
   }
 
+  public async getCurrentFrameId(): Promise<number> {
+    const client = await this.client;
+    const nextFrameId = await client.query.miningSlot.nextFrameId();
+    return nextFrameId.toNumber() - 1; // Subtract 1 to get the current frame ID
+  }
+
   public async forEachFrame<T>(
     iterateByEpoch: boolean,
     callback: (
@@ -309,72 +307,8 @@ export class Mainchain {
     return results;
   }
 
-  public async getLiquidityPoolCapitalByVault(): ReturnType<(typeof Mainchain)['getLiquidityPoolCapitalByVaultAtApi']> {
-    return Mainchain.getLiquidityPoolCapitalByVaultAtApi(await this.client);
-  }
-
-  public static async getLiquidityPoolCapitalByVaultAtApi(api: ArgonClient): Promise<{
-    [vaultId: number]: {
-      contributedCapital: bigint;
-      contributorProfit: bigint;
-      vaultProfit: bigint;
-      byFrame: ({
-        frameId: number;
-      } & ILiquidityPoolDetails)[];
-    };
-  }> {
-    const vaultPoolsByFrame = await api.query.liquidityPools.vaultPoolsByFrame.entries();
-    const result = {} as Awaited<ReturnType<(typeof Mainchain)['getLiquidityPoolCapitalByVaultAtApi']>>;
-    for (const [frameIdRaw, vaultPools] of vaultPoolsByFrame) {
-      const frameId = frameIdRaw.args[0].toNumber();
-      const details = this.translateFrameLiquidityPools(vaultPools);
-      for (const [id, pool] of Object.entries(details)) {
-        const vaultId = parseInt(id, 10);
-        result[vaultId] ??= { contributedCapital: 0n, contributorProfit: 0n, vaultProfit: 0n, byFrame: [] };
-        result[vaultId].byFrame.push({
-          frameId,
-          ...pool,
-        });
-        result[vaultId].contributorProfit += pool.contributorProfit;
-        result[vaultId].contributedCapital += pool.contributedCapital;
-        result[vaultId].vaultProfit += pool.vaultProfit;
-      }
-    }
-    return result;
-  }
-
-  public static translateFrameLiquidityPools(vaultPools: BTreeMap<u32, PalletLiquidityPoolsLiquidityPool>): {
-    [vaultId: number]: ILiquidityPoolDetails;
-  } {
-    const result = {} as ReturnType<(typeof Mainchain)['translateFrameLiquidityPools']>;
-    for (const [vaultIdRaw, pool] of vaultPools.entries()) {
-      const vaultId = vaultIdRaw.toNumber();
-      const contributors: { [address: string]: bigint } = {};
-      let totalCapital = 0n;
-      for (const [accountId, contributed] of pool.contributorBalances) {
-        const address = accountId.toHuman();
-        const balance = contributed.toBigInt();
-        contributors[address] = balance;
-        totalCapital += balance;
-      }
-      const distributed = pool.distributedProfits.unwrapOrDefault().toBigInt();
-      const sharingPercent = convertPermillToBigNumber(pool.vaultSharingPercent.toBigInt()).toNumber();
-      const vaultProfit = BigInt(Number(distributed) * (1 - sharingPercent));
-      const contributorProfit = distributed - vaultProfit;
-      result[vaultId] = {
-        sharingPercent,
-        contributedCapital: totalCapital,
-        contributorProfit,
-        vaultProfit,
-        distributedProfits: distributed,
-        contributors,
-      };
-    }
-    return result;
-  }
-
   private calculateExchangeRateInMicrogons(usdAmount: BigNumber, usdForArgon: BigNumber): bigint {
-    const oneArgonInMicrogons = BigInt(1 * MICROGONS_PER_ARGON);
+    const oneArgonInMicrogons = BigInt(MICROGONS_PER_ARGON);
     const usdAmountBn = BigNumber(usdAmount);
     const usdForArgonBn = BigNumber(usdForArgon);
     if (usdAmountBn.isZero() || usdForArgonBn.isZero()) return oneArgonInMicrogons;
@@ -382,13 +316,4 @@ export class Mainchain {
     const argonsRequired = usdAmountBn.dividedBy(usdForArgonBn);
     return bigNumberToBigInt(argonsRequired.multipliedBy(MICROGONS_PER_ARGON));
   }
-}
-
-export interface ILiquidityPoolDetails {
-  sharingPercent: number;
-  contributedCapital: bigint;
-  contributorProfit: bigint;
-  vaultProfit: bigint;
-  distributedProfits: bigint;
-  contributors: { [address: string]: bigint };
 }
