@@ -19,7 +19,6 @@ import { Mainchain, MiningFrames } from '@argonprotocol/commander-calculator';
 import { Dockers } from './Dockers.ts';
 import type Bot from './Bot.ts';
 import type { AutoBidder } from './AutoBidder.ts';
-import { CohortBidder } from './CohortBidder.ts';
 import FatalError from './interfaces/FatalError.ts';
 
 const defaultCohort = {
@@ -391,9 +390,8 @@ export class BlockSync {
           return false;
         }
         if (!x.microgonsToBeMinedPerBlock) {
-          const data = await CohortBidder.getStartingData(api as any);
-          x.micronotsStakedPerSeat = data.micronotsStakedPerSeat;
-          x.microgonsToBeMinedPerBlock = data.microgonsToBeMinedPerBlock;
+          x.micronotsStakedPerSeat = await api.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
+          x.microgonsToBeMinedPerBlock = await api.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
         }
         x.frameBiddingProgress = this.calculateProgress(headerTick, this.currentFrameTickRange);
         x.lastBlockNumber = blockNumber;

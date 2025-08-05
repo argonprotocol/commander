@@ -1,4 +1,4 @@
-import { type AccountId, Compact, ExtrinsicError, JsonExt, u128 } from '@argonprotocol/mainchain';
+import { ExtrinsicError, JsonExt } from '@argonprotocol/mainchain';
 import { MiningFrames } from '@argonprotocol/commander-calculator';
 import {
   BotActivityType,
@@ -7,6 +7,7 @@ import {
   type IHistoryFile,
 } from './interfaces/IHistoryFile.ts';
 import type { Storage } from './Storage.ts';
+import Queue from 'p-queue';
 
 export enum SeatReductionReason {
   InsufficientFunds = 'InsufficientFunds',
@@ -20,7 +21,7 @@ export class History {
   public lastProcessedBlockNumber: number = 0;
 
   private storage: Storage;
-  private lastBids: { address: string; bid: bigint }[] = [];
+  private lastBids: { address: string; bidMicrogons: bigint }[] = [];
 
   private cohortStartingFrameId!: number;
   private myAddresses: Set<string> = new Set();
@@ -28,6 +29,7 @@ export class History {
 
   private lastIdTick: number = 0;
   private lastIdCounter: number = 0;
+  private queue = new Queue({ concurrency: 1, autoStart: true });
 
   constructor(storage: Storage) {
     this.storage = storage;
@@ -55,7 +57,7 @@ export class History {
     });
   }
 
-  public async initCohort(cohortStartingFrameId: number, myAddresses: Set<string>): Promise<void> {
+  public async initCohort(cohortStartingFrameId: number, myAddresses: Set<string>) {
     this.cohortStartingFrameId = cohortStartingFrameId;
     this.myAddresses = myAddresses;
     this.maxSeatsInPlay = this.myAddresses.size;
@@ -63,75 +65,78 @@ export class History {
     this.unsavedActivities = [];
 
     console.log('SAVING ACTIVITIES TO HISTORY FILE', activitiesToSave);
-    await this.storage.historyFile(this.cohortStartingFrameId).mutate((history: IHistoryFile) => {
-      history.activities.push(...(activitiesToSave as IBotActivity[]));
-    });
+    void this.queue.add(() =>
+      this.storage.historyFile(cohortStartingFrameId).mutate((history: IHistoryFile) => {
+        history.activities.push(...(activitiesToSave as IBotActivity[]));
+      }),
+    );
   }
 
-  public async handleStarting(): Promise<void> {
+  public handleStarting() {
     console.log('STARTING');
-    await this.appendActivities({
+    this.appendActivities({
       tick: MiningFrames.calculateCurrentTickFromSystemTime(),
       type: BotActivityType.Starting,
       data: {},
     });
   }
 
-  public async handleDockersConfirmed(): Promise<void> {
+  public handleDockersConfirmed() {
     console.log('DOCKERS CONFIRMED');
-    await this.appendActivities({
+    this.appendActivities({
       tick: MiningFrames.calculateCurrentTickFromSystemTime(),
       type: BotActivityType.DockersConfirmed,
       data: {},
     });
   }
 
-  public async handleStartedSyncing(): Promise<void> {
+  public handleStartedSyncing() {
     console.log('STARTED SYNCING');
-    await this.appendActivities({
+    this.appendActivities({
       tick: MiningFrames.calculateCurrentTickFromSystemTime(),
       type: BotActivityType.StartedSyncing,
       data: {},
     });
   }
 
-  public async handleFinishedSyncing(): Promise<void> {
+  public handleFinishedSyncing() {
     console.log('FINISHED SYNCING');
-    await this.appendActivities({
+    this.appendActivities({
       tick: MiningFrames.calculateCurrentTickFromSystemTime(),
       type: BotActivityType.FinishedSyncing,
       data: {},
     });
   }
 
-  public async handleReady() {
+  public handleReady() {
     console.log('READY');
-    await this.appendActivities({
+    this.appendActivities({
       tick: MiningFrames.calculateCurrentTickFromSystemTime(),
       type: BotActivityType.Ready,
       data: {},
     });
   }
 
-  public async handleError(error: Error): Promise<void> {
+  public handleError(error: Error) {
     console.log('ERROR', error);
-    await this.appendActivities({
+    this.appendActivities({
       tick: MiningFrames.calculateCurrentTickFromSystemTime(),
       type: BotActivityType.Error,
       data: { name: error.name, message: error.message },
     });
   }
 
-  public async handleShutdown(): Promise<void> {
+  public async handleShutdown() {
     console.log('SHUTDOWN');
-    await this.appendActivities({
+    this.appendActivities({
       tick: MiningFrames.calculateCurrentTickFromSystemTime(),
       type: BotActivityType.Shutdown,
       data: {},
     });
+    await this.queue.onIdle();
   }
 
-  public async handleBidsSubmitted(
+  public handleBidsSubmitted(
     tick: number,
     blockNumber: number,
     param: {
@@ -139,9 +144,9 @@ export class History {
       txFeePlusTip: bigint;
       submittedCount: number;
     },
-  ): Promise<void> {
+  ) {
     console.log('BIDS SUBMITTED', { tick, blockNumber, param });
-    await this.appendActivities({
+    this.appendActivities({
       tick,
       blockNumber,
       type: BotActivityType.BidsSubmitted,
@@ -149,7 +154,7 @@ export class History {
     });
   }
 
-  public async handleBidsRejected(
+  public handleBidsRejected(
     tick: number,
     blockNumber: number,
     param: {
@@ -158,9 +163,9 @@ export class History {
       submittedCount: number;
       bidError?: ExtrinsicError;
     },
-  ): Promise<void> {
+  ) {
     console.log('BIDS REJECTED', { tick, blockNumber, param });
-    await this.appendActivities({
+    this.appendActivities({
       tick,
       blockNumber,
       type: BotActivityType.BidsRejected,
@@ -168,16 +173,15 @@ export class History {
     });
   }
 
-  public async handleSeatFluctuation(
+  public handleSeatFluctuation(
     tick: number,
     blockNumber: number,
     newMaxSeats: number,
     reason: SeatReductionReason,
     availableMicrogons: bigint,
-  ): Promise<void> {
-    console.log('SEAT FLUCTUATION', { tick, blockNumber, newMaxSeats, reason, availableMicrogons });
+  ) {
     if (newMaxSeats < this.maxSeatsInPlay) {
-      await this.appendActivities({
+      this.appendActivities({
         tick,
         blockNumber,
         type: BotActivityType.SeatReduction,
@@ -189,7 +193,7 @@ export class History {
         },
       });
     } else if (newMaxSeats > this.maxSeatsInPlay) {
-      await this.appendActivities({
+      this.appendActivities({
         tick,
         blockNumber,
         type: BotActivityType.SeatExpansion,
@@ -205,38 +209,31 @@ export class History {
     this.maxSeatsInPlay = newMaxSeats;
   }
 
-  public async handleIncomingBids(
+  public handleIncomingBids(
     tick: number,
     blockNumber: number,
-    bids: { accountId: AccountId; bid: u128 | Compact<u128> }[],
-  ): Promise<void> {
-    console.log('INCOMING BIDS', { tick, blockNumber, bids });
-    const nextEntrants: { address: string; bid: bigint }[] = [];
-    for (const x of bids) {
-      const bid = x.bid.toBigInt();
-      const address = x.accountId.toHuman();
-      nextEntrants.push({ address, bid });
-    }
-
+    nextEntrants: { address: string; bidMicrogons: bigint }[],
+  ) {
+    console.log('INCOMING BIDS', { tick, blockNumber, bids: nextEntrants });
     const hasDiffs = JsonExt.stringify(nextEntrants) !== JsonExt.stringify(this.lastBids);
     this.lastProcessedBlockNumber = Math.max(blockNumber, this.lastProcessedBlockNumber);
 
     if (hasDiffs) {
-      for (const [i, { address, bid }] of nextEntrants.entries()) {
+      for (const [i, { address, bidMicrogons }] of nextEntrants.entries()) {
         const prevBidIndex = this.lastBids.findIndex(y => y.address === address);
         const entry: IBotActivityBidReceived = {
           bidderAddress: address,
-          microgonsBid: bid,
+          microgonsBid: bidMicrogons,
           bidPosition: i,
         };
         if (prevBidIndex !== -1) {
-          const prevBidAmount = this.lastBids[prevBidIndex].bid;
-          if (prevBidAmount !== bid) {
+          const prevBidAmount = this.lastBids[prevBidIndex].bidMicrogons;
+          if (prevBidAmount !== bidMicrogons) {
             entry.previousMicrogonsBid = prevBidAmount;
           }
           entry.previousBidPosition = prevBidIndex;
         }
-        await this.appendActivities({
+        this.appendActivities({
           tick,
           blockNumber,
           type: BotActivityType.BidReceived,
@@ -244,16 +241,16 @@ export class History {
         });
       }
 
-      for (const [i, { address, bid }] of this.lastBids.entries()) {
+      for (const [i, { address, bidMicrogons }] of this.lastBids.entries()) {
         const nextBid = nextEntrants.some(y => y.address === address);
         if (!nextBid) {
-          await this.appendActivities({
+          this.appendActivities({
             tick,
             blockNumber,
             type: BotActivityType.BidReceived,
             data: {
               bidderAddress: address,
-              microgonsBid: bid,
+              microgonsBid: bidMicrogons,
               bidPosition: null,
               previousBidPosition: i,
             },
@@ -277,16 +274,19 @@ export class History {
     return id;
   }
 
-  private async appendActivities(...activities: Omit<IBotActivity, 'id'>[]) {
+  private appendActivities(...activities: Omit<IBotActivity, 'id'>[]) {
     for (const activity of activities) {
       (activity as any).id ??= this.createId(activity.tick);
       (activity as any).frameId ??= this.cohortStartingFrameId;
     }
 
-    if (this.cohortStartingFrameId) {
-      await this.storage.historyFile(this.cohortStartingFrameId).mutate((history: IHistoryFile) => {
-        history.activities.push(...(activities as IBotActivity[]));
-      });
+    const cohortFrameId = this.cohortStartingFrameId;
+    if (cohortFrameId) {
+      void this.queue.add(() =>
+        this.storage.historyFile(cohortFrameId).mutate((history: IHistoryFile) => {
+          history.activities.push(...(activities as IBotActivity[]));
+        }),
+      );
     } else {
       this.unsavedActivities.push(...(activities as IBotActivity[]));
     }
