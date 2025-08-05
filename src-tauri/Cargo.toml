@@ -54,7 +54,7 @@ anyhow = "1.0"
 tauri-plugin-log = { version = "2", features = ["colored" ] }
 keyring = {version = "3", features = ["apple-native", "windows-native"] }
 hex = "0.4.3"
-dotenv = "0.15"
+dotenvy = "0.15"
 sha2 = "0.10"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-http = { version = "2", features = ["unsafe-headers"] }

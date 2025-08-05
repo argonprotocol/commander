@@ -11,16 +11,16 @@ pub fn load_env_vars() {
     log::debug!("Loading environment variables for mode: {}", mode);
 
     // 1. Load .env (loaded in all cases)
-    dotenv::dotenv().ok();
+    dotenvy::dotenv().ok();
 
     // 2. Load .env.local (loaded in all cases, ignored by git)
-    dotenv::from_filename(".env.local").ok();
+    dotenvy::from_filename_override(".env.local").ok();
 
     // 3. Load .env.[mode] (only loaded in specified mode)
-    dotenv::from_filename(format!(".env.{}", mode)).ok();
+    dotenvy::from_filename_override(format!(".env.{}", mode)).ok();
 
     // 4. Load .env.[mode].local (only loaded in specified mode, ignored by git)
-    dotenv::from_filename(format!(".env.{}.local", mode)).ok();
+    dotenvy::from_filename_override(format!(".env.{}.local", mode)).ok();
 }
 
 /// Determines the current mode following Vite's logic
