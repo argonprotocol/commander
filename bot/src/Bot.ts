@@ -156,10 +156,10 @@ export default class Bot {
   }
 
   public async shutdown() {
-    this.history.handleShutdown();
     await this.blockSync.stop();
     await this.autobidder.stop();
     await this.accountset.client.then(x => x.disconnect());
+    await this.history.handleShutdown();
   }
 
   private loadBiddingRules() {

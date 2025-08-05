@@ -1,8 +1,7 @@
-import { type Accountset, MiningBids } from '@argonprotocol/mainchain';
+import { type Accountset, CohortBidder, MiningBids } from '@argonprotocol/mainchain';
 import { createBidderParams, type IBiddingRules } from '@argonprotocol/commander-calculator';
 import { type Storage } from './Storage.ts';
-import { CohortBidder } from './CohortBidder.ts';
-import type { History } from './History.ts';
+import { type History, SeatReductionReason } from './History.ts';
 
 /**
  * Creates a bidding process. Between each cohort, it will ask the callback for parameters for the next cohort.
@@ -79,8 +78,43 @@ export class AutoBidder {
       subaccounts.push(...added);
     }
 
-    const cohortBidder = new CohortBidder(this.accountset, this.history, cohortActivationFrameId, subaccounts, params);
+    const cohortBidder = new CohortBidder(this.accountset, cohortActivationFrameId, subaccounts, params, {
+      onBidParamsAdjusted: args => {
+        const { availableBalanceForBids, blockNumber, reason, tick, maxSeats, winningBidCount } = args;
+        const seatsInPlay = Math.max(maxSeats, winningBidCount);
+        const translatedReason =
+          reason === 'max-bid-too-low'
+            ? SeatReductionReason.MaxBidTooLow
+            : reason === 'max-budget-too-low'
+              ? SeatReductionReason.MaxBudgetTooLow
+              : SeatReductionReason.InsufficientFunds;
+
+        this.history.handleSeatFluctuation(tick, blockNumber, seatsInPlay, translatedReason, availableBalanceForBids);
+      },
+      onBidsUpdated: args => {
+        const { tick, bids, atBlockNumber } = args;
+        this.history.handleIncomingBids(tick, atBlockNumber, bids);
+      },
+      onBidsSubmitted: args => {
+        const { tick, blockNumber, microgonsPerSeat, submittedCount, txFeePlusTip } = args;
+        this.history.handleBidsSubmitted(tick, blockNumber, {
+          microgonsPerSeat,
+          submittedCount,
+          txFeePlusTip,
+        });
+      },
+      onBidsRejected: args => {
+        const { tick, blockNumber, bidError, microgonsPerSeat, rejectedCount, submittedCount } = args;
+        this.history.handleBidsRejected(tick, blockNumber, {
+          bidError,
+          microgonsBid: microgonsPerSeat,
+          rejectedCount,
+          submittedCount,
+        });
+      },
+    });
     this.cohortBidder = cohortBidder;
+    await this.history.initCohort(cohortActivationFrameId, cohortBidder.myAddresses);
     await cohortBidder.start();
   }
 
