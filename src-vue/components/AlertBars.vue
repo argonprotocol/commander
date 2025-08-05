@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <div
+  <!-- <div
     InsufficientFunds
     v-if="hasInsufficientFunds"
     @click="openFundMiningWalletOverlay"
@@ -59,7 +59,7 @@
     <span class="cursor-pointer font-bold inline-block rounded-full bg-argon-700 hover:bg-black/90 px-3">
       Add Funds
     </span>
-  </div>
+  </div> -->
 </template>
 
 <script setup lang="ts">

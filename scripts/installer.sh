@@ -295,7 +295,7 @@ run_command "docker compose --env-file=.env.$ARGON_CHAIN up bot -d --build --for
 
 while true; do
     sleep 1
-    raw_output=$("$SCRIPTS_DIR/get_bot_http.sh" "/bot-state")
+    raw_output=$("$SCRIPTS_DIR/get_bot_http.sh" "/state")
     echo $raw_output
     status=$(echo $raw_output | jq -r '.status')
     if [[ "$status" == "200" ]]; then

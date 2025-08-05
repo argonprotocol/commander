@@ -39,19 +39,20 @@ export class AutoBidder {
     await this.stopCohortBidding();
   }
 
-  private async onBiddingEnd(cohortActivatingFrameId: number): Promise<void> {
-    console.log(`Bidding for frame ${cohortActivatingFrameId} ended`);
-    if (this.cohortBidder?.cohortStartingFrameId !== cohortActivatingFrameId) return;
+  private async onBiddingEnd(cohortActivationFrameId: number): Promise<void> {
+    console.log(`Bidding for frame ${cohortActivationFrameId} ended`);
+    if (this.cohortBidder?.cohortStartingFrameId !== cohortActivationFrameId) return;
     await this.stopCohortBidding();
   }
 
-  private async onBiddingStart(cohortActivatingFrameId: number) {
-    if (this.cohortBidder?.cohortStartingFrameId === cohortActivatingFrameId) return;
-    const params = await createBidderParams(cohortActivatingFrameId, await this.accountset.client, this.biddingRules);
+  private async onBiddingStart(cohortActivationFrameId: number) {
+    if (this.cohortBidder?.cohortStartingFrameId === cohortActivationFrameId) return;
+    const params = await createBidderParams(cohortActivationFrameId, await this.accountset.client, this.biddingRules);
     if (params.maxSeats === 0) return;
 
-    const bidsFileData = await this.storage.bidsFile(cohortActivatingFrameId).get();
-    console.log(`Bidding for frame ${cohortActivatingFrameId} started`, {
+    const cohortBiddingFrameId = cohortActivationFrameId - 1;
+    const bidsFileData = await this.storage.bidsFile(cohortBiddingFrameId, cohortActivationFrameId).get();
+    console.log(`Bidding for frame ${cohortActivationFrameId} started`, {
       hasStartingStats: !!bidsFileData,
       seatGoal: params.maxSeats,
     });
@@ -78,7 +79,7 @@ export class AutoBidder {
       subaccounts.push(...added);
     }
 
-    const cohortBidder = new CohortBidder(this.accountset, this.history, cohortActivatingFrameId, subaccounts, params);
+    const cohortBidder = new CohortBidder(this.accountset, this.history, cohortActivationFrameId, subaccounts, params);
     this.cohortBidder = cohortBidder;
     await cohortBidder.start();
   }
@@ -87,8 +88,8 @@ export class AutoBidder {
     const cohortBidder = this.cohortBidder;
     if (!cohortBidder) return;
     this.cohortBidder = undefined;
-    const cohortActivatingFrameId = cohortBidder.cohortStartingFrameId;
+    const cohortActivationFrameId = cohortBidder.cohortStartingFrameId;
     await cohortBidder.stop();
-    console.log('Bidding stopped', { cohortActivatingFrameId });
+    console.log('Bidding stopped', { cohortActivationFrameId });
   }
 }

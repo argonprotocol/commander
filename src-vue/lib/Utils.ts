@@ -11,15 +11,25 @@ export function abreviateAddress(address: string, length = 4) {
   return address.slice(0, 6) + '...' + address.slice(-length);
 }
 
+export function calculateAPR(costs: bigint, rewards: bigint): number {
+  if (costs === 0n && rewards > 0n) return 10_000;
+  if (costs === 0n) return 0;
+
+  const tenDayRate = Number(((rewards - costs) * 100_000n) / costs) / 100_000;
+  // Compound APR over 36.5 cycles (10-day periods in a year)
+  const apr = tenDayRate * 36.5 * 100;
+  return Math.max(apr, -100);
+}
+
 export function calculateAPY(costs: bigint, rewards: bigint): number {
-  if (costs === 0n && rewards > 0n) return 9_999;
+  if (costs === 0n && rewards > 0n) return 10_000;
   if (costs === 0n) return 0;
 
   const tenDayRate = Number(((rewards - costs) * 100_000n) / costs) / 100_000;
   // Compound APR over 36.5 cycles (10-day periods in a year)
   const apy = (Math.pow(1 + tenDayRate, 36.5) - 1) * 100;
-  if (apy > 9_999) {
-    return 9_999;
+  if (apy > 10_000) {
+    return 10_000;
   }
   return apy;
 }
@@ -67,7 +77,7 @@ export function toSqliteBigInt(num: bigint): number {
 
 export function fromSqliteBigInt(num: number): bigint {
   try {
-    return BigInt(num);
+    return BigInt(Math.floor(num));
   } catch (e) {
     console.log('num', num);
     console.error('Error converting sqlite bigint', e);

@@ -68,24 +68,26 @@ export default class Installer {
   public async load(): Promise<void> {
     await this.config.isLoadedPromise;
 
-    const uploadedWalletAddress = await this.fetchUploadedWalletAddress();
-    if (uploadedWalletAddress && uploadedWalletAddress !== this.config.miningAccount.address) {
-      await tauriMessage(
-        'The wallet address on the server does not match the wallet address in the local database. This app will shutdown.',
-        {
-          title: 'Wallet Address Mismatch',
-          kind: 'error',
-        },
-      );
-      await tauriExit(0);
-    }
+    if (this.config.isServerReadyToInstall) {
+      const uploadedWalletAddress = await this.fetchUploadedWalletAddress();
+      if (uploadedWalletAddress && uploadedWalletAddress !== this.config.miningAccount.address) {
+        await tauriMessage(
+          'The wallet address on the server does not match the wallet address in the local database. This app will shutdown.',
+          {
+            title: 'Wallet Address Mismatch',
+            kind: 'error',
+          },
+        );
+        await tauriExit(0);
+      }
 
-    const isRunning = await this.calculateIsRunning();
-    const isReadyToRun = !isRunning && (await this.calculateIsReadyToRun(false));
-    if (isReadyToRun && !isRunning) {
-      await this.run(false);
-    } else {
-      await this.activateInstallerCheck(false);
+      const isRunning = await this.calculateIsRunning();
+      const isReadyToRun = !isRunning && (await this.calculateIsReadyToRun(false));
+      if (isReadyToRun && !isRunning) {
+        await this.run(false);
+      } else {
+        await this.activateInstallerCheck(false);
+      }
     }
 
     this.isLoaded = true;

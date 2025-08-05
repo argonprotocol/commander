@@ -14,7 +14,16 @@ export class CohortFramesTable extends BaseTable {
     microgonsMinted: bigint,
   ): Promise<void> {
     await this.db.execute(
-      'INSERT OR REPLACE INTO CohortFrames (frameId, cohortId, blocksMined, micronotsMined, microgonsMined, microgonsMinted) VALUES (?, ?, ?, ?, ?, ?)',
+      `INSERT INTO CohortFrames (
+          frameId, cohortId, blocksMined, micronotsMined, microgonsMined, microgonsMinted
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?
+        ) ON CONFLICT(frameId, cohortId) DO UPDATE SET 
+          blocksMined = excluded.blocksMined, 
+          micronotsMined = excluded.micronotsMined, 
+          microgonsMined = excluded.microgonsMined, 
+          microgonsMinted = excluded.microgonsMinted
+      `,
       [
         frameId,
         cohortId,
@@ -33,10 +42,9 @@ export class CohortFramesTable extends BaseTable {
     return convertSqliteBigInts(records, this.bigIntFields);
   }
 
-  public async fetchGlobalStats(): Promise<ICohortFrameStats> {
+  public async fetchGlobalStats(): Promise<Omit<ICohortFrameStats, 'totalBlocksMined'>> {
     const [rawResults] = await this.db.select<[any]>(
       `SELECT 
-        COALESCE(sum(blocksMined), 0) as totalBlocksMined,
         COALESCE(sum(micronotsMined), 0) as totalMicronotsMined,
         COALESCE(sum(microgonsMined), 0) as totalMicrogonsMined,
         COALESCE(sum(microgonsMinted), 0) as totalMicrogonsMinted
@@ -45,27 +53,6 @@ export class CohortFramesTable extends BaseTable {
 
     const results = rawResults;
     return {
-      totalBlocksMined: results.totalBlocksMined,
-      totalMicronotsMined: fromSqliteBigInt(results.totalMicronotsMined),
-      totalMicrogonsMined: fromSqliteBigInt(results.totalMicrogonsMined),
-      totalMicrogonsMinted: fromSqliteBigInt(results.totalMicrogonsMinted),
-    };
-  }
-
-  public async fetchCohortStats(cohortId: number): Promise<ICohortFrameStats> {
-    const [rawResults] = await this.db.select<[any]>(
-      `SELECT 
-        COALESCE(sum(blocksMined), 0) as totalBlocksMined,
-        COALESCE(sum(micronotsMined), 0) as totalMicronotsMined,
-        COALESCE(sum(microgonsMined), 0) as totalMicrogonsMined,
-        COALESCE(sum(microgonsMinted), 0) as totalMicrogonsMinted
-      FROM CohortFrames WHERE cohortId = ?`,
-      [cohortId],
-    );
-
-    const results = rawResults;
-    return {
-      totalBlocksMined: results.totalBlocksMined,
       totalMicronotsMined: fromSqliteBigInt(results.totalMicronotsMined),
       totalMicrogonsMined: fromSqliteBigInt(results.totalMicrogonsMined),
       totalMicrogonsMinted: fromSqliteBigInt(results.totalMicrogonsMinted),

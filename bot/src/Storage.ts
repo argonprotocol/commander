@@ -65,7 +65,7 @@ export class Storage {
           microgonToUsd: [],
           microgonToBtc: [],
           microgonToArgonot: [],
-          byCohortActivatingFrameId: {},
+          byCohortActivationFrameId: {},
         };
       });
       this.lruCache.set(key, entry);
@@ -73,14 +73,13 @@ export class Storage {
     return entry;
   }
 
-  public bidsFile(cohortActivatingFrameId: number): JsonStore<IBidsFile> {
-    const cohortBiddingFrameId = cohortActivatingFrameId - 1;
-    const key = `bot-bids/frame-${cohortBiddingFrameId}-${cohortActivatingFrameId}.json`;
+  public bidsFile(cohortBiddingFrameId: number, cohortActivationFrameId: number): JsonStore<IBidsFile> {
+    const key = `bot-bids/frame-${cohortBiddingFrameId}-${cohortActivationFrameId}.json`;
     let entry = this.lruCache.get(key);
     if (!entry) {
       entry = new JsonStore<IBidsFile>(Path.join(this.basedir, key), () => ({
         cohortBiddingFrameId,
-        cohortActivatingFrameId: cohortActivatingFrameId,
+        cohortActivationFrameId,
         frameBiddingProgress: 0,
         lastBlockNumber: 0,
         seatsWon: 0,

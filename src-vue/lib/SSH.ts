@@ -39,16 +39,21 @@ export class SSH {
       throw new Error(`HTTP GET command failed with status ${result[1]}`);
     }
 
-    const httpResponse: { status: number; data?: T; error?: string } = jsonParseWithBigInts(result[0]);
+    try {
+      const httpResponse: { status: number; data?: T; error?: string } = jsonParseWithBigInts(result[0]);
 
-    if (httpResponse.status !== 200) {
-      throw new Error(httpResponse.error);
+      if (httpResponse.status !== 200) {
+        throw new Error(httpResponse.error);
+      }
+
+      return {
+        status: httpResponse.status,
+        data: httpResponse.data!,
+      };
+    } catch (e) {
+      console.error('Failed to parse JSON:', result[0]);
+      throw e;
     }
-
-    return {
-      status: httpResponse.status,
-      data: httpResponse.data!,
-    };
   }
 
   public static async runCommand(command: string, retries = 0): Promise<[string, number]> {

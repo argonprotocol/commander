@@ -21,7 +21,7 @@
   <div class="flex flex-row items-center gap-2 w-full">
     <InputMenu v-model="config.biddingRules.seatGoalType" :options="[
         { name: `Get As Many Seats As Possible`, value: SeatGoalType.Min },
-        { name: `Stop Biding After Goal Reached`, value: SeatGoalType.Max }
+        { name: `Stop Bidding After Goal Reached`, value: SeatGoalType.Max }
       ]" :selectFirst="true" class="w-full" />
   </div>
 </template>

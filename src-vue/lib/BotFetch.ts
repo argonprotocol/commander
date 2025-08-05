@@ -13,7 +13,7 @@ import { BotServerError, BotServerIsLoading, BotServerIsSyncing } from '../inter
 export class BotFetch {
   public static async fetchBotState(retries = 0): Promise<IBotState> {
     try {
-      const response = await SSH.runHttpGet<IBotState | IBotStateStarting | IBotStateError>(`/bot-state`);
+      const response = await SSH.runHttpGet<IBotState | IBotStateStarting | IBotStateError>(`/state`);
 
       if ((response.data as IBotStateError).serverError) {
         throw new BotServerError(response.data as IBotStateError);
@@ -73,10 +73,11 @@ export class BotFetch {
     return data;
   }
 
-  public static async fetchBidsFile(frameId?: number): Promise<IBidsFile> {
+  public static async fetchBidsFile(cohortActivationFrameId?: number): Promise<IBidsFile> {
     let url = `/bids`;
-    if (frameId) {
-      url += `/${frameId}`;
+    if (cohortActivationFrameId) {
+      const cohortBiddingFrameId = cohortActivationFrameId - 1;
+      url += `/${cohortBiddingFrameId}-${cohortActivationFrameId}`;
     }
     const { data } = await SSH.runHttpGet<IBidsFile>(url);
     return data;

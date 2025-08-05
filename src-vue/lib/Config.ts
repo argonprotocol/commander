@@ -24,8 +24,13 @@ import { CurrencyKey } from './Currency';
 import { bip39 } from '@argonprotocol/bitcoin';
 import Countries from './Countries';
 
+console.log('__ARGON_NETWORK_NAME__', __ARGON_NETWORK_NAME__);
+console.log('__ARGON_NETWORK_URL__', __ARGON_NETWORK_URL__);
+console.log('__COMMANDER_INSTANCE__', __COMMANDER_INSTANCE__);
+
 export let NETWORK_NAME = __ARGON_NETWORK_NAME__ || 'mainnet';
-export let NETWORK_URL = __ARGON_NETWORK_URL__ || 'wss://rpc.argon.network';
+export let NETWORK_URL =
+  __ARGON_NETWORK_URL__ || (NETWORK_NAME === 'mainnet' ? 'wss://rpc.argon.network' : 'wss://rpc.argon.network');
 export const [INSTANCE_NAME, INSTANCE_PORT] = (__COMMANDER_INSTANCE__ || 'default:1420').split(':');
 
 export const env = (import.meta as any).env ?? {};
@@ -480,10 +485,10 @@ const defaults: IConfigDefaults = {
       argonotPriceChangePctMin: 0,
       argonotPriceChangePctMax: 0,
 
-      minimumBidFormulaType: BidAmountFormulaType.Custom,
-      minimumBidAdjustmentType: BidAmountAdjustmentType.Absolute,
-      minimumBidCustom: 500n * BigInt(MICROGONS_PER_ARGON),
-      minimumBidAdjustAbsolute: 10n * BigInt(MICROGONS_PER_ARGON),
+      minimumBidFormulaType: BidAmountFormulaType.PreviousDayLow,
+      minimumBidAdjustmentType: BidAmountAdjustmentType.Relative,
+      minimumBidCustom: 0n * BigInt(MICROGONS_PER_ARGON),
+      minimumBidAdjustAbsolute: 0n * BigInt(MICROGONS_PER_ARGON),
       minimumBidAdjustRelative: 0,
 
       rebiddingDelay: 1,
@@ -493,7 +498,7 @@ const defaults: IConfigDefaults = {
       maximumBidAdjustmentType: BidAmountAdjustmentType.Relative,
       maximumBidCustom: 0n,
       maximumBidAdjustAbsolute: 0n,
-      maximumBidAdjustRelative: -1,
+      maximumBidAdjustRelative: 0,
 
       seatGoalType: SeatGoalType.Min,
       seatGoalCount: 3,

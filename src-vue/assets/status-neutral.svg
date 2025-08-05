@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 31 31" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>bland</title>
+    <defs>
+        <path d="M0,0 L1856,0 L1856,1106 L0,1106 L0,0 Z" id="path-1"></path>
+        <filter x="-0.3%" y="-0.5%" width="100.7%" height="101.2%" filterUnits="objectBoundingBox" id="filter-2">
+            <feOffset dx="1" dy="1" in="SourceAlpha" result="shadowOffsetOuter1"></feOffset>
+            <feGaussianBlur stdDeviation="2" in="shadowOffsetOuter1" result="shadowBlurOuter1"></feGaussianBlur>
+            <feComposite in="shadowBlurOuter1" in2="SourceAlpha" operator="out" result="shadowBlurOuter1"></feComposite>
+            <feColorMatrix values="0 0 0 0 0   0 0 0 0 0   0 0 0 0 0  0 0 0 0.153846154 0" type="matrix" in="shadowBlurOuter1"></feColorMatrix>
+        </filter>
+    </defs>
+    <g id="Argon-Commander" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Dashboard-Copy" transform="translate(-1148, -726)" xlink:href="#path-1">
+            <use fill="black" fill-opacity="1" filter="url(#filter-2)" xlink:href="#path-1"></use>
+            <path stroke="#979797" stroke-width="1" d="M1855.5,0.5 L1855.5,1105.5 L0.5,1105.5 L0.5,0.5 L1855.5,0.5 Z" stroke-linejoin="square"></path>
+            <g id="WALLET-MENU" stroke-width="1" fill-rule="evenodd" transform="translate(1116.0379, 477.8947)" fill="currentColor">
+                <path d="M47.3641358,248.50532 C39.0964192,248.50532 32.3641358,255.237603 32.3641358,263.50532 C32.3641358,271.773036 39.0964192,278.50532 47.3641358,278.50532 C55.6318523,278.50532 62.3641358,271.773036 62.3641358,263.50532 C62.3641358,255.237603 55.6318523,248.50532 47.3641358,248.50532 L47.3641358,248.50532 Z M43.4369704,268.587997 L51.2913011,268.587997 C51.9409074,268.587997 52.4724035,269.119493 52.4724035,269.769099 C52.4724035,270.418706 51.8818523,270.950202 51.2913011,270.950202 C49.1653169,270.950202 45.5629547,270.950202 43.4369704,270.950202 C42.7873641,270.950202 42.3149232,270.418706 42.255868,269.769099 C42.255868,269.119493 42.8464192,268.587997 43.4369704,268.587997 Z M43.8208287,259.607682 C43.8208287,260.729729 42.8759468,261.674611 41.7538995,261.674611 C40.6318523,261.674611 39.6869704,260.729729 39.6869704,259.607682 C39.6869704,258.485635 40.6318523,257.540753 41.7538995,257.540753 C42.9350019,257.540753 43.8208287,258.485635 43.8208287,259.607682 Z M50.5531121,259.607682 C50.5531121,258.485635 51.497994,257.540753 52.6200413,257.540753 C53.7420885,257.540753 54.6869704,258.485635 54.6869704,259.607682 C54.6869704,260.729729 53.7420885,261.674611 52.6200413,261.674611 C51.497994,261.674611 50.5531121,260.788784 50.5531121,259.607682 Z" id="bland" fill-rule="nonzero"></path>
+            </g>
+        </g>
+    </g>
+</svg>

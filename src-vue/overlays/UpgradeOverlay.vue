@@ -24,8 +24,15 @@
         leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
       >
         <div
+          :ref="draggable.setModalRef"
+          :style="{
+            top: `calc(50% + ${draggable.modalPosition.y}px)`,
+            left: `calc(50% + ${draggable.modalPosition.x}px)`,
+            transform: 'translate(-50%, -50%)',
+            cursor: draggable.isDragging ? 'grabbing' : 'default',
+          }"
           :class="isUpgrading ? 'w-8/12 min-h-[500px]' : 'w-160'"
-          class="flex flex-col min-h-60 bg-white border border-black/40 px-7 pb-4 rounded-lg pointer-events-auto shadow-xl relative overflow-scroll"
+          class="absolute flex flex-col min-h-60 bg-white border border-black/40 px-7 pb-4 rounded-lg pointer-events-auto shadow-xl overflow-scroll"
         >
           <h2 v-if="isUpgrading" class="text-xl font-bold text-slate-800/70 pt-5">
             {{ installer.isFreshInstall ? 'Installing' : 'Upgrading' }} Your Cloud Machine...
@@ -66,12 +73,15 @@ import BgOverlay from '../components/BgOverlay.vue';
 import { useConfig } from '../stores/config';
 import { useInstaller } from '../stores/installer';
 import InstallProgress from '../components/InstallProgress.vue';
+import Draggable from './helpers/Draggable.ts';
 
 const config = useConfig();
 const installer = useInstaller();
 
 const isOpen = Vue.ref(true);
 const isStartingUpgrade = Vue.ref(false);
+
+const draggable = Vue.reactive(new Draggable());
 
 const isUpgrading = Vue.computed(() => {
   return !config.isServerUpToDate && !config.isWaitingForUpgradeApproval;

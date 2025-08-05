@@ -2,7 +2,7 @@ import type { ILastModifiedAt } from './ILastModified.ts';
 
 export interface IBidsFile extends ILastModifiedAt {
   cohortBiddingFrameId: number;
-  cohortActivatingFrameId: number;
+  cohortActivationFrameId: number;
   frameBiddingProgress: number;
   lastBlockNumber: number;
   microgonsBidTotal: bigint;
