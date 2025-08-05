@@ -168,7 +168,7 @@
 
           <section box class="flex flex-col grow text-center px-2">
             <header class="flex flex-row justify-between text-xl font-bold py-2 text-slate-900/80 border-b border-slate-400/30">
-              <div @click="goToPrevFrame" :class="stats.prevFrameId ? 'opacity-60' : 'opacity-20 pointer-events-none'" class="flex flex-row items-center font-light text-base cursor-pointer group hover:opacity-80">
+              <div @click="goToPrevFrame" :class="hasPrevFrame ? 'opacity-60' : 'opacity-20 pointer-events-none'" class="flex flex-row items-center font-light text-base cursor-pointer group hover:opacity-80">
                 <ChevronLeftIcon class="w-6 h-6 opacity-50 mx-1 group-hover:opacity-80" />
                 PREV
               </div>
@@ -176,7 +176,7 @@
                 <span>{{ currentFrameStartDate }} to {{ currentFrameEndDate }}</span>
                 <span v-if="stats.selectedFrameId > stats.latestFrameId - 10" class="inline-block rounded-full bg-green-500/80 w-2.5 h-2.5 ml-2"></span>
               </span>
-              <div @click="goToNextFrame" :class="stats.nextFrameId ? 'opacity-60' : 'opacity-20 pointer-events-none'" class="flex flex-row items-center font-light text-base cursor-pointer group hover:opacity-80">
+              <div @click="goToNextFrame" :class="hasNextFrame ? 'opacity-60' : 'opacity-20 pointer-events-none'" class="flex flex-row items-center font-light text-base cursor-pointer group hover:opacity-80">
                 NEXT
                 <ChevronRightIcon class="w-6 h-6 opacity-50 mx-1 group-hover:opacity-80" />
               </div>
@@ -273,9 +273,9 @@
                   <div class="h-full w-[1px] bg-slate-400/30"></div>
                   
                   <div stat-box class="flex flex-col w-1/3 h-full pb-3">
-                    <span>{{ numeral(currentFrameAPR).formatIfElseCapped('< 100', '0.[00]', '0,0', 9_999) }}%</span>
+                    <span>{{ numeral(currentFrameProfit).formatIfElseCapped('< 100', '0.[00]', '0,0', 9_999) }}%</span>
                     <label class="relative block w-full">
-                      Current Frame APR
+                      Current Frame Profit
                       <HealthIndicatorBar />
                     </label>
                   </div>
@@ -283,10 +283,10 @@
                 </div>
               </div>
             </div>
-            <div v-else-if="currentFrame.id === stats.latestFrameId" class="flex flex-col items-center justify-center h-full">
+            <div v-else-if="currentFrame.id === stats.latestFrameId" class="flex flex-col items-center justify-center h-full text-slate-900/20 text-2xl font-bold">
               You Have No Mining Seats
             </div>
-            <div v-else class="flex flex-col items-center justify-center h-full">
+            <div v-else class="flex flex-col items-center justify-center h-full text-slate-900/20 text-2xl font-bold">
               You Had No Mining Seats During This Frame
             </div>
           </section>
@@ -360,24 +360,25 @@ let dragMeta: any = {};
 const chartRef = Vue.ref<InstanceType<typeof Chart> | null>(null);
 const nibSliderRef = Vue.ref<InstanceType<typeof NibSlider> | null>(null);
 
-const currentFrame = Vue.ref({
+const currentFrame = Vue.ref<IDashboardFrameStats>({
   id: 0,
   date: '',
   firstTick: 0,
   lastTick: 0,
   activeSeatCount: 0,
-  relativeCost: 0n,
+  relativeSeatCost: 0n,
   microgonToUsd: [0n],
   microgonToArgonot: [0n],
-  totalSeatCost: 0n,
   blocksMined: 0,
 
   micronotsMined: 0n,
   microgonsMined: 0n,
   microgonsMinted: 0n,
-  microgonValueEarned: 0n,
+  microgonValueOfRewards: 0n,
 
   progress: 0,
+  profit: 0,
+  apr: 0,
   score: 0,
 });
 
@@ -410,20 +411,20 @@ const currentFrameEarnings = Vue.computed(() => {
   if (!currentFrame.value.activeSeatCount) return 0n;
 
   const { microgonsMined, microgonsMinted, micronotsMined } = currentFrame.value;
-  console.log('currentFrameEarnings', typeof microgonsMined, typeof microgonsMinted, typeof micronotsMined);
   const microgons = microgonsMined + microgonsMinted;
   return microgons + currency.micronotToMicrogon(micronotsMined);
 });
 
 const currentFrameCost = Vue.computed(() => {
   if (!currentFrame.value.activeSeatCount) return 0n;
-  // const costBn = BigNumber(currentFrame.value.totalSeatCost).multipliedBy(currentFrame.value.progress / 100);
-  return 0n;
-  // return bigNumberToBigInt(costBn);
+  return currentFrame.value.relativeSeatCost;
 });
 
-const currentFrameAPR = Vue.computed(() => {
-  return calculateAPR(currentFrameCost.value, currentFrameEarnings.value);
+const currentFrameProfit = Vue.computed(() => {
+  const earningsBn = BigNumber(currentFrameEarnings.value);
+  const costBn = BigNumber(currentFrameCost.value);
+  const profitBn = earningsBn.minus(costBn).dividedBy(costBn).multipliedBy(100);
+  return profitBn.toNumber();
 });
 
 const currentFrameStartDate = Vue.computed(() => {
@@ -457,13 +458,21 @@ const lastBotActivityAt = Vue.computed(() => {
   return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
 });
 
+const hasNextFrame = Vue.computed(() => {
+  return sliderFrameIndex.value < stats.frames.length - 1;
+});
+
+const hasPrevFrame = Vue.computed(() => {
+  return sliderFrameIndex.value > 0;
+});
+
 async function goToPrevFrame() {
-  const newFrameIndex = Math.max(sliderFrameIndex - 1, 0);
+  const newFrameIndex = Math.max(sliderFrameIndex.value - 1, 0);
   updateFrameSliderPos(newFrameIndex);
 }
 
 async function goToNextFrame() {
-  const newFrameIndex = Math.min(sliderFrameIndex + 1, stats.frames.length - 1);
+  const newFrameIndex = Math.min(sliderFrameIndex.value + 1, stats.frames.length - 1);
   updateFrameSliderPos(newFrameIndex);
 }
 
@@ -493,7 +502,7 @@ function loadChartData() {
   updateFrameSliderPos(items.length - 1);
 }
 
-let sliderFrameIndex = 0;
+const sliderFrameIndex = Vue.ref(0);
 const sliderLeftPosX = Vue.ref(0);
 
 function startDrag(event: PointerEvent) {
@@ -506,7 +515,7 @@ function startDrag(event: PointerEvent) {
     startX,
     elemOffset: elementLeftPos - startX,
     elemLeftPos: elementLeftPos,
-    startIndex: sliderFrameIndex,
+    startIndex: sliderFrameIndex.value,
     hasShiftKey: event.metaKey || event.shiftKey,
   };
 
@@ -544,7 +553,7 @@ function stopDrag(event: PointerEvent) {
 
 function updateFrameSliderPos(index: number, wasManuallyMoved: boolean = false) {
   index = Math.max(index || 0, 0);
-  sliderFrameIndex = index;
+  sliderFrameIndex.value = index;
 
   const item = stats.frames[index];
   const pointPosition = chartRef.value?.getPointPosition(index);

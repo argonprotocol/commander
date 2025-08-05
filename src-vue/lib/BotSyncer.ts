@@ -229,7 +229,6 @@ export class BotSyncer {
       earningsFile.frameProgress,
     );
 
-    console.log('UPDATING FRAME', frameId, blocksMined, earningsFile.frameProgress);
     const isProcessed = earningsFile.frameProgress === 100.0;
     await this.db.framesTable.update(
       frameId,

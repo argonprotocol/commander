@@ -30,7 +30,21 @@ export class FramesTable extends BaseTable {
     isProcessed: boolean,
   ): Promise<void> {
     await this.db.execute(
-      'INSERT OR REPLACE INTO Frames (id, firstTick, lastTick, firstBlockNumber, lastBlockNumber, microgonToUsd, microgonToBtc, microgonToArgonot, progress, isProcessed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      `INSERT INTO Frames (
+          id, firstTick, lastTick, firstBlockNumber, lastBlockNumber, microgonToUsd, microgonToBtc, microgonToArgonot, progress, isProcessed
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ) ON CONFLICT(id) DO UPDATE SET 
+          firstTick = excluded.firstTick, 
+          lastTick = excluded.lastTick, 
+          firstBlockNumber = excluded.firstBlockNumber, 
+          lastBlockNumber = excluded.lastBlockNumber, 
+          microgonToUsd = excluded.microgonToUsd, 
+          microgonToBtc = excluded.microgonToBtc, 
+          microgonToArgonot = excluded.microgonToArgonot, 
+          progress = excluded.progress, 
+          isProcessed = excluded.isProcessed
+      `,
       toSqlParams([
         id,
         firstTick,
@@ -116,12 +130,13 @@ export class FramesTable extends BaseTable {
 
       const relativeSeatCostBn = BigNumber(x.totalSeatCost).multipliedBy(x.progress / 100);
       const relativeSeatCost = bigNumberToBigInt(relativeSeatCostBn);
+      console.log('relativeSeatCost', x.id, x.totalSeatCost, x.progress, relativeSeatCost);
       const microgonValueEarnedBn = BigNumber(x.microgonsMined).plus(x.microgonsMinted).plus(x.micronotsMined);
       const microgonValueOfRewards = bigNumberToBigInt(microgonValueEarnedBn);
       const profit = BigNumber(microgonValueEarnedBn).minus(relativeSeatCostBn).toNumber();
       const apr = calculateAPR(relativeSeatCost, microgonValueOfRewards);
 
-      return {
+      const record: Omit<IDashboardFrameStats, 'score'> = {
         id: x.id,
         date,
         firstTick: x.firstTick,
@@ -141,6 +156,8 @@ export class FramesTable extends BaseTable {
         profit,
         apr,
       };
+
+      return record;
     });
 
     while (records.length < 365) {
@@ -150,21 +167,25 @@ export class FramesTable extends BaseTable {
         break;
       }
 
-      records.push({
+      const blankRecord: Omit<IDashboardFrameStats, 'score'> = {
         id: 0,
         date: previousDay.local().format('YYYY-MM-DD'),
         firstTick: lastRecord.firstTick - 1_440,
         lastTick: lastRecord.lastTick - 1_440,
         activeSeatCount: 0,
+        relativeSeatCost: 0n,
+        microgonToUsd: [0n],
+        microgonToArgonot: [0n],
         blocksMined: 0,
-        microgonsCollected: 0,
-        micronotsCollected: 0,
+        microgonsMined: 0n,
+        microgonsMinted: 0n,
+        micronotsMined: 0n,
+        microgonValueOfRewards: 0n,
         progress: 0,
-        relativeCost: 0,
-        revenue: 0,
         profit: 0,
         apr: 0,
-      });
+      };
+      records.push(blankRecord);
     }
 
     return records;

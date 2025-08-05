@@ -38,8 +38,8 @@
       </ul>
     </div>
 
-    <div class="flex flex-row mr-1 space-x-1 items-center justify-end w-1/2 pointer-events-none relative top-[1px]">
-      <div class="pointer-events-auto"><FundingStatusMenu /></div>
+    <div class="flex flex-row mr-2 space-x-1 items-center justify-end w-1/2 pointer-events-none relative top-[1px]">
+      <div class="pointer-events-auto"><StatusMenu /></div>
       <div class="pointer-events-auto"><CurrencyMenu /></div>
       <div class="bg-slate-400/50 w-[1px] h-[28px]"></div>
       <div class="pointer-events-auto"><AccountMenu /></div>
@@ -54,7 +54,7 @@ import { NETWORK_NAME } from '../stores/config';
 import WindowControls from '../tauri-controls/WindowControls.vue';
 import CurrencyMenu from './CurrencyMenu.vue';
 import { INSTANCE_NAME } from '../lib/Config';
-import FundingStatusMenu from './FundingStatusMenu.vue';
+import StatusMenu from './StatusMenu.vue';
 import AccountMenu from './AccountMenu.vue';
 
 const controller = useController();

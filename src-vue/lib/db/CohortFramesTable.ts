@@ -14,7 +14,16 @@ export class CohortFramesTable extends BaseTable {
     microgonsMinted: bigint,
   ): Promise<void> {
     await this.db.execute(
-      'INSERT OR REPLACE INTO CohortFrames (frameId, cohortId, blocksMined, micronotsMined, microgonsMined, microgonsMinted) VALUES (?, ?, ?, ?, ?, ?)',
+      `INSERT INTO CohortFrames (
+          frameId, cohortId, blocksMined, micronotsMined, microgonsMined, microgonsMinted
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?
+        ) ON CONFLICT(frameId, cohortId) DO UPDATE SET 
+          blocksMined = excluded.blocksMined, 
+          micronotsMined = excluded.micronotsMined, 
+          microgonsMined = excluded.microgonsMined, 
+          microgonsMinted = excluded.microgonsMinted
+      `,
       [
         frameId,
         cohortId,

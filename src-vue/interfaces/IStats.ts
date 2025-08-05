@@ -31,8 +31,8 @@ export interface IDashboardFrameStats {
   activeSeatCount: number;
   relativeSeatCost: bigint;
   blocksMined: number;
-  microgonToUsd: bigint;
-  microgonToArgonot: bigint;
+  microgonToUsd: bigint[];
+  microgonToArgonot: bigint[];
   microgonsMined: bigint;
   microgonsMinted: bigint;
   micronotsMined: bigint;

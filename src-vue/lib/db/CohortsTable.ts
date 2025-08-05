@@ -106,7 +106,8 @@ export class CohortsTable extends BaseTable {
     );
 
     const frameProgressBn = BigNumber(frameProgress).dividedBy(100);
-    const totalSeatCostBn = BigNumber(fromSqliteBigInt(rawActiveStats.totalSeatCost)).multipliedBy(frameProgressBn);
+    const seatCostPerDayBn = BigNumber(fromSqliteBigInt(rawActiveStats.totalSeatCost)).dividedBy(10);
+    const totalSeatCostBn = BigNumber(seatCostPerDayBn).multipliedBy(frameProgressBn);
 
     return {
       activeSeatCount: rawActiveStats.seatCount,
@@ -132,15 +133,26 @@ export class CohortsTable extends BaseTable {
     micronotsToBeMined: bigint,
   ): Promise<void> {
     await this.db.execute(
-      `INSERT OR REPLACE INTO Cohorts (
-        id, 
-        progress, 
-        transactionFees, 
-        micronotsStaked, 
-        microgonsBid, 
-        seatsWon, 
-        microgonsToBeMined, 
-        micronotsToBeMined) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO Cohorts (
+          id, 
+          progress, 
+          transactionFees, 
+          micronotsStaked, 
+          microgonsBid, 
+          seatsWon, 
+          microgonsToBeMined, 
+          micronotsToBeMined
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?
+        ) ON CONFLICT(id) DO UPDATE SET 
+          progress = excluded.progress, 
+          transactionFees = excluded.transactionFees, 
+          micronotsStaked = excluded.micronotsStaked, 
+          microgonsBid = excluded.microgonsBid, 
+          seatsWon = excluded.seatsWon, 
+          microgonsToBeMined = excluded.microgonsToBeMined, 
+          micronotsToBeMined = excluded.micronotsToBeMined
+      `,
       toSqlParams([
         id,
         progress,

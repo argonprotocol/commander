@@ -2,12 +2,8 @@
 <template>
   <HoverCardRoot :openDelay="0" :closeDelay="0" class="relative pointer-events-auto" v-model:open="isOpen">
     <HoverCardTrigger
-      class="flex flex-row items-center justify-center text-sm/6 font-semibold text-gray-900 cursor-pointer hover:bg-slate-400/10 px-3 h-[30px] focus:outline-none"
-      :class="[
-        isOpen
-          ? `${buttonBorderProperty} ${buttonBgProperty}`
-          : `border-transparent hover:${buttonBorderProperty} hover:${buttonBgProperty}`,
-      ]"
+      class="flex flex-row items-center justify-center text-sm/6 font-semibold text-gray-900 cursor-pointer border rounded-md hover:bg-slate-400/10 px-3 h-[30px] focus:outline-none hover:border-slate-400/50"
+      :class="[isOpen ? 'border-slate-400/50' : 'border-transparent']"
     >
       <ArgonSign v-if="currency?.record?.key === 'ARGN'" class="h-[14px]" />
       <DollarSign v-else-if="currency?.record?.key === 'USD'" class="h-[18px]" />
@@ -18,7 +14,7 @@
     </HoverCardTrigger>
 
     <HoverCardPortal>
-      <HoverCardContent :align="'end'" :alignOffset="-6" :sideOffset="0" class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad data-[state=open]:transition-all">
+      <HoverCardContent :align="'end'" :alignOffset="-6" :sideOffset="-3" class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad data-[state=open]:transition-all">
         <div class="flex flex-col p-1 shrink rounded bg-white text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20">
           <a
             v-for="(record, key) of currency?.records as Record<ICurrencyKey, ICurrencyRecord>"

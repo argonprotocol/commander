@@ -2,10 +2,10 @@
 <template>
   <div>
     <div class="flex flex-row justify-between items-center w-full pt-2 pb-3 space-x-1 border-b border-black/20">
-      <div class="flex flex-row items-center hover:bg-[#f1f3f7] rounded-md p-1 cursor-pointer ml-3">
+      <!-- <div class="flex flex-row items-center hover:bg-[#f1f3f7] rounded-md p-1 cursor-pointer ml-3">
         <ChevronLeftIcon @click="goBack" class="w-6 h-6 cursor-pointer relative -top-0.25" />
-      </div>
-      <div class="text-2xl font-bold grow">Add Funds to Your {{ walletName }} Wallet</div>
+      </div> -->
+      <div class="text-2xl font-bold grow pl-5">Add Funds to Your {{ walletName }} Wallet</div>
       <div
         @click="closeOverlay"
         class="mr-2 z-10 flex items-center justify-center text-sm/6 font-semibold cursor-pointer border rounded-md w-[30px] h-[30px] focus:outline-none border-slate-400/60 hover:border-slate-500/60 hover:bg-[#f1f3f7]"
