@@ -1,19 +1,12 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
-import { listen } from '@tauri-apps/api/event';
 import App from './App.vue';
 import './main.css';
-import basicEmitter from './emitters/basicEmitter';
 
 const app = createApp(App);
 
 app.use(createPinia());
 app.mount('#app');
-
-// Listen for Tauri events from the backend
-listen('openAboutOverlay', () => {
-  basicEmitter.emit('openAboutOverlay');
-});
 
 window.addEventListener('keydown', e => {
   // Cmd+R (Mac) or Ctrl+R (Win/Linux)

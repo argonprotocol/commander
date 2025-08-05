@@ -367,14 +367,13 @@ export class Stats {
 
   private async fetchFramesFromDb(): Promise<IDashboardFrameStats[]> {
     const lastYear = await this.db.framesTable.fetchLastYear();
-    let maxApr = Math.max(...lastYear.map(x => x.apr));
-    maxApr = Math.min(maxApr, 9_999);
 
+    let maxProfitPct = Math.min(Math.max(...lastYear.map(x => x.profitPct)), 1_000);
     return lastYear
       .map(x => {
-        let score = Math.min(x.apr, 9_999);
-        if (x.apr > 0) {
-          score = (200 * score) / maxApr;
+        let score = Math.min(x.profitPct, 1_000);
+        if (x.profitPct > 0) {
+          score = (200 * score) / maxProfitPct;
         }
         return {
           ...x,

@@ -19,7 +19,7 @@
           class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad data-[state=open]:transition-all"
         >
           <div
-            class="flex flex-col shrink rounded bg-argon-menu-bg text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
+            class="flex flex-col shrink p-1 rounded bg-argon-menu-bg text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
           >
             <DropdownMenuItem @click="() => openBotOverlay()" class="pt-3 pb-3">
               <header v-if="!config.hasSavedBiddingRules">Create Personal Mining Bot</header>
@@ -43,12 +43,12 @@
             <DropdownMenuSeparator divider class="bg-slate-400/30 h-[1px] w-full my-1" />
             <DropdownMenuSub>
               <DropdownMenuSubTrigger class="py-2 relative">
-                <ChevronLeftIcon class="w-5 h-5 absolute left-1 top-1/2 -translate-y-1/2 text-gray-400" />
+                <ChevronLeftIcon class="w-5 h-5 absolute left-0.5 top-1/2 -translate-y-1/2 text-gray-400" />
                 <header>Transfer Tokens</header>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent class="min-w-50 relative -top-1">
                 <div
-                  class="flex flex-col shrink rounded bg-argon-menu-bg text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
+                  class="flex flex-col shrink rounded p-1 bg-argon-menu-bg text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
                 >
                   <DropdownMenuItem class="py-2" @click="() => openFundMiningAccountOverlay()">
                     <header>Into Mining Account</header>

@@ -378,7 +378,7 @@ const currentFrame = Vue.ref<IDashboardFrameStats>({
 
   progress: 0,
   profit: 0,
-  apr: 0,
+  profitPct: 0,
   score: 0,
 });
 
@@ -482,7 +482,6 @@ function openBotOverlay() {
 
 function loadChartData() {
   const items: any[] = [];
-
   for (const [index, frame] of stats.frames.entries()) {
     const item = {
       date: frame.date,

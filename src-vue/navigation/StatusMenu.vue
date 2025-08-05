@@ -49,11 +49,11 @@
           class="flex flex-col shrink rounded bg-white text-md text-gray-900 shadow-lg ring-1 ring-gray-900/20 w-120 p-1"
         >
           <div v-if="miningAccountStatus === 'underfunded'" class="bg-red-100/70 py-4 px-4 rounded-md">
-            <header class="flex flex-row items-center gap-x-2 text-xl font-bold text-red-600 whitespace-nowrap">
-              <StatusSad class="w-6 h-6" />
+            <header class="flex flex-row items-center gap-x-2 text-lg font-bold text-red-600 whitespace-nowrap">
+              <StatusSad class="w-5 h-5" />
               <span>Your Mining Account Is Lacking Funds</span>
             </header>
-            <p class="p-1 mt-1">
+            <p class="py-1 mt-px opacity-80">
               Your accounts needs 1,000 ARGNs and 2 ARGNOTs in order to fully operate according to your bidding rules.
             </p>
             <div class="flex flex-row gap-x-2 mt-2">
@@ -66,11 +66,11 @@
             </div>
           </div>
           <div v-else-if="miningAccountStatus === 'overfunded'" class="bg-yellow-100/70 py-4 px-4 rounded-md">
-            <header class="flex flex-row items-center gap-x-2 text-xl font-bold text-yellow-600 whitespace-nowrap">
-              <StatusNeutral class="w-6 h-6" />
+            <header class="flex flex-row items-center gap-x-2 text-lg font-bold text-yellow-600 whitespace-nowrap">
+              <StatusNeutral class="w-5 h-5" />
               <span>Your Mining Account Has Excess Funds</span>
             </header>
-            <p class="p-1 mt-1">
+            <p class="py-1 mt-px opacity-80">
               Your account has an extra 10 ARGNs sitting unused. This isn't causing harm, but it's also not generating
               yield on your asset.
             </p>
@@ -83,11 +83,11 @@
             </div>
           </div>
           <div v-else class="py-4 px-4 rounded-md">
-            <header class="flex flex-row items-center gap-x-2 text-xl font-bold text-lime-600 whitespace-nowrap">
-              <StatusHappy class="w-6 h-6" />
+            <header class="flex flex-row items-center gap-x-2 text-lg font-bold text-lime-600 whitespace-nowrap">
+              <StatusHappy class="w-5 h-5" />
               <span>Your Mining Account Is Looking Good</span>
             </header>
-            <p class="p-1 mt-1">
+            <p class="py-1 mt-px opacity-80">
               Your mining account has enough funds to operate according to your bidding rules. No further action is
               required. However, you can always add more funds.
             </p>
@@ -104,11 +104,11 @@
           <div class="h-px bg-gray-200/80 my-1" />
 
           <div v-if="vaultingAccountStatus === 'underfunded'" class="bg-red-100/70 py-4 px-4 rounded-md">
-            <header class="flex flex-row items-center gap-x-2 text-xl font-bold text-red-600 whitespace-nowrap">
-              <StatusSad class="w-6 h-6" />
+            <header class="flex flex-row items-center gap-x-2 text-lg font-bold text-red-600 whitespace-nowrap">
+              <StatusSad class="w-5 h-5" />
               <span>Your Vaulting Account Is Lacking Funds</span>
             </header>
-            <p class="p-1 mt-1">
+            <p class="py-1 mt-px opacity-80">
               Your accounts needs 1,000 ARGNs and 2 ARGNOTs in order to fully operate your vault effeciently.
             </p>
             <div class="flex flex-row gap-x-2 mt-2">
@@ -121,11 +121,11 @@
             </div>
           </div>
           <div v-else-if="vaultingAccountStatus === 'overfunded'" class="bg-yellow-500/10 py-4 px-4 rounded-md">
-            <header class="flex flex-row items-center gap-x-2 text-xl font-bold text-yellow-600 whitespace-nowrap">
-              <StatusNeutral class="w-6 h-6" />
+            <header class="flex flex-row items-center gap-x-2 text-lg font-bold text-yellow-600 whitespace-nowrap">
+              <StatusNeutral class="w-5 h-5" />
               <span>Your Vaulting Account Has Excess Funds</span>
             </header>
-            <p class="p-1 mt-1">
+            <p class="py-1 mt-px opacity-80">
               Your account has an extra 10 ARGNs sitting unused. This isn't causing harm, but they're also not
               generating yield.
             </p>
@@ -138,11 +138,11 @@
             </div>
           </div>
           <div v-else class="py-4 px-4 rounded-md">
-            <header class="flex flex-row items-center gap-x-2 text-xl font-bold text-lime-600 whitespace-nowrap">
-              <StatusHappy class="w-6 h-6" />
+            <header class="flex flex-row items-center gap-x-2 text-lg font-bold text-lime-600 whitespace-nowrap">
+              <StatusHappy class="w-5 h-5" />
               <span>Your Vaulting Account Is Looking Good</span>
             </header>
-            <p class="p-1 mt-1">
+            <p class="py-1 mt-px opacity-80">
               Your vaulting account has enough funds to operate. No further action is required at this time. However,
               you can always improve your vault with more funds.
             </p>

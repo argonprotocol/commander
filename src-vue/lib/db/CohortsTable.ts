@@ -101,8 +101,8 @@ export class CohortsTable extends BaseTable {
       `SELECT 
         COALESCE(sum(seatsWon), 0) as seatCount,
         COALESCE(sum(microgonsBid * seatsWon), 0) as totalSeatCost
-      FROM Cohorts WHERE id >= ?`,
-      [frameId - 9],
+      FROM Cohorts WHERE id <= ? AND id >= ?`,
+      [frameId, frameId - 9],
     );
 
     const frameProgressBn = BigNumber(frameProgress).dividedBy(100);
