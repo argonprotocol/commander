@@ -7,7 +7,9 @@
     </div>
 
     <div ChartWrapper class="grow relative w-full">
-      <canvas id="MyChart" ref="chartRef"></canvas>
+      <div class="absolute top-0 left-[-6px] w-[calc(100%+12px)] h-[calc(100%-27px)]">
+        <canvas id="MyChart" ref="chartRef"></canvas>
+      </div>
     </div>
 
     <div
@@ -16,7 +18,7 @@
       class="MARKER cursor-pointer"
       :style="`left: ${markerPos.left}px; top: ${markerPos.top}px`"
     ></div>
-    <XAxis class="relative mb-4 z-10" />
+    <XAxis class="absolute bottom-0 left-0 w-full z-10" />
   </div>
 </template>
 
@@ -37,7 +39,7 @@ import {
 } from 'chart.js';
 import 'chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm';
 // import Charttip from '../overlays/Charttip.vue';
-import { createChartOptions } from '../lib/ChartOptions';
+import { createChartOptions, createFillerPoints } from '../lib/ChartOptions';
 import XAxis from './XAxis.vue';
 
 dayjs.extend(dayjsUtc);
@@ -56,8 +58,8 @@ const markerPos = Vue.ref({ show: false, left: 0, top: 0 });
 const chartRef = Vue.ref<HTMLCanvasElement | null>(null);
 let chart: Chart | null = null;
 
+const fillerPoints: any[] = [];
 const chartPoints: any[] = [];
-const pointRadius: number[] = [];
 const pointItems: any[] = [];
 const pointItemsByDate: Record<string, any> = {};
 
@@ -78,8 +80,8 @@ function toggleDatasetVisibility(index: number, visible: boolean) {
 }
 
 function clearPoints() {
+  fillerPoints.splice(0, fillerPoints.length);
   chartPoints.splice(0, chartPoints.length);
-  pointRadius.splice(0, pointRadius.length);
   pointItems.splice(0, pointItems.length);
   chart?.update();
 }
@@ -91,25 +93,23 @@ function setDateRange(min: string, max: string) {
   chart.update();
 }
 
-function addPoints(items: { date: string; price: number; showPointOnChart: boolean }[]) {
-  const lastIndex = chartPoints.length - 1;
-  if (lastIndex > 0) {
-    pointRadius[lastIndex] = chartPoints[lastIndex].showPointOnChart ? 4 : 0;
-  }
+function addPoints(items: { date: string; score: number; isFiller: boolean }[]) {
+  let hasFinishedFiller = false;
 
   for (const item of items) {
     const date = dayjs.utc(item.date);
-    const price = item.price;
+    const score = item.score;
 
-    chartPoints.push({ x: date.valueOf(), y: price });
-    pointRadius.push(item.showPointOnChart ? 4 : 0);
+    chartPoints.push({ x: date.valueOf(), y: score });
     pointItems.push(item);
     pointItemsByDate[item.date] = item;
+    if (!hasFinishedFiller && item.isFiller) {
+      fillerPoints.push({ x: date.valueOf(), y: 0 });
+    } else {
+      hasFinishedFiller = true;
+    }
   }
 
-  pointRadius[pointRadius.length - 1] = 4;
-
-  pointRadius[0] = 4;
   const daysLoaded = chartPoints.length / totalDays;
   loadPct.value = Math.round(daysLoaded * 100);
 
@@ -143,15 +143,15 @@ const tooltipOpened = Vue.ref(false);
 function reloadData(items: any[]) {
   if (!chart) return;
 
+  fillerPoints.splice(0, fillerPoints.length);
   chartPoints.splice(0, chartPoints.length);
-  pointRadius.splice(0, pointRadius.length);
   pointItems.splice(0, pointItems.length);
 
   addPoints(items);
 }
 
 function getPointPosition(index: number) {
-  const meta = chart?.getDatasetMeta(0);
+  const meta = chart?.getDatasetMeta(1);
   const currentDataPoint = meta?.data[index];
 
   return { x: currentDataPoint?.x, y: currentDataPoint?.y };
@@ -186,14 +186,21 @@ function getItemIndexFromEvent(event: MouseEvent, override: { x?: number; y?: nu
   const eventX = override.x || event.x;
   const eventY = override.y || event.y;
 
+  const myCustomEvent = new MouseEvent('click', {
+    clientX: eventX,
+    clientY: eventY,
+    bubbles: true,
+    cancelable: true,
+  });
+
   const wrappedEvent = {
     chart: chart,
-    native: event,
+    native: myCustomEvent,
     offsetX: undefined,
     offsetY: undefined,
     type: event.type,
     x: eventX,
-    y: Math.min(eventY, maxY),
+    y: rect.height / 2,
   };
   const interactionItems =
     chart?.getElementsAtEventForMode(wrappedEvent as any, 'index', { intersect: false }, true) || [];
@@ -212,7 +219,6 @@ function getNextMonthIndex(index: number) {
   const currentDate = dayjs.utc(pointItems[index].date);
   const nextDate = currentDate.add(1, 'month').startOf('month');
   const daysToAdd = nextDate.diff(currentDate, 'day');
-  console.log(currentDate.toISOString(), nextDate.toISOString(), daysToAdd);
   return index + daysToAdd;
 }
 
@@ -256,7 +262,7 @@ function stopPulsing() {
 
 Vue.onMounted(() => {
   if (chartRef.value) {
-    const chartOptions = createChartOptions(chartPoints, pointRadius, onTooltipFn);
+    const chartOptions = createChartOptions(fillerPoints, chartPoints, [], onTooltipFn);
     chart = new Chart(chartRef.value, chartOptions as any);
   }
 });

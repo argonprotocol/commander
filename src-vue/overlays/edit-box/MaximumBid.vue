@@ -150,8 +150,8 @@ Vue.onBeforeMount(async () => {
     },
     {
       name: 'Breakeven at Medium Growth',
-      value: BidAmountFormulaType.BreakevenAtSlowGrowth,
-      microgons: calculator.breakevenBidAtSlowGrowth,
+      value: BidAmountFormulaType.BreakevenAtMediumGrowth,
+      microgons: calculator.breakevenBidAtMediumGrowth,
     },
     {
       name: 'Breakeven at Fast Growth',

@@ -15,7 +15,17 @@ export class FrameBidsTable extends BaseTable {
     lastBidAtTick: number | undefined,
   ): Promise<void> {
     await this.db.execute(
-      'INSERT OR REPLACE INTO FrameBids (frameId, confirmedAtBlockNumber, address, subAccountIndex, microgonsBid, bidPosition, lastBidAtTick) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      `INSERT INTO FrameBids (
+          frameId, confirmedAtBlockNumber, address, subAccountIndex, microgonsBid, bidPosition, lastBidAtTick
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?
+        ) ON CONFLICT(frameId, address) DO UPDATE SET 
+          confirmedAtBlockNumber = excluded.confirmedAtBlockNumber, 
+          subAccountIndex = excluded.subAccountIndex,
+          microgonsBid = excluded.microgonsBid, 
+          bidPosition = excluded.bidPosition, 
+          lastBidAtTick = excluded.lastBidAtTick
+      `,
       toSqlParams([
         frameId,
         confirmedAtBlockNumber,

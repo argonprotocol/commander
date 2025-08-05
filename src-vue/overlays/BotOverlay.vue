@@ -65,17 +65,17 @@
                       <table class="w-full h-full table-fixed relative z-50 whitespace-nowrap -mt-1">
                         <tbody>
                           <tr class="text-argon-600 h-1/3">
-                            <td class="w-4/12"></td>
+                            <td class="w-5/12"></td>
                             <td class="font-light font-sans text-argon-800/40 w-5/12">Slow Growth</td>
                             <td class="font-light font-sans text-argon-800/40 w-5/12">Fast Growth</td>
                           </tr>
                           <tr class="font-bold font-mono text-argon-600 h-1/3">
-                            <td class="font-light font-sans text-argon-800/40 border-t border-dashed border-slate-300 text-left pl-2">Maximum Bid</td>
+                            <td class="font-light font-sans text-argon-800/40 border-t border-dashed border-slate-300 text-left pl-2 pr-10">Maximum Bid ({{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }})</td>
                             <td class="text-lg border-t border-dashed border-slate-300">{{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</td>
                             <td class="text-lg border-t border-dashed border-slate-300">{{ numeral(maximumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</td>
                           </tr>
                           <tr class="font-bold font-mono text-argon-600 h-1/3">
-                            <td class="font-light font-sans text-argon-800/40 border-t border-dashed border-slate-300 text-left pl-2">Starting Bid</td>
+                            <td class="font-light font-sans text-argon-800/40 border-t border-dashed border-slate-300 text-left pl-2 pr-10">Starting Bid ({{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }})</td>
                             <td class="text-lg border-t border-dashed border-slate-300">{{ numeral(minimumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</td>
                             <td class="text-lg border-t border-dashed border-slate-300">{{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</td>
                           </tr>
@@ -183,15 +183,15 @@
                 <section class="flex flex-row h-1/2 my-2">
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
                     <div MainWrapper @mouseenter="showTooltip($event, tooltip.seatGoals, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'seatGoals')" class="flex flex-col w-full h-full items-center justify-center px-8">
-                      <div StatHeader>Seating Goal</div>
+                      <div StatHeader>Capital Allocation</div>
                       <div MainRule v-if="rules.seatGoalType === SeatGoalType.Max && rules.seatGoalCount === 0" class="w-full">
                         Disabled
                       </div>
                       <div MainRule v-else class="w-full">
-                        {{ rules.seatGoalCount }} Per {{ rules.seatGoalInterval }}
+                       Max {{ rules.seatGoalCount }} Seats Per {{ rules.seatGoalInterval }}
                       </div>
                       <div class="text-gray-500/60 text-md">
-                        {{ rules.seatGoalType === SeatGoalType.Max ? 'Stop After Goal Reached' : 'Get As Many As Possible' }}
+                        {{ rules.seatGoalType === SeatGoalType.Max ? 'Stop After Goal Reached' : 'Reinvest Profits from Operation' }}
                       </div>
                     </div>
                   </div>

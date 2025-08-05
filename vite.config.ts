@@ -83,7 +83,7 @@ export default defineConfig(async ({ mode }) => {
     define: {
       'process.env': {},
       __ARGON_NETWORK_NAME__: JSON.stringify(envFile.ARGON_NETWORK_NAME || ''),
-      __ARGON_NETWORK_URL__: JSON.stringify(process.env.ARGON_NETWORK_URL || ''),
+      __ARGON_NETWORK_URL__: JSON.stringify(envFile.ARGON_NETWORK_URL || ''),
       __COMMANDER_INSTANCE__: JSON.stringify(`${instanceName}:${instancePort}`),
     },
     // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

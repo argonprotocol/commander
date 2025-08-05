@@ -1,10 +1,3 @@
-export interface IStats {
-  dashboard: IDashboardStats;
-  argonActivity: any[]; // TODO: Define proper type
-  bitcoinActivity: any[]; // TODO: Define proper type
-  botActivity: any[]; // TODO: Define proper type
-}
-
 export interface IActiveBids {
   subaccounts: IBidsFileSubaccount[];
 }
@@ -18,16 +11,11 @@ export interface IBidsFileSubaccount {
   lastBidAtTick: number | null;
 }
 
-export interface IDashboardStats {
-  global: IDashboardGlobalStats;
-  frameId: number | null;
-  cohort: IDashboardCohortStats | null;
-}
-
 export interface IDashboardGlobalStats {
-  activeCohorts: number;
-  activeSeats: number;
-  totalBlocksMined: number;
+  totalSeats: number;
+  framesMined: number;
+  framesRemaining: number;
+  framedCost: bigint;
   totalMicrogonsBid: bigint;
   totalTransactionFees: bigint;
   totalMicronotsMined: bigint;
@@ -35,21 +23,22 @@ export interface IDashboardGlobalStats {
   totalMicrogonsMinted: bigint;
 }
 
-export interface IDashboardCohortStats {
-  cohortId: number;
+export interface IDashboardFrameStats {
+  id: number;
+  date: string;
   firstTick: number;
   lastTick: number;
-  lastBlockNumber: number;
-  transactionFees: bigint;
-  micronotsStaked: bigint;
-  microgonsBid: bigint;
-  seatsWon: number;
-  progress: number;
+  activeSeatCount: number;
+  relativeSeatCost: bigint;
   blocksMined: number;
-  micronotsMined: bigint;
+  microgonToUsd: bigint[];
+  microgonToArgonot: bigint[];
   microgonsMined: bigint;
   microgonsMinted: bigint;
-  microgonsToBeMined: bigint;
-  microgonsToBeMinted: bigint;
-  micronotsToBeMined: bigint;
+  micronotsMined: bigint;
+  microgonValueOfRewards: bigint;
+  progress: number;
+  profit: number;
+  apr: number;
+  score: number;
 }

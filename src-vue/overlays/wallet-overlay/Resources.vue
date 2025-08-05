@@ -21,6 +21,22 @@
         <div v-else class="text-slate-700/50">Not Transferable</div>
       </div>
     </li>
+    <!-- <li class="flex flex-row justify-between items-center w-full border-t border-black/10 first:border-black/30 pb-3 py-4 px-2">
+      <div class="flex flex-row justify-between items-center pr-6">
+        <component :is="resource.icon" class="w-14 text-argon-600" />
+      </div>
+      <div class="flex flex-col justify-between items-start grow">
+        <div class="text-xl font-bold">{{ resource.name }}</div>
+        <div class="">{{ resource.itemCountStr }} {{ resource.itemCountLabel }}</div>
+      </div>
+      <div class="flex flex-col justify-between items-end">
+        <div class="font-bold">
+          {{ currency.symbol }}{{ microgonToMoneyNm(resource.microgonValue).format('0,0.00') }}
+        </div>
+        <div v-if="resource.uniswapUrl" class="text-argon-600/80 hover:text-argon-600 cursor-pointer" @click="openUniswapMarket(resource.uniswapUrl)">Open Uniswap Market</div>
+        <div v-else class="text-slate-700/50">Not Transferable</div>
+      </div>
+    </li> -->
   </ul>
 </template>
 

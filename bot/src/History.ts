@@ -33,17 +33,22 @@ export class History {
     this.storage = storage;
   }
 
-  public get data(): Promise<IHistoryFile> {
+  public get recent(): Promise<IHistoryFile> {
     return new Promise(async (resolve, reject) => {
+      const activities: IBotActivity[] = [];
+      let lastModifiedAt: Date | undefined;
       try {
         if (this.cohortStartingFrameId) {
-          const historyFile = await this.storage.historyFile(this.cohortStartingFrameId).get();
-          resolve(historyFile as IHistoryFile);
+          const historyFile = (await this.storage.historyFile(this.cohortStartingFrameId).get())!;
+          lastModifiedAt = historyFile.lastModifiedAt;
+          activities.push(...historyFile.activities.slice(-20));
         } else {
-          resolve({
-            activities: this.unsavedActivities,
-          });
+          activities.push(...this.unsavedActivities);
         }
+        resolve({
+          lastModifiedAt,
+          activities,
+        });
       } catch (error) {
         reject(error);
       }
@@ -57,7 +62,7 @@ export class History {
     const activitiesToSave = this.unsavedActivities;
     this.unsavedActivities = [];
 
-    console.log('SAVING TO HISTORY FILE', activitiesToSave);
+    console.log('SAVING ACTIVITIES TO HISTORY FILE', activitiesToSave);
     await this.storage.historyFile(this.cohortStartingFrameId).mutate((history: IHistoryFile) => {
       history.activities.push(...(activitiesToSave as IBotActivity[]));
     });
@@ -135,6 +140,7 @@ export class History {
       submittedCount: number;
     },
   ): Promise<void> {
+    console.log('BIDS SUBMITTED', { tick, blockNumber, param });
     await this.appendActivities({
       tick,
       blockNumber,
@@ -153,6 +159,7 @@ export class History {
       bidError?: ExtrinsicError;
     },
   ): Promise<void> {
+    console.log('BIDS REJECTED', { tick, blockNumber, param });
     await this.appendActivities({
       tick,
       blockNumber,
@@ -168,6 +175,7 @@ export class History {
     reason: SeatReductionReason,
     availableMicrogons: bigint,
   ): Promise<void> {
+    console.log('SEAT FLUCTUATION', { tick, blockNumber, newMaxSeats, reason, availableMicrogons });
     if (newMaxSeats < this.maxSeatsInPlay) {
       await this.appendActivities({
         tick,
@@ -202,6 +210,7 @@ export class History {
     blockNumber: number,
     bids: { accountId: AccountId; bid: u128 | Compact<u128> }[],
   ): Promise<void> {
+    console.log('INCOMING BIDS', { tick, blockNumber, bids });
     const nextEntrants: { address: string; bid: bigint }[] = [];
     for (const x of bids) {
       const bid = x.bid.toBigInt();

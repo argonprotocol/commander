@@ -7,6 +7,7 @@ import { BlockSync } from './BlockSync.ts';
 import { Dockers } from './Dockers.ts';
 import { type IBiddingRules, jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
 import { History } from './History.ts';
+import FatalError from './interfaces/FatalError.ts';
 
 interface IBotOptions {
   datadir: string;
@@ -112,6 +113,10 @@ export default class Bot {
         await this.blockSync.load();
         break;
       } catch (error) {
+        if (error instanceof FatalError) {
+          console.error('Fatal error loading block sync (exiting...)', error);
+          throw error;
+        }
         console.error('Error loading block sync (retrying...)', error);
         await new Promise(resolve => setTimeout(resolve, 1000));
       }

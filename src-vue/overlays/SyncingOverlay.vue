@@ -31,7 +31,7 @@
             transform: 'translate(-50%, -50%)',
             cursor: draggable.isDragging ? 'grabbing' : 'default',
           }"
-          class="flex flex-col w-6/12 bg-white border border-black/40 px-7 pb-8 rounded-lg pointer-events-auto shadow-xl relative overflow-scroll"
+          class="absolute flex flex-col w-6/12 bg-white border border-black/40 px-7 pb-8 rounded-lg pointer-events-auto shadow-xl overflow-scroll"
         >
           <h2 @mousedown="draggable.onMouseDown($event)" class="text-2xl font-bold text-slate-800/70 border-b border-slate-300 pt-6 pb-3 mb-3">
             Syncing Your Cloud Machine

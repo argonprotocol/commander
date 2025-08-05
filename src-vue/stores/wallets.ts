@@ -42,14 +42,7 @@ export const useWallets = defineStore('wallets', () => {
   });
 
   const miningSeatValue = Vue.computed(() => {
-    return (
-      stats.myMiningSeats.microgonsToBeMined +
-      stats.myMiningSeats.microgonsToBeMinted +
-      currency.micronotToMicrogon(stats.myMiningSeats.micronotsToBeMined) +
-      currency.micronotToMicrogon(stats.myMiningSeats.micronotsMined) +
-      (stats.myMiningSeats.microgonsMinted || 0n) +
-      (stats.myMiningSeats.microgonsMined || 0n)
-    );
+    return stats.myMiningSeats.microgonsBid;
   });
 
   const miningBidValue = Vue.computed(() => {

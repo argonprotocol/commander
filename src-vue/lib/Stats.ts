@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js';
 import { type IBidsFile, type IWinningBid } from '@argonprotocol/commander-bot';
-import { IDashboardStats } from '../interfaces/IStats';
+import { IDashboardGlobalStats, IDashboardFrameStats } from '../interfaces/IStats';
 import { Db } from './Db';
 import { Config } from './Config';
 import { bigIntMax } from '@argonprotocol/commander-calculator/src/utils';
@@ -13,6 +13,7 @@ import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
 
 interface IMyMiningSeats {
   seatCount: number;
+  transactionFees: bigint;
   microgonsBid: bigint;
   micronotsStaked: bigint;
   microgonsMined: bigint;
@@ -38,7 +39,9 @@ export class Stats {
 
   public allWinningBids: IWinningBid[];
 
-  public dashboard: IDashboardStats;
+  public global: IDashboardGlobalStats;
+  public frames: IDashboardFrameStats[];
+
   public argonActivity: any[];
   public bitcoinActivity: any[];
   public biddingActivity: any[];
@@ -72,6 +75,7 @@ export class Stats {
 
     this.myMiningSeats = {
       seatCount: 0,
+      transactionFees: 0n,
       microgonsBid: 0n,
       micronotsStaked: 0n,
       microgonsMined: 0n,
@@ -87,20 +91,19 @@ export class Stats {
       microgonsBid: 0n,
     };
 
-    this.dashboard = {
-      frameId: null,
-      cohort: null,
-      global: {
-        activeCohorts: 0,
-        activeSeats: 0,
-        totalBlocksMined: 0,
-        totalMicrogonsBid: 0n,
-        totalTransactionFees: 0n,
-        totalMicronotsMined: 0n,
-        totalMicrogonsMined: 0n,
-        totalMicrogonsMinted: 0n,
-      },
+    this.global = {
+      totalSeats: 0,
+      framesMined: 0,
+      framesRemaining: 0,
+      framedCost: 0n,
+      totalMicrogonsBid: 0n,
+      totalTransactionFees: 0n,
+      totalMicronotsMined: 0n,
+      totalMicrogonsMined: 0n,
+      totalMicrogonsMinted: 0n,
     };
+
+    this.frames = [];
 
     this.argonActivity = [];
     this.bitcoinActivity = [];
@@ -250,11 +253,12 @@ export class Stats {
   }
 
   private async updateDashboard(): Promise<void> {
-    this.dashboard = await this.fetchDashboardFromDb();
+    this.global = await this.fetchGlobalFromDb();
+    this.frames = await this.fetchFramesFromDb();
   }
 
   private async updateMiningSeats(): Promise<void> {
-    this.myMiningSeats = await this.fetchMiningSeatsFromDb();
+    this.myMiningSeats = await this.fetchActiveMiningSeatsFromDb();
   }
 
   private async updateBitcoinActivities(): Promise<void> {
@@ -286,8 +290,9 @@ export class Stats {
     this.myMiningBids.microgonsBid = myWinningBids.reduce((acc, bid) => acc + (bid.microgonsBid || 0n), 0n);
   }
 
-  private async fetchMiningSeatsFromDb(): Promise<IMyMiningSeats> {
+  private async fetchActiveMiningSeatsFromDb(): Promise<IMyMiningSeats> {
     let seatCount = 0;
+    let transactionFees = 0n;
     let microgonsBid = 0n;
     let micronotsStaked = 0n;
     let microgonsMined = 0n;
@@ -306,6 +311,7 @@ export class Stats {
 
       seatCount += cohort.seatsWon;
       microgonsBid += cohort.microgonsBid * BigInt(cohort.seatsWon);
+      transactionFees += cohort.transactionFees * BigInt(cohort.seatsWon);
       micronotsStaked += cohort.micronotsStaked * BigInt(cohort.seatsWon);
       microgonsToBeMined += remainingRewardsPerSeat.microgonsToBeMined * BigInt(cohort.seatsWon);
       microgonsToBeMinted += remainingRewardsPerSeat.microgonsToBeMinted * BigInt(cohort.seatsWon);
@@ -322,6 +328,7 @@ export class Stats {
 
     return {
       seatCount,
+      transactionFees,
       microgonsBid,
       micronotsStaked,
       microgonsMined,
@@ -358,60 +365,40 @@ export class Stats {
     };
   }
 
-  private async fetchDashboardFromDb(): Promise<IDashboardStats> {
-    try {
-      return {
-        global: await this.fetchDashboardGlobalStatsFromDb(),
-        frameId: this.selectedFrameId,
-        cohort: this.selectedFrameId ? await this.fetchDashboardCohortStatsFromDb(this.selectedFrameId) : null,
-      };
-    } catch (error) {
-      console.error('Error fetching dashboard from db', error);
-      throw error;
-    }
+  private async fetchFramesFromDb(): Promise<IFramesOverTime[]> {
+    const lastYear = await this.db.framesTable.fetchLastYear();
+    let maxApr = Math.max(...lastYear.map(x => x.apr));
+    maxApr = Math.min(maxApr, 9_999);
+
+    return lastYear
+      .map(x => {
+        let score = Math.min(x.apr, 9_999);
+        if (x.apr > 0) {
+          score = (200 * score) / maxApr;
+        }
+        return {
+          ...x,
+          score,
+        };
+      })
+      .reverse();
   }
 
-  private async fetchDashboardGlobalStatsFromDb(): Promise<IDashboardStats['global']> {
+  private async fetchGlobalFromDb(): Promise<IDashboardGlobalStats> {
     const currentFrameId = await this.db.framesTable.latestId();
     const globalStats1 = await this.db.cohortsTable.fetchGlobalStats(currentFrameId);
     const globalStats2 = await this.db.cohortFramesTable.fetchGlobalStats();
 
     return {
-      activeCohorts: globalStats1.totalActiveCohorts,
-      activeSeats: globalStats1.totalActiveSeats,
-      totalBlocksMined: globalStats2.totalBlocksMined,
+      totalSeats: globalStats1.totalSeats,
+      framesMined: globalStats1.framesMined,
+      framesRemaining: globalStats1.framesRemaining,
+      framedCost: globalStats1.framedCost,
       totalMicrogonsBid: globalStats1.totalMicrogonsBid,
       totalTransactionFees: globalStats1.totalTransactionFees,
       totalMicronotsMined: globalStats2.totalMicronotsMined,
       totalMicrogonsMined: globalStats2.totalMicrogonsMined,
       totalMicrogonsMinted: globalStats2.totalMicrogonsMinted,
-    };
-  }
-
-  private async fetchDashboardCohortStatsFromDb(frameId: number): Promise<IDashboardStats['cohort']> {
-    const cohort = await this.db.cohortsTable.fetchById(frameId);
-    if (!cohort) return null;
-
-    const cohortStats = await this.db.cohortFramesTable.fetchCohortStats(cohort.id);
-    const remainingRewardsPerSeat = this.calculateRemainingRewardsExpectedPerSeat(cohort);
-
-    return {
-      cohortId: cohort.id,
-      firstTick: cohort.firstTick,
-      lastTick: cohort.lastTick,
-      lastBlockNumber: cohort.lastBlockNumber,
-      transactionFees: cohort.transactionFees,
-      micronotsStaked: cohort.micronotsStaked,
-      microgonsBid: cohort.microgonsBid,
-      seatsWon: cohort.seatsWon,
-      progress: cohort.progress,
-      blocksMined: cohortStats.totalBlocksMined,
-      micronotsMined: cohortStats.totalMicronotsMined,
-      microgonsMined: cohortStats.totalMicrogonsMined,
-      microgonsMinted: cohortStats.totalMicrogonsMinted,
-      microgonsToBeMined: remainingRewardsPerSeat.microgonsToBeMined * BigInt(cohort.seatsWon),
-      microgonsToBeMinted: remainingRewardsPerSeat.microgonsToBeMinted * BigInt(cohort.seatsWon),
-      micronotsToBeMined: remainingRewardsPerSeat.micronotsToBeMined * BigInt(cohort.seatsWon),
     };
   }
 }

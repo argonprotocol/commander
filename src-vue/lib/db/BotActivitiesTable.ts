@@ -16,7 +16,17 @@ export class BotActivitiesTable extends BaseTable {
     data: any,
   ): Promise<void> {
     await this.db.execute(
-      `INSERT OR REPLACE INTO BotActivities (id, frameId, tick, blockNumber, type, data) VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO BotActivities (
+          id, frameId, tick, blockNumber, type, data
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?
+        ) ON CONFLICT(id) DO UPDATE SET 
+          frameId = excluded.frameId, 
+          tick = excluded.tick, 
+          blockNumber = excluded.blockNumber, 
+          type = excluded.type, 
+          data = excluded.data
+      `,
       toSqlParams([id, frameId, tick, blockNumber, type, data]),
     );
   }
