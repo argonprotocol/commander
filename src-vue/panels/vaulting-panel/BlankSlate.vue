@@ -164,34 +164,32 @@ Vue.onMounted(async () => {
   try {
     const mainchain = getMainchain();
     await vaultsStore.load();
+    const frameToLoadPoolEarnings = (await mainchain.getCurrentFrameId()) - 1;
     const list = Object.values(vaultsStore.vaultsById);
-    mainchain.getLiquidityPoolCapitalByVault().then(x => {
-      const vaultApys: number[] = [];
-      for (const entry of vaults.value) {
-        const pool = x[entry.id];
-        if (!pool) continue;
-        const vault = vaultsStore.vaultsById[entry.id];
+    const vaultApys: number[] = [];
+    for (const entry of vaults.value) {
+      const vault = vaultsStore.vaultsById[entry.id];
 
-        const yearFeeRevenue = Number(vaultsStore.getTrailingYearVaultRevenue(entry.id));
-        const activatedSecuritization = Number(vault.activatedSecuritization());
-        const liquidityPoolCapital = Number(pool.contributedCapital);
-        entry.liquidityFillPct = Math.round((liquidityPoolCapital / activatedSecuritization) * 100);
+      const yearFeeRevenue = Number(vaultsStore.getTrailingYearVaultRevenue(entry.id));
+      const activatedSecuritization = Number(vault.activatedSecuritization());
 
-        const epochPoolEarnings = Number(pool.contributorProfit + pool.vaultProfit);
-        const epochPoolEarningsRatio = epochPoolEarnings / liquidityPoolCapital;
+      const epochPoolCapital = Number(vaultsStore.contributedCapital(entry.id, frameToLoadPoolEarnings, 10));
+      entry.liquidityFillPct = Math.round((epochPoolCapital / activatedSecuritization) * 100);
 
-        const poolApy = (1 + epochPoolEarningsRatio) ** 36.5 - 1;
-        const feeApr = yearFeeRevenue / Number(vault.securitization);
+      const epochPoolEarnings = Number(vaultsStore.poolEarnings(entry.id, frameToLoadPoolEarnings, 10));
+      const epochPoolEarningsRatio = epochPoolEarnings / epochPoolCapital;
 
-        const apy = poolApy + feeApr;
-        vaultApys.push(apy);
-      }
-      if (vaultApys.length > 0) {
-        averageVaultAPY.value = vaultApys.reduce((a, b) => a + b, 0) / vaultApys.length;
-      } else {
-        averageVaultAPY.value = 0;
-      }
-    });
+      const poolApy = (1 + epochPoolEarningsRatio) ** 36.5 - 1;
+      const feeApr = yearFeeRevenue / Number(vault.securitization);
+
+      const apy = poolApy + feeApr;
+      vaultApys.push(apy);
+    }
+    if (vaultApys.length > 0) {
+      averageVaultAPY.value = vaultApys.reduce((a, b) => a + b, 0) / vaultApys.length;
+    } else {
+      averageVaultAPY.value = 0;
+    }
     vaultCount.value = list.length;
     const satsLocked = vaultsStore.getTotalSatoshisLocked();
     bitcoinLocked.value = Number(satsLocked) / Number(SATOSHIS_PER_BITCOIN);

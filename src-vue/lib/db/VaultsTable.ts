@@ -6,12 +6,12 @@ export interface IVaultRecord {
   hdPath: string;
   createdAtBlockHeight: number;
   lastTermsUpdateHeight?: number;
-  lastCollectTick?: number;
   personalUtxoId?: number;
+  operationalFeeMicrogons?: bigint;
   /**
    * The amount of microgons that have been prebonded to this vault as well as tip and fee
    */
-  prebondedMicrogonsIncludingFee?: bigint;
+  prebondedMicrogons?: bigint;
   prebondedMicrogonsAtTick?: number;
   isClosed: boolean;
   createdAt: Date;
@@ -21,13 +21,18 @@ export interface IVaultRecord {
 export class VaultsTable extends BaseTable {
   private fieldTypes: IFieldTypes = {
     date: ['createdAt', 'updatedAt'],
-    bigint: ['prebondedMicrogonsIncludingFee'],
+    bigint: ['prebondedMicrogons', 'operationalFeeMicrogons'],
   };
 
-  async insert(vaultId: number, hdPath: string, updatedAtBlockHeight: number): Promise<IVaultRecord> {
+  async insert(
+    vaultId: number,
+    hdPath: string,
+    updatedAtBlockHeight: number,
+    operationalFeeMicrogons: bigint,
+  ): Promise<IVaultRecord> {
     const result = await this.db.select<IVaultRecord[]>(
-      'INSERT INTO Vaults (id, hdPath, createdAtBlockHeight) VALUES (?, ?, ?) returning *',
-      toSqlParams([vaultId, hdPath, updatedAtBlockHeight]),
+      'INSERT INTO Vaults (id, hdPath, createdAtBlockHeight,operationalFeeMicrogons) VALUES (?, ?, ?, ?) returning *',
+      toSqlParams([vaultId, hdPath, updatedAtBlockHeight, operationalFeeMicrogons]),
     );
     if (!result || result.length === 0) {
       throw new Error(`Failed to insert vault with id ${vaultId}`);
@@ -37,12 +42,12 @@ export class VaultsTable extends BaseTable {
 
   async save(record: IVaultRecord): Promise<void> {
     await this.db.execute(
-      'UPDATE Vaults SET prebondedMicrogonsIncludingFee = ?, prebondedMicrogonsAtTick = ?, lastCollectTick = ?, lastTermsUpdateHeight = ?, ' +
+      'UPDATE Vaults SET operationalFeeMicrogons = ?, prebondedMicrogons = ?, prebondedMicrogonsAtTick = ?, lastTermsUpdateHeight = ?, ' +
         'personalUtxoId = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?',
       toSqlParams([
-        record.prebondedMicrogonsIncludingFee,
+        record.operationalFeeMicrogons,
+        record.prebondedMicrogons,
         record.prebondedMicrogonsAtTick,
-        record.lastCollectTick,
         record.lastTermsUpdateHeight,
         record.personalUtxoId,
         record.id,

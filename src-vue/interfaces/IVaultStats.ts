@@ -18,18 +18,17 @@ export interface IVaultStats {
 
 export interface IVaultFrameStats {
   frameId: number;
-  isFrameInProgress: boolean;
-  feeRevenue: bigint;
+  bitcoinFeeRevenue: bigint;
   satoshisAdded: bigint;
   bitcoinLocksCreated: number;
   microgonLiquidityAdded: bigint;
   securitization: bigint;
   securitizationActivated: bigint;
   liquidityPool: {
-    sharingPercent: number;
-    contributedCapital: bigint;
-    contributedCapitalByVaultOperator: bigint;
-    contributorProfit: bigint;
-    vaultProfit: bigint;
+    externalCapital: bigint;
+    vaultCapital: bigint;
+    totalEarnings: bigint;
+    vaultEarnings: bigint;
   };
+  uncollectedEarnings: bigint;
 }

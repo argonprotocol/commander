@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <slot :hours="hours" :minutes="minutes" :seconds="seconds"></slot>
+  <slot :hours="hours" :minutes="minutes" :seconds="seconds" :days="days"></slot>
 </template>
 
 <script setup lang="ts">
@@ -18,10 +18,21 @@ const emit = defineEmits<{
 const hours = Vue.ref(0);
 const minutes = Vue.ref(0);
 const seconds = Vue.ref(0);
+const days = Vue.ref(0);
 
 function updateTime() {
   const now = dayjs.utc();
-  const totalSeconds = props.time.diff(now, 'seconds');
+
+  let remaining = now;
+  const totalDays = props.time.diff(now, 'days');
+  if (totalDays > 0) {
+    days.value = totalDays;
+    remaining = props.time.subtract(totalDays, 'days');
+  } else {
+    days.value = 0;
+  }
+
+  const totalSeconds = props.time.diff(remaining, 'seconds');
   hours.value = Math.floor(totalSeconds / 3600);
   minutes.value = Math.floor((totalSeconds % 3600) / 60);
   seconds.value = totalSeconds % 60;

@@ -16,16 +16,16 @@ const defaultPortString = '1420';
 
 // Function to check if a port is available
 function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const server = createServer();
-    
+
     server.listen(port, () => {
       server.once('close', () => {
         resolve(true);
       });
       server.close();
     });
-    
+
     server.on('error', () => {
       resolve(false);
     });
@@ -34,8 +34,9 @@ function isPortAvailable(port: number): Promise<boolean> {
 
 // https://vitejs.dev/config/
 export default defineConfig(async ({ mode }) => {
+  mode = process.env.NODE_ENV || 'development';
 
-  const envFile = loadEnv(mode, process.cwd(), ''); 
+  const envFile = loadEnv(mode, process.cwd(), '');
   const host = envFile.TAURI_DEV_HOST;
 
   const instance = (process.env.COMMANDER_INSTANCE || '').split(':');

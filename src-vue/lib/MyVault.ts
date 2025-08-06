@@ -1,32 +1,28 @@
 import {
   BitcoinLocks,
-  BTreeMap,
+  FrameCalculator,
   ITxProgressCallback,
   KeyringPair,
-  type PalletBitcoinLocksLockReleaseRequest,
+  PalletVaultsVaultFrameRevenue,
+  toFixedNumber,
   TxResult,
   TxSubmitter,
   u64,
   u8aToHex,
   Vault,
+  Vec,
 } from '@argonprotocol/mainchain';
 import { BitcoinNetwork, CosignScript, getBitcoinNetworkFromApi, getChildXpriv, HDKey } from '@argonprotocol/bitcoin';
 import { Db } from './Db.ts';
-import { getMainchainClient } from '../stores/mainchain.ts';
+import { getMainchain, getMainchainClient } from '../stores/mainchain.ts';
 import { deferred, IDeferred } from './Utils.ts';
 import { IVaultRecord, VaultsTable } from './db/VaultsTable.ts';
 import IVaultingRules from '../interfaces/IVaultingRules.ts';
 import BigNumber from 'bignumber.js';
 import { Vaults } from './Vaults.ts';
 import { IVaultStats } from '../interfaces/IVaultStats.ts';
-import { Mainchain } from '@argonprotocol/commander-calculator';
 import { toRaw } from 'vue';
-
-export interface IBitcoinUtxoPendingRelease {
-  bitcoinNetworkFee: bigint;
-  cosignDueBlock: number;
-  toScriptPubkey: string;
-}
+import BitcoinLocksStore from './BitcoinLocksStore.ts';
 
 export class MyVault {
   public data: {
@@ -36,8 +32,8 @@ export class MyVault {
     stats: IVaultStats | null;
     ownLiquidityPoolCapitalDeployed: bigint;
     pendingCollectRevenue: bigint;
-    pendingCosignUtxoIds: Map<number, IBitcoinUtxoPendingRelease>;
-    nextCollectDueTick: number;
+    pendingCosignUtxoIds: Set<number>;
+    nextCollectDueDate: number;
   };
 
   public get createdVault(): Vault | null {
@@ -57,6 +53,15 @@ export class MyVault {
   #table?: VaultsTable;
   #subscriptions: VoidFunction[] = [];
   #bitcoinLocks?: BitcoinLocks;
+  #frameCalculator?: FrameCalculator;
+  #configs?: {
+    tickMillis: number;
+    ticksBetweenFrames: number;
+    slotBiddingStartAfterTicks: number;
+    genesisTick: number;
+    biddingStartTick: number;
+    timeToCollectFrames: number;
+  };
 
   constructor(
     readonly dbPromise: Promise<Db>,
@@ -68,8 +73,8 @@ export class MyVault {
       stats: null,
       ownLiquidityPoolCapitalDeployed: 0n,
       pendingCollectRevenue: 0n,
-      pendingCosignUtxoIds: new Map(),
-      nextCollectDueTick: 0,
+      pendingCosignUtxoIds: new Set(),
+      nextCollectDueDate: 0,
     };
     this.vaults = vaults;
   }
@@ -111,24 +116,21 @@ export class MyVault {
       const client = await getMainchainClient();
       this.#bitcoinLocks ??= new BitcoinLocks(Promise.resolve(client));
       this.data.metadata = (await table.get()) ?? null;
-      if (this.metadata?.id) {
-        this.data.createdVault = this.vaults.vaultsById[this.metadata.id];
-        this.data.stats = this.vaults.stats?.vaultsById[this.metadata.id] ?? null;
+      this.#frameCalculator = new FrameCalculator();
+      // prefetch the config
+      const miningConfig = await this.#frameCalculator.load(client);
+      const timeToCollectFrames = client.consts.vaults.revenueCollectionExpirationFrames.toNumber();
+      this.#configs = {
+        ...miningConfig,
+        timeToCollectFrames,
+      };
+      const vaultId = this.data.metadata?.id;
+      if (vaultId) {
+        this.data.createdVault = this.vaults.vaultsById[vaultId];
+        this.data.stats = this.vaults.stats?.vaultsById[vaultId] ?? null;
         console.log('Stats on load:', toRaw(this.data.stats));
-        const poolCapital = await client.query.liquidityPools.vaultPoolsByFrame.entries();
-        const vaultOperator = this.data.createdVault.operatorAccountId;
-        for (const [_frameId, pools] of poolCapital) {
-          const liquidityPoolFrame = Mainchain.translateFrameLiquidityPools(pools)[this.createdVault?.vaultId!];
-          if (liquidityPoolFrame) {
-            this.data.ownLiquidityPoolCapitalDeployed += liquidityPoolFrame.contributors[vaultOperator] ?? 0n;
-          }
-        }
-        await client.query.bitcoinLocks.locksPendingReleaseByUtxoId().then(x => this.recordPendingCosignUtxos(x));
       }
-      const currentTick = await client.query.ticks.currentTick().then(x => x.toNumber());
 
-      // TODO: this is fully fake, so create a real one
-      this.data.nextCollectDueTick = currentTick + 60 * 24 * 10; // 10 days in minutes
       this.#waitForLoad.resolve();
     } catch (error) {
       this.#waitForLoad.reject(error as Error);
@@ -148,26 +150,35 @@ export class MyVault {
       await this.updateRevenue();
     });
 
-    const sub2 = await client.query.miningSlot.nextFrameId(async _nextFrame => {
-      await this.updateRevenue();
+    const sub2 = await client.query.vaults.revenuePerFrameByVault(vaultId, async x => {
+      await this.updateRevenue(x);
     });
 
-    const sub3 = await client.query.bitcoinLocks.locksPendingReleaseByUtxoId(x => this.recordPendingCosignUtxos(x));
+    const sub3 = await client.query.vaults.pendingCosignByVaultId(vaultId, x => this.recordPendingCosignUtxos(x));
+    const sub4 = await client.query.vaults.lastCollectFrameByVaultId(vaultId, x =>
+      this.updateCollectDueDate(x.isSome ? x.unwrap().toNumber() : undefined),
+    );
 
-    this.#subscriptions.push(sub, sub2, sub3);
+    await this.updateCollectDueDate();
+
+    this.#subscriptions.push(sub, sub2, sub3, sub4);
   }
 
-  private recordPendingCosignUtxos(pendingCosign: BTreeMap<u64, PalletBitcoinLocksLockReleaseRequest>) {
-    for (const [utxoIdRaw, lock] of pendingCosign) {
-      if (lock.vaultId.toNumber() === this.createdVault?.vaultId) {
-        const utxoId = utxoIdRaw.toNumber();
+  private async updateCollectDueDate(lastCollectFrameId?: number) {
+    lastCollectFrameId ??= await getMainchain().getCurrentFrameId();
 
-        this.data.pendingCosignUtxoIds.set(utxoId, {
-          bitcoinNetworkFee: lock.bitcoinNetworkFee.toBigInt(),
-          cosignDueBlock: lock.cosignDueBlock.toNumber(),
-          toScriptPubkey: lock.toScriptPubkey.toHex(),
-        });
-      }
+    const nextCollectDue = lastCollectFrameId + this.#configs!.timeToCollectFrames;
+    this.data.nextCollectDueDate = this.frameToDateRange(nextCollectDue)[0].getTime();
+  }
+
+  private frameToDateRange(frameId: number): [Date, Date] {
+    return FrameCalculator.frameToDateRange(frameId, this.#configs!);
+  }
+
+  private async recordPendingCosignUtxos(rawUtxoIds: Iterable<u64>) {
+    this.data.pendingCosignUtxoIds.clear();
+    for (const utxoId of rawUtxoIds) {
+      this.data.pendingCosignUtxoIds.add(utxoId.toNumber());
     }
   }
 
@@ -219,6 +230,7 @@ export class MyVault {
     });
     txResult.txProgressCallback = progressCallback;
     const blockHash = await txResult.inBlockPromise;
+    txResult.txProgressCallback = undefined;
     const client = await getMainchainClient();
     const api = await client.at(blockHash);
     const txResultBlockNumber = await api.query.system.number();
@@ -229,7 +241,7 @@ export class MyVault {
 
   public async collect(
     args: { argonKeyring: KeyringPair; xprivSeed: Uint8Array },
-    progressCallback?: (cosignProgress: number, cosignTxProgress: number, steps: number) => void,
+    progressCallback?: (cosignProgress: number, activeTransactionProgress: number, steps: number) => void,
   ) {
     if (!this.createdVault) {
       throw new Error('No vault created to collect revenue');
@@ -240,24 +252,47 @@ export class MyVault {
     const { argonKeyring, xprivSeed } = args;
     const toCollect = this.data.pendingCosignUtxoIds;
 
+    const steps = toCollect.size + 1; // +1 for the final collect transaction
     const vaultXpriv = await this.getVaultXpub(xprivSeed, this.metadata.hdPath);
     let completed = 0;
-    for (const [utxoId, pendingRelease] of toCollect) {
+    const client = await getMainchainClient();
+    for (const utxoId of toCollect) {
+      const pendingReleaseRaw = await client.query.bitcoinLocks.lockReleaseRequestsByUtxoId(utxoId);
+      if (pendingReleaseRaw.isNone) {
+        continue;
+      }
+      const pendingRelease = pendingReleaseRaw.unwrap();
+
       await this.cosignRelease({
         argonKeyring,
         vaultXpriv,
         utxoId,
-        bitcoinNetworkFee: pendingRelease.bitcoinNetworkFee,
-        toScriptPubkey: pendingRelease.toScriptPubkey,
+        bitcoinNetworkFee: pendingRelease.bitcoinNetworkFee.toBigInt(),
+        toScriptPubkey: pendingRelease.toScriptPubkey.toHex(),
         progressCallback(progressPct) {
           if (progressCallback) {
-            progressCallback((completed * 100) / toCollect.size, progressPct, toCollect.size);
+            progressCallback((completed * 100) / steps, progressPct, steps);
           }
         },
       });
       completed++;
     }
     // now we can collect!
+    const tx = new TxSubmitter(client, client.tx.vaults.collect(this.createdVault.vaultId), argonKeyring);
+    const txResult = await tx.submit({
+      waitForBlock: true,
+      txProgressCallback(progressPct) {
+        if (progressCallback) {
+          progressCallback((completed * 100) / steps, progressPct, steps);
+        }
+      },
+    });
+    txResult.txProgressCallback = undefined;
+    completed++;
+    if (progressCallback) {
+      progressCallback(100, 100, steps);
+    }
+    // TODO: redistribute to the liquidity pool and vaults
   }
 
   public async create(args: {
@@ -278,7 +313,6 @@ export class MyVault {
     try {
       const { argonKeyring, xprivSeed, masterXpubPath, rules } = args;
 
-      const { microgonsForSecuritization } = MyVault.getMicrogoonSplit(rules);
       const vaultXpriv = await this.getVaultXpub(xprivSeed, masterXpubPath);
       const masterXpub = vaultXpriv.publicExtendedKey;
       const client = await getMainchainClient();
@@ -288,12 +322,11 @@ export class MyVault {
         argonKeyring,
         {
           securitizationRatio: rules.securitizationRatio,
-          securitization: microgonsForSecuritization,
+          securitization: 1,
           annualPercentRate: rules.btcPctFee / 100,
           baseFee: rules.btcFlatFee,
           bitcoinXpub: masterXpub,
           liquidityPoolProfitSharing: rules.profitSharingPct / 100,
-          doNotExceedBalance: microgonsForSecuritization,
           txProgressCallback: args.progressCallback,
         },
         { tickDurationMillis: this.vaults.tickDuration },
@@ -301,7 +334,12 @@ export class MyVault {
       const table = await this.getTable();
       const api = await client.at(txResult.includedInBlock!);
       const blockNumber = await api.query.system.number();
-      this.data.metadata = await table.insert(vault.vaultId, masterXpubPath, blockNumber.toNumber());
+      this.data.metadata = await table.insert(
+        vault.vaultId,
+        masterXpubPath,
+        blockNumber.toNumber(),
+        txResult.finalFee ?? 0n,
+      );
       this.data.createdVault = vault;
       this.vaults.vaultsById[vault.vaultId] = vault;
       createVaultDeferred.resolve({ vault, txResult });
@@ -313,32 +351,21 @@ export class MyVault {
     return createVaultDeferred;
   }
 
-  public async updateRevenue(): Promise<void> {
+  public async updateRevenue(frameRevenues?: Vec<PalletVaultsVaultFrameRevenue>): Promise<void> {
     if (!this.createdVault) {
       throw new Error('No vault created to update revenue');
     }
     const client = await getMainchainClient();
     const vaultId = this.createdVault.vaultId;
-    const frameRevenueByVault = await client.query.vaults.perFrameFeeRevenueByVault(vaultId);
-    const frameId = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
-    const frameIds = [0, 1, 2].map(i => frameId - i);
-    const liquidity = await client.query.liquidityPools.vaultPoolsByFrame.multi(frameIds);
+    frameRevenues ??= await client.query.vaults.revenuePerFrameByVault(vaultId);
     this.vaults.vaultsById[vaultId] = this.createdVault;
 
-    for (let i = 0; i < frameIds.length; i++) {
-      const loadFrameId = frameIds[i];
-      const frameLiquidity = liquidity[i];
-      const frameRevenue = frameRevenueByVault.find(x => x.frameId.toNumber() === loadFrameId);
-
-      const liquidityPoolFrame = Mainchain.translateFrameLiquidityPools(frameLiquidity)[vaultId];
-      await this.vaults.updateVaultRevenue({
-        vaultId,
-        frameId: loadFrameId,
-        api: client,
-        currentFrameId: frameId,
-        frameRevenue,
-        liquidityPoolFrame,
-      });
+    await this.vaults.updateVaultRevenue(vaultId, frameRevenues);
+    this.data.ownLiquidityPoolCapitalDeployed = 0n;
+    this.data.pendingCollectRevenue = 0n;
+    for (const frameRevenue of frameRevenues) {
+      this.data.ownLiquidityPoolCapitalDeployed += frameRevenue.liquidityPoolVaultCapital.toBigInt();
+      this.data.pendingCollectRevenue += frameRevenue.uncollectedRevenue.toBigInt();
     }
     const data = this.vaults.stats?.vaultsById?.[vaultId];
     if (data) {
@@ -353,97 +380,110 @@ export class MyVault {
     this.#subscriptions.length = 0;
   }
 
-  public async prebondLiquidityPool(args: { argonKeyring: KeyringPair; rules: IVaultingRules; tip?: bigint }) {
+  public async activeMicrogonsForLiquidity(): Promise<{ maxAmountPerFrame?: bigint; active: bigint }> {
+    if (!this.createdVault) {
+      throw new Error('No vault created to get active liquidity funds');
+    }
+    const client = await getMainchainClient();
+    const vaultId = this.createdVault.vaultId;
+    const prebondedLiquidity = await client.query.liquidityPools.prebondedByVaultId(vaultId);
+    let activeLiquidity =
+      this.data.stats?.changesByFrame
+        .slice(0, 10)
+        .reduce((total, change) => total + change.liquidityPool.vaultCapital, 0n) ?? 0n;
+
+    const maxAmountPerFrame = prebondedLiquidity.isSome
+      ? prebondedLiquidity.unwrap().maxAmountPerFrame.toBigInt()
+      : undefined;
+    return { active: activeLiquidity, maxAmountPerFrame };
+  }
+
+  public async saveVaultRules(args: {
+    argonKeyring: KeyringPair;
+    rules: IVaultingRules;
+    bip39Seed: Uint8Array;
+    bitcoinLocksStore: BitcoinLocksStore;
+    txProgressCallback: ITxProgressCallback;
+    tip?: bigint;
+  }) {
     const vaultId = this.createdVault?.vaultId;
     if (!vaultId) {
       throw new Error('No vault created to prebond liquidity pool');
     }
-    const { argonKeyring, rules, tip = 0n } = args;
+    const vault = this.createdVault!;
+    const { bip39Seed, bitcoinLocksStore, argonKeyring, rules, tip = 0n, txProgressCallback } = args;
     const client = await getMainchainClient();
 
     // need to leave enough for the BTC fees
-    const { microgonsForLiquidity } = MyVault.getMicrogoonSplit(rules);
-
-    const table = await this.getTable();
-
-    let amountPerFrame = microgonsForLiquidity / 10n; // 10 frames
-    const prebondAmount = () => amountPerFrame * 10n;
-    let microgonsAlreadyUsed = this.metadata?.prebondedMicrogonsIncludingFee ?? 0n;
-    console.log('Microgons already used for prebonding:', microgonsAlreadyUsed);
-
-    if (microgonsAlreadyUsed === 0n) {
-      const existing = await client.query.liquidityPools.prebondedByVaultId(vaultId);
-      if (existing.isSome) {
-        let amountAlreadyBonded = existing.unwrap().amountUnbonded.toBigInt();
-        for (const bonded of existing.unwrap().bondedByStartOffset) {
-          amountAlreadyBonded += bonded.toBigInt();
-        }
-
-        console.log(`Found existing prebonded amount`, amountAlreadyBonded);
-
-        const tx = client.tx.liquidityPools.vaultOperatorPrebond(
-          vaultId,
-          amountAlreadyBonded,
-          amountAlreadyBonded / 10n,
-        );
-        const txFee = await new TxSubmitter(client, tx, argonKeyring).feeEstimate(tip);
-
-        this.metadata!.prebondedMicrogonsIncludingFee = amountAlreadyBonded + txFee + tip; // assume tip was same
-        // we could go back and get this from the chain, but it's not critical
-        this.metadata!.prebondedMicrogonsAtTick = await client.query.ticks.currentTick().then(x => x.toNumber() - 1);
-        await table.save(this.metadata!);
-      }
-    }
-
-    if (microgonsAlreadyUsed > 0n) {
-      amountPerFrame = (microgonsForLiquidity - microgonsAlreadyUsed) / 10n;
-    }
-
-    let submitter = new TxSubmitter(
-      client,
-      client.tx.liquidityPools.vaultOperatorPrebond(vaultId, prebondAmount(), amountPerFrame),
-      argonKeyring,
+    const { microgonsForLiquidity, microgonsForSecuritization } = MyVault.getMicrogoonSplit(
+      rules,
+      this.metadata?.operationalFeeMicrogons ?? 0n,
     );
 
-    let txFee = await submitter.feeEstimate(tip);
-    while (txFee + tip + microgonsAlreadyUsed + prebondAmount() > microgonsForLiquidity) {
-      const total = microgonsForLiquidity - microgonsAlreadyUsed - txFee - tip;
-      // now round it off so it adds up cleanly
-      amountPerFrame = total / 10n;
-      if (amountPerFrame <= 0n) {
-        return null;
-      }
-      submitter.tx = client.tx.liquidityPools.vaultOperatorPrebond(vaultId, prebondAmount(), amountPerFrame);
-      txFee = await submitter.feeEstimate(tip);
+    let txs = [];
+    let addedSecuritization = microgonsForSecuritization - vault.securitization;
+    if (addedSecuritization > 0n) {
+      const tx = client.tx.vaults.modifyFunding(
+        vaultId,
+        microgonsForSecuritization,
+        toFixedNumber(rules.securitizationRatio, 18),
+      );
+      txs.push(tx);
+    }
+    const { maxAmountPerFrame, active } = await this.activeMicrogonsForLiquidity();
+    let needsPrebondIncrease;
+    if (maxAmountPerFrame !== undefined) {
+      needsPrebondIncrease = maxAmountPerFrame < microgonsForLiquidity / 10n;
+    } else {
+      needsPrebondIncrease = active < microgonsForLiquidity;
+    }
+    if (needsPrebondIncrease) {
+      const tx = client.tx.liquidityPools.vaultOperatorPrebond(vaultId, microgonsForLiquidity / 10n);
+      txs.push(tx);
+    }
+    let bitcoinArgs: { satoshis: bigint; hdPath: string; securityFee: bigint } | undefined;
+    if (!this.metadata?.personalUtxoId && rules.personalBtcValue > 0n) {
+      const { tx, satoshis, hdPath, securityFee } = await bitcoinLocksStore.createInitializeTx({
+        argonKeyring,
+        bip39Seed,
+        vault,
+        addingVaultSpace: BigInt(Number(addedSecuritization) / vault.securitizationRatio),
+        microgonLiquidity: microgonsForLiquidity,
+        tip,
+      });
+      bitcoinArgs = { satoshis, hdPath, securityFee };
+      txs.push(tx);
     }
 
-    const { canAfford } = await submitter.canAfford({ tip, unavailableBalance: prebondAmount() });
-    if (!canAfford) {
-      throw new Error('Insufficient balance to prebond liquidity pool');
+    if (!txs.length) {
+      return undefined;
     }
-    const txResult = await submitter.submit({ tip });
+    txProgressCallback(5);
+    const table = await this.getTable();
+
+    const txSubmitter = new TxSubmitter(client, client.tx.utility.batchAll(txs), argonKeyring);
+    const txResult = await txSubmitter.submit({ tip, txProgressCallback });
     const blockHash = await txResult.inBlockPromise;
     const api = await client.at(blockHash);
     const tick = await api.query.ticks.currentTick();
 
-    console.log('Saving metadata for prebonded liquidity pool:', {
-      prebond: prebondAmount(),
-      microgonsAlreadyUsed,
-      txFee,
+    console.log('Saving vault updates', {
+      microgonsForLiquidity,
+      microgonsForSecuritization,
       tip,
       meta: this.metadata,
     });
-    this.metadata!.prebondedMicrogonsIncludingFee = prebondAmount() + microgonsAlreadyUsed + txFee + tip;
+    this.metadata!.prebondedMicrogons = microgonsForLiquidity;
     this.metadata!.prebondedMicrogonsAtTick = tick.toNumber();
+    this.metadata!.operationalFeeMicrogons ??= 0n;
+    this.metadata!.operationalFeeMicrogons += txResult.finalFee ?? 0n;
     await table.save(this.metadata!);
-    return { txResult, prebondAmount };
-  }
-
-  public async recordPersonalBitcoinUtxoId(utxoId: number): Promise<void> {
-    await this.load();
-    const table = await this.getTable();
-    this.metadata!.personalUtxoId = utxoId;
-    await table.save(this.metadata!);
+    if (bitcoinArgs) {
+      const record = await bitcoinLocksStore.saveBitcoinLock({ vaultId, txResult, ...bitcoinArgs });
+      this.metadata!.personalUtxoId = record.utxoId;
+      await table.save(this.metadata!);
+    }
+    return { txResult };
   }
 
   private async getTable(): Promise<VaultsTable> {
@@ -451,9 +491,9 @@ export class MyVault {
     return this.#table;
   }
 
-  public static getMicrogoonSplit(rules: IVaultingRules) {
-    const bitcoinFee = 50_000n + rules.btcFlatFee + BigInt((rules.btcPctFee / 100) * Number(rules.personalBtcValue));
-    const microgonsForVaulting = rules.requiredMicrogons - bitcoinFee;
+  public static getMicrogoonSplit(rules: IVaultingRules, existingFees: bigint = 0n) {
+    const estimatedOperationalFees = existingFees + 75_000n;
+    const microgonsForVaulting = rules.requiredMicrogons - estimatedOperationalFees;
     const microgonsForSecuritization = BigInt(
       BigNumber(rules.capitalForSecuritizationPct).div(100).times(microgonsForVaulting).toFixed(),
     );
@@ -465,7 +505,7 @@ export class MyVault {
       microgonsForVaulting,
       microgonsForSecuritization,
       microgonsForLiquidity,
-      maxBitcoinFee: bitcoinFee,
+      estimatedOperationalFees,
     };
   }
 }

@@ -34,8 +34,9 @@ export let NETWORK_URL =
 export const [INSTANCE_NAME, INSTANCE_PORT] = (__COMMANDER_INSTANCE__ || 'default:1420').split(':');
 
 export const env = (import.meta as any).env ?? {};
-export const TICK_MILLIS = env.VITE_TICK_MILLIS || 60e3;
-
+export const TICK_MILLIS: number = env.VITE_TICK_MILLIS || 60e3;
+export const ESPLORA_HOST: string = env.VITE_ESPLORA_HOST || 'https://mempool.space';
+export const BITCOIN_BLOCK_MILLIS: number = env.VITE_BITCOIN_BLOCK_MILLIS || 10 * 60e3; // 10 minutes
 export const DEPLOY_ENV_FILE =
   { testnet: '.env.testnet', mainnet: '.env.mainnet', local: '.env.localnet' }[NETWORK_NAME as string] ??
   '.env.mainnet';
