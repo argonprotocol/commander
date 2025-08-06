@@ -317,22 +317,16 @@ import { BigNumber } from 'bignumber.js';
 import { calculateAPR } from '../../lib/Utils';
 import { useStats } from '../../stores/stats';
 import { useCurrency } from '../../stores/currency';
-import { useBot } from '../../stores/bot';
-import { useBlockchainStore } from '../../stores/blockchain';
 import basicEmitter from '../../emitters/basicEmitter';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import CountupClock from '../../components/CountupClock.vue';
 import AlertBars from '../../components/AlertBars.vue';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
-import { bigNumberToBigInt, MiningFrames } from '@argonprotocol/commander-calculator';
 import AuctionIcon from '../../assets/auction.svg?component';
 import ActivityIcon from '../../assets/activity.svg?component';
 import BlocksIcon from '../../assets/blocks.svg?component';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
 import BotHistoryOverlayButton from '../../overlays/BotHistoryOverlayButton.vue';
-import { getMainchainClient } from '../../stores/mainchain';
-import { Accountset, Keyring } from '@argonprotocol/mainchain';
-import { useConfig } from '../../stores/config';
 import { TICK_MILLIS } from '../../lib/Config.ts';
 import { useWallets } from '../../stores/wallets';
 import MinerIcon from '../../assets/miner.svg?component';
@@ -343,12 +337,9 @@ import NibSlider from '../../components/NibSlider.vue';
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
 
-const bot = useBot();
 const stats = useStats();
-const config = useConfig();
 const currency = useCurrency();
-const clientPromise = getMainchainClient();
-const blockchainStore = useBlockchainStore();
+
 const wallets = useWallets();
 
 const { microgonToMoneyNm, micronotToMoneyNm } = createNumeralHelpers(currency);
@@ -380,18 +371,6 @@ const currentFrame = Vue.ref<IDashboardFrameStats>({
   profit: 0,
   profitPct: 0,
   score: 0,
-});
-
-const currentCohortId = Vue.ref(0);
-
-const walletMiningJson = JSON.parse(config.security.walletJson);
-const walletMiningAccount = new Keyring().createFromJson(walletMiningJson);
-walletMiningAccount.decodePkcs8(''); // TODO: Need to use passphrase when feature is added
-const accountset = new Accountset({
-  client: clientPromise,
-  seedAccount: walletMiningAccount,
-  sessionKeyMnemonic: config.security.sessionMnemonic,
-  subaccountRange: new Array(99).fill(0).map((_, i) => i),
 });
 
 const globalMicrogonsEarned = Vue.computed(() => {
@@ -569,6 +548,44 @@ Vue.watch(
 Vue.onMounted(() => {
   stats.subscribeToDashboard();
   stats.subscribeToActivity();
+  const initialDelay = 500; // Initial delay before starting continuous updates
+  const updateInterval = 100; // Interval between updates once continuous mode starts
+  let keyPressIntervalId: NodeJS.Timeout | null = null;
+  let keyPressTimeoutId: NodeJS.Timeout | null = null;
+
+  function handleKeyDown(e: KeyboardEvent) {
+    if (keyPressIntervalId) return; // Already handling key press
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      const action = e.key === 'ArrowRight' ? goToNextFrame : goToPrevFrame;
+      action();
+
+      keyPressTimeoutId = setTimeout(() => {
+        keyPressIntervalId = setInterval(action, updateInterval);
+      }, initialDelay);
+    }
+  }
+
+  function handleKeyUp() {
+    if (keyPressTimeoutId) {
+      clearTimeout(keyPressTimeoutId);
+      keyPressTimeoutId = null;
+    }
+    if (keyPressIntervalId) {
+      clearInterval(keyPressIntervalId);
+      keyPressIntervalId = null;
+    }
+  }
+
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keyup', handleKeyUp);
+
+  Vue.onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyDown);
+    window.removeEventListener('keyup', handleKeyUp);
+    if (keyPressTimeoutId) clearTimeout(keyPressTimeoutId);
+    if (keyPressIntervalId) clearInterval(keyPressIntervalId);
+  });
 });
 
 Vue.onUnmounted(() => {
