@@ -83,7 +83,7 @@ const hasLowFunds = Vue.computed(() => {
     return false;
   }
 
-  if (wallets.miningWallet.availableMicrogons < config.biddingRules.requiredMicrogons) {
+  if (wallets.miningWallet.availableMicrogons < config.biddingRules.baseCapitalCommitment) {
     return true;
   }
 

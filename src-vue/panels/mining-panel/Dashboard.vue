@@ -41,51 +41,56 @@
             Asset Breakdown
           </header>
           <ul class="relative flex flex-col items-center whitespace-nowrap w-full h-6/12 mb-4 text-md">
-            <li class="flex flex-row items-center justify-between w-full h-[calc(100%/7)] py-2">
-              <div>{{ numeral(wallets.miningWallet.availableMicrogons).format('0,0.[00]') }} Argons</div>
-              <div>
+            <li class="flex flex-row items-center w-full h-[calc(100%/7)] py-2">
+              <ArgonIcon class="w-8 h-8 text-argon-600/70 mr-2" />
+              <div class="grow">{{ numeral(wallets.miningWallet.availableMicrogons).format('0,0.[00]') }} Argons</div>
+              <div class="pr-1">
                 {{ currency.symbol
                 }}{{ microgonToMoneyNm(wallets.miningWallet.availableMicrogons).format('0,0.00') }}
               </div>
             </li>
-            <li class="flex flex-row items-center justify-between w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
-              <div>{{ numeral(wallets.miningWallet.availableMicronots).format('0,0.[00]') }} Argonots</div>
-              <div>
+            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
+              <ArgonotIcon class="w-8 h-8 text-argon-600/70 mr-2" />
+              <div class="grow">{{ numeral(wallets.miningWallet.availableMicronots).format('0,0.[00]') }} Argonots</div>
+              <div class="pr-1">
                 {{ currency.symbol
                 }}{{ micronotToMoneyNm(wallets.miningWallet.availableMicronots).format('0,0.00') }}
               </div>
             </li>
-            <li class="flex flex-row items-center justify-between w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
-              <div>{{ numeral(wallets.miningWallet.reservedMicronots).format('0,0.[00]') }} Locked Argonots</div>
-              <div>
+            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
+              <ArgonotLockedIcon class="w-8 h-8 text-argon-600/70 mr-2" />
+              <div class="grow">{{ numeral(wallets.miningWallet.reservedMicronots).format('0,0.[00]') }} Locked Argonots</div>
+              <div class="pr-1">
                 {{ currency.symbol
                 }}{{ micronotToMoneyNm(wallets.miningWallet.reservedMicronots).format('0,0.00') }}
               </div>
             </li>
-            <li class="flex flex-row items-center justify-between w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
-              <div>{{ numeral(stats.myMiningBids.bidCount).format('0,0') }} Winning Mining Bids</div>
-              <div>
+            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
+              <MiningBidIcon class="w-8 h-8 text-argon-600/70 mr-2" />
+              <div class="grow">{{ numeral(stats.myMiningBids.bidCount).format('0,0') }} Winning <span class="hidden 2xl:inline">Mining</span> Bids</div>
+              <div class="pr-1">
                 {{ currency.symbol
                 }}{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}
               </div>
             </li>
-            <li class="flex flex-row items-center justify-between w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
-              <div>{{ numeral(stats.myMiningSeats.seatCount).format('0,0') }} Active Mining Seats</div>
-              <div>
+            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
+              <MiningSeatIcon class="w-8 h-8 text-argon-600/70 mr-2" />
+              <div class="grow">{{ numeral(stats.myMiningSeats.seatCount).format('0,0') }} Active <span class="hidden 2xl:inline">Mining</span> Seats</div>
+              <div class="pr-1">
                 {{ currency.symbol
                 }}{{ microgonToMoneyNm(wallets.miningSeatValue).format('0,0.00') }}
               </div>
             </li>
-            <li class="flex flex-row items-center justify-between w-full h-[calc(100%/7)] border-t border-gray-600/50 py-2 text-red-900/70">
-              <div>Operational Expenses</div>
-              <div>
+            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/50 py-2 text-red-900/70">
+              <div class="grow pl-1"><span class="hidden 2xl:inline">Operational</span> Expenses</div>
+              <div class="pr-1">
                 -{{ currency.symbol
                 }}{{ microgonToMoneyNm(stats.myMiningSeats.transactionFees).format('0,0.00') }}
               </div>
             </li>
             <li class="flex flex-row items-center justify-between w-full h-[calc(100%/7)] border-t border-b border-gray-600/50 py-2 font-bold">
-              <div>TOTAL VALUE</div>
-              <div>
+              <div class="grow pl-1">TOTAL VALUE</div>
+              <div class="pr-1">
                 {{ currency.symbol
                 }}{{ microgonToMoneyNm(wallets.totalMiningResources).format('0,0.00') }}
               </div>
@@ -333,6 +338,11 @@ import MinerIcon from '../../assets/miner.svg?component';
 import HealthIndicatorBar from '../../components/HealthIndicatorBar.vue';
 import Chart from '../../components/Chart.vue';
 import NibSlider from '../../components/NibSlider.vue';
+import ArgonIcon from '../../assets/resources/argon.svg?component';
+import ArgonotIcon from '../../assets/resources/argonot.svg?component';
+import ArgonotLockedIcon from '../../assets/resources/argonot-locked.svg?component';
+import MiningBidIcon from '../../assets/resources/mining-bid.svg?component';
+import MiningSeatIcon from '../../assets/resources/mining-seat.svg?component';
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
@@ -529,13 +539,13 @@ function stopDrag(event: PointerEvent) {
   const currentX = rawX + dragMeta.elemOffset;
   const currentIndex = chartRef.value?.getItemIndexFromEvent(event, { x: currentX });
 
-  updateFrameSliderPos(currentIndex || 0, true);
+  updateFrameSliderPos(currentIndex || 0);
 
   document.body.classList.remove('isGrabbing');
   document.body.classList.remove('isResizing');
 }
 
-function updateFrameSliderPos(index: number, wasManuallyMoved: boolean = false) {
+function updateFrameSliderPos(index: number) {
   index = Math.max(index || 0, 0);
   sliderFrameIndex.value = index;
 
@@ -554,43 +564,18 @@ Vue.watch(
 Vue.onMounted(() => {
   stats.subscribeToDashboard();
   stats.subscribeToActivity();
-  const initialDelay = 500; // Initial delay before starting continuous updates
-  const updateInterval = 100; // Interval between updates once continuous mode starts
-  let keyPressIntervalId: NodeJS.Timeout | null = null;
-  let keyPressTimeoutId: NodeJS.Timeout | null = null;
 
   function handleKeyDown(e: KeyboardEvent) {
-    if (keyPressIntervalId) return; // Already handling key press
-
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       const action = e.key === 'ArrowRight' ? goToNextFrame : goToPrevFrame;
       action();
-
-      keyPressTimeoutId = setTimeout(() => {
-        keyPressIntervalId = setInterval(action, updateInterval);
-      }, initialDelay);
-    }
-  }
-
-  function handleKeyUp() {
-    if (keyPressTimeoutId) {
-      clearTimeout(keyPressTimeoutId);
-      keyPressTimeoutId = null;
-    }
-    if (keyPressIntervalId) {
-      clearInterval(keyPressIntervalId);
-      keyPressIntervalId = null;
     }
   }
 
   window.addEventListener('keydown', handleKeyDown);
-  window.addEventListener('keyup', handleKeyUp);
 
   Vue.onUnmounted(() => {
     window.removeEventListener('keydown', handleKeyDown);
-    window.removeEventListener('keyup', handleKeyUp);
-    if (keyPressTimeoutId) clearTimeout(keyPressTimeoutId);
-    if (keyPressIntervalId) clearInterval(keyPressIntervalId);
   });
 });
 

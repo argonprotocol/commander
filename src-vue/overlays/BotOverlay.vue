@@ -42,7 +42,7 @@
                     <header StatHeader class="bg-[#FAF9FA] border border-[#DDDCDD] rounded-t-lg group-hover:text-argon-600/70 relative z-10">Capital to Commit</header>
                     <div PrimaryStat class="grow relative border border-slate-500/30 rounded-lg mt-2 pb-12 pt-10 text-5xl font-bold font-mono text-argon-600 shadow-sm">
                       <AlertIcon v-if="probableMinSeats < rules.seatGoalCount" class="w-10 h-10 text-yellow-700 inline-block relative -top-2 mr-2" />
-                      <InputArgon v-model="rules.requiredMicrogons" :min="10_000_000n" :minDecimals="0" />
+                      <InputArgon v-model="rules.baseCapitalCommitment" :min="10_000_000n" :minDecimals="0" />
                     </div>
                   </div>
                   <div class="pt-3 text-argon-600/70 text-md">
@@ -372,7 +372,7 @@ function cancelOverlay() {
 
 function calculateMicronotsRequired(): bigint {
   let possibleSeats = Math.ceil(
-    BigNumber(rules.value.requiredMicrogons).dividedBy(calculatorData.previousDayMidBid).toNumber(),
+    BigNumber(rules.value.baseCapitalCommitment).dividedBy(calculatorData.previousDayMidBid).toNumber(),
   );
 
   if (rules.value?.seatGoalType === SeatGoalType.Max) {
@@ -422,10 +422,10 @@ function updateAPYs() {
   maximumBidAtSlowGrowthAPY.value = calculator.maximumBidAtSlowGrowthAPY;
   maximumBidAtFastGrowthAPY.value = calculator.maximumBidAtFastGrowthAPY;
 
-  const probableMinSeatsBn = BigNumber(rules.value.requiredMicrogons).dividedBy(calculator.maximumBidAmount);
+  const probableMinSeatsBn = BigNumber(rules.value.baseCapitalCommitment).dividedBy(calculator.maximumBidAmount);
   probableMinSeats.value = Math.max(probableMinSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(), 0);
 
-  const probableMaxSeatsBn = BigNumber(rules.value.requiredMicrogons).dividedBy(calculator.minimumBidAmount);
+  const probableMaxSeatsBn = BigNumber(rules.value.baseCapitalCommitment).dividedBy(calculator.minimumBidAmount);
   probableMaxSeats.value = Math.min(
     probableMaxSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(),
     calculatorData.miningSeatCount,
