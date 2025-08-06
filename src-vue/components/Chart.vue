@@ -94,8 +94,6 @@ function setDateRange(min: string, max: string) {
 }
 
 function addPoints(items: { date: string; score: number; isFiller: boolean }[]) {
-  let hasFinishedFiller = false;
-
   for (const item of items) {
     const date = dayjs.utc(item.date);
     const score = item.score;
@@ -103,10 +101,8 @@ function addPoints(items: { date: string; score: number; isFiller: boolean }[]) 
     chartPoints.push({ x: date.valueOf(), y: score });
     pointItems.push(item);
     pointItemsByDate[item.date] = item;
-    if (!hasFinishedFiller && item.isFiller) {
+    if (item.isFiller) {
       fillerPoints.push({ x: date.valueOf(), y: 0 });
-    } else {
-      hasFinishedFiller = true;
     }
   }
 

@@ -460,12 +460,18 @@ function openBotOverlay() {
 }
 
 function loadChartData() {
+  let isFiller = true;
   const items: any[] = [];
   for (const [index, frame] of stats.frames.entries()) {
+    if (isFiller && frame.activeSeatCount > 0) {
+      const previousItem = items[index - 1];
+      previousItem && (previousItem.isFiller = false);
+      isFiller = false;
+    }
     const item = {
       date: frame.date,
       score: frame.score,
-      isFiller: frame.activeSeatCount === 0,
+      isFiller,
       previous: items[index - 1],
       next: undefined,
     };
