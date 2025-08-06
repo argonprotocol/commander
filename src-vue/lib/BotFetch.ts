@@ -9,9 +9,13 @@ import {
 } from '@argonprotocol/commander-bot';
 import { BotServerError, BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors.ts';
 import { SSH } from './SSH.ts';
+import { JsonExt } from '@argonprotocol/mainchain';
 
 export class BotFetch {
   private static async botFetch<T>(botPath: string): Promise<{ data: T; status: number }> {
+    if (botPath.startsWith('/')) {
+      botPath = botPath.slice(1);
+    }
     const url = `http://${SSH.ipAddress}:3000/${botPath}`;
     console.log(`Fetching: ${url}`);
     const result = await fetch(url);
@@ -20,7 +24,8 @@ export class BotFetch {
     }
 
     try {
-      const data = await result.json();
+      const body = await result.text();
+      const data = JsonExt.parse(body);
 
       return {
         status: result.status,
@@ -30,6 +35,20 @@ export class BotFetch {
       console.error('Failed to parse JSON:', result.status, result.statusText, e);
       throw e;
     }
+  }
+
+  public static async lastModifiedDate(): Promise<Date | null> {
+    try {
+      const response = await this.botFetch<{ lastModifiedDate: string } | IBotStateStarting | IBotStateError>(
+        `/last-modified`,
+      );
+      if ('lastModifiedDate' in response.data) {
+        return new Date(response.data.lastModifiedDate);
+      }
+    } catch (error) {
+      console.error('Failed to parse JSON:', error);
+    }
+    return null;
   }
 
   public static async fetchBotState(retries = 0): Promise<IBotState> {

@@ -45,7 +45,7 @@ export function getMinerNodeClient(): Promise<MainchainClient> {
   if (!config.isLoaded) {
     throw new Error('Config must be loaded before miner node client can be initialized');
   }
-  return getClient(`ws://${config.serverDetails.ipAddress}:9945`);
+  return getClient(`ws://${config.serverDetails.ipAddress}:9944`);
 }
 
 export function getMainchain(): Mainchain {

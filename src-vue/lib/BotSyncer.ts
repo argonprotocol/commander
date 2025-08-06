@@ -2,17 +2,16 @@ import { Config } from './Config';
 import { Db } from './Db';
 import { BotFetch } from './BotFetch';
 import {
-  type IEarningsFileCohort,
+  type IBidsFile,
   type IBotState,
   type IBotStateStarting,
-  type IBidsFile,
+  type IEarningsFileCohort,
 } from '@argonprotocol/commander-bot';
 import { MiningFrames, TICKS_PER_COHORT } from '@argonprotocol/commander-calculator';
 import { getMainchain } from '../stores/mainchain';
 import { BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors';
 import { IBotEmitter } from './Bot';
 import Installer from './Installer';
-import { activeAnimations } from 'motion-v';
 
 export enum BotStatus {
   Starting = 'Starting',
@@ -46,6 +45,7 @@ export class BotSyncer {
   private mainchain = getMainchain();
 
   private bidsFileCacheByActivationFrameId: Record<number, [number, IBidsFile]> = {};
+  private lastModifiedDate: Date | null = null;
 
   constructor(config: Config, db: Db, installer: Installer, botFn: IBotFns) {
     this.config = config;
@@ -58,36 +58,50 @@ export class BotSyncer {
     await this.config.isLoadedPromise;
     await this.installer.isLoadedPromise;
 
-    this.runContinuously();
+    void this.runContinuously();
   }
 
   private async runContinuously(): Promise<void> {
     if (this.isRunnable) {
       try {
-        await this.updateBotState();
-        await this.syncArgonActivity();
-        await this.syncBitcoinActivity();
-        await this.syncBotActivity();
-        await this.syncCurrentBids();
-
-        if (!this.isSyncingThePast) {
-          this.botFns.setStatus(BotStatus.Ready);
-          this.botFns.onEvent('updated-cohort-data', this.botState.currentFrameId);
+        const lastModifiedDate = await BotFetch.lastModifiedDate();
+        if ((lastModifiedDate?.getTime() ?? 0) > (this.lastModifiedDate?.getTime() ?? 0)) {
+          this.lastModifiedDate = lastModifiedDate;
+          await this.runSync();
         }
-      } catch (e) {
-        if (e instanceof BotServerIsLoading) {
-          this.botFns.setStatus(BotStatus.Starting);
-        } else if (e instanceof BotServerIsSyncing) {
-          this.botFns.setStatus(BotStatus.ServerSyncing);
-          this.botFns.setServerSyncProgress(e.progress);
-        } else {
-          this.botFns.setStatus(BotStatus.Broken);
-          console.error('BotSyncer error:', e);
-        }
+      } catch (error) {
+        await this.installer.ensureIpAddressIsWhitelisted();
       }
     }
 
-    setTimeout(this.runContinuously.bind(this), 5000);
+    setTimeout(this.runContinuously.bind(this), 1000);
+  }
+
+  private async runSync(): Promise<void> {
+    try {
+      console.log('BotSyncer: Running sync...');
+      await this.updateBotState();
+      await this.syncArgonActivity();
+      await this.syncBitcoinActivity();
+      await this.syncBotActivity();
+      await this.syncCurrentBids();
+
+      if (!this.isSyncingThePast) {
+        this.botFns.setStatus(BotStatus.Ready);
+        this.botFns.onEvent('updated-cohort-data', this.botState.currentFrameId);
+      }
+    } catch (e) {
+      this.lastModifiedDate = null; // Reset last modified date to ensure we re-fetch on next run
+      if (e instanceof BotServerIsLoading) {
+        this.botFns.setStatus(BotStatus.Starting);
+      } else if (e instanceof BotServerIsSyncing) {
+        this.botFns.setStatus(BotStatus.ServerSyncing);
+        this.botFns.setServerSyncProgress(e.progress);
+      } else {
+        this.botFns.setStatus(BotStatus.Broken);
+        console.error('BotSyncer error:', e);
+      }
+    }
   }
 
   private get isRunnable(): boolean {
@@ -146,7 +160,7 @@ export class BotSyncer {
       this.botFns.setDbSyncProgress(dbSyncProgress);
       await this.syncThePast(dbSyncProgress);
     } else {
-      this.syncCurrentFrame();
+      await this.syncCurrentFrame();
     }
   }
 

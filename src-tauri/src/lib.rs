@@ -78,7 +78,6 @@ async fn close_ssh_connection() -> Result<String, String> {
 
 #[tauri::command]
 async fn ssh_run_command(command: String) -> Result<(String, u32), String> {
-    log::info!("ssh_run_command: {}", command);
     let ssh: ssh::SSH = get_ssh_singleton_connection()
         .await
         .map_err(|e| e.to_string())?

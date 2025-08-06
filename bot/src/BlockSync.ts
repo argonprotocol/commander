@@ -59,6 +59,7 @@ export class BlockSync {
   private lastExchangeRateDate?: Date;
   private lastExchangeRateFrameId?: number;
   private tickDurationMillis: number = 60000; // 1 minute in milliseconds
+  private frameCalculator = new FrameCalculator();
 
   constructor(
     public bot: Bot,
@@ -353,7 +354,7 @@ export class BlockSync {
   }
 
   private async getFrameIdFromHeader(header: Header): Promise<number> {
-    const currentFrameId = await new FrameCalculator().getForHeader(this.localClient, header);
+    const currentFrameId = await this.frameCalculator.getForHeader(this.localClient, header);
     if (currentFrameId === undefined) {
       throw new Error(`Error getting frame id for header ${header.number.toNumber()}`);
     }

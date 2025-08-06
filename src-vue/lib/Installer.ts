@@ -191,6 +191,8 @@ export default class Installer {
   }
 
   public async ensureIpAddressIsWhitelisted(): Promise<void> {
+    // we don't have anything to connect to yet!
+    if (!SSH.ipAddress) return;
     const ipResponse = await fetch('https://api.ipify.org?format=json');
     const { ip: ipAddress } = await ipResponse.json();
     await SSH.runCommand(`ufw status | grep ${ipAddress} || ufw allow from ${ipAddress}`);
