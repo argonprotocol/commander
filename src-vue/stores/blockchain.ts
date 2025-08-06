@@ -29,7 +29,6 @@ export type IBlock = {
 };
 
 export const useBlockchainStore = defineStore('blockchain', () => {
-  const clientPromise = getMainchainClient();
   const miningSeatCount = Vue.ref(0);
   const aggregatedBidCosts = Vue.ref(0n);
   const aggregatedBlockRewards = Vue.ref({ microgons: 0n, micronots: 0n });
@@ -77,7 +76,7 @@ export const useBlockchainStore = defineStore('blockchain', () => {
   }
 
   async function fetchBlocks(lastBlockNumber: number | null, endingFrameId: number | null, maxBlockCount: number) {
-    const client = await clientPromise;
+    const client = await getMainchainClient(true);
     const blocks: IBlock[] = [];
 
     if (!lastBlockNumber) {
@@ -99,7 +98,7 @@ export const useBlockchainStore = defineStore('blockchain', () => {
   }
 
   async function subscribeToBlocks(onBlock: (block: IBlock) => void) {
-    const client = await getMainchainClient();
+    const client = await getMainchainClient(true);
 
     // Subscribe to new blocks
     return await client.rpc.chain.subscribeNewHeads(async header => {

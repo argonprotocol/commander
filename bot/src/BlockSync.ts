@@ -389,10 +389,8 @@ export class BlockSync {
           });
           return false;
         }
-        if (!x.microgonsToBeMinedPerBlock) {
-          x.micronotsStakedPerSeat = await api.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
-          x.microgonsToBeMinedPerBlock = await api.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
-        }
+        x.micronotsStakedPerSeat ??= await api.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
+        x.microgonsToBeMinedPerBlock ??= await api.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
         x.frameBiddingProgress = this.calculateProgress(headerTick, this.currentFrameTickRange);
         x.lastBlockNumber = blockNumber;
         x.winningBids = nextCohort.map((c, i): IWinningBid => {

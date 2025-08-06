@@ -1,12 +1,14 @@
 import * as Vue from 'vue';
 import { defineStore } from 'pinia';
 import { ask } from '@tauri-apps/plugin-dialog';
-import { getMainchainClient } from '../stores/mainchain.ts';
+import { getMainchainClient } from './mainchain.ts';
 import handleUnknownFatalError from './helpers/handleUnknownFatalError.ts';
 import { useConfig } from './config.ts';
 import { createDeferred } from '../lib/Utils.ts';
 import { useStats } from './stats.ts';
 import { useCurrency } from './currency.ts';
+import { botEmitter } from '../lib/Bot.ts';
+import { MainchainClient } from '@argonprotocol/commander-calculator';
 
 const config = useConfig();
 
@@ -74,10 +76,10 @@ export const useWallets = defineStore('wallets', () => {
   const totalWalletMicrogons = Vue.ref(0n);
   const totalWalletMicronots = Vue.ref(0n);
 
-  function loadArgonBalance(wallet: IWallet) {
+  const subscriptions: VoidFunction[] = [];
+  function loadArgonBalance(client: MainchainClient, wallet: IWallet) {
     return new Promise<void>(async (resolve, _) => {
-      const client = await getMainchainClient();
-      client.query.system.account(wallet.address, result => {
+      const sub = await client.query.system.account(wallet.address, result => {
         const availableMicrogons = result.data.free.toBigInt();
         const availableMicrogonsDiff = availableMicrogons - wallet.availableMicrogons;
 
@@ -86,13 +88,13 @@ export const useWallets = defineStore('wallets', () => {
         totalWalletMicrogons.value += availableMicrogonsDiff;
         resolve();
       });
+      subscriptions.push(sub);
     });
   }
 
-  function loadArgonotBalance(wallet: IWallet) {
+  function loadArgonotBalance(client: MainchainClient, wallet: IWallet) {
     return new Promise<void>(async (resolve, _) => {
-      const client = await getMainchainClient();
-      client.query.ownership.account(wallet.address, result => {
+      const sub = await client.query.ownership.account(wallet.address, result => {
         const availableMicronots = result.free.toBigInt();
         const reservedMicronots = result.reserved.toBigInt();
         const micronotsDiff = availableMicronots + reservedMicronots - wallet.availableMicronots;
@@ -103,16 +105,21 @@ export const useWallets = defineStore('wallets', () => {
         totalWalletMicronots.value += micronotsDiff;
         resolve();
       });
+      subscriptions.push(sub);
     });
   }
 
   async function loadBalances() {
     await config.isLoadedPromise;
+    if (subscriptions.length) {
+      subscriptions.forEach(x => x());
+      subscriptions.length = 0;
+    }
     miningWallet.address = config.miningAccount.address;
     vaultingWallet.address = config.vaultingAccount.address;
-
+    const client = await getMainchainClient(true);
     for (const wallet of [miningWallet, vaultingWallet]) {
-      await Promise.all([loadArgonBalance(wallet), loadArgonotBalance(wallet)]);
+      await Promise.all([loadArgonBalance(client, wallet), loadArgonotBalance(client, wallet)]);
     }
   }
 
@@ -123,22 +130,29 @@ export const useWallets = defineStore('wallets', () => {
       try {
         await loadBalances();
         await Promise.all([stats.isLoadedPromise, currency.isLoadedPromise]);
-        isLoadedResolve();
+        isLoaded.value = true;
       } catch (error) {
         await ask('Wallets failed to load correctly. Click Ok to try again.', {
           title: 'Argon Commander',
           kind: 'warning',
         });
-        continue;
       }
-      isLoaded.value = true;
     }
   }
 
   load().catch(error => {
     console.log('Error loading wallets:', error);
-    handleUnknownFatalError();
+    void handleUnknownFatalError();
     isLoadedReject();
+  });
+
+  botEmitter.on('status-changed', status => {
+    if (isLoaded.value && status === 'Ready') {
+      // Reload balances when bot status changes
+      loadBalances().catch(error => {
+        console.error('Error reloading wallet balances:', error);
+      });
+    }
   });
 
   return {

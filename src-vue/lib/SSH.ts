@@ -1,7 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { Config, DEPLOY_ENV_FILE } from './Config';
 import { IConfigServerDetails } from '../interfaces/IConfig';
-import { jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
 
 class InvokeTimeout extends Error {
   constructor(message: string) {
@@ -31,29 +30,8 @@ export class SSH {
     this.isConnected = false;
   }
 
-  public static async runHttpGet<T>(botPath: string, ...curlArgs: string[]): Promise<{ status: number; data: T }> {
-    this.isConnected || (await this.openConnection());
-    console.log(`Running: ~/scripts/get_bot_http.sh ${botPath} ${curlArgs.join(' ')}`);
-    const result = await SSH.runCommand(`~/scripts/get_bot_http.sh ${botPath} ${curlArgs.join(' ')}`);
-    if (result[1] !== 0) {
-      throw new Error(`HTTP GET command failed with status ${result[1]}`);
-    }
-
-    try {
-      const httpResponse: { status: number; data?: T; error?: string } = jsonParseWithBigInts(result[0]);
-
-      if (httpResponse.status !== 200) {
-        throw new Error(httpResponse.error);
-      }
-
-      return {
-        status: httpResponse.status,
-        data: httpResponse.data!,
-      };
-    } catch (e) {
-      console.error('Failed to parse JSON:', result[0]);
-      throw e;
-    }
+  public static get ipAddress() {
+    return this.config.serverDetails.ipAddress;
   }
 
   public static async runCommand(command: string, retries = 0): Promise<[string, number]> {
