@@ -136,8 +136,15 @@ export class Config {
 
       configData[key] = jsonParseWithBigInts(rawValue as string);
       fieldsSerialized[key as keyof typeof fieldsSerialized] = rawValue as string;
-      if (key === dbFields.biddingRules) this.hasSavedBiddingRules = true;
-      if (key === dbFields.vaultingRules) this.hasSavedVaultingRules = true;
+      if (key === dbFields.biddingRules) {
+        this.hasSavedBiddingRules = true;
+        // TODO: remove this once we've migrated all users to the new field
+        configData.biddingRules.baseCapitalCommitment =
+          configData.biddingRules.requiredMicrogons || configData.biddingRules.baseCapitalCommitment;
+        delete configData.biddingRules.requiredMicrogons;
+      } else if (key === dbFields.vaultingRules) {
+        this.hasSavedVaultingRules = true;
+      }
     }
 
     const dataToSave = Config.extractDataToSave(fieldsToSave, fieldsSerialized);
@@ -505,7 +512,7 @@ const defaults: IConfigDefaults = {
       seatGoalCount: 3,
       seatGoalInterval: SeatGoalInterval.Epoch,
 
-      requiredMicrogons: 1_000n * BigInt(MICROGONS_PER_ARGON),
+      baseCapitalCommitment: 1_000n * BigInt(MICROGONS_PER_ARGON),
       requiredMicronots: 0n,
     };
   },

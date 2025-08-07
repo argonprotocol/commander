@@ -59,6 +59,8 @@ import TooltipOverlay from './overlays/TooltipOverlay.vue';
 import { hideTooltip } from './lib/TooltipUtils';
 import AboutOverlay from './overlays/AboutOverlay.vue';
 import ComplianceOverlay from './overlays/ComplianceOverlay.vue';
+import { listen } from '@tauri-apps/api/event';
+import basicEmitter from './emitters/basicEmitter';
 
 const controller = useController();
 const config = useConfig();
@@ -77,6 +79,35 @@ const showMiningPanel = Vue.computed(() => {
 function clickHandler() {
   hideTooltip();
 }
+
+// Listen for Tauri events from the backend
+listen('openAboutOverlay', () => {
+  basicEmitter.emit('openAboutOverlay');
+});
+
+listen('openMiningDashboard', () => {
+  controller.setPanel('mining');
+});
+
+listen('openVaultingDashboard', () => {
+  controller.setPanel('vaulting');
+});
+
+listen('openConfigureMiningBot', () => {
+  basicEmitter.emit('openBotOverlay');
+});
+
+listen('openConfigureVaultSettings', () => {
+  basicEmitter.emit('openConfigureStabilizationVaultOverlay');
+});
+
+listen('openMiningWalletOverlay', event => {
+  basicEmitter.emit('openWalletOverlay', { walletId: 'mining', screen: 'receive' });
+});
+
+listen('openVaultingWalletOverlay', event => {
+  basicEmitter.emit('openWalletOverlay', { walletId: 'vaulting', screen: 'receive' });
+});
 
 Vue.onBeforeMount(async () => {
   await waitForLoad();

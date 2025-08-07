@@ -25,6 +25,20 @@ pub fn create_menu<R: Runtime>(app: &App<R>) -> Result<tauri::menu::Menu<R>, tau
         .separator()
         .build()?;
 
+    let mining_menu = SubmenuBuilder::new(app, "Mining")
+        .text("mining-dashboard", "Open Mining Dashboard")
+        .separator()
+        .text("configure-mining-bot", "Configure Mining Bot")
+        .text("token-transfer-to-mining", "Transfer Tokens")
+        .build()?;
+
+    let vaulting_menu = SubmenuBuilder::new(app, "Vaulting")
+        .text("vaulting-dashboard", "Open Vaulting Dashboard")
+        .separator()
+        .text("configure-vault-settings", "Configure Vault Settings")
+        .text("token-transfer-to-vaulting", "Transfer Tokens")
+        .build()?;
+
     let reload_item = MenuItemBuilder::new("Reload App")
         .id("reload")
         .accelerator("CmdOrCtrl+R")
@@ -35,7 +49,7 @@ pub fn create_menu<R: Runtime>(app: &App<R>) -> Result<tauri::menu::Menu<R>, tau
         .build()?;
 
     let menu = MenuBuilder::new(app)
-        .items(&[&commander_menu, &edit_menu, &window_menu])
+        .items(&[&commander_menu, &edit_menu, &mining_menu, &vaulting_menu, &window_menu])
         .build()?;
 
     Ok(menu)
@@ -53,6 +67,24 @@ pub fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, event: &tauri::menu::Me
         }
         "quit" => {
             app.exit(0);
+        }
+        "mining-dashboard" => {
+            app.emit("openMiningDashboard", ()).unwrap();
+        }
+        "vaulting-dashboard" => {
+            app.emit("openVaultingDashboard", ()).unwrap();
+        }
+        "configure-mining-bot" => {
+            app.emit("openConfigureMiningBot", ()).unwrap();
+        }
+        "configure-vault-settings" => {
+            app.emit("openConfigureVaultSettings", ()).unwrap();
+        }
+        "token-transfer-to-mining" => {
+            app.emit("openMiningWalletOverlay", ()).unwrap();
+        }
+        "token-transfer-to-vaulting" => {
+            app.emit("openVaultingWalletOverlay", ()).unwrap();
         }
         "reload" => {
             app.get_webview_window("main").unwrap().reload().unwrap();

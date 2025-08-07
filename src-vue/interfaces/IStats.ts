@@ -39,6 +39,6 @@ export interface IDashboardFrameStats {
   microgonValueOfRewards: bigint;
   progress: number;
   profit: number;
-  apr: number;
+  profitPct: number;
   score: number;
 }

@@ -74,8 +74,8 @@
               </p>
               <p v-else>
                 Your acccount needs a minimum of
-                {{ microgonToArgonNm(config.biddingRules?.requiredMicrogons || 0n).format('0,0.[00000000]') }} argon{{
-                  microgonToArgonNm(config.biddingRules?.requiredMicrogons || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
+                {{ microgonToArgonNm(config.biddingRules?.baseCapitalCommitment || 0n).format('0,0.[00000000]') }} argon{{
+                  microgonToArgonNm(config.biddingRules?.baseCapitalCommitment || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
                 }}
                 and
                 {{
@@ -152,7 +152,7 @@ const walletIsPartiallyFunded = Vue.computed(() => {
 });
 
 const additionalMicrogonsNeeded = Vue.computed(() => {
-  return bigIntMax(config.biddingRules.requiredMicrogons - wallets.miningWallet.availableMicrogons, 0n);
+  return bigIntMax(config.biddingRules.baseCapitalCommitment - wallets.miningWallet.availableMicrogons, 0n);
 });
 
 const additionalMicronotsNeeded = Vue.computed(() => {

@@ -50,6 +50,28 @@
 </template>
 
 <script setup lang="ts">
+import { Accountset, Keyring } from '@argonprotocol/mainchain';
+import { useConfig } from '../stores/config';
+import { useBot } from '../stores/bot';
+import { useBlockchainStore } from '../stores/blockchain';
+import { getMainchainClient } from '../stores/mainchain';
+
+const bot = useBot();
+const config = useConfig();
+
+const clientPromise = getMainchainClient();
+const blockchainStore = useBlockchainStore();
+
+// const walletMiningJson = JSON.parse(config.security.walletJson);
+// const walletMiningAccount = new Keyring().createFromJson(walletMiningJson);
+// walletMiningAccount.decodePkcs8(''); // TODO: Need to use passphrase when feature is added
+// const accountset = new Accountset({
+//   client: clientPromise,
+//   seedAccount: walletMiningAccount,
+//   sessionKeyMnemonic: config.security.sessionMnemonic,
+//   subaccountRange: new Array(99).fill(0).map((_, i) => i),
+// });
+
 // let unsubscribeFromBlocks: any = null;
 
 // function isOurAddress(address: string): boolean {

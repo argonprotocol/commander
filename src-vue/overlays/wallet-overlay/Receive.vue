@@ -38,10 +38,10 @@
             </thead>
             <tbody>
               <tr>
-                <td>{{ microgonToArgonNm(requiredMicrogons).format('0,0.[00000000]') }} ARGN</td>
+                <td>{{ microgonToArgonNm(baseCapitalCommitment).format('0,0.[00000000]') }} ARGN</td>
                 <td>{{ microgonToArgonNm(wallet.availableMicrogons).format('0,0.[00000000]') }} ARGN</td>
-                <td v-if="!requiredMicrogons" class="text-right">--</td>
-                <td v-else-if="wallet.availableMicrogons >= requiredMicrogons" class="text-right text-green-700 font-bold">success</td>
+                <td v-if="!baseCapitalCommitment" class="text-right">--</td>
+                <td v-else-if="wallet.availableMicrogons >= baseCapitalCommitment" class="text-right text-green-700 font-bold">success</td>
                 <td v-else class="fade-in-out text-right text-red-700 font-bold">
                   <template v-if="wallet.availableMicrogons > 0n">partially funded</template>
                   <template v-else>waiting</template>
@@ -121,9 +121,9 @@ function stillNeeded(amount: bigint, walletValue: bigint) {
   return stillNeeded > 0n ? stillNeeded : 0n;
 }
 
-const requiredMicrogons = Vue.computed(() => {
+const baseCapitalCommitment = Vue.computed(() => {
   if (props.walletId === 'mining') {
-    return config.biddingRules?.requiredMicrogons || 0n;
+    return config.biddingRules?.baseCapitalCommitment || 0n;
   } else if (props.walletId === 'vaulting') {
     return config.vaultingRules?.requiredMicrogons || 0n;
   }

@@ -123,18 +123,16 @@ export class FramesTable extends BaseTable {
     FROM Frames ORDER BY id DESC LIMIT 365`);
 
     const records = convertFromSqliteFields(rawRecords, this.fieldTypes).map((x: any) => {
-      const date = dayjs
-        .utc(x.firstTick * TICK_MILLIS)
-        .local()
-        .format('YYYY-MM-DD');
+      const date = dayjs.utc(x.firstTick * TICK_MILLIS).format('YYYY-MM-DD');
 
       const relativeSeatCostBn = BigNumber(x.totalSeatCost).multipliedBy(x.progress / 100);
       const relativeSeatCost = bigNumberToBigInt(relativeSeatCostBn);
-      console.log('relativeSeatCost', x.id, x.totalSeatCost, x.progress, relativeSeatCost);
       const microgonValueEarnedBn = BigNumber(x.microgonsMined).plus(x.microgonsMinted).plus(x.micronotsMined);
       const microgonValueOfRewards = bigNumberToBigInt(microgonValueEarnedBn);
-      const profit = BigNumber(microgonValueEarnedBn).minus(relativeSeatCostBn).toNumber();
-      const apr = calculateAPR(relativeSeatCost, microgonValueOfRewards);
+      const profitBn = BigNumber(microgonValueEarnedBn).minus(relativeSeatCostBn);
+      const profitPct = relativeSeatCostBn.isZero()
+        ? BigNumber(0)
+        : profitBn.dividedBy(relativeSeatCostBn).multipliedBy(100);
 
       const record: Omit<IDashboardFrameStats, 'score'> = {
         id: x.id,
@@ -153,8 +151,8 @@ export class FramesTable extends BaseTable {
 
         microgonValueOfRewards,
         progress: x.progress,
-        profit,
-        apr,
+        profit: profitBn.toNumber(),
+        profitPct: profitPct.toNumber(),
       };
 
       return record;
@@ -169,7 +167,7 @@ export class FramesTable extends BaseTable {
 
       const blankRecord: Omit<IDashboardFrameStats, 'score'> = {
         id: 0,
-        date: previousDay.local().format('YYYY-MM-DD'),
+        date: previousDay.format('YYYY-MM-DD'),
         firstTick: lastRecord.firstTick - 1_440,
         lastTick: lastRecord.lastTick - 1_440,
         activeSeatCount: 0,
@@ -183,7 +181,7 @@ export class FramesTable extends BaseTable {
         microgonValueOfRewards: 0n,
         progress: 0,
         profit: 0,
-        apr: 0,
+        profitPct: 0,
       };
       records.push(blankRecord);
     }
