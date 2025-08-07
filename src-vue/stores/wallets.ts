@@ -130,6 +130,7 @@ export const useWallets = defineStore('wallets', () => {
       try {
         await loadBalances();
         await Promise.all([stats.isLoadedPromise, currency.isLoadedPromise]);
+        isLoadedResolve();
         isLoaded.value = true;
       } catch (error) {
         await ask('Wallets failed to load correctly. Click Ok to try again.', {
