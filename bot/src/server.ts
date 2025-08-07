@@ -4,9 +4,9 @@ import { jsonExt, onExit, requireAll, requireEnv } from './utils.ts';
 import Bot from './Bot.ts';
 import express from 'express';
 import cors from 'cors';
+import type { IBlockNumbers } from './Dockers.ts';
 import { Dockers } from './Dockers.ts';
 import type { IBotStateError, IBotStateStarting } from './interfaces/IBotStateFile.ts';
-import type { IBlockNumbers } from './Dockers.ts';
 
 // wait for crypto wasm to be loaded
 await waitForLoad();
@@ -44,6 +44,21 @@ app.get('/state', async (_req, res) => {
   if (await isStarting(res)) return;
   const botState = await bot.blockSync.state();
   jsonExt(botState, res);
+});
+
+app.get('/last-modified', async (_req, res) => {
+  if (await hasError(res)) return;
+  let lastModifiedDate = new Date();
+  if (!bot.isReady) {
+    return jsonExt({ lastModifiedDate }, res);
+  }
+
+  const state = await bot.blockSync.state();
+  lastModifiedDate = state.bidsLastModifiedAt;
+  if (lastModifiedDate < state.earningsLastModifiedAt) {
+    lastModifiedDate = state.earningsLastModifiedAt;
+  }
+  jsonExt({ lastModifiedDate }, res);
 });
 
 app.get('/argon-blockchain-status', async (_req, res) => {

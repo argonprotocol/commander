@@ -380,6 +380,12 @@ export class Config {
     await this._db.configTable.insertOrReplace(dataToSave);
   }
 
+  public async getIpAddress(): Promise<string> {
+    const ipResponse = await fetch('https://api.ipify.org?format=json');
+    const { ip: ipAddress } = await ipResponse.json();
+    return ipAddress;
+  }
+
   public resetField(field: keyof typeof dbFields) {
     this._throwErrorIfNotLoaded();
     (this as any)[field] = defaults[field]();

@@ -1,9 +1,9 @@
 import { SSH } from './SSH';
 import {
-  InstallStepErrorType,
-  InstallStepStatus,
-  InstallStepKey,
   type IConfigInstallStep,
+  InstallStepErrorType,
+  InstallStepKey,
+  InstallStepStatus,
 } from '../interfaces/IConfig';
 import { Config, NETWORK_NAME } from './Config';
 import { app } from '@tauri-apps/api';
@@ -68,6 +68,7 @@ export default class Installer {
   public async load(): Promise<void> {
     await this.config.isLoadedPromise;
 
+    await this.ensureIpAddressIsWhitelisted();
     if (this.config.isServerReadyToInstall) {
       const uploadedWalletAddress = await this.fetchUploadedWalletAddress();
       if (uploadedWalletAddress && uploadedWalletAddress !== this.config.miningAccount.address) {
@@ -187,6 +188,14 @@ export default class Installer {
 
     this.isRunning = false;
     this.isReadyToRun = false;
+  }
+
+  public async ensureIpAddressIsWhitelisted(): Promise<void> {
+    // we don't have anything to connect to yet!
+    if (!SSH.ipAddress) return;
+    const ipResponse = await fetch('https://api.ipify.org?format=json');
+    const { ip: ipAddress } = await ipResponse.json();
+    await SSH.runCommand(`ufw status | grep ${ipAddress} || ufw allow from ${ipAddress}`);
   }
 
   public async runFailedStep(stepKey: string): Promise<void> {

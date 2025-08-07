@@ -14,6 +14,7 @@ export type IBotEmitter = {
   'updated-bitcoin-activity': void;
   'updated-argon-activity': void;
   'updated-bidding-activity': void;
+  'status-changed': BotStatus;
 };
 
 export const botEmitter: Emitter<IBotEmitter> = mitt<IBotEmitter>();
@@ -43,7 +44,10 @@ export class Bot {
     const db = await this.dbPromise;
     this.botSyncer = new BotSyncer(this.config, db, installer, {
       onEvent: (type: keyof IBotEmitter, payload?: any) => botEmitter.emit(type, payload),
-      setStatus: (x: BotStatus) => (this.status = x),
+      setStatus: (x: BotStatus) => {
+        this.status = x;
+        botEmitter.emit('status-changed', x);
+      },
       setServerSyncProgress: (x: number) => (this.syncProgress = x * 0.9),
       setDbSyncProgress: (x: number) => (this.syncProgress = 90 + x * 0.1),
       setMaxSeatsPossible: (x: number) => (this.maxSeatsPossible = x),

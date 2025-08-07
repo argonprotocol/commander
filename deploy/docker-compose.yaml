@@ -38,6 +38,8 @@ services:
     command:
       - /usr/local/bin/bitcoind
       - -conf=${BITCOIN_CONFIG}
+    ports:
+      - "${BITCOIN_P2P_PORT:-8333}:${BITCOIN_P2P_PORT:-8333}"
     environment:
       - BITCOIN_CONFIG=${BITCOIN_CONFIG}
       - BITCOIN_CHAIN=${BITCOIN_CHAIN}
@@ -63,6 +65,8 @@ services:
       - --base-path=/data
       - --no-mdns
       - --no-telemetry
+      - --prometheus-port=9615
+      - --prometheus-external
       - --port=30333
       - --rpc-port=9944
       - --rpc-methods=unsafe
@@ -83,6 +87,7 @@ services:
     ports:
       - '30333:30333'
       - '9944:9944'
+      - '9615:9615'
     environment:
       - ARGON_CHAIN=${ARGON_CHAIN}
       - ARGON_ARCHIVE_NODE=${ARGON_ARCHIVE_NODE}

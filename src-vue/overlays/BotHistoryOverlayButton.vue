@@ -87,7 +87,7 @@ const props = withDefaults(
 const stats = useStats();
 const config = useConfig();
 const currency = useCurrency();
-const clientPromise = getMainchainClient();
+const clientPromise = getMainchainClient(true);
 
 const { microgonToMoneyNm } = createNumeralHelpers(currency);
 

@@ -1,19 +1,59 @@
 import {
-  type IBotState,
-  type IEarningsFile,
   type IBidsFile,
-  type IBotStateStarting,
-  type IBotStateError,
-  type IHistoryFile,
   type IBlockNumbers,
+  type IBotState,
+  type IBotStateError,
+  type IBotStateStarting,
+  type IEarningsFile,
+  type IHistoryFile,
 } from '@argonprotocol/commander-bot';
-import { SSH } from './SSH.ts';
 import { BotServerError, BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors.ts';
+import { SSH } from './SSH.ts';
+import { JsonExt } from '@argonprotocol/mainchain';
 
 export class BotFetch {
+  private static async botFetch<T>(botPath: string): Promise<{ data: T; status: number }> {
+    if (botPath.startsWith('/')) {
+      botPath = botPath.slice(1);
+    }
+    const url = `http://${SSH.ipAddress}:3000/${botPath}`;
+    console.log(`Fetching: ${url}`);
+    const result = await fetch(url);
+    if (!result.ok) {
+      throw new Error(`HTTP GET command failed with status ${result.status}`);
+    }
+
+    try {
+      const body = await result.text();
+      const data = JsonExt.parse(body);
+
+      return {
+        status: result.status,
+        data,
+      };
+    } catch (e) {
+      console.error('Failed to parse JSON:', result.status, result.statusText, e);
+      throw e;
+    }
+  }
+
+  public static async lastModifiedDate(): Promise<Date | null> {
+    try {
+      const response = await this.botFetch<{ lastModifiedDate: string } | IBotStateStarting | IBotStateError>(
+        `/last-modified`,
+      );
+      if ('lastModifiedDate' in response.data) {
+        return new Date(response.data.lastModifiedDate);
+      }
+    } catch (error) {
+      console.error('Failed to parse JSON:', error);
+    }
+    return null;
+  }
+
   public static async fetchBotState(retries = 0): Promise<IBotState> {
     try {
-      const response = await SSH.runHttpGet<IBotState | IBotStateStarting | IBotStateError>(`/state`);
+      const response = await this.botFetch<IBotState | IBotStateStarting | IBotStateError>(`/state`);
 
       if ((response.data as IBotStateError).serverError) {
         throw new BotServerError(response.data as IBotStateError);
@@ -53,23 +93,23 @@ export class BotFetch {
   }
 
   public static async fetchArgonBlockchainStatus(): Promise<IBlockNumbers> {
-    const { data } = await SSH.runHttpGet<IBlockNumbers>(`/argon-blockchain-status`);
+    const { data } = await this.botFetch<IBlockNumbers>(`/argon-blockchain-status`);
     return { localNode: data.localNode, mainNode: data.mainNode };
   }
 
   public static async fetchBitcoinBlockchainStatus(): Promise<IBlockNumbers> {
-    const { data } = await SSH.runHttpGet<IBlockNumbers>(`/bitcoin-blockchain-status`);
+    const { data } = await this.botFetch<IBlockNumbers>(`/bitcoin-blockchain-status`);
     return { localNode: data.localNode, mainNode: data.mainNode };
   }
 
   public static async fetchHistory(): Promise<IHistoryFile> {
-    const { data } = await SSH.runHttpGet<IHistoryFile>(`/history`);
+    const { data } = await this.botFetch<IHistoryFile>(`/history`);
 
     return data;
   }
 
   public static async fetchEarningsFile(frameId: number): Promise<IEarningsFile> {
-    const { data } = await SSH.runHttpGet<IEarningsFile>(`/earnings/${frameId}`);
+    const { data } = await this.botFetch<IEarningsFile>(`/earnings/${frameId}`);
     return data;
   }
 
@@ -79,7 +119,7 @@ export class BotFetch {
       const cohortBiddingFrameId = cohortActivationFrameId - 1;
       url += `/${cohortBiddingFrameId}-${cohortActivationFrameId}`;
     }
-    const { data } = await SSH.runHttpGet<IBidsFile>(url);
+    const { data } = await this.botFetch<IBidsFile>(url);
     return data;
   }
 }

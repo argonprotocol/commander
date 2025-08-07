@@ -116,21 +116,32 @@ if ! (already_ran "UbuntuCheck"); then
     echo "CHECKING UBUNTU VERSION"
 
     command_output=$(run_command "cat /etc/os-release")
-    
     # Extract VERSION_ID from the output
     version=$(echo "$command_output" | grep "^VERSION_ID=" | cut -d'"' -f2)
     if [ -z "$version" ]; then
         failed "Could not extract Ubuntu version from: $command_output"
     fi
-    
+
     # Split version into major and minor
     major_version=$(echo "$version" | cut -d. -f1)
     minor_version=$(echo "$version" | cut -d. -f2)
-    
+
     # Compare versions semantically
     if [ "$major_version" -lt 24 ] || ([ "$major_version" -eq 24 ] && [ "$minor_version" -lt 10 ]); then
         failed "Ubuntu version $version is less than required version 24.10"
     fi
+
+    echo "-----------------------------------------------------------------"
+    echo "SETTING UP UFW FIREWALL RULES"
+
+    command_output=$(run_command "sudo ufw app list | grep -q '^OpenSSH$' && echo 'OpenSSH found' || echo 'OpenSSH not found'")
+    if echo "$command_output" | grep -q 'OpenSSH found'; then
+        echo "OpenSSH is already installed, allowing OpenSSH through UFW"
+        run_command "sudo ufw allow OpenSSH"
+    else
+        run_command "sudo ufw allow 22/tcp"
+    fi
+    run_command "sudo ufw --force enable"
 
     finish "UbuntuCheck"
 fi
@@ -196,11 +207,18 @@ if ! (already_ran "BitcoinInstall"); then
     echo "-----------------------------------------------------------------"
     echo "BUILDING BITCOIN FOR $ARGON_CHAIN"
 
+    command_output=$(run_command "cat .env.$ARGON_CHAIN | grep -E '^BITCOIN_P2P_PORT=' | cut -d'=' -f2")
+    if [ -z "$command_output" ]; then
+        failed "BITCOIN_P2P_PORT not found in .env.$ARGON_CHAIN"
+    fi
+    run_command "ufw allow $command_output/tcp"
+
+
     command_output=$(run_command "docker compose --env-file=.env.$ARGON_CHAIN build bitcoin")
     if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
         failed "no configuration file provided: not found"
     fi
-    
+
     command_output=$(run_command "docker images")
     if ! echo "$command_output" | grep -q "bitcoin"; then
         failed "bitcoin image was not found"
@@ -241,6 +259,8 @@ if ! (already_ran "ArgonInstall"); then
     echo "-----------------------------------------------------------------"
     echo "BUILDING ARGON-MINER FOR $ARGON_CHAIN"
 
+    run_command "ufw allow 30333/tcp"
+
     command_output=$(run_command "docker compose --env-file=.env.$ARGON_CHAIN build argon-miner")
     if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
         failed "no configuration file provided: not found"
@@ -255,7 +275,7 @@ if ! (already_ran "ArgonInstall"); then
     command_output=$(run_command "docker images")
     if ! echo "$command_output" | grep -q "bot"; then
         failed "bot image was not found:\n$command_output"
-    fi    
+    fi
 
     command_output=$(run_command "docker compose --env-file=.env.$ARGON_CHAIN up argon-miner -d --build --force-recreate")
     if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
@@ -295,9 +315,9 @@ run_command "docker compose --env-file=.env.$ARGON_CHAIN up bot -d --build --for
 
 while true; do
     sleep 1
-    raw_output=$("$SCRIPTS_DIR/get_bot_http.sh" "/state")
-    echo $raw_output
-    status=$(echo $raw_output | jq -r '.status')
+    RESPONSE=$(curl -s -w "\n%{http_code}" "http://127.0.0.1:3000/state" || echo -e "\n000")
+    echo "$RESPONSE"
+    status=$(echo "$RESPONSE" | tail -n 1)
     if [[ "$status" == "200" ]]; then
         echo "Bot is running"
       break;
