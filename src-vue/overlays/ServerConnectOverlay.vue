@@ -127,13 +127,13 @@
                         <p>Copy and paste the following public key:</p>
                         <CopyToClipboard
                           ref="copyToClipboard"
-                          :content="serverDetails.sshPublicKey"
+                          :content="sshPublicKey"
                           class="relative mb-3"
                           @click="highlightCopiedContent"
                         >
                           <input
                             type="text"
-                            :value="serverDetails.sshPublicKey"
+                            :value="sshPublicKey"
                             class="bg-white py-4 pl-4 pr-8 border border-slate-300 rounded-md w-full pointer-events-none"
                             readonly
                           />
@@ -146,7 +146,7 @@
                           <template #copied>
                             <div class="bg-white py-4 pl-4 pr-8 border border-slate-300 rounded-md w-full pointer-events-none overflow-hidden">
                               <span class="bg-blue-200 whitespace-nowrap w-full inline-block">
-                                {{ serverDetails.sshPublicKey }}
+                                {{ sshPublicKey }}
                               </span>
                             </div>
                             <div
@@ -268,7 +268,7 @@ import { IConfigServerDetails } from '../interfaces/IConfig';
 const config = useConfig();
 const installer = useInstaller();
 
-const serverDetails = Vue.computed(() => config.serverDetails);
+const sshPublicKey = Vue.computed(() => config.security.sshPublicKey);
 
 const scrollContainer = Vue.ref<HTMLDivElement>();
 
@@ -310,7 +310,10 @@ async function addServer() {
       ...config.serverDetails,
       ipAddress: ipAddress.value,
     };
-    await SSH.tryConnection(newServerDetails);
+    const serverMeta = await SSH.tryConnection(newServerDetails, config.security.sshPrivateKey);
+    if (serverMeta.walletAddress && serverMeta.walletAddress !== config.miningAccount.address) {
+      hasServerDetailsError.value = true;
+    }
     config.serverDetails = newServerDetails;
     await config.save();
     closeOverlay();

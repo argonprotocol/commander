@@ -36,7 +36,7 @@ export default class BiddingCalculatorData {
   private async initialize(mainchain: Mainchain) {
     try {
       const tickAtStartOfNextCohort = await mainchain.getTickAtStartOfNextCohort();
-      const tickAtEndOfNextCohort = tickAtStartOfNextCohort + BigInt(TICKS_PER_COHORT);
+      const tickAtEndOfNextCohort = tickAtStartOfNextCohort + TICKS_PER_COHORT;
 
       const miningSeatCount = await mainchain.getMiningSeatCount();
       const previousDayWinningBids = await mainchain.fetchPreviousDayWinningBidAmounts();
@@ -68,8 +68,8 @@ export default class BiddingCalculatorData {
 
   private async estimateBlockRewardsForFullYear(mainchain: Mainchain, currentRewardsPerBlock: bigint): Promise<bigint> {
     // TODO: We need to improve this function to calculate the minimumRewardsPerBlock at the tick being analyzed in for loop
-    const intervalsPerYear = BigInt(365 * 1_440) / BLOCK_REWARD_INTERVAL;
-    const currentTick = BigInt(await mainchain.getCurrentTick());
+    const intervalsPerYear = (365 * 1_440) / BLOCK_REWARD_INTERVAL;
+    const currentTick = await mainchain.getCurrentTick();
     const startingRewardsPerBlock = await mainchain.minimumBlockRewardsAtTick(currentTick);
 
     let totalRewards = 0n;
@@ -78,12 +78,12 @@ export default class BiddingCalculatorData {
       minimumRewardsPerBlock += BLOCK_REWARD_INCREASE_PER_INTERVAL;
       minimumRewardsPerBlock = bigIntMin(minimumRewardsPerBlock, BLOCK_REWARD_MAX);
       currentRewardsPerBlock = bigIntMax(minimumRewardsPerBlock, currentRewardsPerBlock);
-      totalRewards += currentRewardsPerBlock * BLOCK_REWARD_INTERVAL;
+      totalRewards += currentRewardsPerBlock * BigInt(BLOCK_REWARD_INTERVAL);
     }
 
-    const intervalsPerYearRemainder = intervalsPerYear % 1n;
+    const intervalsPerYearRemainder = intervalsPerYear % 1;
     if (intervalsPerYearRemainder > 0) {
-      totalRewards += currentRewardsPerBlock * (BLOCK_REWARD_INTERVAL * intervalsPerYearRemainder);
+      totalRewards += currentRewardsPerBlock * BigInt(Math.floor(BLOCK_REWARD_INTERVAL * intervalsPerYearRemainder));
     }
 
     return totalRewards;

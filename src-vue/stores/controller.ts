@@ -1,16 +1,21 @@
 import * as Vue from 'vue';
 import { defineStore } from 'pinia';
 import basicEmitter from '../emitters/basicEmitter';
-import { useConfig } from './config';
+import { useConfig, type Config } from './config';
+import { getDbPromise } from './helpers/dbPromise';
 import { createDeferred } from '../lib/Utils';
 import handleUnknownFatalError from './helpers/handleUnknownFatalError';
+import Importer from '../lib/Importer';
 
 export const useController = defineStore('controller', () => {
   const isLoaded = Vue.ref(false);
   const { promise: isLoadedPromise, resolve: isLoadedResolve, reject: isLoadedReject } = createDeferred<void>();
 
+  const dbPromise = getDbPromise();
   const config = useConfig();
   const panel = Vue.ref('mining');
+
+  const isImporting = Vue.ref(false);
 
   function setPanel(value: string) {
     if (panel.value === value) return;
@@ -25,6 +30,12 @@ export const useController = defineStore('controller', () => {
     isLoadedResolve();
   }
 
+  async function importAccount(dataRaw: string) {
+    isImporting.value = true;
+    const importer = new Importer(dataRaw, config as Config, dbPromise, () => (isImporting.value = false));
+    basicEmitter.emit('openImportingOverlay', importer);
+  }
+
   load().catch(handleUnknownFatalError);
 
   return {
@@ -32,5 +43,7 @@ export const useController = defineStore('controller', () => {
     setPanel,
     isLoaded,
     isLoadedPromise,
+    isImporting,
+    importAccount,
   };
 });

@@ -22,24 +22,26 @@
             QR code shown on the right, or copy and paste the address that's printed below it.
           </p>
           <p v-if="props.walletId === 'mining'" class="mt-2 font-light">
-            Based on the rules you configured, your Mining Bot needs the following tokens in order to win seats:
+            Based on the rules configured, your Mining Bot needs the following tokens in order to operate.
           </p>
           <p v-else class="mt-2 font-light">
-            Based on the rules configured in your account, your Vault needs the following tokens in order to operate:
+            Based on the rules configured in your account, your Vault needs the following tokens in order to operate.
           </p>
 
           <table>
             <thead>
               <tr>
-                <td>Tokens Needed</td>
+                <td>Required</td>
                 <td>You Have</td>
+                <td>You Need</td>
                 <td class="text-right">Status</td>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="selectable-text">
               <tr>
                 <td>{{ microgonToArgonNm(baseCapitalCommitment).format('0,0.[00000000]') }} ARGN</td>
-                <td>{{ microgonToArgonNm(wallet.availableMicrogons).format('0,0.[00000000]') }} ARGN</td>
+                <td>{{ microgonToArgonNm(wallet.availableMicrogons).format('0,0.[00000000]') }}</td>
+                <td>{{ microgonToArgonNm(bigIntMax(0n, baseCapitalCommitment - wallet.availableMicrogons)).format('0,0.[00000000]') }}</td>
                 <td v-if="!baseCapitalCommitment" class="text-right">--</td>
                 <td v-else-if="wallet.availableMicrogons >= baseCapitalCommitment" class="text-right text-green-700 font-bold">success</td>
                 <td v-else class="fade-in-out text-right text-red-700 font-bold">
@@ -49,7 +51,8 @@
               </tr>
               <tr>
                 <td>{{ micronotToArgonotNm(requiredMicronots).format('0,0.[00000000]') }} ARGNOT</td>
-                <td>{{ micronotToArgonotNm(wallet.availableMicronots).format('0,0.[00000000]') }} ARGNOT</td>
+                <td>{{ micronotToArgonotNm(wallet.availableMicronots).format('0,0.[00000000]') }}</td>
+                <td>{{ micronotToArgonotNm(bigIntMax(0n, requiredMicronots - wallet.availableMicronots)).format('0,0.[00000000]') }}</td>
                 <td v-if="!requiredMicronots" class="text-right">--</td>
                 <td v-else-if="wallet.availableMicronots >= requiredMicronots" class="text-right text-green-700 font-bold">success</td>
                 <td v-else class="fade-in-out text-right text-red-700 font-bold">
@@ -94,6 +97,7 @@ import { ChevronLeftIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import CopyIcon from '../../assets/copy.svg?component';
 import CopyToClipboard from '../../components/CopyToClipboard.vue';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
+import { bigIntMax } from '@argonprotocol/commander-calculator/src/utils';
 
 const props = defineProps({
   walletId: {

@@ -1,12 +1,13 @@
 <!-- prettier-ignore -->
 <template>
-  <div class="min-w-8 min-h-8 w-8 h-8">
+  <div :class="`min-w-${props.size} min-h-${props.size} w-${props.size} h-${props.size}`">
     <div
       v-if="props.isChecked"
-      class="flex items-center justify-center w-full h-full border-4 mr-4 border-argon-button bg-argon-button"
+      :style="`border-width: ${props.size/2}px`"
+      class="flex items-center justify-center w-full h-full border-argon-button bg-argon-button"
     >
       <svg
-        class="pointer-events-none size-10 self-center justify-self-center stroke-white"
+        class="pointer-events-none w-full h-full self-center justify-self-center stroke-white"
         viewBox="0 0 14 14"
         fill="none"
       >
@@ -22,13 +23,14 @@
 
     <div
       v-else-if="props.isPartiallyChecked"
-      class="relative flex items-center justify-center w-full h-full border-4 mr-4 border-argon-button"
+      :style="`border-width: ${props.size/2}px`"
+      class="relative flex items-center justify-center w-full h-full border-argon-button"
     >
       <div
         class="absolute top-0 bottom-0 left-0 w-full bg-gradient-to-t from-argon-button-hover/40 to-argon-button-hover/10"
       />
       <svg
-        class="relative pointer-events-none size-10 self-center justify-self-center stroke-white"
+        class="relative pointer-events-none w-full h-full self-center justify-self-center stroke-white"
         viewBox="0 0 14 14"
         fill="none"
       >
@@ -42,7 +44,7 @@
       </svg>
     </div>
 
-    <div v-else class="w-full h-full border-4 border-slate-400 mr-4" />
+    <div v-else :style="`border-width: ${props.size/2}px`" class="w-full h-full border-slate-400" />
   </div>
 </template>
 
@@ -55,6 +57,10 @@ const props = defineProps({
   isPartiallyChecked: {
     type: Boolean,
     default: false,
+  },
+  size: {
+    type: Number,
+    default: 8,
   },
 });
 </script>

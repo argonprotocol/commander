@@ -40,32 +40,14 @@ CREATE TABLE BotActivities (
   -- FOREIGN KEY (frameId) REFERENCES frames(id)
 );
 
-CREATE TABLE CohortAccounts (
-  idx INTEGER NOT NULL,
-  cohortId INTEGER NOT NULL,
-  address TEXT NOT NULL,
-  microgonsBid INTEGER NOT NULL,
-  bidPosition INTEGER NOT NULL,
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (idx, cohortId),
-  FOREIGN KEY (cohortId) REFERENCES cohorts(id)
-);
-
-CREATE TRIGGER CohortAccountsUpdateTimestamp
-AFTER UPDATE ON CohortAccounts
-BEGIN
-  UPDATE CohortAccounts SET updatedAt = CURRENT_TIMESTAMP WHERE idx = NEW.idx AND cohortId = NEW.cohortId;
-END;
-
 CREATE TABLE CohortFrames (
   frameId INTEGER NOT NULL,
   cohortId INTEGER NOT NULL,
-  blocksMined INTEGER NOT NULL,
-  microgonFeesMined INTEGER NOT NULL,
-  micronotsMined INTEGER NOT NULL,
-  microgonsMined INTEGER NOT NULL,
-  microgonsMinted INTEGER NOT NULL,
+  blocksMinedTotal INTEGER NOT NULL,
+  microgonFeesCollectedTotal INTEGER NOT NULL,
+  micronotsMinedTotal INTEGER NOT NULL,
+  microgonsMinedTotal INTEGER NOT NULL,
+  microgonsMintedTotal INTEGER NOT NULL,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (frameId, cohortId),
@@ -82,12 +64,12 @@ END;
 CREATE TABLE Cohorts (
   id INTEGER NOT NULL PRIMARY KEY,
   progress REAL NOT NULL,
-  transactionFees INTEGER NOT NULL,
-  micronotsStaked INTEGER NOT NULL,
-  microgonsBid INTEGER NOT NULL,
-  seatsWon INTEGER NOT NULL,
-  microgonsToBeMined INTEGER NOT NULL,
-  micronotsToBeMined INTEGER NOT NULL,
+  seatCountWon INTEGER NOT NULL,
+  transactionFeesTotal INTEGER NOT NULL,
+  micronotsStakedPerSeat INTEGER NOT NULL,
+  microgonsBidPerSeat INTEGER NOT NULL,
+  microgonsToBeMinedPerSeat INTEGER NOT NULL,
+  micronotsToBeMinedPerSeat INTEGER NOT NULL,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (id) REFERENCES frames(id)
@@ -108,13 +90,14 @@ CREATE TABLE Frames (
   microgonToUsd TEXT NOT NULL DEFAULT '[]',
   microgonToBtc TEXT NOT NULL DEFAULT '[]',
   microgonToArgonot TEXT NOT NULL DEFAULT '[]',
-  activeSeatCount INTEGER NOT NULL DEFAULT 0,
-  totalSeatCost INTEGER NOT NULL DEFAULT 0,
-  blocksMined INTEGER NOT NULL DEFAULT 0,
-  micronotsMined INTEGER NOT NULL DEFAULT 0,
-  microgonFeesMined INTEGER NOT NULL DEFAULT 0,
-  microgonsMined INTEGER NOT NULL DEFAULT 0,
-  microgonsMinted INTEGER NOT NULL DEFAULT 0,
+  seatCountActive INTEGER NOT NULL DEFAULT 0,
+  seatCostTotalFramed INTEGER NOT NULL DEFAULT 0,
+  blocksMinedTotal INTEGER NOT NULL DEFAULT 0,
+  microgonFeesCollectedTotal INTEGER NOT NULL DEFAULT 0,
+  micronotsMinedTotal INTEGER NOT NULL DEFAULT 0,
+  microgonsMinedTotal INTEGER NOT NULL DEFAULT 0,
+  microgonsMintedTotal INTEGER NOT NULL DEFAULT 0,
+  accruedMicrogonProfits INTEGER NOT NULL DEFAULT 0,
   progress REAL NOT NULL,
   isProcessed INTEGER NOT NULL,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -132,7 +115,7 @@ CREATE TABLE FrameBids (
   confirmedAtBlockNumber INTEGER NOT NULL,
   address TEXT NOT NULL,
   subAccountIndex INTEGER,
-  microgonsBid INTEGER NOT NULL,
+  microgonsPerSeat INTEGER NOT NULL,
   bidPosition INTEGER NOT NULL,
   lastBidAtTick INTEGER,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,

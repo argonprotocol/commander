@@ -6,14 +6,14 @@
     access your wallet and funds.
   </p>
 
-  <ol class="grid grid-cols-3 gap-2 px-3 mt-4 mb-3 ml-6">
-    <li v-for="(mnemonic, index) in mnemonics" :key="mnemonic" class="flex items-center gap-2">
+  <ol class="grid grid-cols-3 gap-2 px-3 mt-5 mb-6 ml-6">
+    <li v-for="(word, index) in words" :key="word" class="flex items-center gap-2 py-1">
       <span class="text-slate-500">{{ index + 1 }}.</span>
-      <span>{{ mnemonic }}</span>
+      <span>{{ word }}</span>
     </li>
   </ol>
 
-  <button @click="copyToClipboard" class="w-full bg-slate-600/20 hover:bg-slate-600/15 border border-slate-900/10 inner-button-shadow text-slate-900 px-4 py-1 rounded-lg focus:outline-none">
+  <button @click="copyToClipboard" class="w-full bg-slate-600/20 hover:bg-slate-600/15 border border-slate-900/10 inner-button-shadow text-slate-900 px-4 py-1 rounded-lg focus:outline-none cursor-pointer">
     {{ isCopied ? 'Copied!' : 'Copy to Clipboard' }}
   </button>
 </template>
@@ -23,8 +23,9 @@ import * as Vue from 'vue';
 import { useConfig } from '../../stores/config';
 
 const config = useConfig();
-const mnemonics = Vue.computed(() => config.security.walletMnemonic.split(' '));
+
 const isCopied = Vue.ref(false);
+const words = Vue.computed(() => config.security.masterMnemonic.split(' '));
 
 const emit = defineEmits(['close', 'goto']);
 
@@ -33,7 +34,7 @@ function closeOverlay() {
 }
 
 function copyToClipboard() {
-  navigator.clipboard.writeText(config.security.walletMnemonic);
+  navigator.clipboard.writeText(config.security.masterMnemonic);
   isCopied.value = true;
   setTimeout(() => {
     isCopied.value = false;

@@ -45,11 +45,15 @@ html {
 }
 
 body {
-  @apply select-none;
+  @apply select-none cursor-default;
   height: 100%;
   border-radius: 10px;
   overflow: hidden;
   background-color: #f9f2fa;
+}
+
+.selectable-text {
+  @apply select-text cursor-text;
 }
 
 :root {

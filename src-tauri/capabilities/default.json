@@ -25,6 +25,8 @@
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     "clipboard-manager:allow-clear",
+    "shell:default",
+    "fs:default",
     {
       "identifier": "http:default",
       "allow": [
@@ -34,6 +36,30 @@
       ],
       "deny": []
     },
-    "shell:default"
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "$APPLOG"
+        },
+        {
+          "path": "$APPLOG/**"
+        },
+        {
+          "path": "$APPDATA"
+        },
+        {
+          "path": "$APPDATA/**"
+        }
+      ]
+    },
+    {
+      "identifier": "fs:allow-app-write-recursive",
+      "allow": [
+        {
+          "path": "$APPDATA/**"
+        }
+      ]
+    }
   ]
 }

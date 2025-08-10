@@ -13,10 +13,6 @@ export const sshMockFn = () => {
       runHttpGet: vi.fn(),
       uploadFile: vi.fn(),
       uploadDirectory: vi.fn(),
-      getKeys: vi.fn(() => ({
-        privateKey: 'mocked-private-key',
-        publicKey: 'mocked-public-key',
-      })),
     },
   };
 };

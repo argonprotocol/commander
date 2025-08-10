@@ -8,7 +8,7 @@ declare global {
       ARCHIVE_NODE_URL: string;
       BIDDING_RULES_PATH: string;
       DATADIR: string;
-      SESSION_KEYS_MNEMONIC: string;
+      SESSION_MINI_SECRET: string;
       OLDEST_FRAME_ID_TO_SYNC?: string;
     }
   }

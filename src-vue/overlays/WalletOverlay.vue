@@ -9,9 +9,9 @@
           </Motion>
         </DialogOverlay>
         
-        <DialogContent asChild @escapeKeyDown="handleEscapeKeyDown" :aria-describedby="undefined">    
+        <DialogContent asChild @escapeKeyDown="handleEscapeKeyDown" :aria-describedby="undefined">
           <Motion asChild :initial="{ opacity: 0, top: '40%' }" :animate="{ opacity: 1, top: '50%' }" :exit="{ opacity: 0, top: '0' }">
-            <div class="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 z-50 bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl w-9/12 overflow-scroll">
+            <div class="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 z-50 bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl w-9/12 overflow-scroll focus:outline-none">
               <Receive v-if="activeScreen === 'receive'" @navigate="navigate" :walletId="walletId" />               
               <div v-else>
                 <div class="flex flex-row justify-between items-center w-full px-3 py-3 space-x-4 text-5xl font-bold border-b border-black/20">

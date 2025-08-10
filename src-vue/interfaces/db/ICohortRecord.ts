@@ -1,12 +1,12 @@
 export interface ICohortRecord {
   id: number;
   progress: number;
-  transactionFees: bigint;
-  micronotsStaked: bigint;
-  microgonsBid: bigint;
-  seatsWon: number;
-  microgonsToBeMined: bigint;
-  micronotsToBeMined: bigint;
+  transactionFeesTotal: bigint;
+  micronotsStakedPerSeat: bigint;
+  microgonsBidPerSeat: bigint;
+  seatCountWon: number;
+  microgonsToBeMinedPerSeat: bigint;
+  micronotsToBeMinedPerSeat: bigint;
   createdAt: string;
   updatedAt: string;
 }

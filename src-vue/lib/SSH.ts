@@ -1,34 +1,58 @@
-import { invoke } from '@tauri-apps/api/core';
 import { Config, DEPLOY_ENV_FILE } from './Config';
 import { IConfigServerDetails } from '../interfaces/IConfig';
+import { invoke, InvokeTimeout, invokeWithTimeout } from './tauriApi';
+import SSHConnection from './SSHConnection';
+import { SSHCommands } from './SSHCommands';
+import dotenv from 'dotenv';
+import { IBiddingRules, jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
 import { listen } from '@tauri-apps/api/event';
 
-class InvokeTimeout extends Error {
-  constructor(message: string) {
-    super(message);
-  }
+export interface ITryServerData {
+  walletAddress: string | undefined;
+  biddingRules: IBiddingRules | undefined;
+  oldestFrameIdToSync: number | undefined;
 }
 
 export class SSH {
   private static config: Config;
-  private static isConnected = false;
-  private static isConnectingPromise?: Promise<void>;
+  private static connection: SSHConnection;
 
   public static setConfig(config: Config): void {
     this.config = config;
+    if (this.connection) {
+      this.reconnect();
+    }
   }
 
-  public static async tryConnection(serverDetails: IConfigServerDetails): Promise<void> {
-    await invoke('try_ssh_connection', {
-      host: serverDetails.ipAddress,
+  public static async tryConnection(
+    serverDetails: IConfigServerDetails,
+    sshPrivateKey: string,
+  ): Promise<ITryServerData> {
+    const connection = new SSHConnection({
+      address: serverDetails.ipAddress,
       username: serverDetails.sshUser,
-      privateKey: serverDetails.sshPrivateKey,
+      privateKey: sshPrivateKey,
     });
-  }
+    await connection.connect();
+    const [walletAddress] = await connection.runCommandWithTimeout(SSHCommands.fetchUploadedWalletAddress, 10_000);
+    if (!walletAddress)
+      return {
+        walletAddress: undefined,
+        biddingRules: undefined,
+        oldestFrameIdToSync: undefined,
+      };
 
-  public static async closeConnection(): Promise<void> {
-    await invoke('close_ssh_connection', {});
-    this.isConnected = false;
+    const [biddingRulesRaw] = await connection.runCommandWithTimeout(SSHCommands.fetchBiddingRules, 10_000);
+    const biddingRules = biddingRulesRaw ? jsonParseWithBigInts(biddingRulesRaw) : undefined;
+    const [envState] = await connection.runCommandWithTimeout(SSHCommands.fetchEnvState, 10_000);
+    const parsedEnvState = envState ? dotenv.parse(envState) : {};
+    const oldestFrameIdToSync = Number(parsedEnvState.OLDEST_FRAME_ID_TO_SYNC);
+
+    return {
+      walletAddress,
+      biddingRules,
+      oldestFrameIdToSync,
+    };
   }
 
   public static get ipAddress() {
@@ -36,14 +60,14 @@ export class SSH {
   }
 
   public static async runCommand(command: string, retries = 0): Promise<[string, number]> {
-    this.isConnected || (await this.openConnection());
+    this.connection?.isConnected || (await this.connect());
     try {
-      const response = await this.invokeWithTimeout('ssh_run_command', { command }, 60 * 1e3);
+      const response = await this.connection.runCommandWithTimeout(command, 60 * 1e3);
       return response as [string, number];
     } catch (e) {
       if (e instanceof InvokeTimeout) {
         console.error('SSH command timed out, retrying...', command);
-        await this.closeConnection();
+        await this.reconnect();
         return this.runCommand(command, retries);
       }
       if (e === 'SSHCommandMissingExitStatus' && retries < 2) {
@@ -54,18 +78,13 @@ export class SSH {
     }
   }
 
-  public static async getEmbeddedFiles(path: string): Promise<string[]> {
-    const response = await this.invokeWithTimeout('get_embedded_files', { path }, 2 * 1e3);
-    return response as string[];
-  }
-
   public static async uploadFile(contents: string, remotePath: string): Promise<void> {
-    this.isConnected || (await this.openConnection());
+    this.connection?.isConnected || (await this.connect());
     try {
-      await this.invokeWithTimeout('ssh_upload_file', { contents, remotePath }, 60 * 1e3);
+      await this.connection.uploadFileWithTimeout(contents, remotePath, 60 * 1e3);
     } catch (e) {
       if (e instanceof InvokeTimeout) {
-        await this.closeConnection();
+        await this.reconnect();
         return this.uploadFile(contents, remotePath);
       }
       throw e;
@@ -73,29 +92,12 @@ export class SSH {
   }
 
   public static async uploadEmbeddedFile(
-    app: any,
-    localPath: string,
+    localRelativePath: string,
     remotePath: string,
     progressCallback: (progress: number) => void,
   ): Promise<void> {
-    this.isConnected || (await this.openConnection());
-    const eventProgressKey = localPath.replace(/[^a-zA-Z0-9]/g, '_') + '_progress';
-    const unsub = await listen(eventProgressKey, event => {
-      progressCallback(event.payload as number);
-      if (event.payload === 100) {
-        unsub(); // Unsubscribe when upload is complete
-      }
-    });
-    try {
-      await this.invokeWithTimeout(
-        'ssh_upload_embedded_file',
-        { app, localPath, remotePath, eventProgressKey },
-        120 * 1e3,
-      );
-    } catch (e) {
-      unsub();
-      throw e;
-    }
+    this.connection?.isConnected || (await this.connect());
+    await this.connection.uploadEmbeddedFileWithTimeout(localRelativePath, remotePath, progressCallback, 120 * 1e3);
   }
 
   public static async stopMiningDockers(): Promise<void> {
@@ -110,57 +112,21 @@ export class SSH {
     await this.runCommand(`cd server && docker compose --env-file=${DEPLOY_ENV_FILE} up bot -d`);
   }
 
-  public static async getKeys(): Promise<IKeys> {
-    const response = await invoke('get_ssh_keys', {});
-    return response as IKeys;
-  }
-
-  // PRIVATE METHODS //////////////////////////////
-
-  private static invokeWithTimeout<T>(cmd: string, args: Record<string, any>, timeoutMs: number): Promise<T> {
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new InvokeTimeout('Invoke timed out')), timeoutMs),
-    );
-
-    const invocation = invoke<T>(cmd, args);
-
-    return Promise.race([invocation, timeout]);
-  }
-
-  private static async openConnection(): Promise<void> {
-    if (this.isConnectingPromise) {
-      return this.isConnectingPromise;
+  private static async connect(): Promise<void> {
+    if (this.connection) {
+      return this.connection.isConnectedPromise;
     }
-
-    this.isConnectingPromise = new Promise(async resolve => {
-      await this.config.isLoadedPromise;
-      const sshConfig = {
-        host: this.config.serverDetails.ipAddress,
-        username: this.config.serverDetails.sshUser,
-        privateKey: this.config.serverDetails.sshPrivateKey,
-      };
-      if (!sshConfig.host) {
-        throw new Error('No SSH host config provided');
-      }
-      await invoke('open_ssh_connection', sshConfig);
-      this.isConnected = true;
-      resolve();
-      this.isConnectingPromise = undefined;
+    await this.config.isLoadedPromise;
+    this.connection = new SSHConnection({
+      address: this.config.serverDetails.ipAddress,
+      username: this.config.serverDetails.sshUser,
+      privateKey: this.config.security.sshPrivateKey,
     });
-
-    return this.isConnectingPromise;
+    await this.connection.connect();
   }
-}
 
-export interface IKeys {
-  privateKey: string;
-  publicKey: string;
-}
-
-export interface SSHConfig {
-  host: string;
-  port: number;
-  username: string;
-  password?: string;
-  privateKey?: string;
+  private static async reconnect(): Promise<void> {
+    await this.connection.close();
+    await this.connection.connect();
+  }
 }

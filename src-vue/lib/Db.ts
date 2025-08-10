@@ -6,7 +6,6 @@ import { FramesTable } from './db/FramesTable';
 import { ArgonActivitiesTable } from './db/ArgonActivitiesTable';
 import { BitcoinActivitiesTable } from './db/BitcoinActivitiesTable';
 import { BotActivitiesTable } from './db/BotActivitiesTable';
-import { CohortAccountsTable } from './db/CohortAccountsTable';
 import { INSTANCE_NAME, NETWORK_NAME } from './Config';
 import { ensureOnlyOneInstance } from './Utils';
 import { FrameBidsTable } from './db/FrameBidsTable';
@@ -18,7 +17,6 @@ export class Db {
   public argonActivitiesTable: ArgonActivitiesTable;
   public bitcoinActivitiesTable: BitcoinActivitiesTable;
   public botActivitiesTable: BotActivitiesTable;
-  public cohortAccountsTable: CohortAccountsTable;
   public cohortFramesTable: CohortFramesTable;
   public cohortsTable: CohortsTable;
   public configTable: ConfigTable;
@@ -34,7 +32,6 @@ export class Db {
     this.argonActivitiesTable = new ArgonActivitiesTable(this);
     this.bitcoinActivitiesTable = new BitcoinActivitiesTable(this);
     this.botActivitiesTable = new BotActivitiesTable(this);
-    this.cohortAccountsTable = new CohortAccountsTable(this);
     this.cohortFramesTable = new CohortFramesTable(this);
     this.cohortsTable = new CohortsTable(this);
     this.configTable = new ConfigTable(this);
@@ -45,7 +42,7 @@ export class Db {
   }
 
   static async load(): Promise<Db> {
-    const sql = await PluginSql.load(`sqlite:${NETWORK_NAME}/${INSTANCE_NAME}/database.sqlite`);
+    const sql = await PluginSql.load(`sqlite:${Db.relativePath}`);
     return new Db(sql);
   }
 
@@ -65,5 +62,22 @@ export class Db {
       console.error('Error selecting query:', { query, bindValues, error });
       throw error;
     }
+  }
+
+  public async close() {
+    await this.sql.close();
+  }
+
+  public async reconnect() {
+    const sql = await PluginSql.load(`sqlite:${Db.relativePath}`);
+    this.sql = sql;
+  }
+
+  public static get relativeDir() {
+    return `${NETWORK_NAME}/${INSTANCE_NAME}`;
+  }
+
+  public static get relativePath() {
+    return `${this.relativeDir}/database.sqlite`;
   }
 }

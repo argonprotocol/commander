@@ -2,7 +2,7 @@
 <template>
   <div class="h-screen w-screen flex flex-col overflow-hidden cursor-default">
     <TopBar />
-    <main v-if="controller.isLoaded" class="flex-grow relative">
+    <main v-if="controller.isLoaded && !controller.isImporting" class="flex-grow relative">
       <MiningPanel v-if="showMiningPanel" />
       <VaultingPanel v-else-if="controller.panel === 'vaulting'" />
       <LiquidLockingPanel v-else-if="controller.panel === 'liquid-locking'" />
@@ -30,6 +30,8 @@
       <AboutOverlay />
       <ComplianceOverlay />
     </template>
+    <TroubleshootingOverlay />
+    <ImportingOverlay />
   </div>
 </template>
 
@@ -59,8 +61,10 @@ import TooltipOverlay from './overlays/TooltipOverlay.vue';
 import { hideTooltip } from './lib/TooltipUtils';
 import AboutOverlay from './overlays/AboutOverlay.vue';
 import ComplianceOverlay from './overlays/ComplianceOverlay.vue';
+import TroubleshootingOverlay from './overlays/Troubleshooting.vue';
 import { listen } from '@tauri-apps/api/event';
 import basicEmitter from './emitters/basicEmitter';
+import ImportingOverlay from './overlays/ImportingOverlay.vue';
 
 const controller = useController();
 const config = useConfig();
@@ -109,6 +113,20 @@ listen('openVaultingWalletOverlay', event => {
   basicEmitter.emit('openWalletOverlay', { walletId: 'vaulting', screen: 'receive' });
 });
 
+listen('openSecuritySettings', () => {
+  basicEmitter.emit('openSecuritySettingsOverlay');
+});
+
+listen('openJurisdictionalCompliance', () => {
+  basicEmitter.emit('openComplianceOverlay');
+});
+
+listen('openTroubleshootingOverlay', (event: any) => {
+  basicEmitter.emit('openTroubleshootingOverlay', {
+    screen: event.payload as 'server-diagnostics' | 'data-and-log-files' | 'options-for-restart',
+  });
+});
+
 Vue.onBeforeMount(async () => {
   await waitForLoad();
 });
@@ -125,5 +143,10 @@ Vue.onBeforeUnmount(() => {
     clearInterval(timeout);
   }
   document.removeEventListener('click', clickHandler, true);
+});
+
+Vue.onErrorCaptured((error, instance) => {
+  console.error(instance?.$options.name, error);
+  return false;
 });
 </script>

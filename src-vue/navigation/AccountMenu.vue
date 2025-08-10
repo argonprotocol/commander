@@ -3,8 +3,8 @@
     <DropdownMenuRoot :openDelay="0" :closeDelay="0" class="relative pointer-events-auto" v-model:open="isOpen">
       <DropdownMenuTrigger
         @click="onToggle"
-        class="flex flex-row items-center justify-center text-sm/6 font-semibold text-gray-900 cursor-pointer border rounded-md w-[38px] h-[30px] hover:bg-slate-400/10 focus:outline-none hover:border-slate-400/50"
-        :class="[isOpen ? 'border-slate-400/50' : 'border-transparent']"
+        class="flex flex-row items-center justify-center text-sm/6 font-semibold text-argon-600/60 cursor-pointer border rounded-md w-[38px] h-[30px] hover:bg-slate-400/10 focus:outline-none hover:border-slate-400/50"
+        :class="[isOpen ? 'border-slate-400/60 bg-slate-400/10' : 'border-slate-400/50']"
       >
         <ConfigIcon class="w-5 h-5" />
       </DropdownMenuTrigger>
@@ -16,12 +16,17 @@
           :align="'end'"
           :alignOffset="0"
           :sideOffset="-3"
-          class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad data-[state=open]:transition-all"
+          class="z-50 data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad data-[state=open]:transition-all"
         >
           <div
             class="flex flex-col shrink p-1 rounded bg-argon-menu-bg text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
           >
-            <DropdownMenuItem @click="() => openBotOverlay()" class="pt-3 pb-3">
+            <DropdownMenuItem
+              @click="() => openBotOverlay()"
+              :class="[installer.isRunning ? 'opacity-30 pointer-events-none' : '']"
+              class="pt-3 pb-3"
+              :disabled="installer.isRunning"
+            >
               <header v-if="!config.hasSavedBiddingRules">Create Personal Mining Bot</header>
               <header v-else>Configure Personal Mining Bot</header>
               <p>
@@ -44,25 +49,25 @@
             <DropdownMenuSub>
               <DropdownMenuSubTrigger class="py-2 relative">
                 <ChevronLeftIcon class="w-5 h-5 absolute left-0.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <header>Transfer Tokens</header>
+                <header>Account Wallets</header>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent class="min-w-50 relative -top-1">
                 <div
                   class="flex flex-col shrink rounded p-1 bg-argon-menu-bg text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
                 >
                   <DropdownMenuItem class="py-2" @click="() => openFundMiningAccountOverlay()">
-                    <header>Into Mining Account</header>
+                    <header>Mining Wallet</header>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator divider class="bg-slate-400/30 h-[1px] w-full my-1" />
                   <DropdownMenuItem class="py-2" @click="() => openFundVaultingAccountOverlay()">
-                    <header>Into Vaulting Account</header>
+                    <header>Vaulting Wallet</header>
                   </DropdownMenuItem>
                 </div>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuSeparator divider class="bg-slate-400/30 h-[1px] w-full my-1" />
             <DropdownMenuItem @click="() => openSecuritySettingsOverlay()" class="py-2">
-              <header>Security Settings</header>
+              <header>Security and Recovery</header>
             </DropdownMenuItem>
             <DropdownMenuSeparator divider class="bg-slate-400/30 h-[1px] w-full my-1" />
             <DropdownMenuItem @click="() => openComplianceOverlay()" class="py-2">
@@ -101,8 +106,11 @@ import ConfigIcon from '../assets/config.svg?component';
 import basicEmitter from '../emitters/basicEmitter';
 import { useConfig } from '../stores/config';
 import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
+import { useInstaller } from '../stores/installer';
 
 const config = useConfig();
+const installer = useInstaller();
+
 const isOpen = Vue.ref(false);
 
 let mouseLeaveTimerId: ReturnType<typeof setTimeout> | null = null;

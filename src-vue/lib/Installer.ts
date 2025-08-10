@@ -16,6 +16,7 @@ import { createDeferred, ensureOnlyOneInstance, resetOnlyOneInstance } from './U
 import IDeferred from '../interfaces/IDeferred';
 import { message as tauriMessage } from '@tauri-apps/plugin-dialog';
 import { exit as tauriExit } from '@tauri-apps/plugin-process';
+import { SSHCommands } from './SSHCommands';
 
 dayjs.extend(utc);
 
@@ -470,7 +471,7 @@ export default class Installer {
   }
 
   private async fetchUploadedWalletAddress(): Promise<string> {
-    const [walletAddress] = await SSH.runCommand('cat ~/address 2>/dev/null || true');
+    const [walletAddress] = await SSH.runCommand(SSHCommands.fetchUploadedWalletAddress);
     return walletAddress.trim();
   }
 
@@ -483,7 +484,7 @@ export default class Installer {
     const version = await this.getLocalVersion();
     console.log(`UPLOADING SERVER VERSION ${version}`);
     const expectedSha = await invoke<string>('read_embedded_file', {
-      path: `resources/server-${version}.tar.gz.sha256`,
+      localRelativePath: `resources/server-${version}.tar.gz.sha256`,
     });
     const serverTar = `server-${version}.tar.gz`;
     const localServerTar = `resources/${serverTar}`;
@@ -501,7 +502,7 @@ export default class Installer {
     }
     try {
       console.log(`Uploading server to ${remoteDir}`);
-      await SSH.uploadEmbeddedFile(app, localServerTar, `~/${serverTar}`, progress => {
+      await SSH.uploadEmbeddedFile(localServerTar, `~/${serverTar}`, (progress: number) => {
         totalProgress += progress;
         progressFn?.(totalCount, totalProgress);
       });
@@ -538,11 +539,13 @@ export default class Installer {
     const biddingRulesStr = jsonStringifyWithBigInts(this.config.biddingRules);
     if (!biddingRulesStr) return;
 
-    const envSecurity = `SESSION_KEYS_MNEMONIC="${this.config.security.sessionMnemonic}"\n` + `KEYPAIR_PASSPHRASE=`;
+    const envSecurity = `SESSION_MINI_SECRET="${this.config.miningSessionMiniSecret}"\n` + `KEYPAIR_PASSPHRASE=`;
     const envState = `OLDEST_FRAME_ID_TO_SYNC=${this.config.oldestFrameIdToSync || ''}\n`;
 
+    const walletMiningJson = jsonStringifyWithBigInts(this.config.miningAccount.toJson(''), null, 2);
+
     const files = [
-      [this.config.security.walletJson, '~/config/wallet.json'],
+      [walletMiningJson, '~/config/walletMining.json'],
       [biddingRulesStr, '~/config/biddingRules.json'],
       [envSecurity, '~/config/.env.security'],
       [envState, '~/config/.env.state'],
@@ -604,7 +607,7 @@ export default class Installer {
   }
 
   private async getLocalVersion(): Promise<string> {
-    const embeddedFiles = await invoke('read_embedded_file', { path: 'resources/VERSION' });
+    const embeddedFiles = await invoke('read_embedded_file', { localRelativePath: 'resources/VERSION' });
     if (typeof embeddedFiles !== 'string') {
       throw new Error('Failed to read local version file');
     }

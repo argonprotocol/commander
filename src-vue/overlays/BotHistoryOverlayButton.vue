@@ -12,23 +12,23 @@
       <div :class="arrowPositioningClasses" class="absolute w-[30px] h-[15px] overflow-hidden">
         <div class="relative top-[5px] left-[5px] w-[20px] h-[20px] rotate-45 bg-white ring-1 ring-gray-900/20"></div>
       </div>
-      <div class="flex flex-col text-base px-6 pt-4 pb-2 h-full overflow-hidden">
+      <div class="flex flex-col text-base px-6 pt-4 pb-2 h-full max-w-full">
         <h2 class="text-left text-2xl font-bold mb-2">Recent Bidding Activity</h2>
-        <table class="w-full grow font-mono text-md">
+        <table class="w-full max-w-full grow font-mono text-md">
           <tbody class="font-light text-left">
             <tr v-for="activity of activities" :key="activity.id" class="whitespace-nowrap">
-              <td class="text-left">
+              <td class="text-left w-[5%]">
                 <ActivityArrowIcon v-if="activity.type === 'bidUp'" class="w-5 h-5 text-green-500" />
                 <ActivityArrowIcon v-if="activity.type === 'bidDown'" class="w-5 h-5 rotate-180 text-red-500" />
                 <ActivityFailureIcon v-if="activity.type === 'failure'" class="w-5 h-5 text-red-500" />
                 <ActivitySuccessIcon v-if="activity.type === 'success'" class="w-5 h-5 text-green-500" />
               </td>
-              <td class="text-left opacity-50 pl-[5%]">
-                {{ activity.timestamp.fromNow() }}
+              <td class="text-left opacity-50 pl-[30px] w-[10%]">
+                {{ activity.timestamp.local().fromNow() }}
               </td>
               <template v-if="['bidUp', 'bidDown'].includes(activity.type)">
-                <td class="pl-[5%]">{{ activity.message }}</td>
-                <td class="text-left relative pl-[5%] opacity-80">
+                <td class="pl-[30px] w-[30%] text-left">{{ activity.message }}</td>
+                <td class="text-left relative pl-[30px] opacity-80 w-[55%]">
                   <div v-if="activity.bidderAddress">
                     <span class="opacity-60">{{ activity.bidderAddress.slice(0, 10) }}&nbsp;</span>
                     <span v-if="activity.isMine" class="absolute right-0 top-1/2 -translate-y-1/2 bg-argon-600 text-white px-1.5 pb-0.25 rounded text-sm">
@@ -38,7 +38,7 @@
                   </div>
                 </td>
               </template>
-              <td v-else colspan="2" class="pl-[5%]">
+              <td v-else colspan="2" class="pl-[30px]">
                 {{ activity.message }}
               </td>
             </tr>
@@ -56,7 +56,7 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { createNumeralHelpers } from '../lib/numeral';
 import { useStats } from '../stores/stats';
 import { useConfig } from '../stores/config';
-import { Accountset, Keyring } from '@argonprotocol/mainchain';
+import { Accountset } from '@argonprotocol/mainchain';
 import ActivityArrowIcon from '../assets/activity-arrow.svg?component';
 import ActivityFailureIcon from '../assets/activity-failure.svg?component';
 import ActivitySuccessIcon from '../assets/activity-success.svg?component';
@@ -68,6 +68,7 @@ import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   IBotActivityBidReceived,
+  IBotActivityBidsRejected,
   IBotActivityBidsSubmitted,
   IBotActivitySeatReduction,
 } from '@argonprotocol/commander-bot/src/interfaces/IHistoryFile';
@@ -109,13 +110,10 @@ const arrowPositioningClasses = Vue.computed(() => {
   }
 });
 
-const walletMiningJson = JSON.parse(config.security.walletJson);
-const walletMiningAccount = new Keyring().createFromJson(walletMiningJson);
-walletMiningAccount.decodePkcs8(''); // TODO: Need to use passphrase when feature is added
 const accountset = new Accountset({
   client: clientPromise,
-  seedAccount: walletMiningAccount,
-  sessionKeySeedOrMnemonic: config.security.sessionMnemonic,
+  seedAccount: config.miningAccount,
+  sessionKeySeedOrMnemonic: config.miningSessionMiniSecret,
   subaccountRange: new Array(99).fill(0).map((_, i) => i),
 });
 
@@ -140,17 +138,21 @@ const activities = Vue.computed(() => {
 
 function extractMessage(activity: IBotActivityRecord): string {
   if (activity.type === BotActivityType.BidReceived) {
-    const { bidPosition, previousBidPosition, microgonsBid, previousMicrogonsBid } =
-      activity.data as IBotActivityBidReceived;
+    const {
+      bidPosition,
+      previousBidPosition,
+      microgonsPerSeat: microgonsBid,
+      previousMicrogonsPerSeat: previousMicrogonsBid,
+    } = activity.data as IBotActivityBidReceived;
     if (previousBidPosition === undefined || previousBidPosition === null) {
       return `A new bid of ${currency.symbol}${microgonToMoneyNm(microgonsBid).format('0,0.00')} was inserted at position #${(bidPosition || 0) + 1}`;
     } else if (bidPosition === undefined || bidPosition === null) {
-      return `An existing bid #${previousBidPosition + 1} (${currency.symbol}${microgonToMoneyNm(microgonsBid ?? 0n).format('0,0.00')}) fell off the list`;
+      return `Existing bid #${previousBidPosition + 1} (${currency.symbol}${microgonToMoneyNm(microgonsBid ?? 0n).format('0,0.00')}) fell off the list`;
     } else if (bidPosition > previousBidPosition) {
-      return `An existing bid #${previousBidPosition + 1} (${currency.symbol}${microgonToMoneyNm(microgonsBid ?? 0n).format('0,0.00')}) rose to position #${bidPosition + 1}`;
+      return `Existing bid #${previousBidPosition + 1} (${currency.symbol}${microgonToMoneyNm(microgonsBid ?? 0n).format('0,0.00')}) rose to position #${bidPosition + 1}`;
     } else {
       // bidPosition < previousBidPosition
-      return `An existing bid #${previousBidPosition + 1} (${currency.symbol}${microgonToMoneyNm(previousMicrogonsBid ?? 0n).format('0,0.00')}) fell to position #${bidPosition + 1}`;
+      return `Existing bid #${previousBidPosition + 1} (${currency.symbol}${microgonToMoneyNm(previousMicrogonsBid ?? 0n).format('0,0.00')}) fell to position #${bidPosition + 1}`;
     }
   } else if (activity.type === BotActivityType.BidsSubmitted) {
     const { microgonsPerSeat, txFeePlusTip, submittedCount } = activity.data as IBotActivityBidsSubmitted;
@@ -158,6 +160,9 @@ function extractMessage(activity: IBotActivityRecord): string {
   } else if (activity.type === BotActivityType.SeatReduction) {
     const { prevSeatsInPlay, maxSeatsInPlay } = activity.data as IBotActivitySeatReduction;
     return `The number of seats you can win dropped from ${prevSeatsInPlay} to ${maxSeatsInPlay}`;
+  } else if (activity.type === BotActivityType.BidsRejected) {
+    const { rejectedCount, microgonsPerSeat: microgonsBid } = activity.data as IBotActivityBidsRejected;
+    return `${rejectedCount} incoming bids were rejected for ${currency.symbol}${microgonToMoneyNm(microgonsPerSeat).format('0,0.00')} per seat`;
   }
 
   return activity.type;

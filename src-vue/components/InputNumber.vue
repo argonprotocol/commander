@@ -8,7 +8,7 @@
         hasFocus ? 'inner-input-shadow outline-2 -outline-offset-2 outline-argon-button' : '',
         [!hasFocus && !props.disabled ? 'hover:bg-white' : ''],
       ]"
-      class="min-w-20 font-mono text-sm flex flex-row w-full text-left py-[3px] border border-slate-700/50 rounded-md text-gray-800 cursor-text"
+      class="min-w-20 font-mono text-sm flex flex-row w-full text-left py-[2px] border border-slate-700/50 rounded-md text-gray-800 cursor-text"
     >
       <span class="select-none pl-[10px] py-[1px]">{{ prefix }}</span>
       <div
@@ -23,7 +23,7 @@
         :class="[props.disabled ? 'opacity-70' : '']"
         class="inline-block w-auto focus:outline-none py-[1px]"
       ></div>
-      <span Suffix :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']" class="grow opacity-80 select-none pr-2 min-w-4 relative cursor-text py-[1px]">
+      <span Suffix :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']" class="grow opacity-50 select-none pr-2 min-w-4 relative cursor-text py-[1px]">
         <span v-if="suffix" class="inline-block">{{ suffix }}</span>
         <span @click="moveCursorToEnd" @dblclick="selectAllText" class="absolute top-0 left-0 w-full h-full" />
       </span>
@@ -44,7 +44,7 @@
         >
           <MenuItems
             v-if="showMenu"
-            class="absolute top-full -translate-y-1 z-20 right-0 h-auto max-h-80 w-auto max-w-100 bg-argon-menu-bg border border-gray-500/40 rounded-md px-0.5 py-0.5 shadow-md focus:outline-none"
+            class="absolute top-full cursor-default -translate-y-1 z-20 right-0 h-auto max-h-80 w-auto max-w-100 bg-argon-menu-bg border border-gray-500/40 rounded-md px-0.5 py-0.5 shadow-md focus:outline-none"
           >
             <div class="absolute -top-[9px] right-[29.5px] w-[20px] h-[9px] overflow-hidden pointer-events-none">
               <div

@@ -3,7 +3,7 @@
   <SelectRoot v-model="selectedOption" @update:open="handleToggleOpen" @update:modelValue="handleUpdateModelValue">
     <SelectTrigger
       ref="triggerInstance"
-      class="inline-flex min-w-[160px] w-full items-center justify-between rounded-md px-[10px] text-xs leading-none h-[30px] gap-[5px] bg-white hover:bg-stone-50 border border-slate-700/50 data-[placeholder]:text-gray-600 outline-none"
+      class="inline-flex w-full items-center justify-between rounded-md px-[10px] text-xs leading-none h-[30px] gap-[5px] bg-white hover:bg-stone-50 border border-slate-700/50 data-[placeholder]:text-gray-600 outline-none"
     >
       <SelectValue class="whitespace-nowrap flex flex-row justify-between w-full font-mono text-sm">
         <span class="grow text-left">{{ selectedOption?.name|| 'Select Option...' }}</span>
@@ -16,7 +16,7 @@
 
     <SelectPortal>
       <SelectContent
-        class="bg-white py-2 data-[side=bottom]:rounded-b-md data-[side=top]:rounded-t-md data-[side=bottom]:border-t-gray-400 data-[side=top]:border-b-gray-400 border border-slate-700/50 shadow-sm will-change-[opacity,transform] data-[side=top]:animate-slideDownAndFade data-[side=right]:animate-slideLeftAndFade data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade z-[100]"
+        class="bg-white cursor-default data-[side=bottom]:rounded-b-md data-[side=top]:rounded-t-md data-[side=bottom]:border-t-gray-400 data-[side=top]:border-b-gray-400 border border-slate-700/50 shadow-sm will-change-[opacity,transform] data-[side=top]:animate-slideDownAndFade data-[side=right]:animate-slideLeftAndFade data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade z-[100]"
         position="popper"
         :style="{ minWidth: menuWidth, maxHeight: 'var(--reka-select-content-available-height)' }"
         :avoidCollisions="true"
@@ -33,8 +33,10 @@
           <SelectItem
             v-for="(option, index) in props.options"
             :key="index"
-            class="text-xs leading-none rounded-[3px] flex items-center h-[25px] pr-[10px] pl-[20px] relative select-none data-[highlighted]:outline-none data-[highlighted]:bg-argon-400 data-[highlighted]:text-white"
+            :disabled="option.disabled"
+            :class="[option.disabled ? 'opacity-50' : '']"
             :value="option"
+            class="text-xs leading-none rounded-[3px] flex items-center h-[25px] pr-[10px] pl-[20px] relative select-none data-[highlighted]:outline-none data-[highlighted]:bg-argon-400 data-[highlighted]:text-white"
           >
             <SelectItemIndicator class="absolute left-0 w-[20px] inline-flex items-center justify-center">
               <CheckIcon class="size-4 text-white-400 block" />
@@ -75,7 +77,7 @@ import {
 const currency = useCurrency();
 const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
-export type IOption = { name: string; value: string; microgons?: bigint };
+export type IOption = { name: string; value: string; microgons?: bigint; disabled?: boolean };
 
 const props = withDefaults(
   defineProps<{

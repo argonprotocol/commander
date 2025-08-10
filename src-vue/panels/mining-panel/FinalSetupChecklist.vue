@@ -3,7 +3,8 @@
   <div class="flex flex-col h-full w-full p-3">
     <div class="grow relative bg-[#FCF9FD] rounded border border-[#CCCEDA] shadow">
       <div class="relative px-[15%]">
-        <div :class="[isLaunchingMiningBot ? 'opacity-30 pointer-events-none' : '']">
+        <div :class="[isLaunchingMiningBot || !wallets.isLoaded ? 'opacity-30 pointer-events-none' : '']">
+
           <h1 class="text-[40px] font-bold text-left mt-20 mb-4 whitespace-nowrap">
             You're Almost Ready to Start Mining!
           </h1>
@@ -16,7 +17,7 @@
             @click="openBotOverlay"
             class="flex flex-row cursor-pointer mt-8 border-t border-[#CCCEDA] py-6 hover:bg-argon-menu-hover"
           >
-            <Checkbox :isChecked="true" />
+            <Checkbox :isChecked="wallets.isLoaded" />
             <div class="px-4">
               <h2 class="text-2xl text-[#A600D4] font-bold">Configure Mining Bot</h2>
               <p>
@@ -95,7 +96,7 @@
             @click="openServerConnectOverlay"
             class="flex flex-row cursor-pointer border-t border-b border-[#CCCEDA] py-6"
           >
-            <Checkbox :isChecked="!!config.serverDetails.ipAddress" />
+            <Checkbox :isChecked="wallets.isLoaded && !!config.serverDetails.ipAddress" />
             <div class="px-4">
               <h2 class="text-2xl text-[#A600D4] font-bold">Connect Mining Machine</h2>
               <p>

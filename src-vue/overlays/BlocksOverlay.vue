@@ -62,13 +62,10 @@ const config = useConfig();
 const clientPromise = getMainchainClient();
 const blockchainStore = useBlockchainStore();
 
-// const walletMiningJson = JSON.parse(config.security.walletJson);
-// const walletMiningAccount = new Keyring().createFromJson(walletMiningJson);
-// walletMiningAccount.decodePkcs8(''); // TODO: Need to use passphrase when feature is added
 // const accountset = new Accountset({
 //   client: clientPromise,
-//   seedAccount: walletMiningAccount,
-//   sessionKeyMnemonic: config.security.sessionMnemonic,
+//   seedAccount: config.miningAccount,
+//   sessionKeyMnemonic: config.sessionMnemonic,
 //   subaccountRange: new Array(99).fill(0).map((_, i) => i),
 // });
 

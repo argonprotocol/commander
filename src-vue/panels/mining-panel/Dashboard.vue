@@ -6,12 +6,12 @@
     <div :class="stats.isLoaded ? '' : 'opacity-30 pointer-events-none'" class="flex flex-col h-full px-2.5 py-2.5 gap-y-2 justify-stretch grow">
       <section class="flex flex-row gap-x-2 h-[14%]">
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ stats.global.totalSeats || 0 }}</span>
-          <label>Total Mining Seat{{ stats.global.totalSeats === 1 ? '' : 's' }}</label>
+          <span>{{ stats.global.seatsTotal || 0 }}</span>
+          <label>Total Mining Seat{{ stats.global.seatsTotal === 1 ? '' : 's' }}</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ numeral(stats.global.framesMined).format('0,0.[00]') }}</span>
-          <label>Frame{{ stats.global.framesMined === 1 ? '' : 's' }} Completed</label>
+          <span>{{ numeral(stats.global.framesCompleted).format('0,0.[00]') }}</span>
+          <label>Frame{{ stats.global.framesCompleted === 1 ? '' : 's' }} Completed</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
           <span>{{ numeral(stats.global.framesRemaining).format('0,0.[00]') }}</span>
@@ -30,8 +30,8 @@
           <label>Relative Total Earnings</label>
         </div>
         <div box stat-box class="flex flex-col w-2/12 !py-4">
-          <span>{{ numeral(globalAPR).formatIfElseCapped('< 100', '0.[00]', '0,0', 9_999) }}%</span>
-          <label>Current APR</label>
+          <span>{{ numeral(globalAPY).formatIfElseCapped('< 100', '0.[00]', '0,0', 9_999) }}%</span>
+          <label>Current APY</label>
         </div>
       </section>
 
@@ -42,31 +42,31 @@
           </header>
           <ul class="relative flex flex-col items-center whitespace-nowrap w-full h-6/12 mb-4 text-md">
             <li class="flex flex-row items-center w-full h-[calc(100%/7)] py-2">
-              <ArgonIcon class="w-8 h-8 text-argon-600/70 mr-2" />
-              <div class="grow">{{ numeral(wallets.miningWallet.availableMicrogons).format('0,0.[00]') }} Argons</div>
+              <ArgonIcon class="w-7 h-7 text-argon-600/70 mr-2" />
+              <div class="grow">{{ numeral(wallets.miningWallet.availableMicrogons).formatIfElse('< 100', '0,0.[00]', '0,0') }} Argons</div>
               <div class="pr-1">
                 {{ currency.symbol
                 }}{{ microgonToMoneyNm(wallets.miningWallet.availableMicrogons).format('0,0.00') }}
               </div>
             </li>
             <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
-              <ArgonotIcon class="w-8 h-8 text-argon-600/70 mr-2" />
-              <div class="grow">{{ numeral(wallets.miningWallet.availableMicronots).format('0,0.[00]') }} Argonots</div>
+              <ArgonotIcon class="w-7 h-7 text-argon-600/70 mr-2" />
+              <div class="grow">{{ numeral(wallets.miningWallet.availableMicronots).formatIfElse('< 100', '0,0.[00]', '0,0') }} Argonots</div>
               <div class="pr-1">
                 {{ currency.symbol
                 }}{{ micronotToMoneyNm(wallets.miningWallet.availableMicronots).format('0,0.00') }}
               </div>
             </li>
             <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
-              <ArgonotLockedIcon class="w-8 h-8 text-argon-600/70 mr-2" />
-              <div class="grow">{{ numeral(wallets.miningWallet.reservedMicronots).format('0,0.[00]') }} Locked Argonots</div>
+              <ArgonotLockedIcon class="w-7 h-7 text-argon-600/70 mr-2" />
+              <div class="grow">{{ numeral(wallets.miningWallet.reservedMicronots).formatIfElse('< 100', '0,0.[00]', '0,0') }} Locked Argonots</div>
               <div class="pr-1">
                 {{ currency.symbol
                 }}{{ micronotToMoneyNm(wallets.miningWallet.reservedMicronots).format('0,0.00') }}
               </div>
             </li>
             <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
-              <MiningBidIcon class="w-8 h-8 text-argon-600/70 mr-2" />
+              <MiningBidIcon class="w-7 h-7 text-argon-600/70 mr-2" />
               <div class="grow">{{ numeral(stats.myMiningBids.bidCount).format('0,0') }} Winning <span class="hidden 2xl:inline">Mining</span> Bids</div>
               <div class="pr-1">
                 {{ currency.symbol
@@ -74,7 +74,7 @@
               </div>
             </li>
             <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
-              <MiningSeatIcon class="w-8 h-8 text-argon-600/70 mr-2" />
+              <MiningSeatIcon class="w-7 h-7 text-argon-600/70 mr-2" />
               <div class="grow">{{ numeral(stats.myMiningSeats.seatCount).format('0,0') }} Active <span class="hidden 2xl:inline">Mining</span> Seats</div>
               <div class="pr-1">
                 {{ currency.symbol
@@ -85,11 +85,11 @@
               <div class="grow pl-1"><span class="hidden 2xl:inline">Operational</span> Expenses</div>
               <div class="pr-1">
                 -{{ currency.symbol
-                }}{{ microgonToMoneyNm(stats.myMiningSeats.transactionFees).format('0,0.00') }}
+                }}{{ microgonToMoneyNm(stats.myMiningSeats.transactionFeesTotal).format('0,0.00') }}
               </div>
             </li>
             <li class="flex flex-row items-center justify-between w-full h-[calc(100%/7)] border-t border-b border-gray-600/50 py-2 font-bold">
-              <div class="grow pl-1">TOTAL VALUE</div>
+              <div class="grow pl-1">Total Value</div>
               <div class="pr-1">
                 {{ currency.symbol
                 }}{{ microgonToMoneyNm(wallets.totalMiningResources).format('0,0.00') }}
@@ -110,13 +110,13 @@
             <div class="flex flex-row pt-2 pb-1 h-full">
               <div class="flex flex-col w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
                 <div class="font-bold">Bitcoin Node</div>
-                <div class="flex flex-row items-center justify-center gap-x-2">
+                <div class="flex flex-row items-center justify-center gap-x-2 whitespace-nowrap">
                   <div>Last Block</div>
                   <CountupClock as="span" :time="lastBitcoinActivityAt" v-slot="{ hours, minutes, seconds, isNull }" class="font-mono">
                     <template v-if="hours">{{ hours }}h, </template>
-                    <template v-if="minutes">{{ minutes }}m, </template>
-                    <template v-if="!isNull">{{ seconds }}s ago</template>
-                    <template v-else>-- ----</template>
+                    <template v-if="minutes || hours">{{ minutes }}m{{ !isNull && !hours ? ', ' : '' }}</template>
+                    <template v-if="!isNull && !hours">{{ seconds }}s ago</template>
+                    <template v-else-if="isNull">-- ----</template>
                   </CountupClock>
                   <BotHistoryOverlayButton :position="'left'">
                     <span class="flex items-center justify-center group border border-transparent hover:border-argon-200 rounded cursor-pointer w-7 h-7 relative top-0.5">
@@ -130,13 +130,13 @@
               
               <div class="flex flex-col w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
                 <div class="font-bold">Argon Node</div>
-                <div class="flex flex-row items-center justify-center gap-x-2">
+                <div class="flex flex-row items-center justify-center gap-x-2 whitespace-nowrap">
                   <div>Last Block</div>
                   <CountupClock as="span" :time="lastArgonActivityAt" v-slot="{ hours, minutes, seconds, isNull }" class="font-mono">
                     <template v-if="hours">{{ hours }}h, </template>
-                    <template v-if="minutes">{{ minutes }}m, </template>
-                    <template v-if="!isNull">{{ seconds }}s ago</template>
-                    <template v-else>-- ----</template>
+                    <template v-if="minutes || hours">{{ minutes }}m{{ !isNull && !hours ? ', ' : '' }}</template>
+                    <template v-if="!isNull && !hours">{{ seconds }}s ago</template>
+                    <template v-else-if="isNull">-- ----</template>
                   </CountupClock>
                   <BotHistoryOverlayButton :position="'left'">
                     <span class="flex items-center justify-center group border border-transparent hover:border-argon-200 rounded cursor-pointer w-7 h-7 relative top-0.5">
@@ -148,13 +148,13 @@
               <div class="h-full w-[1px] bg-slate-400/30"></div>
               <div class="flex flex-col w-4/12 items-center justify-center gap-x-2 pb-1 pt-3">
                 <div class="font-bold">Mining Bot</div>
-                <div class="flex flex-row items-center justify-center gap-x-2">
-                  <div>Last Bidding</div>
+                <div class="flex flex-row items-center justify-center gap-x-2 whitespace-nowrap">
+                  <div>Last Activity</div>
                   <CountupClock as="span" :time="lastBotActivityAt" v-slot="{ hours, minutes, seconds, isNull }" class="font-mono">
                     <template v-if="hours">{{ hours }}h, </template>
-                    <template v-if="minutes">{{ minutes }}m, </template>
-                    <template v-if="!isNull">{{ seconds }}s ago</template>
-                    <template v-else>-- ----</template>
+                    <template v-if="minutes || hours">{{ minutes }}m{{ !isNull && !hours ? ', ' : '' }}</template>
+                    <template v-if="!isNull && !hours">{{ seconds }}s ago</template>
+                    <template v-else-if="isNull">-- ----</template>
                   </CountupClock>
                   <ActiveBidsOverlayButton :position="'left'" class="ml-1.5">
                     <span class="flex items-center justify-center group border border-transparent hover:border-argon-200 rounded cursor-pointer w-7 h-7 relative top-0.5">
@@ -186,19 +186,19 @@
                 <ChevronRightIcon class="w-6 h-6 opacity-50 mx-1 group-hover:opacity-80" />
               </div>
             </header>
-            <div v-if="currentFrame.activeSeatCount" class="flex flex-row h-full">
+            <div v-if="currentFrame.seatCountActive" class="flex flex-row h-full">
               <div class="flex flex-col w-full h-full pt-2 gap-y-2">
                 <div class="flex flex-row w-full h-1/2 gap-x-2">
                   
                   <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30 pb-3">
-                    <span>{{ currentFrame.activeSeatCount }}</span>
-                    <label>Active Mining Seat{{ currentFrame.activeSeatCount === 1 ? '' : 's' }}</label>
+                    <span>{{ currentFrame.seatCountActive }}</span>
+                    <label>Active Mining Seat{{ currentFrame.seatCountActive === 1 ? '' : 's' }}</label>
                   </div>
 
                   <div class="h-full w-[1px] bg-slate-400/30"></div>
 
                   <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30 pb-3">
-                    <span>{{ currentFrame.blocksMined }}</span>
+                    <span>{{ currentFrame.blocksMinedTotal }}</span>
                     <label class="relative block w-full">
                       Blocks Mined
                       <HealthIndicatorBar />
@@ -211,7 +211,7 @@
                     <span>
                       {{
                         microgonToMoneyNm(
-                          currentFrame.microgonsMined + currentFrame.microgonsMinted,
+                          currentFrame.microgonsMinedTotal + currentFrame.microgonsMintedTotal,
                         ).formatIfElse('< 1_000', '0,0.00', '0,0')
                       }}
                     </span>
@@ -226,7 +226,7 @@
                   <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30 pb-3">
                     <span>
                       {{
-                        microgonToMoneyNm(currentFrame.micronotsMined).formatIfElse('< 1_000', '0,0.00', '0,0')
+                        microgonToMoneyNm(currentFrame.micronotsMinedTotal).formatIfElse('< 1_000', '0,0.00', '0,0')
                       }}
                     </span>
                     <label class="relative block w-full">
@@ -319,7 +319,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import utc from 'dayjs/plugin/utc';
 import { BigNumber } from 'bignumber.js';
-import { calculateAPR } from '../../lib/Utils';
+import { calculateAPR, calculateAPY } from '../../lib/Utils';
 import { useStats } from '../../stores/stats';
 import { useCurrency } from '../../stores/currency';
 import basicEmitter from '../../emitters/basicEmitter';
@@ -366,15 +366,15 @@ const currentFrame = Vue.ref<IDashboardFrameStats>({
   date: '',
   firstTick: 0,
   lastTick: 0,
-  activeSeatCount: 0,
-  relativeSeatCost: 0n,
+  seatCountActive: 0,
+  seatCostTotalFramed: 0n,
   microgonToUsd: [0n],
   microgonToArgonot: [0n],
-  blocksMined: 0,
+  blocksMinedTotal: 0,
 
-  micronotsMined: 0n,
-  microgonsMined: 0n,
-  microgonsMinted: 0n,
+  micronotsMinedTotal: 0n,
+  microgonsMinedTotal: 0n,
+  microgonsMintedTotal: 0n,
   microgonValueOfRewards: 0n,
 
   progress: 0,
@@ -384,7 +384,11 @@ const currentFrame = Vue.ref<IDashboardFrameStats>({
 });
 
 const globalMicrogonsEarned = Vue.computed(() => {
-  const { totalMicrogonsMined, totalMicrogonsMinted, totalMicronotsMined } = stats.global;
+  const {
+    microgonsMinedTotal: totalMicrogonsMined,
+    microgonsMintedTotal: totalMicrogonsMinted,
+    micronotsMinedTotal: totalMicronotsMined,
+  } = stats.global;
   return totalMicrogonsMined + totalMicrogonsMinted + currency.micronotToMicrogon(totalMicronotsMined);
 });
 
@@ -392,21 +396,21 @@ const globalMicrogonsInvested = Vue.computed(() => {
   return stats.global.framedCost;
 });
 
-const globalAPR = Vue.computed(() => {
-  return calculateAPR(globalMicrogonsInvested.value, globalMicrogonsEarned.value);
+const globalAPY = Vue.computed(() => {
+  return calculateAPY(globalMicrogonsInvested.value, globalMicrogonsEarned.value);
 });
 
 const currentFrameEarnings = Vue.computed(() => {
-  if (!currentFrame.value.activeSeatCount) return 0n;
+  if (!currentFrame.value.seatCountActive) return 0n;
 
-  const { microgonsMined, microgonsMinted, micronotsMined } = currentFrame.value;
-  const microgons = microgonsMined + microgonsMinted;
-  return microgons + currency.micronotToMicrogon(micronotsMined);
+  const { microgonsMinedTotal, microgonsMintedTotal, micronotsMinedTotal } = currentFrame.value;
+  const microgons = microgonsMinedTotal + microgonsMintedTotal;
+  return microgons + currency.micronotToMicrogon(micronotsMinedTotal);
 });
 
 const currentFrameCost = Vue.computed(() => {
-  if (!currentFrame.value.activeSeatCount) return 0n;
-  return currentFrame.value.relativeSeatCost;
+  if (!currentFrame.value.seatCountActive) return 0n;
+  return currentFrame.value.seatCostTotalFramed;
 });
 
 const currentFrameProfit = Vue.computed(() => {
@@ -434,17 +438,17 @@ const currentFrameEndDate = Vue.computed(() => {
 
 const lastBitcoinActivityAt = Vue.computed(() => {
   const lastActivity = stats.bitcoinActivity[0];
-  return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
+  return lastActivity ? dayjs.utc(lastActivity.insertedAt).local() : null;
 });
 
 const lastArgonActivityAt = Vue.computed(() => {
   const lastActivity = stats.argonActivity[0];
-  return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
+  return lastActivity ? dayjs.utc(lastActivity.insertedAt).local() : null;
 });
 
 const lastBotActivityAt = Vue.computed(() => {
   const lastActivity = stats.biddingActivity[0];
-  return lastActivity ? dayjs.utc(lastActivity.insertedAt) : null;
+  return lastActivity ? dayjs.utc(lastActivity.insertedAt).local() : null;
 });
 
 const hasNextFrame = Vue.computed(() => {
@@ -473,7 +477,7 @@ function loadChartData() {
   let isFiller = true;
   const items: any[] = [];
   for (const [index, frame] of stats.frames.entries()) {
-    if (isFiller && frame.activeSeatCount > 0) {
+    if (isFiller && frame.seatCountActive > 0) {
       const previousItem = items[index - 1];
       previousItem && (previousItem.isFiller = false);
       isFiller = false;
@@ -529,7 +533,7 @@ function onDrag(event: PointerEvent) {
 
   dragMeta.wasDragged = dragMeta.wasDragged || currentIndex !== dragMeta.startIndex;
 
-  updateFrameSliderPos(currentIndex || 0, true);
+  updateFrameSliderPos(currentIndex || 0);
 }
 
 function stopDrag(event: PointerEvent) {

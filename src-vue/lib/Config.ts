@@ -1,15 +1,7 @@
 import packageJson from '../../package.json';
 import { Db } from './Db';
-import {
-  IConfig,
-  IConfigDefaults,
-  IConfigInstallStep,
-  IConfigStringified,
-  InstallStepKey,
-  InstallStepStatus,
-} from '../interfaces/IConfig';
-import { SSH } from './SSH';
-import { Keyring, type KeyringPair, MICROGONS_PER_ARGON, mnemonicGenerate } from '@argonprotocol/mainchain';
+import { IConfig, IConfigDefaults, IConfigStringified, InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
+import { Keyring, type KeyringPair, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
 import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
 import {
   BidAmountAdjustmentType,
@@ -18,11 +10,14 @@ import {
   SeatGoalInterval,
   SeatGoalType,
 } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
-import { createDeferred, ensureOnlyOneInstance } from './Utils';
+import { message as tauriMessage } from '@tauri-apps/plugin-dialog';
+import { createDeferred, ensureOnlyOneInstance, miniSecretFromUri } from './Utils';
 import IDeferred from '../interfaces/IDeferred';
 import { CurrencyKey } from './Currency';
 import { bip39 } from '@argonprotocol/bitcoin';
 import Countries from './Countries';
+import { invokeWithTimeout } from './tauriApi';
+import ISecurity from '../interfaces/ISecurity';
 
 console.log('__ARGON_NETWORK_NAME__', __ARGON_NETWORK_NAME__);
 console.log('__ARGON_NETWORK_URL__', __ARGON_NETWORK_URL__);
@@ -55,20 +50,16 @@ export class Config {
   private _db!: Db;
   private _fieldsToSave: Set<string> = new Set();
   private _dbPromise: Promise<Db>;
-  private _unstringified!: IConfig;
-  private _stringified = {} as IConfigStringified;
-  private _seedAccount!: KeyringPair;
+  private _security!: ISecurity;
+  private _loadedData!: IConfig;
+  private _stringifiedData = {} as IConfigStringified;
+  private _masterAccount!: KeyringPair;
   private _miningAccount!: KeyringPair;
   private _vaultingAccount!: KeyringPair;
+  private _miningSessionMiniSecret!: string;
 
   constructor(dbPromise: Promise<Db>) {
     ensureOnlyOneInstance(this.constructor);
-
-    const installDetailsStep: IConfigInstallStep = {
-      status: InstallStepStatus.Pending,
-      progress: 0,
-      startDate: null,
-    };
     this._loadedDeferred = createDeferred<void>();
     this.isLoadedPromise = this._loadedDeferred.promise;
     this.isLoaded = false;
@@ -77,18 +68,16 @@ export class Config {
     this.hasSavedVaultingRules = false;
 
     this._dbPromise = dbPromise;
-    this._unstringified = {
+    this._security = {
+      masterMnemonic: '',
+      sshPublicKey: '',
+      sshPrivateKey: '',
+    };
+    this._loadedData = {
       version: packageJson.version,
       requiresPassword: false,
-      security: {
-        walletMnemonic: '',
-        sessionMnemonic: '',
-        walletJson: '',
-      },
       serverDetails: {
         ipAddress: '',
-        sshPublicKey: '',
-        sshPrivateKey: '',
         sshUser: '',
       },
       installDetails: Config.getDefault(dbFields.installDetails) as IConfig['installDetails'],
@@ -117,239 +106,254 @@ export class Config {
 
   public async load() {
     const db = await this._dbPromise;
-    const rawData = await db.configTable.fetchAllAsObject();
-    const configData: any = {};
     const fieldsToSave: Set<string> = new Set();
-    let fieldsSerialized = {} as IConfigStringified;
+    const loadedData: any = {};
+    const stringifieData = {} as IConfigStringified & { miningAccountAddress: string };
+
+    const [rawData, security] = await Promise.all([
+      db.configTable.fetchAllAsObject(),
+      invokeWithTimeout('fetch_security', {}, 5e3),
+    ]);
+
+    this._security = security as unknown as ISecurity;
 
     for (const [key, value] of Object.entries(defaults)) {
       const rawValue = rawData[key as keyof typeof rawData];
       if (rawValue === undefined || rawValue === '') {
         const defaultValue = await value();
-        configData[key] = defaultValue;
+        loadedData[key] = defaultValue;
         if (key !== dbFields.biddingRules && key !== dbFields.vaultingRules) {
           fieldsToSave.add(key);
-          fieldsSerialized[key as keyof typeof fieldsSerialized] = jsonStringifyWithBigInts(defaultValue, null, 2);
+          stringifieData[key as keyof typeof stringifieData] = jsonStringifyWithBigInts(defaultValue, null, 2);
         }
         continue;
       }
 
-      configData[key] = jsonParseWithBigInts(rawValue as string);
-      fieldsSerialized[key as keyof typeof fieldsSerialized] = rawValue as string;
+      loadedData[key] = jsonParseWithBigInts(rawValue as string);
+      stringifieData[key as keyof typeof stringifieData] = rawValue as string;
       if (key === dbFields.biddingRules) {
         this.hasSavedBiddingRules = true;
-        // TODO: remove this once we've migrated all users to the new field
-        configData.biddingRules.baseCapitalCommitment =
-          configData.biddingRules.requiredMicrogons || configData.biddingRules.baseCapitalCommitment;
-        delete configData.biddingRules.requiredMicrogons;
       } else if (key === dbFields.vaultingRules) {
         this.hasSavedVaultingRules = true;
       }
     }
 
-    const dataToSave = Config.extractDataToSave(fieldsToSave, fieldsSerialized);
+    this.isLoaded = true;
+
+    if (!loadedData.miningAccountAddress) {
+      fieldsToSave.add('miningAccountAddress');
+      stringifieData['miningAccountAddress'] = JSON.stringify(this.miningAccount.address);
+    } else if (this.miningAccount.address !== loadedData.miningAccountAddress) {
+      tauriMessage(
+        'Your database does not match your current mining account address. Something has corrupted your data.',
+        {
+          title: 'Mining Account Inconsistency',
+          kind: 'error',
+        },
+      );
+    }
+
+    const dataToSave = Config.extractDataToSave(fieldsToSave, stringifieData);
     await db.configTable.insertOrReplace(dataToSave);
 
-    this.isLoaded = true;
     this._db = db;
-    this._stringified = fieldsSerialized;
-    this._unstringified = configData as IConfig;
+    this._loadedData = loadedData as IConfig;
+    this._stringifiedData = stringifieData;
     this._loadedDeferred.resolve();
   }
 
-  get seedAccount(): KeyringPair {
+  get masterAccount(): KeyringPair {
     this._throwErrorIfNotLoaded();
-    return (this._seedAccount ||= new Keyring({ type: 'sr25519' }).createFromUri(this.security.walletMnemonic));
+    return (this._masterAccount ||= new Keyring({ type: 'sr25519' }).createFromUri(this.security.masterMnemonic));
+  }
+
+  get miningSessionMiniSecret(): string {
+    this._throwErrorIfNotLoaded();
+    return (this._miningSessionMiniSecret ||= miniSecretFromUri(`${this.security.masterMnemonic}//mining//sessions`));
   }
 
   get miningAccount(): KeyringPair {
     this._throwErrorIfNotLoaded();
-    return (this._miningAccount ||= this.seedAccount.derive(`//mng`));
+    return (this._miningAccount ||= this.masterAccount.derive(`//mining`));
   }
 
   get vaultingAccount(): KeyringPair {
     this._throwErrorIfNotLoaded();
-    return (this._vaultingAccount ||= this.seedAccount.derive(`//vlt`));
+    return (this._vaultingAccount ||= this.masterAccount.derive(`//vaulting`));
   }
 
   get bitcoinXprivSeed(): Uint8Array {
-    return bip39.mnemonicToSeedSync(this.security.walletMnemonic);
+    return bip39.mnemonicToSeedSync(this.security.masterMnemonic);
   }
 
   //////////////////////////////
 
   get requiresPassword(): boolean {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.requiresPassword;
+    return this._loadedData.requiresPassword;
   }
 
   set requiresPassword(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.requiresPassword, value);
-    this._unstringified.requiresPassword = value;
+    this._loadedData.requiresPassword = value;
   }
 
-  get security(): IConfig['security'] {
+  get security(): ISecurity {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.security;
-  }
-
-  set security(value: IConfig['security']) {
-    this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.security, value);
-    this._unstringified.security = value;
+    return this._security;
   }
 
   get serverDetails(): IConfig['serverDetails'] {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.serverDetails;
+    return this._loadedData.serverDetails;
   }
 
   set serverDetails(value: IConfig['serverDetails']) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.serverDetails, value);
-    this._unstringified.serverDetails = value;
+    this._loadedData.serverDetails = value;
   }
 
   get installDetails(): IConfig['installDetails'] {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.installDetails;
+    return this._loadedData.installDetails;
   }
 
   set installDetails(value: IConfig['installDetails']) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.installDetails, value);
-    this._unstringified.installDetails = value;
+    this._loadedData.installDetails = value;
   }
 
   get oldestFrameIdToSync(): number {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.oldestFrameIdToSync;
+    return this._loadedData.oldestFrameIdToSync;
   }
 
   set oldestFrameIdToSync(value: number) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.oldestFrameIdToSync, value);
-    this._unstringified.oldestFrameIdToSync = value;
+    this._loadedData.oldestFrameIdToSync = value;
   }
 
   get isVaultReadyToCreate(): boolean {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.isVaultReadyToCreate;
+    return this._loadedData.isVaultReadyToCreate;
   }
 
   set isVaultReadyToCreate(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.isVaultReadyToCreate, value);
-    this._unstringified.isVaultReadyToCreate = value;
+    this._loadedData.isVaultReadyToCreate = value;
   }
 
   get isServerReadyToInstall(): boolean {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.isServerReadyToInstall;
+    return this._loadedData.isServerReadyToInstall;
   }
 
   set isServerReadyToInstall(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.isServerReadyToInstall, value);
-    this._unstringified.isServerReadyToInstall = value;
+    this._loadedData.isServerReadyToInstall = value;
   }
 
   get isServerUpToDate(): boolean {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.isServerUpToDate;
+    return this._loadedData.isServerUpToDate;
   }
 
   set isServerUpToDate(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.isServerUpToDate, value);
-    this._unstringified.isServerUpToDate = value;
+    this._loadedData.isServerUpToDate = value;
   }
 
   get isServerInstalled(): boolean {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.isServerInstalled;
+    return this._loadedData.isServerInstalled;
   }
 
   set isServerInstalled(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.isServerInstalled, value);
-    this._unstringified.isServerInstalled = value;
+    this._loadedData.isServerInstalled = value;
   }
 
   get isWaitingForUpgradeApproval(): boolean {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.isWaitingForUpgradeApproval;
+    return this._loadedData.isWaitingForUpgradeApproval;
   }
 
   set isWaitingForUpgradeApproval(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.isWaitingForUpgradeApproval, value);
-    this._unstringified.isWaitingForUpgradeApproval = value;
+    this._loadedData.isWaitingForUpgradeApproval = value;
   }
 
   get hasMiningSeats(): boolean {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.hasMiningSeats;
+    return this._loadedData.hasMiningSeats;
   }
 
   set hasMiningSeats(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.hasMiningSeats, value);
-    this._unstringified.hasMiningSeats = value;
+    this._loadedData.hasMiningSeats = value;
   }
 
   get hasMiningBids(): boolean {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.hasMiningBids;
+    return this._loadedData.hasMiningBids;
   }
 
   set hasMiningBids(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.hasMiningBids, value);
-    this._unstringified.hasMiningBids = value;
+    this._loadedData.hasMiningBids = value;
   }
 
   get biddingRules(): IConfig['biddingRules'] {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.biddingRules;
+    return this._loadedData.biddingRules;
   }
 
   set biddingRules(value: IConfig['biddingRules']) {
     this._throwErrorIfNotLoaded();
-    this._unstringified.biddingRules = value;
+    this._loadedData.biddingRules = value;
   }
 
   get vaultingRules(): IConfig['vaultingRules'] {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.vaultingRules;
+    return this._loadedData.vaultingRules;
   }
 
   set vaultingRules(value: IConfig['vaultingRules']) {
     this._throwErrorIfNotLoaded();
-    this._unstringified.vaultingRules = value;
+    this._loadedData.vaultingRules = value;
   }
 
   get defaultCurrencyKey(): CurrencyKey {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.defaultCurrencyKey;
+    return this._loadedData.defaultCurrencyKey;
   }
 
   set defaultCurrencyKey(value: CurrencyKey) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.defaultCurrencyKey, value);
-    this._unstringified.defaultCurrencyKey = value;
+    this._loadedData.defaultCurrencyKey = value;
   }
 
   get userJurisdiction(): IConfig['userJurisdiction'] {
     this._throwErrorIfNotLoaded();
-    return this._unstringified.userJurisdiction;
+    return this._loadedData.userJurisdiction;
   }
 
   set userJurisdiction(value: IConfig['userJurisdiction']) {
     this._throwErrorIfNotLoaded();
     this._tryFieldsToSave(dbFields.userJurisdiction, value);
-    this._unstringified.userJurisdiction = value;
+    this._loadedData.userJurisdiction = value;
   }
 
   get isValidJurisdiction(): boolean {
@@ -373,7 +377,7 @@ export class Config {
 
   public async save() {
     this._throwErrorIfNotLoaded();
-    const dataToSave = Config.extractDataToSave(this._fieldsToSave, this._stringified);
+    const dataToSave = Config.extractDataToSave(this._fieldsToSave, this._stringifiedData);
     this._fieldsToSave = new Set();
     if (Object.keys(dataToSave).length === 0) return;
 
@@ -398,9 +402,9 @@ export class Config {
 
   private _tryFieldsToSave(field: keyof typeof dbFields, value: any) {
     const stringifiedValue = jsonStringifyWithBigInts(value, null, 2);
-    if (this._stringified[field] === stringifiedValue) return;
+    if (this._stringifiedData[field] === stringifiedValue) return;
 
-    this._stringified[field] = stringifiedValue;
+    this._stringifiedData[field] = stringifiedValue;
     this._fieldsToSave.add(field);
   }
 
@@ -423,7 +427,6 @@ export class Config {
 
 const dbFields = {
   requiresPassword: 'requiresPassword',
-  security: 'security',
   serverDetails: 'serverDetails',
   installDetails: 'installDetails',
   oldestFrameIdToSync: 'oldestFrameIdToSync',
@@ -442,24 +445,9 @@ const dbFields = {
 
 const defaults: IConfigDefaults = {
   requiresPassword: () => false,
-  security: () => {
-    const sessionMnemonic = mnemonicGenerate();
-    const walletMnemonic = mnemonicGenerate();
-    const walletAccount = new Keyring({ type: 'sr25519' }).createFromUri(walletMnemonic);
-    const walletMiningAccount = walletAccount.derive(`//mng`);
-    const walletMiningJson = jsonStringifyWithBigInts(walletMiningAccount.toJson(''), null, 2);
-    return {
-      walletMnemonic,
-      sessionMnemonic,
-      walletJson: walletMiningJson,
-    };
-  },
-  serverDetails: async () => {
-    const keys = await SSH.getKeys();
+  serverDetails: () => {
     return {
       ipAddress: '',
-      sshPublicKey: keys.publicKey,
-      sshPrivateKey: keys.privateKey,
       sshUser: 'root',
     };
   },
@@ -496,8 +484,8 @@ const defaults: IConfigDefaults = {
       argonCirculationGrowthPctMax: 50,
 
       argonotPriceChangeType: MicronotPriceChangeType.Between,
-      argonotPriceChangePctMin: 0,
-      argonotPriceChangePctMax: 0,
+      argonotPriceChangePctMin: -10,
+      argonotPriceChangePctMax: +100,
 
       minimumBidFormulaType: BidAmountFormulaType.PreviousDayLow,
       minimumBidAdjustmentType: BidAmountAdjustmentType.Relative,

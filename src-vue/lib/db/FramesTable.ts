@@ -1,6 +1,6 @@
 import { IFrameRecord } from '../../interfaces/db/IFrameRecord';
 import { BaseTable, IFieldTypes } from './BaseTable';
-import { convertFromSqliteFields, toSqlParams } from '../Utils';
+import { convertFromSqliteFields, fromSqliteBigInt, toSqlParams } from '../Utils';
 import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
 import BigNumber from 'bignumber.js';
 import dayjs from 'dayjs';
@@ -14,7 +14,14 @@ export class FramesTable extends BaseTable {
   private fieldTypes: IFieldTypes = {
     boolean: ['isProcessed'],
     bigintJson: ['microgonToUsd', 'microgonToBtc', 'microgonToArgonot'],
-    bigint: ['totalSeatCost', 'microgonsMined', 'microgonsMinted', 'micronotsMined', 'microgonFeesMined'],
+    bigint: [
+      'seatCostTotalFramed',
+      'microgonsMinedTotal',
+      'microgonsMintedTotal',
+      'micronotsMinedTotal',
+      'microgonFeesCollectedTotal',
+      'accruedMicrogonProfits',
+    ],
   };
 
   async insertOrUpdate(
@@ -61,7 +68,7 @@ export class FramesTable extends BaseTable {
   }
 
   async update(args: {
-    frameId: number;
+    id: number;
     firstTick: number;
     lastTick: number;
     firstBlockNumber: number;
@@ -69,18 +76,19 @@ export class FramesTable extends BaseTable {
     microgonToUsd: bigint[];
     microgonToBtc: bigint[];
     microgonToArgonot: bigint[];
-    activeSeatCount: number;
-    totalSeatCost: bigint;
-    blocksMined: number;
-    microgonFeesMined: bigint;
-    micronotsMined: bigint;
-    microgonsMined: bigint;
-    microgonsMinted: bigint;
-    frameProgress: number;
+    seatCountActive: number;
+    seatCostTotalFramed: bigint;
+    blocksMinedTotal: number;
+    micronotsMinedTotal: bigint;
+    microgonsMinedTotal: bigint;
+    microgonsMintedTotal: bigint;
+    microgonFeesCollectedTotal: bigint;
+    accruedMicrogonProfits: bigint;
+    progress: number;
     isProcessed: boolean;
   }): Promise<void> {
     const {
-      frameId,
+      id,
       firstTick,
       lastTick,
       firstBlockNumber,
@@ -88,14 +96,15 @@ export class FramesTable extends BaseTable {
       microgonToUsd,
       microgonToBtc,
       microgonToArgonot,
-      activeSeatCount,
-      totalSeatCost,
-      blocksMined,
-      micronotsMined,
-      microgonsMined,
-      microgonsMinted,
-      microgonFeesMined,
-      frameProgress: progress,
+      seatCountActive,
+      seatCostTotalFramed,
+      blocksMinedTotal,
+      micronotsMinedTotal,
+      microgonsMinedTotal,
+      microgonsMintedTotal,
+      microgonFeesCollectedTotal,
+      accruedMicrogonProfits,
+      progress,
       isProcessed,
     } = args;
     await this.db.execute(
@@ -107,13 +116,14 @@ export class FramesTable extends BaseTable {
         microgonToUsd = ?, 
         microgonToBtc = ?, 
         microgonToArgonot = ?, 
-        activeSeatCount = ?, 
-        totalSeatCost = ?,
-        blocksMined = ?, 
-        micronotsMined = ?,
-        microgonsMined = ?,
-        microgonFeesMined = ?,
-        microgonsMinted = ?, 
+        seatCountActive = ?, 
+        seatCostTotalFramed = ?,
+        blocksMinedTotal = ?,
+        micronotsMinedTotal = ?,
+        microgonsMinedTotal = ?,
+        microgonsMintedTotal = ?,
+        microgonFeesCollectedTotal = ?,
+        accruedMicrogonProfits = ?,
         progress = ?, 
         isProcessed = ? 
       WHERE id = ?`,
@@ -125,52 +135,53 @@ export class FramesTable extends BaseTable {
         microgonToUsd,
         microgonToBtc,
         microgonToArgonot,
-        activeSeatCount,
-        totalSeatCost,
-        blocksMined,
-        micronotsMined,
-        microgonsMined,
-        microgonFeesMined,
-        microgonsMinted,
+        seatCountActive,
+        seatCostTotalFramed,
+        blocksMinedTotal,
+        micronotsMinedTotal,
+        microgonsMinedTotal,
+        microgonsMintedTotal,
+        microgonFeesCollectedTotal,
+        accruedMicrogonProfits,
         progress,
         isProcessed,
-        frameId,
+        id,
       ]),
     );
   }
 
   async fetchLastYear(): Promise<Omit<IDashboardFrameStats, 'score'>[]> {
     const rawRecords = await this.db.select<any[]>(`SELECT 
-      id, firstTick, lastTick, microgonToUsd, microgonToArgonot, activeSeatCount, totalSeatCost, blocksMined, micronotsMined, microgonsMined, microgonsMinted, progress
+      id, firstTick, lastTick, microgonToUsd, microgonToArgonot, seatCountActive, seatCostTotalFramed, blocksMinedTotal, micronotsMinedTotal, microgonsMinedTotal, microgonsMintedTotal, progress
     FROM Frames ORDER BY id DESC LIMIT 365`);
 
     const records = convertFromSqliteFields(rawRecords, this.fieldTypes).map((x: any) => {
       const date = dayjs.utc(x.firstTick * TICK_MILLIS).format('YYYY-MM-DD');
 
-      const relativeSeatCostBn = BigNumber(x.totalSeatCost).multipliedBy(x.progress / 100);
-      const relativeSeatCost = bigNumberToBigInt(relativeSeatCostBn);
-      const microgonValueEarnedBn = BigNumber(x.microgonsMined).plus(x.microgonsMinted).plus(x.micronotsMined);
+      // TODO: WE need to calculate the microgon value of micronotsMinted
+      const microgonValueEarnedBn = BigNumber(x.microgonsMinedTotal)
+        .plus(x.microgonsMintedTotal)
+        .plus(x.micronotsMinedTotal);
       const microgonValueOfRewards = bigNumberToBigInt(microgonValueEarnedBn);
-      const profitBn = BigNumber(microgonValueEarnedBn).minus(relativeSeatCostBn);
-      const profitPct = relativeSeatCostBn.isZero()
+      const profitBn = BigNumber(microgonValueEarnedBn).minus(x.seatCostTotalFramed);
+      const profitPct = x.seatCostTotalFramed
         ? BigNumber(0)
-        : profitBn.dividedBy(relativeSeatCostBn).multipliedBy(100);
+        : profitBn.dividedBy(x.seatCostTotalFramed).multipliedBy(100);
 
       const record: Omit<IDashboardFrameStats, 'score'> = {
         id: x.id,
         date,
         firstTick: x.firstTick,
         lastTick: x.lastTick,
-        activeSeatCount: x.activeSeatCount,
-        relativeSeatCost: relativeSeatCost,
-        blocksMined: x.blocksMined,
+        seatCountActive: x.seatCountActive,
+        seatCostTotalFramed: x.seatCostTotalFramed,
+        blocksMinedTotal: x.blocksMinedTotal,
         microgonToUsd: x.microgonToUsd,
         microgonToArgonot: x.microgonToArgonot,
-
-        microgonsMined: x.microgonsMined,
-        microgonsMinted: x.microgonsMinted,
-        micronotsMined: x.micronotsMined,
-        microgonFeesMined: x.microgonFeesMined,
+        microgonsMinedTotal: x.microgonsMinedTotal,
+        microgonsMintedTotal: x.microgonsMintedTotal,
+        micronotsMinedTotal: x.micronotsMinedTotal,
+        microgonFeesCollectedTotal: x.microgonFeesCollectedTotal,
 
         microgonValueOfRewards,
         progress: x.progress,
@@ -193,15 +204,15 @@ export class FramesTable extends BaseTable {
         date: previousDay.format('YYYY-MM-DD'),
         firstTick: lastRecord.firstTick - 1_440,
         lastTick: lastRecord.lastTick - 1_440,
-        activeSeatCount: 0,
-        relativeSeatCost: 0n,
+        seatCountActive: 0,
+        seatCostTotalFramed: 0n,
         microgonToUsd: [0n],
         microgonToArgonot: [0n],
-        blocksMined: 0,
-        microgonsMined: 0n,
-        microgonsMinted: 0n,
-        micronotsMined: 0n,
-        microgonFeesMined: 0n,
+        blocksMinedTotal: 0,
+        microgonsMinedTotal: 0n,
+        microgonsMintedTotal: 0n,
+        micronotsMinedTotal: 0n,
+        microgonFeesCollectedTotal: 0n,
         microgonValueOfRewards: 0n,
         progress: 0,
         profit: 0,
@@ -230,5 +241,13 @@ export class FramesTable extends BaseTable {
   async latestId(): Promise<number> {
     const [rawRecord] = await this.db.select<[{ maxId: number }]>('SELECT COALESCE(MAX(id), 0) as maxId FROM Frames');
     return rawRecord.maxId;
+  }
+
+  async fetchAccruedMicrogonProfits(): Promise<bigint> {
+    const [rawRecord] = await this.db.select<[{ accruedMicrogonProfits: number }]>(
+      'SELECT accruedMicrogonProfits FROM Frames ORDER BY id DESC LIMIT 1',
+      [],
+    );
+    return fromSqliteBigInt(rawRecord?.accruedMicrogonProfits ?? 0);
   }
 }

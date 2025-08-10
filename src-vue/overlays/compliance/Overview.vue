@@ -1,12 +1,12 @@
 <template>
   <div class="flex flex-col gap-2 px-3">
     <p v-if="config.isValidJurisdiction" class="text-slate-800 text-md">
-      As a residence of the Cayman Islands, you have been given the fully unlocked version of Commander. If you reside
-      in another jurisdiction, please fix your country of residence below so that this app can remain compliant.
+      As a residence of Cayman Islands, you are able to use the full-featured version of Commander. If you reside in
+      another jurisdiction, please fix your country of residence below so that this app can remain compliant.
     </p>
     <p v-else class="text-slate-800 text-md">
-      This version of Commander has some features disabled. The more advanced capabilities are reserved for the
-      residents of Cayman Islands. If our geolocation service made a mistake, please fix it below.
+      Your version of Commander has some features disabled. The more advanced capabilities are reserved for residents of
+      Cayman Islands. If our geolocation service made a mistake, please fix it below.
     </p>
 
     <div class="flex flex-col gap-2 text-center py-5 w-8/12 mx-auto mb-1">

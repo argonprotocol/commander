@@ -1,7 +1,37 @@
 use include_dir::{Dir, include_dir};
 use tauri_plugin_sql::{Migration, MigrationKind};
+use std::path::PathBuf;
+use sqlx::{
+    error::BoxDynError,
+    migrate::{Migration as SqlxMigration, MigrationSource, Migrator},
+};
+use std::pin::Pin;
+use std::future::Future;
 
 static MIGRATIONS_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/migrations");
+
+#[derive(Debug)]
+struct MigrationList(Vec<Migration>);
+
+impl MigrationSource<'static> for MigrationList {
+    fn resolve(self) -> Pin<Box<dyn Future<Output = std::result::Result<Vec<SqlxMigration>, BoxDynError>> + Send + 'static>> {
+        Box::pin(async move {
+            let mut migrations = Vec::new();
+            for migration in self.0 {
+                if matches!(migration.kind, MigrationKind::Up) {
+                    migrations.push(SqlxMigration::new(
+                        migration.version,
+                        migration.description.into(),
+                        migration.kind.into(),
+                        migration.sql.into(),
+                        false,
+                    ));
+                }
+            }
+            Ok(migrations)
+        })
+    }
+}
 
 pub fn get_migrations() -> Vec<Migration> {
     MIGRATIONS_DIR
@@ -28,4 +58,25 @@ pub fn get_migrations() -> Vec<Migration> {
             })
         })
         .collect()
+}
+
+pub async fn run_db_migrations(absolute_db_path: PathBuf) -> Result<(), String> {    
+    let opts = sqlx::sqlite::SqliteConnectOptions::new()
+        .filename(&absolute_db_path)
+        .create_if_missing(true);
+
+    let pool = sqlx::SqlitePool::connect_with(opts)
+        .await
+        .map_err(|e| format!("Failed to connect to database: {}", e))?;
+    
+    let migrations = MigrationList(get_migrations());
+    let migrator = Migrator::new(migrations)
+        .await
+        .map_err(|e| format!("Failed to create migrator: {}", e))?;
+    migrator.run(&pool)
+        .await
+        .map_err(|e| format!("Failed to run migrations: {}", e))?;
+
+    pool.close().await;
+    Ok(())
 }

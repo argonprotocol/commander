@@ -3,26 +3,26 @@ import { BaseTable } from './BaseTable';
 import { convertSqliteBigInts, toSqliteBigInt, toSqlParams } from '../Utils';
 
 export class FrameBidsTable extends BaseTable {
-  private bigIntFields: string[] = ['microgonsBid'];
+  private bigIntFields: string[] = ['microgonsPerSeat'];
 
   async insertOrUpdate(
     frameId: number,
     confirmedAtBlockNumber: number,
     address: string,
     subAccountIndex: number | undefined,
-    microgonsBid: bigint,
+    microgonsPerSeat: bigint,
     bidPosition: number,
     lastBidAtTick: number | undefined,
   ): Promise<void> {
     await this.db.execute(
       `INSERT INTO FrameBids (
-          frameId, confirmedAtBlockNumber, address, subAccountIndex, microgonsBid, bidPosition, lastBidAtTick
+          frameId, confirmedAtBlockNumber, address, subAccountIndex, microgonsPerSeat, bidPosition, lastBidAtTick
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?
         ) ON CONFLICT(frameId, address) DO UPDATE SET 
           confirmedAtBlockNumber = excluded.confirmedAtBlockNumber, 
           subAccountIndex = excluded.subAccountIndex,
-          microgonsBid = excluded.microgonsBid, 
+          microgonsPerSeat = excluded.microgonsPerSeat, 
           bidPosition = excluded.bidPosition, 
           lastBidAtTick = excluded.lastBidAtTick
       `,
@@ -31,7 +31,7 @@ export class FrameBidsTable extends BaseTable {
         confirmedAtBlockNumber,
         address,
         subAccountIndex,
-        toSqliteBigInt(microgonsBid),
+        toSqliteBigInt(microgonsPerSeat),
         bidPosition,
         lastBidAtTick,
       ]),
@@ -40,7 +40,7 @@ export class FrameBidsTable extends BaseTable {
 
   async fetchForFrameId(frameId: number, limit: number = 100): Promise<IFrameBidRecord[]> {
     const rawRecords = await this.db.select<IFrameBidRecord[]>(
-      'SELECT * FROM FrameBids WHERE frameId = ? ORDER BY microgonsBid DESC LIMIT ?',
+      'SELECT * FROM FrameBids WHERE frameId = ? ORDER BY microgonsPerSeat DESC LIMIT ?',
       [frameId, limit],
     );
     return convertSqliteBigInts(rawRecords, this.bigIntFields);

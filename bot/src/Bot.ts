@@ -16,7 +16,7 @@ interface IBotOptions {
   localRpcUrl: string;
   archiveRpcUrl: string;
   biddingRulesPath: string;
-  keysMnemonic: string;
+  sessionMiniSecret: string;
   oldestFrameIdToSync?: number;
   shouldSkipDockerSync?: boolean;
 }

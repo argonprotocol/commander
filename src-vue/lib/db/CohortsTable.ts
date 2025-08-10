@@ -6,16 +6,16 @@ import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
 
 export class CohortsTable extends BaseTable {
   private bigIntFields: string[] = [
-    'transactionFees',
-    'microgonsBid',
-    'micronotsStaked',
-    'microgonsToBeMined',
-    'micronotsToBeMined',
+    'transactionFeesTotal',
+    'microgonsBidPerSeat',
+    'micronotsStakedPerSeat',
+    'microgonsToBeMinedPerSeat',
+    'micronotsToBeMinedPerSeat',
   ];
 
   public async fetchLatestActiveId(): Promise<number | null> {
     const result = await this.db.select<{ id: number }[]>(
-      'SELECT id FROM Cohorts WHERE seatsWon > 0 ORDER BY id DESC LIMIT 1',
+      'SELECT id FROM Cohorts WHERE seatCountWon > 0 ORDER BY id DESC LIMIT 1',
     );
     return result.length > 0 ? result[0].id : null;
   }
@@ -46,46 +46,45 @@ export class CohortsTable extends BaseTable {
   }
 
   public async fetchGlobalStats(currentFrameId: number): Promise<{
-    totalSeats: number;
-    framesMined: number;
+    seatsTotal: number;
+    framesCompleted: number;
     framesRemaining: number;
     framedCost: bigint;
-    totalTransactionFees: bigint;
-    totalMicrogonsBid: bigint;
+    transactionFeesTotal: bigint;
+    microgonsBidTotal: bigint;
   }> {
     try {
-      const [rawTotalStats] = await this.db.select<[any]>(
+      const [allStats] = await this.db.select<[any]>(
         `SELECT 
-        COALESCE(sum(transactionFees), 0) as totalTransactionFees, 
-        COALESCE(sum(microgonsBid), 0) as totalMicrogonsBid,
-        COALESCE(sum((microgonsBid + transactionFees) * seatsWon * (progress / 100)), 0) as framedCost
+        COALESCE(sum(transactionFeesTotal), 0) as transactionFeesTotal, 
+        COALESCE(sum(microgonsBidPerSeat), 0) as microgonsBidTotal,
+        COALESCE(sum((transactionFeesTotal + (microgonsBidPerSeat * seatCountWon)) * (progress / 100)), 0) as framedCost
       FROM Cohorts`,
       );
 
       // const oldestActiveFrameId = Math.max(1, currentFrameId - 10);
-      const [rawActiveStats] = await this.db.select<[any]>(
+      const [activeStats] = await this.db.select<[any]>(
         `SELECT 
         count(*) as cohortCount,
-        COALESCE(sum(progress * seatsWon), 0.0) as totalFlooredProgress,
-        COALESCE(sum(seatsWon), 0) as totalSeats
-      FROM Cohorts WHERE seatsWon > 0`,
+        COALESCE(sum(progress * seatCountWon), 0.0) as accruedProgress,
+        COALESCE(sum(seatCountWon), 0) as seatCountTotal
+      FROM Cohorts WHERE seatCountWon > 0`,
         [],
       );
 
-      const totalStats = rawTotalStats;
-      const activeStats = rawActiveStats;
-
-      const framesExpectedBn = BigNumber(activeStats.cohortCount).multipliedBy(10).multipliedBy(activeStats.totalSeats);
-      const framesMined = BigNumber(activeStats.totalFlooredProgress).dividedBy(10).toNumber();
-      const framesRemaining = framesExpectedBn.minus(framesMined).toNumber();
+      const framesExpectedBn = BigNumber(activeStats.cohortCount)
+        .multipliedBy(10)
+        .multipliedBy(activeStats.seatCountTotal);
+      const framesCompleted = BigNumber(activeStats.accruedProgress).dividedBy(10).toNumber();
+      const framesRemaining = framesExpectedBn.minus(framesCompleted).toNumber();
 
       return {
-        totalSeats: activeStats.totalSeats,
-        framesMined,
+        seatsTotal: activeStats.seatCountTotal,
+        framesCompleted,
         framesRemaining,
-        framedCost: fromSqliteBigInt(totalStats.framedCost),
-        totalTransactionFees: fromSqliteBigInt(totalStats.totalTransactionFees),
-        totalMicrogonsBid: fromSqliteBigInt(totalStats.totalMicrogonsBid),
+        framedCost: fromSqliteBigInt(allStats.framedCost),
+        transactionFeesTotal: fromSqliteBigInt(allStats.transactionFeesTotal),
+        microgonsBidTotal: fromSqliteBigInt(allStats.microgonsBidTotal),
       };
     } catch (e) {
       console.error('Error fetching global stats', e);
@@ -96,28 +95,28 @@ export class CohortsTable extends BaseTable {
   async fetchActiveSeatData(
     frameId: number,
     frameProgress: number,
-  ): Promise<{ activeSeatCount: number; totalSeatCost: bigint }> {
+  ): Promise<{ seatCountActive: number; seatCostTotalFramed: bigint }> {
     const [rawActiveStats] = await this.db.select<[any]>(
       `SELECT 
-        COALESCE(sum(seatsWon), 0) as seatCount,
-        COALESCE(sum(microgonsBid * seatsWon), 0) as totalSeatCost
+        COALESCE(sum(seatCountWon), 0) as seatCountTotal,
+        COALESCE(sum(microgonsBidPerSeat * seatCountWon), 0) as seatCostTotal
       FROM Cohorts WHERE id <= ? AND id >= ?`,
       [frameId, frameId - 9],
     );
 
     const frameProgressBn = BigNumber(frameProgress).dividedBy(100);
-    const seatCostPerDayBn = BigNumber(fromSqliteBigInt(rawActiveStats.totalSeatCost)).dividedBy(10);
-    const totalSeatCostBn = BigNumber(seatCostPerDayBn).multipliedBy(frameProgressBn);
+    const seatCostTotalPerDayBn = BigNumber(fromSqliteBigInt(rawActiveStats.seatCostTotal)).dividedBy(10);
+    const seatCostTotalFramedBn = BigNumber(seatCostTotalPerDayBn).multipliedBy(frameProgressBn);
 
     return {
-      activeSeatCount: rawActiveStats.seatCount,
-      totalSeatCost: bigNumberToBigInt(totalSeatCostBn),
+      seatCountActive: rawActiveStats.seatCountTotal,
+      seatCostTotalFramed: bigNumberToBigInt(seatCostTotalFramedBn),
     };
   }
 
   async fetchActiveCohorts(currentFrameId: number): Promise<ICohortRecord[]> {
-    const records = await this.db.select<any[]>('SELECT * FROM Cohorts WHERE seatsWon > 0 AND id >= ?', [
-      currentFrameId - 10,
+    const records = await this.db.select<any[]>('SELECT * FROM Cohorts WHERE seatCountWon > 0 AND id >= ?', [
+      currentFrameId - 9,
     ]);
     return convertSqliteBigInts(records, this.bigIntFields) as ICohortRecord[];
   }
@@ -125,43 +124,43 @@ export class CohortsTable extends BaseTable {
   async insertOrUpdate(
     id: number,
     progress: number,
-    transactionFees: bigint,
-    micronotsStaked: bigint,
-    microgonsBid: bigint,
-    seatsWon: number,
-    microgonsToBeMined: bigint,
-    micronotsToBeMined: bigint,
+    transactionFeesTotal: bigint,
+    micronotsStakedPerSeat: bigint,
+    microgonsBidPerSeat: bigint,
+    seatCountWon: number,
+    microgonsToBeMinedPerSeat: bigint,
+    micronotsToBeMinedPerSeat: bigint,
   ): Promise<void> {
     await this.db.execute(
       `INSERT INTO Cohorts (
           id, 
           progress, 
-          transactionFees, 
-          micronotsStaked, 
-          microgonsBid, 
-          seatsWon, 
-          microgonsToBeMined, 
-          micronotsToBeMined
+          transactionFeesTotal, 
+          micronotsStakedPerSeat,
+          microgonsBidPerSeat,
+          seatCountWon,
+          microgonsToBeMinedPerSeat,
+          micronotsToBeMinedPerSeat
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?, ?
         ) ON CONFLICT(id) DO UPDATE SET 
           progress = excluded.progress, 
-          transactionFees = excluded.transactionFees, 
-          micronotsStaked = excluded.micronotsStaked, 
-          microgonsBid = excluded.microgonsBid, 
-          seatsWon = excluded.seatsWon, 
-          microgonsToBeMined = excluded.microgonsToBeMined, 
-          micronotsToBeMined = excluded.micronotsToBeMined
+          transactionFeesTotal = excluded.transactionFeesTotal, 
+          micronotsStakedPerSeat = excluded.micronotsStakedPerSeat, 
+          microgonsBidPerSeat = excluded.microgonsBidPerSeat, 
+          seatCountWon = excluded.seatCountWon, 
+          microgonsToBeMinedPerSeat = excluded.microgonsToBeMinedPerSeat, 
+          micronotsToBeMinedPerSeat = excluded.micronotsToBeMinedPerSeat
       `,
       toSqlParams([
         id,
         progress,
-        transactionFees,
-        micronotsStaked,
-        microgonsBid,
-        seatsWon,
-        microgonsToBeMined,
-        micronotsToBeMined,
+        transactionFeesTotal,
+        micronotsStakedPerSeat,
+        microgonsBidPerSeat,
+        seatCountWon,
+        microgonsToBeMinedPerSeat,
+        micronotsToBeMinedPerSeat,
       ]),
     );
   }
