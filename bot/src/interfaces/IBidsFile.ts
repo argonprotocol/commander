@@ -6,7 +6,7 @@ export interface IBidsFile extends ILastModifiedAt {
   frameBiddingProgress: number;
   lastBlockNumber: number;
   microgonsBidTotal: bigint;
-  transactionFees: bigint;
+  transactionFeesByBlock: { [blockNumber: number]: bigint };
   micronotsStakedPerSeat: bigint;
   microgonsToBeMinedPerBlock: bigint;
   seatsWon: number;

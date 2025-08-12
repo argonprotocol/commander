@@ -7,6 +7,7 @@ import type { IEarningsFile } from './interfaces/IEarningsFile.ts';
 import type { IBidsFile } from './interfaces/IBidsFile.ts';
 import type { IHistoryFile } from './interfaces/IHistoryFile.ts';
 import { JsonStore } from './JsonStore.ts';
+import type { IBlockSyncFile } from './interfaces/IBlockSyncFile.ts';
 
 export class Storage {
   private lruCache = new LRU<JsonStore<any>>(100);
@@ -18,29 +19,45 @@ export class Storage {
     fs.mkdirSync(Path.join(this.basedir, 'bot-history'), { recursive: true });
   }
 
+  public botBlockSyncFile(): JsonStore<IBlockSyncFile> {
+    const key = `bot-blocks.json`;
+    let entry = this.lruCache.get(key);
+    if (!entry) {
+      entry = new JsonStore<IBlockSyncFile>(Path.join(this.basedir, key), () => ({
+        blocksByNumber: {},
+        syncedToBlockNumber: 0,
+        finalizedBlockNumber: 0,
+        bestBlockNumber: 0,
+      }));
+      this.lruCache.set(key, entry);
+    }
+    return entry;
+  }
+
   public botStateFile(): JsonStore<IBotStateFile> {
     const key = `bot-state.json`;
     let entry = this.lruCache.get(key);
     if (!entry) {
-      entry = new JsonStore<IBotStateFile>(Path.join(this.basedir, key), () => ({
-        isReady: false,
-        hasMiningBids: false,
-        hasMiningSeats: false,
-        argonBlockNumbers: { localNode: 0, mainNode: 0 },
-        bitcoinBlockNumbers: { localNode: 0, mainNode: 0 },
-        bidsLastModifiedAt: new Date(),
-        earningsLastModifiedAt: new Date(),
-        lastBlockNumber: 0,
-        lastFinalizedBlockNumber: 0,
-        oldestFrameIdToSync: 0,
-        currentFrameId: 0,
-        currentFrameProgress: 0,
-        syncProgress: 0,
-        queueDepth: 0,
-        maxSeatsPossible: 10, // TODO: instead of hardcoded 10, fetch from chain
-        maxSeatsReductionReason: '',
-        lastBlockNumberByFrameId: {},
-      }));
+      entry = new JsonStore<IBotStateFile>(
+        Path.join(this.basedir, key),
+        () =>
+          <IBotStateFile>{
+            isReady: false,
+            hasMiningBids: false,
+            hasMiningSeats: false,
+            argonBlockNumbers: { localNode: 0, mainNode: 0 },
+            bitcoinBlockNumbers: { localNode: 0, mainNode: 0 },
+            bidsLastModifiedAt: new Date(),
+            earningsLastModifiedAt: new Date(),
+            oldestFrameIdToSync: 0,
+            currentFrameId: 0,
+            currentFrameProgress: 0,
+            syncProgress: 0,
+            maxSeatsPossible: 10, // TODO: instead of hardcoded 10, fetch from chain
+            maxSeatsReductionReason: '',
+            lastBlockNumberByFrameId: {},
+          },
+      );
       this.lruCache.set(key, entry);
     }
     return entry;
@@ -65,7 +82,7 @@ export class Storage {
           microgonToUsd: [],
           microgonToBtc: [],
           microgonToArgonot: [],
-          byCohortActivationFrameId: {},
+          earningsByBlock: {},
         };
       });
       this.lruCache.set(key, entry);
@@ -84,7 +101,7 @@ export class Storage {
         lastBlockNumber: 0,
         seatsWon: 0,
         microgonsBidTotal: 0n,
-        transactionFees: 0n,
+        transactionFeesByBlock: {},
         micronotsStakedPerSeat: 0n,
         microgonsToBeMinedPerBlock: 0n,
         winningBids: [],

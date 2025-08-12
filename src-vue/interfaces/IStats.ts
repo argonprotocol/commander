@@ -34,6 +34,7 @@ export interface IDashboardFrameStats {
   microgonToUsd: bigint[];
   microgonToArgonot: bigint[];
   microgonsMined: bigint;
+  microgonFeesMined: bigint;
   microgonsMinted: bigint;
   micronotsMined: bigint;
   microgonValueOfRewards: bigint;

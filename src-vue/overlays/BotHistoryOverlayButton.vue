@@ -115,7 +115,7 @@ walletMiningAccount.decodePkcs8(''); // TODO: Need to use passphrase when featur
 const accountset = new Accountset({
   client: clientPromise,
   seedAccount: walletMiningAccount,
-  sessionKeyMnemonic: config.security.sessionMnemonic,
+  sessionKeySeedOrMnemonic: config.security.sessionMnemonic,
   subaccountRange: new Array(99).fill(0).map((_, i) => i),
 });
 

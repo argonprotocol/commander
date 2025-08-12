@@ -3,16 +3,26 @@ import { BaseTable } from './BaseTable';
 import { convertSqliteBigInts, fromSqliteBigInt, toSqliteBigInt } from '../Utils';
 
 export class CohortFramesTable extends BaseTable {
-  private bigIntFields: string[] = ['micronotsMined', 'microgonsMined', 'microgonsMinted'];
+  private bigIntFields: string[] = ['micronotsMined', 'microgonsMined', 'microgonsMinted', 'microgonFeesMined'];
 
-  async insertOrUpdate(
-    frameId: number,
-    cohortId: number,
-    blocksMined: number,
-    micronotsMined: bigint,
-    microgonsMined: bigint,
-    microgonsMinted: bigint,
-  ): Promise<void> {
+  async insertOrUpdate(args: {
+    frameId: number;
+    cohortActivationFrameId: number;
+    blocksMined: number;
+    micronotsMined: bigint;
+    microgonsMined: bigint;
+    microgonsMinted: bigint;
+    microgonFeesMined: bigint;
+  }): Promise<void> {
+    const {
+      frameId,
+      cohortActivationFrameId,
+      blocksMined,
+      micronotsMined,
+      microgonsMined,
+      microgonsMinted,
+      microgonFeesMined,
+    } = args;
     await this.db.execute(
       `INSERT INTO CohortFrames (
           frameId, cohortId, blocksMined, micronotsMined, microgonsMined, microgonsMinted
@@ -22,15 +32,17 @@ export class CohortFramesTable extends BaseTable {
           blocksMined = excluded.blocksMined, 
           micronotsMined = excluded.micronotsMined, 
           microgonsMined = excluded.microgonsMined, 
-          microgonsMinted = excluded.microgonsMinted
+          microgonsMinted = excluded.microgonsMinted,
+          microgonFeesMined = excluded.microgonFeesMined
       `,
       [
         frameId,
-        cohortId,
+        cohortActivationFrameId,
         blocksMined,
         toSqliteBigInt(micronotsMined),
         toSqliteBigInt(microgonsMined),
         toSqliteBigInt(microgonsMinted),
+        toSqliteBigInt(microgonFeesMined),
       ],
     );
   }
