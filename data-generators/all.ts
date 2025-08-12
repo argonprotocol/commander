@@ -16,6 +16,7 @@ async function main() {
     await fetchVaultRevenue();
 
     console.log('All data fetch operations completed successfully!');
+    process.exit(0);
   } catch (error) {
     console.error('Error in data fetch process:', error);
     process.exit(1);

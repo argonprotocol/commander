@@ -6,6 +6,7 @@ import { IAllVaultStats, IVaultFrameStats } from '../interfaces/IVaultStats.ts';
 import mainnetVaultRevenueHistory from '../data/vaultRevenue.mainnet.json';
 import testnetVaultRevenueHistory from '../data/vaultRevenue.testnet.json';
 import { NETWORK_NAME } from './Config.ts';
+import { Mainchain } from '@argonprotocol/commander-calculator';
 
 export class Vaults {
   public readonly vaultsById: { [id: number]: Vault } = {};
@@ -29,7 +30,7 @@ export class Vaults {
         this.vaultsById[id] = new Vault(id, vaultRaw.unwrap(), this.tickDuration);
       }
 
-      const { synchedToFrame, vaultsById }: IAllVaultStats =
+      const { synchedToFrame, vaultsById } =
         this.network === 'mainnet' ? mainnetVaultRevenueHistory : testnetVaultRevenueHistory;
       if (!this.stats) {
         this.stats = { synchedToFrame, vaultsById: {} };
@@ -44,7 +45,7 @@ export class Vaults {
               microgonLiquidityRealized: convertBigIntStringToNumber(baseline.microgonLiquidityRealized as any) ?? 0n,
               satoshis: convertBigIntStringToNumber(baseline.satoshis as any) ?? 0n,
             },
-            changesByFrame: changesByFrame.map(change => ({
+            changesByFrame: changesByFrame.map((change: IVaultFrameStats) => ({
               frameId: change.frameId,
               satoshisAdded: convertBigIntStringToNumber(change.satoshisAdded as any) ?? 0n,
               bitcoinLocksCreated: change.bitcoinLocksCreated,
@@ -60,6 +61,18 @@ export class Vaults {
               },
               uncollectedEarnings: 0n,
             })),
+          };
+        }
+        for (const vault of Object.values(this.vaultsById)) {
+          this.stats.vaultsById[vault.vaultId] ??= {
+            openedTick: vault.openedTick,
+            baseline: {
+              bitcoinLocks: 0,
+              feeRevenue: 0n,
+              microgonLiquidityRealized: 0n,
+              satoshis: 0n,
+            },
+            changesByFrame: [],
           };
         }
       }
@@ -118,10 +131,10 @@ export class Vaults {
     }
   }
 
-  public async refreshRevenue() {
+  public async refreshRevenue(mainchain?: Mainchain): Promise<IAllVaultStats> {
     await this.load();
-    const mainchain = getMainchain();
-    const client = await getMainchainClient();
+    mainchain ??= getMainchain();
+    const client = await mainchain.client;
 
     const revenue = this.stats ?? { synchedToFrame: 0, vaultsById: {} };
     const oldestFrameToGet = revenue.synchedToFrame;
