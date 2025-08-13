@@ -100,8 +100,8 @@ services:
   bot:
     <<: *common-config
     build:
-      context: ..
-      dockerfile: deploy/bot/Dockerfile
+      context: ./bot
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       - argon-miner

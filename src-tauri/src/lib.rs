@@ -4,7 +4,8 @@ use serde;
 use ssh::SSH;
 use ssh_singleton::*;
 use std;
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use utils::Utils;
@@ -87,21 +88,18 @@ async fn ssh_run_command(command: String) -> Result<(String, u32), String> {
 }
 
 #[tauri::command]
-async fn ssh_upload_directory(
+async fn ssh_upload_embedded_file(
     app: AppHandle,
-    local_relative_dir: String,
-    remote_dir: String,
+    local_path: String,
+    remote_path: String,
+    event_progress_key: String,
 ) -> Result<String, String> {
-    log::info!(
-        "ssh_upload_directory: {}, {}",
-        local_relative_dir,
-        remote_dir
-    );
+    log::info!("ssh_upload_embedded_file: {}, {}", local_path, remote_path);
     let ssh: ssh::SSH = get_ssh_singleton_connection()
         .await
         .map_err(|e| e.to_string())?
         .ok_or("No SSH connection")?;
-    ssh.upload_directory(&app, &local_relative_dir, &remote_dir)
+    ssh.upload_embedded_file(&app, &local_path, &remote_path, event_progress_key)
         .await
         .map_err(|e| e.to_string())?;
     Ok("success".to_string())
@@ -114,7 +112,7 @@ async fn ssh_upload_file(contents: String, remote_path: String) -> Result<String
         .await
         .map_err(|e| e.to_string())?
         .ok_or("No SSH connection")?;
-    ssh.upload_file(&contents, &remote_path)
+    ssh.upload_file(&contents.as_bytes(), &remote_path)
         .await
         .map_err(|e| e.to_string())?;
     Ok("success".to_string())
@@ -134,17 +132,18 @@ async fn get_ssh_keys() -> Result<IKeys, String> {
 }
 
 #[tauri::command]
-async fn get_shasums() -> Result<String, String> {
-    log::info!("get_shasums");
-    let local_shasums: &'static str = include_str!("../../SHASUMS256");
-    Ok(local_shasums.to_string())
-}
+async fn read_embedded_file(app: AppHandle, path: String) -> Result<String, String> {
+    log::info!("read_embedded_file: {}", path);
+    let embedded_path = Utils::get_embedded_path(&app, path.clone())
+        .map_err(|e| format!("Error resolving embedded path: {}", e))?;
 
-#[tauri::command]
-async fn create_shasum(app: AppHandle, dir_name: String) -> Result<String, String> {
-    log::info!("create_shasum: {}", dir_name);
-    let shasum = Utils::create_shasum(&app, Path::new(&dir_name)).map_err(|e| e.to_string())?;
-    Ok(shasum)
+    if !embedded_path.exists() {
+        return Err(format!("File does not exist: {}", path).to_string());
+    }
+
+    let content = fs::read_to_string(&embedded_path)
+        .map_err(|e| format!("Error reading file {}: {}", path, e))?;
+    Ok(content)
 }
 
 ////////////////////////////////////////////////////////////
@@ -179,7 +178,10 @@ fn init_logger(network_name: &String, instance_name: &String) -> tauri_plugin_lo
     logger
 }
 
-fn init_config_instance_dir(app: &AppHandle, relative_config_dir: &PathBuf) -> Result<(), tauri::Error> {
+fn init_config_instance_dir(
+    app: &AppHandle,
+    relative_config_dir: &PathBuf,
+) -> Result<(), tauri::Error> {
     let config_instance_dir = app
         .path()
         .resolve(relative_config_dir, tauri::path::BaseDirectory::AppConfig)?;
@@ -211,7 +213,11 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(move |app| {
-            log::info!("Starting instance '{}' on network '{}'", instance_name, network_name);
+            log::info!(
+                "Starting instance '{}' on network '{}'",
+                instance_name,
+                network_name
+            );
             log::info!("Database URL = {}", db_relative_path.display());
 
             let window = app.get_webview_window("main").unwrap();
@@ -250,11 +256,10 @@ pub fn run() {
             open_ssh_connection,
             close_ssh_connection,
             ssh_run_command,
-            ssh_upload_directory,
+            ssh_upload_embedded_file,
             ssh_upload_file,
             get_ssh_keys,
-            get_shasums,
-            create_shasum,
+            read_embedded_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

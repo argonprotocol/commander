@@ -1,0 +1,7 @@
+{
+  "name": "argon-commander-bot",
+  "private": true,
+  "version": "0.1.0-rc1",
+  "type": "module",
+  "module": "src/server.js"
+}

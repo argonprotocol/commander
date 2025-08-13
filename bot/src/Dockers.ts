@@ -8,7 +8,7 @@ export interface IBlockNumbers {
 export class Dockers {
   static async getArgonBlockNumbers(): Promise<IBlockNumbers> {
     return new Promise(resolve => {
-      exec('docker exec deploy-argon-miner-1 latestblocks.sh', (error, stdout, stderr) => {
+      exec('docker exec server-argon-miner-1 latestblocks.sh', (error, stdout, stderr) => {
         if (error) {
           console.error(`getArgonBlockNumbers Error: ${error.message}`);
           resolve({ localNode: 0, mainNode: 0 });
@@ -30,7 +30,7 @@ export class Dockers {
 
   static async isArgonMinerReady(): Promise<boolean> {
     return new Promise(resolve => {
-      exec('docker exec deploy-argon-miner-1 iscomplete.sh', (error, stdout, stderr) => {
+      exec('docker exec server-argon-miner-1 iscomplete.sh', (error, stdout, stderr) => {
         if (error) {
           console.error(`isArgonMinerReady Error: ${error.message}`);
           resolve(false);
@@ -48,7 +48,7 @@ export class Dockers {
 
   static async getBitcoinBlockNumbers(): Promise<IBlockNumbers> {
     return new Promise(resolve => {
-      exec('docker exec deploy-bitcoin-1 latestblocks.sh', (error, stdout, stderr) => {
+      exec('docker exec server-bitcoin-1 latestblocks.sh', (error, stdout, stderr) => {
         if (error) {
           console.error(`getBitcoinBlockNumbers Error: ${error.message}`);
           resolve({ localNode: 0, mainNode: 0 });

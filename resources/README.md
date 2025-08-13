@@ -1,0 +1,1 @@
+This directory is our deployment directory. It's where we stage new server builds that will be bundled with the tauri app.

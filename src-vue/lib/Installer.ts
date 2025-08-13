@@ -25,7 +25,6 @@ export function resetInstaller(): void {
 
 export enum ReasonsToSkipInstall {
   ServerNotConnected = 'ServerNotConnected',
-  LocalShasumsNotAccurate = 'LocalShasumsNotAccurate',
   InstallAlreadyRunning = 'InstallAlreadyRunning',
   ServerUpToDate = 'ServerUpToDate',
   UpgradeRequiresApproval = 'UpgradeRequiresApproval',
@@ -131,7 +130,7 @@ export default class Installer {
       console.info('Clearing step files');
       await this.clearStepFiles(stepsToClear);
     }
-
+    await this.ensureIpAddressIsWhitelisted();
     this.installerCheck.shouldUseCachedFilenames = true;
     this.fileUploadProgress = 0;
     this.installerCheck.start();
@@ -145,9 +144,8 @@ export default class Installer {
       }
 
       if (this.remoteFilesNeedUpdating) {
-        console.info('Uploading sha256');
+        console.info('Uploading wallet address');
         await this.uploadWalletAddress();
-        await this.uploadSha256();
 
         console.info('Uploading core files');
         await this.uploadCoreFiles(t => (this.fileUploadProgress += (1 / t) * 49));
@@ -301,15 +299,6 @@ export default class Installer {
       return false;
     }
 
-    const localFilesAreValid = await this.doLocalFilesMatchLocalShasums();
-    if (!localFilesAreValid) {
-      this.isReadyToRun = false;
-      this.reasonToSkipInstall = ReasonsToSkipInstall.LocalShasumsNotAccurate;
-      this.reasonToSkipInstallData = { localFilesAreValid };
-      await this.config.save();
-      return false;
-    }
-
     // We will begin by running through a series of checks to determine if the install process
     // should be started. We don't use serverDetails.isInstalling because the local value could
     // be out of date with the server.
@@ -400,7 +389,7 @@ export default class Installer {
     }
 
     try {
-      const [pid] = await SSH.runCommand('pgrep -f ~/scripts/installer.sh');
+      const [pid] = await SSH.runCommand('pgrep -f ~/server/scripts/installer.sh');
       const isRunningRemotely = pid.trim() !== '';
       if (isRunningRemotely) {
         console.log('Install process IS running remotely');
@@ -451,7 +440,7 @@ export default class Installer {
 
     await this.installerCheck.updateInstallStatus();
     const isServerInstallComplete = this.installerCheck.isServerInstallComplete;
-    const remoteFilesNeedUpdating = !(await this.doRemoteFilesMatchLocalShasums());
+    const remoteFilesNeedUpdating = !(await this.isRemoteVersionLatest());
 
     return {
       isFreshInstall,
@@ -460,59 +449,23 @@ export default class Installer {
     };
   }
 
-  private async doRemoteFilesMatchLocalShasums(): Promise<boolean> {
-    const [remoteShasums] = await SSH.runCommand('cat ~/SHASUMS256.copied 2>/dev/null || true');
-    const localShasums = await this.getLocalShasums();
-    const remoteFilesMatchLocalShasums = localShasums === remoteShasums;
+  private async isRemoteVersionLatest(): Promise<boolean> {
+    const [remoteVersion] = await SSH.runCommand('cat ~/server/VERSION 2>/dev/null || true');
+    const localVersion = await this.getLocalVersion();
+    const remoteFilesMatchLocalVersion = localVersion === remoteVersion;
 
-    console.info(`Remote files ${remoteFilesMatchLocalShasums ? 'DO' : 'do NOT'} match local shasums`);
+    console.info(`Remote files ${remoteFilesMatchLocalVersion ? 'DO' : 'do NOT'} match local version`);
 
-    if (!remoteFilesMatchLocalShasums) {
-      console.info(`Remote shasums: \n${remoteShasums}`);
-      console.info(`Local shasums: \n${localShasums}`);
+    if (!remoteFilesMatchLocalVersion) {
+      console.info(`Remote version: \n${remoteVersion}`);
+      console.info(`Local version: \n${localVersion}`);
     }
 
-    return remoteFilesMatchLocalShasums;
-  }
-
-  private async doLocalFilesMatchLocalShasums(): Promise<boolean> {
-    const localShasums = await this.getLocalShasums();
-
-    let dynamicShasums = '';
-    for (const dirName of CORE_DIRS) {
-      const shasum = await invoke('create_shasum', { dirName });
-      if (dynamicShasums !== '') {
-        dynamicShasums += '\n';
-      }
-      dynamicShasums += `${dirName} ${shasum}`;
-    }
-
-    console.info(`Local shasums:\n${localShasums}`);
-    console.info(`Dynamic shasums:\n${dynamicShasums}`);
-
-    const localTrimmed = localShasums.trim();
-    const dynamicTrimmed = dynamicShasums.trim();
-    const shasumsMatch = localTrimmed === dynamicTrimmed;
-
-    console.info(`Local files ${shasumsMatch ? 'DO' : 'do NOT'} match dynamic shasums`);
-    if (!shasumsMatch) {
-      const localLines = localTrimmed.split('\n');
-      const dynamicLines = dynamicTrimmed.split('\n');
-
-      for (let i = 0; i < localLines.length; i++) {
-        if (localLines[i] !== dynamicLines[i]) {
-          console.info(`Mismatch at line ${i + 1}:`);
-          console.info(`  Local:   ${localLines[i]}`);
-          console.info(`  Dynamic: ${dynamicLines[i]}`);
-        }
-      }
-    }
-
-    return shasumsMatch;
+    return remoteFilesMatchLocalVersion;
   }
 
   private async serverHasSha256File(): Promise<boolean> {
-    const [, code] = await SSH.runCommand('test -f ~/SHASUMS256');
+    const [, code] = await SSH.runCommand('test -f ~/version256');
     return code === 0;
   }
 
@@ -526,36 +479,59 @@ export default class Installer {
     await SSH.uploadFile(walletAddress, '~/address');
   }
 
-  private async uploadSha256(): Promise<void> {
-    const localShasums = await this.getLocalShasums();
-    await SSH.uploadFile(localShasums, '~/SHASUMS256');
-    await SSH.runCommand('rm ~/SHASUMS256.copied');
-  }
-
   private async uploadCoreFiles(progressFn?: (totalCount: number, uploadedCount: number) => void): Promise<void> {
-    let uploadedCount = 0;
-    for (const localDir of CORE_DIRS) {
-      console.log(`UPLOADING ${localDir}`);
-      const remoteDir = `~/${localDir}`;
-      try {
-        console.log(`Removing ${remoteDir}`);
-        await SSH.runCommand(`rm -rf ${remoteDir}`);
-      } catch (e) {
-        console.error(`Failed to remove remote directory ${remoteDir}: ${e}`);
-        throw e;
-      }
-      try {
-        console.log(`Uploading Directory ${localDir} to ${remoteDir}`);
-        await SSH.uploadDirectory(app, localDir, remoteDir);
-        console.log(`FINISHED Uploading Directory ${localDir} to ${remoteDir}`);
-      } catch (e) {
-        console.error(`Failed to upload directory ${localDir} to ${remoteDir}: ${e}`);
-        throw e;
-      }
-      uploadedCount++;
-      progressFn?.(CORE_DIRS.length, uploadedCount);
+    const version = await this.getLocalVersion();
+    console.log(`UPLOADING SERVER VERSION ${version}`);
+    const expectedSha = await invoke<string>('read_embedded_file', {
+      path: `resources/server-${version}.tar.gz.sha256`,
+    });
+    const serverTar = `server-${version}.tar.gz`;
+    const localServerTar = `resources/${serverTar}`;
+    const remoteDir = `~/server`;
+    let totalProgress = 0;
+    let totalCount = 120;
+    try {
+      console.log(`Removing ${remoteDir}`);
+      await SSH.runCommand(`rm -rf ${remoteDir} && mkdir -p ${remoteDir}`);
+      totalProgress += 10;
+      progressFn?.(totalCount, totalProgress);
+    } catch (e) {
+      console.error(`Failed to remove remote directory ${remoteDir}: ${e}`);
+      throw e;
     }
-    await SSH.runCommand('~/scripts/update_shasums.sh SHASUMS256.copied');
+    try {
+      console.log(`Uploading server to ${remoteDir}`);
+      await SSH.uploadEmbeddedFile(app, localServerTar, `~/${serverTar}`, progress => {
+        totalProgress += progress;
+        progressFn?.(totalCount, totalProgress);
+      });
+      const [remoteSha256] = await SSH.runCommand(`sha256sum ~/${serverTar}`);
+      if (remoteSha256.split(' ')[0] !== expectedSha.split(' ')[0]) {
+        console.log(`Remote SHA256: ${remoteSha256}`);
+        console.log(`Embedded SHA256: ${expectedSha}`);
+        throw new Error(`SHA256 mismatch: expected ${expectedSha}, got ${remoteSha256}`);
+      }
+      console.log(`FINISHED Uploading server to ${remoteDir}`);
+    } catch (e) {
+      console.error(`Failed to upload server to ${remoteDir}: ${e}`);
+      throw e;
+    }
+
+    try {
+      console.log(`Extracting server files to ${remoteDir}`);
+      const [result, status] = await SSH.runCommand(`tar -xzf ~/${serverTar} -C ${remoteDir}`);
+      if (status !== 0) {
+        throw new Error(`Failed to extract server files: ${result}`);
+      }
+      console.log(`FINISHED Extracting server files to ${remoteDir} - ${result}`);
+      totalProgress += 10;
+      progressFn?.(totalCount, totalProgress);
+    } catch (e) {
+      console.error(`Failed to extract server files to ${remoteDir}: ${e}`);
+      throw e;
+    }
+
+    progressFn?.(totalCount, totalCount);
   }
 
   private async uploadBotConfigFiles(progressFn?: (totalCount: number, uploadedCount: number) => void): Promise<void> {
@@ -619,7 +595,7 @@ export default class Installer {
   }
 
   private async startRemoteScript(): Promise<void> {
-    const remoteScriptPath = '~/scripts/installer.sh';
+    const remoteScriptPath = '~/server/scripts/installer.sh';
     const remoteScriptLogPath = '~/installer.log';
     const shellCommand = `ARGON_CHAIN=${NETWORK_NAME} nohup ${remoteScriptPath} > ${remoteScriptLogPath} 2>&1 &`;
 
@@ -627,8 +603,12 @@ export default class Installer {
     await SSH.runCommand(shellCommand);
   }
 
-  private async getLocalShasums(): Promise<string> {
-    return await invoke('get_shasums');
+  private async getLocalVersion(): Promise<string> {
+    const embeddedFiles = await invoke('read_embedded_file', { path: 'resources/VERSION' });
+    if (typeof embeddedFiles !== 'string') {
+      throw new Error('Failed to read local version file');
+    }
+    return embeddedFiles.trim();
   }
 }
 
@@ -637,5 +617,3 @@ interface TmpInstallChecks {
   isServerInstallComplete: boolean;
   remoteFilesNeedUpdating: boolean;
 }
-
-const CORE_DIRS = ['deploy', 'bot', 'calculator', 'scripts'];

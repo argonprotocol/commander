@@ -7,13 +7,12 @@ use russh::client::{AuthResult, Msg};
 use russh::keys::ssh_key::LineEnding;
 use russh::keys::*;
 use russh::*;
-use std::collections::HashSet;
 use std::fmt::Display;
-use std::fs;
 use std::future::Future;
-use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
+use tokio::fs::File;
+use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::runtime::Handle;
 use tokio::sync::Mutex;
 
@@ -164,52 +163,53 @@ impl SSH {
         Ok((output, code))
     }
 
-    pub async fn upload_directory(
+    pub async fn upload_embedded_file(
         &self,
         app: &AppHandle,
-        local_relative_dir: impl AsRef<Path>,
-        remote_base_dir: &str,
+        file_name: &str,
+        remote_path: &str,
+        event_progress_key: String,
     ) -> Result<()> {
-        let local_relative_path = local_relative_dir.as_ref().to_path_buf();
-        info!(
-            "Uploading directory {}",
-            local_relative_path.to_string_lossy()
-        );
-        let files_to_upload = Utils::collect_files(app, &local_relative_path)?;
-        let mut remote_dirs_created = HashSet::new();
+        let path = Utils::get_embedded_path(app, file_name)?;
+        let file = File::open(&path).await?;
 
-        // Upload each file
-        for file in files_to_upload {
-            let remote_file_path = PathBuf::from(remote_base_dir).join(&file.relative_path);
-            let remote_parent_dir = remote_file_path
-                .parent()
-                .map(|p| p.to_string_lossy().to_string());
-            let remote_file_path = remote_file_path.to_string_lossy().to_string();
+        // ensure old file is removed
+        let _ = self.run_command(format!("rm -f {}", remote_path)).await;
 
-            // Create remote parent directory if needed
-            if let Some(parent) = remote_parent_dir {
-                if remote_dirs_created.insert(parent.clone()) {
-                    info!("Creating remote directory {}", parent);
-                    self.run_command(format!("mkdir -p {}", parent)).await?;
-                }
+        let mut channel = self.open_channel().await?;
+        channel.exec(true, format!("cat > {}", remote_path)).await?;
+        let mut writer = channel.make_writer();
+
+        let file_size = file.metadata().await?.len();
+        let mut reader = BufReader::new(file);
+        let mut buffer = [0u8; 8192];
+        let mut total = 0;
+
+        let mut last_percent = -1;
+        loop {
+            let n = reader.read(&mut buffer).await?;
+            if n == 0 {
+                break;
             }
-
-            let script_contents = fs::read_to_string(&file.absolute_path)?;
-            self.upload_file(&script_contents, &remote_file_path)
-                .await?;
-
-            // Set executable bit if needed
-            if file.is_executable {
-                info!("Setting executable bit for {}", remote_file_path);
-                self.run_command(format!("chmod u+x {}", remote_file_path))
-                    .await?;
+            writer.write_all(&buffer[..n]).await?;
+            total += n as u64;
+            let percent = (total * 100 / file_size) as i32;
+            if percent != last_percent {
+                last_percent = percent;
+                info!("Uploading {}: {}%", file_name, percent);
+                app.emit(&event_progress_key, percent)?;
             }
         }
+
+        app.emit(&event_progress_key, 100)?;
+        writer.shutdown().await?;
+        channel.eof().await?;
+        while channel.wait().await.is_some() {}
 
         Ok(())
     }
 
-    pub async fn upload_file(&self, contents: &str, remote_path: &str) -> Result<()> {
+    pub async fn upload_file(&self, contents: &[u8], remote_path: &str) -> Result<()> {
         // First, create the script in the remote server's home directory
         info!("Uploading file {}", remote_path);
         let mut channel = self.open_channel().await?;
@@ -217,7 +217,7 @@ impl SSH {
         channel.exec(true, scp_command).await?;
 
         // Write the contents of the setup script
-        channel.data(contents.as_bytes()).await?;
+        channel.data(contents).await?;
         channel.eof().await?;
 
         // Wait for the copy to complete

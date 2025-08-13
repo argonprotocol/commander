@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { Config, DEPLOY_ENV_FILE } from './Config';
 import { IConfigServerDetails } from '../interfaces/IConfig';
+import { listen } from '@tauri-apps/api/event';
 
 class InvokeTimeout extends Error {
   constructor(message: string) {
@@ -53,6 +54,11 @@ export class SSH {
     }
   }
 
+  public static async getEmbeddedFiles(path: string): Promise<string[]> {
+    const response = await this.invokeWithTimeout('get_embedded_files', { path }, 2 * 1e3);
+    return response as string[];
+  }
+
   public static async uploadFile(contents: string, remotePath: string): Promise<void> {
     this.isConnected || (await this.openConnection());
     try {
@@ -66,21 +72,42 @@ export class SSH {
     }
   }
 
-  public static async uploadDirectory(app: any, localRelativeDir: string, remoteDir: string): Promise<void> {
+  public static async uploadEmbeddedFile(
+    app: any,
+    localPath: string,
+    remotePath: string,
+    progressCallback: (progress: number) => void,
+  ): Promise<void> {
     this.isConnected || (await this.openConnection());
-    await this.invokeWithTimeout('ssh_upload_directory', { app, localRelativeDir, remoteDir }, 120 * 1e3);
+    const eventProgressKey = localPath.replace(/[^a-zA-Z0-9]/g, '_') + '_progress';
+    const unsub = await listen(eventProgressKey, event => {
+      progressCallback(event.payload as number);
+      if (event.payload === 100) {
+        unsub(); // Unsubscribe when upload is complete
+      }
+    });
+    try {
+      await this.invokeWithTimeout(
+        'ssh_upload_embedded_file',
+        { app, localPath, remotePath, eventProgressKey },
+        120 * 1e3,
+      );
+    } catch (e) {
+      unsub();
+      throw e;
+    }
   }
 
   public static async stopMiningDockers(): Promise<void> {
-    await this.runCommand(`cd deploy && docker compose --env-file=${DEPLOY_ENV_FILE} --profile miners down`);
+    await this.runCommand(`cd server && docker compose --env-file=${DEPLOY_ENV_FILE} --profile miners down`);
   }
 
   public static async stopBotDocker(): Promise<void> {
-    await this.runCommand(`cd deploy && docker compose --env-file=${DEPLOY_ENV_FILE} down bot`);
+    await this.runCommand(`cd server && docker compose --env-file=${DEPLOY_ENV_FILE} down bot`);
   }
 
   public static async startBotDocker(): Promise<void> {
-    await this.runCommand(`cd deploy && docker compose --env-file=${DEPLOY_ENV_FILE} up bot -d`);
+    await this.runCommand(`cd server && docker compose --env-file=${DEPLOY_ENV_FILE} up bot -d`);
   }
 
   public static async getKeys(): Promise<IKeys> {

@@ -3,3 +3,4 @@ tars
 .vscode
 /.idea
 data
+/bot/src/
