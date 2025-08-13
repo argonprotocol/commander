@@ -1,4 +1,4 @@
-import { runOnTeardown, sudo, teardown } from '@argonprotocol/testing';
+import { runOnTeardown, startNetwork, sudo, teardown } from '@argonprotocol/testing';
 import { FrameCalculator, getClient, mnemonicGenerate } from '@argonprotocol/mainchain';
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
@@ -6,7 +6,6 @@ import Path from 'node:path';
 import Bot from '../src/Bot.ts';
 import * as BiddingCalculator from '@argonprotocol/commander-calculator';
 import { Dockers } from '../src/Dockers.js';
-import { startNetwork } from './_network.js';
 
 afterEach(teardown);
 afterAll(teardown);

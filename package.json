@@ -11,16 +11,15 @@
     "tauri": "tauri",
     "tauri:dev": "sh -c 'TAURI_PORT=${COMMANDER_INSTANCE##*:}; yarn tauri dev --config=\"{\\\"build\\\":{\\\"devUrl\\\":\\\"http://localhost:${TAURI_PORT:-1420}\\\"}}\"'",
     "lint": "prettier -w bot calculator src-vue",
-    "fetch:compose": "tsx fetchCompose.ts",
-    "test": "yarn fetch:compose && vitest --run",
+    "test": "vitest --run",
     "typecheck": "vue-tsc --noEmit && yarn workspaces foreach --all run tsc --noEmit",
     "update-data": "tsx data-generators/all.ts",
     "prepare": "husky"
   },
   "dependencies": {
-    "@argonprotocol/bitcoin": "1.3.6",
+    "@argonprotocol/bitcoin": "^1.3.6",
     "@argonprotocol/commander-calculator": "workspace:*",
-    "@argonprotocol/mainchain": "1.3.6",
+    "@argonprotocol/mainchain": "^1.3.6",
     "@chenfengyuan/vue-countdown": "^2.1.3",
     "@headlessui/vue": "^1.7.23",
     "@heroicons/vue": "^2.2.0",
@@ -38,7 +37,7 @@
     "@tauri-apps/plugin-sql": "^2.2.0",
     "@tauri-apps/plugin-updater": "~2",
     "@tauri-controls/vue": "^0.4.0",
-    "bignumber.js": "^9.1.2",
+    "bignumber.js": "^9.3.0",
     "buffer": "^6.0.3",
     "camelcase-keys": "^9.1.3",
     "chart.js": "^4.4.9",
@@ -55,7 +54,7 @@
     "sass-embedded": "^1.85.1",
     "tailwind-merge": "^3.0.1",
     "tailwindcss": "^4.0.3",
-    "vitest": "^3.1.2",
+    "vitest": "^3.2.4",
     "vue": "^3.5.13",
     "zod": "^3.25.55"
   },
@@ -81,7 +80,7 @@
     "vite-svg-loader": "^5.1.0",
     "vue-tsc": "^2.1.10"
   },
-  "resolutions_disable": {
+  "resolutions": {
     "@argonprotocol/mainchain": "portal:../mainchain/client/nodejs",
     "@argonprotocol/testing": "portal:../mainchain/testing/nodejs",
     "@argonprotocol/bitcoin": "portal:../mainchain/bitcoin/nodejs"

@@ -7,6 +7,7 @@ export default defineConfig({
     retry: 0,
     reporters: process.env.GITHUB_ACTIONS ? ['dot', 'github-actions'] : ['dot'],
     include: ['src-vue/__test__/**/*.test.ts'],
+    setupFiles: './vitest.setup.ts',
     // silent: false
   },
 });

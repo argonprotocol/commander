@@ -1,6 +1,5 @@
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
-import { runOnTeardown, sudo, teardown } from '@argonprotocol/testing';
-import { startNetwork } from './_network.js';
+import { runOnTeardown, sudo, teardown, startNetwork } from '@argonprotocol/testing';
 import { AccountMiners, Accountset, getClient, mnemonicGenerate } from '@argonprotocol/mainchain';
 import { BlockSync } from '../src/BlockSync.js';
 import fs from 'node:fs';

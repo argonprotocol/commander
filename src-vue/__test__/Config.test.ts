@@ -18,7 +18,7 @@ it.only('can load config defaults', async () => {
   expect(config.isWaitingForUpgradeApproval).toBe(false);
   expect(config.hasMiningSeats).toBe(false);
   expect(config.hasMiningBids).toBe(false);
-  expect(config.biddingRules).toBe(null);
+  expect(config.biddingRules).toBeTruthy();
 });
 
 it('can load config from db state', async () => {

@@ -1,24 +1,17 @@
 import { afterAll, afterEach, expect, it } from 'vitest';
-import { activateNotary, sudo, teardown, TestMainchain, TestNotary } from '@argonprotocol/testing';
+import { startNetwork, teardown } from '@argonprotocol/testing';
 import createBidderParams from '../src/createBidderParams.ts';
 import { type IBiddingRules } from '../src/IBiddingRules.ts';
 import { jsonParseWithBigInts } from '../src/utils.ts';
+import { getClient } from '@argonprotocol/mainchain';
 import { MiningFrames } from '../src/MiningFrames.ts';
 
 afterEach(teardown);
 afterAll(teardown);
 
 it('can create bidder params', async () => {
-  const chain = new TestMainchain();
-  await chain.launch({ miningThreads: 1 });
-  const notary = new TestNotary();
-  await notary.start({
-    uuid: chain.uuid,
-    mainchainUrl: chain.address,
-  });
-  const clientPromise = chain.client();
-  const client = await clientPromise;
-  await activateNotary(sudo(), client, notary);
+  const network = await startNetwork();
+  const client = await getClient(network.archiveUrl);
 
   const biddingRules = jsonParseWithBigInts(`{
     "argonCirculationGrowthPctMin": 91,
