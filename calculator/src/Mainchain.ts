@@ -147,15 +147,23 @@ export class Mainchain {
     return await client.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
   }
 
-  public async fetchMicrogonExchangeRatesTo(): Promise<{
+  public async fetchMicrogonBlockFeesMined(blockHash?: Uint8Array | string): Promise<bigint> {
+    const client = await this.client;
+    const api = blockHash ? await client.at(blockHash) : client;
+    const blockFees = await api.query.blockRewards.blockFees();
+    return blockFees.toBigInt();
+  }
+
+  public async fetchMicrogonExchangeRatesTo(blockHash?: Uint8Array | string): Promise<{
     USD: bigint;
     ARGNOT: bigint;
     ARGN: bigint;
     BTC: bigint;
   }> {
     const client = await this.client;
+    const api = blockHash ? await client.at(blockHash) : client;
     const microgonsForArgon = BigInt(1 * MICROGONS_PER_ARGON);
-    const priceIndexRaw = await client.query.priceIndex.current();
+    const priceIndexRaw = await api.query.priceIndex.current();
     if (priceIndexRaw.isNone) {
       return {
         USD: microgonsForArgon,

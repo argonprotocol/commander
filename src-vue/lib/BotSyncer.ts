@@ -1,17 +1,13 @@
 import { Config } from './Config';
 import { Db } from './Db';
 import { BotFetch } from './BotFetch';
-import {
-  type IBidsFile,
-  type IBotState,
-  type IBotStateStarting,
-  type IEarningsFileCohort,
-} from '@argonprotocol/commander-bot';
+import { type IBidsFile, type IBotState, type IBotStateStarting } from '@argonprotocol/commander-bot';
 import { MiningFrames, TICKS_PER_COHORT } from '@argonprotocol/commander-calculator';
 import { getMainchain } from '../stores/mainchain';
 import { BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors';
 import { IBotEmitter } from './Bot';
 import Installer from './Installer';
+import type { IFrameEarningsRollup } from '@argonprotocol/commander-bot/src/interfaces/IEarningsFile.ts';
 
 export enum BotStatus {
   Starting = 'Starting',
@@ -214,16 +210,40 @@ export class BotSyncer {
     await this.syncDbCohort(frameId);
     const processedCohorts: Set<number> = new Set([frameId]);
 
-    const cohortEarningsByFrameId = await this.injectMissingCohortEarnings(
-      earningsFile.byCohortActivationFrameId,
-      frameId,
-    );
-    const cohortEarningsEntries = Object.entries(cohortEarningsByFrameId) as [string, IEarningsFileCohort][];
+    const earningsByCohortActivationFrameId: { [frameId: number]: IFrameEarningsRollup } = {};
+    let maxBlockNumber = 0;
+    for (const [blockNumberStr, earnings] of Object.entries(earningsFile.earningsByBlock)) {
+      const blockNumber = parseInt(blockNumberStr, 10);
+      const cohortActivationFrameId = earnings.authorCohortActivationFrameId;
+      earningsByCohortActivationFrameId[cohortActivationFrameId] ??= {
+        lastBlockMinedAt: '',
+        blocksMined: 0,
+        microgonFeesMined: 0n,
+        microgonsMined: 0n,
+        microgonsMinted: 0n,
+        micronotsMined: 0n,
+      };
+
+      const earningsDuringBlock = earningsByCohortActivationFrameId[cohortActivationFrameId];
+      earningsDuringBlock.blocksMined += 1;
+      if (blockNumber > maxBlockNumber) {
+        earningsDuringBlock.lastBlockMinedAt = earnings.blockMinedAt;
+        maxBlockNumber = blockNumber;
+      }
+      earningsDuringBlock.lastBlockMinedAt = earnings.blockMinedAt;
+      earningsDuringBlock.microgonFeesMined += earnings.microgonFeesMined;
+      earningsDuringBlock.microgonsMined += earnings.microgonsMined;
+      earningsDuringBlock.microgonsMinted += earnings.microgonsMinted;
+      earningsDuringBlock.micronotsMined += earnings.micronotsMined;
+    }
+    const cohortEarningsByFrameId = await this.injectMissingCohortEarnings(earningsByCohortActivationFrameId, frameId);
+    const cohortEarningsEntries = Object.entries(cohortEarningsByFrameId);
 
     let blocksMined = 0;
     let micronotsMined = 0n;
     let microgonsMined = 0n;
     let microgonsMinted = 0n;
+    let microgonFeesMined = 0n;
 
     for (const [cohortActivationFrameIdStr, cohortEarningsDuringFrame] of cohortEarningsEntries) {
       const cohortActivationFrameId = parseInt(cohortActivationFrameIdStr, 10);
@@ -236,6 +256,7 @@ export class BotSyncer {
       micronotsMined += cohortEarningsDuringFrame.micronotsMined;
       microgonsMined += cohortEarningsDuringFrame.microgonsMined;
       microgonsMinted += cohortEarningsDuringFrame.microgonsMinted;
+      microgonFeesMined += cohortEarningsDuringFrame.microgonFeesMined;
     }
 
     const { activeSeatCount, totalSeatCost } = await this.db.cohortsTable.fetchActiveSeatData(
@@ -244,15 +265,15 @@ export class BotSyncer {
     );
 
     const isProcessed = earningsFile.frameProgress === 100.0;
-    await this.db.framesTable.update(
+    await this.db.framesTable.update({
       frameId,
-      earningsFile.firstTick,
-      earningsFile.lastTick,
-      earningsFile.firstBlockNumber,
-      earningsFile.lastBlockNumber,
-      earningsFile.microgonToUsd,
-      earningsFile.microgonToBtc,
-      earningsFile.microgonToArgonot,
+      firstTick: earningsFile.firstTick,
+      lastTick: earningsFile.lastTick,
+      firstBlockNumber: earningsFile.firstBlockNumber,
+      lastBlockNumber: earningsFile.lastBlockNumber,
+      microgonToUsd: earningsFile.microgonToUsd,
+      microgonToBtc: earningsFile.microgonToBtc,
+      microgonToArgonot: earningsFile.microgonToArgonot,
 
       activeSeatCount,
       totalSeatCost,
@@ -260,16 +281,17 @@ export class BotSyncer {
       micronotsMined,
       microgonsMined,
       microgonsMinted,
+      microgonFeesMined,
 
-      earningsFile.frameProgress,
+      frameProgress: earningsFile.frameProgress,
       isProcessed,
-    );
+    });
   }
 
   private async injectMissingCohortEarnings(
-    cohortEarningsByFrameId: Record<string, IEarningsFileCohort>,
+    cohortEarningsByFrameId: Record<string, IFrameEarningsRollup>,
     currentFrameId: number,
-  ): Promise<Record<string, IEarningsFileCohort>> {
+  ): Promise<Record<string, IFrameEarningsRollup>> {
     // Check previous 9 frames for to ensure we have all active cohorts in earnings object
     for (let i = 0; i < 10; i++) {
       const frameIdToCheck = currentFrameId - i;
@@ -292,6 +314,7 @@ export class BotSyncer {
           microgonsMined: 0n,
           microgonsMinted: 0n,
           micronotsMined: 0n,
+          microgonFeesMined: 0n,
         };
       }
     }
@@ -319,11 +342,12 @@ export class BotSyncer {
       );
       const microgonsToBeMinedPerSeat = microgonsToBeMinedDuringCohort / miningSeatCount;
       const micronotsToBeMinedPerSeat = micronotsToBeMinedDuringCohort / miningSeatCount;
+      const transactionFees = Object.values(bidsFile.transactionFeesByBlock).reduce((acc, fee) => acc + fee, 0n);
 
       await this.db.cohortsTable.insertOrUpdate(
         cohortActivationFrameId,
         progress,
-        bidsFile.transactionFees,
+        transactionFees,
         micronotsStaked,
         bidsFile.microgonsBidTotal,
         bidsFile.seatsWon,
@@ -356,16 +380,13 @@ export class BotSyncer {
   private async syncDbCohortFrame(
     cohortActivationFrameId: number,
     frameId: number,
-    cohortEarningsDuringFrame: IEarningsFileCohort,
+    cohortEarningsDuringFrame: IFrameEarningsRollup,
   ): Promise<void> {
-    await this.db.cohortFramesTable.insertOrUpdate(
+    await this.db.cohortFramesTable.insertOrUpdate({
       frameId,
       cohortActivationFrameId,
-      cohortEarningsDuringFrame.blocksMined,
-      cohortEarningsDuringFrame.micronotsMined,
-      cohortEarningsDuringFrame.microgonsMined,
-      cohortEarningsDuringFrame.microgonsMinted,
-    );
+      ...cohortEarningsDuringFrame,
+    });
   }
 
   // I'm using a hash to call out which frame ID is being used to fetch the bids file

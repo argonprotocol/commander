@@ -27,21 +27,6 @@ it('should skip install if server is not connected', async () => {
   expect(installer.reasonToSkipInstall).toBe('ServerNotConnected');
 });
 
-it('should skip install if local files are invalid', async () => {
-  const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'true' });
-  const config = new Config(dbPromise);
-  await config.load();
-
-  const installer = new Installer(config);
-  await installer.load();
-  // @ts-ignore
-  installer.doLocalFilesMatchLocalShasums = vi.fn().mockReturnValue(false);
-  const didRun = await installer.run();
-
-  expect(didRun).toBe(false);
-  expect(installer.reasonToSkipInstall).toBe('LocalShasumsNotAccurate');
-});
-
 it('should skip install if install is already running', async () => {
   const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'true' });
   const config = new Config(dbPromise);
@@ -73,9 +58,7 @@ it('should install if all conditions are met', async () => {
   await config.save();
 
   // @ts-ignore
-  installer.doLocalFilesMatchLocalShasums = vi.fn().mockResolvedValue(true);
-  // @ts-ignore
-  installer.doRemoteFilesMatchLocalShasums = vi.fn().mockResolvedValue(true);
+  installer.isRemoteVersionLatest = vi.fn().mockResolvedValue(true);
   // @ts-ignore
   installer.calculateIsRunning = vi.fn().mockResolvedValue(false);
   // @ts-ignore
@@ -103,9 +86,7 @@ it.only('should run through entire install process', async () => {
   const installer = new Installer(config);
 
   // @ts-ignore
-  installer.doLocalFilesMatchLocalShasums = vi.fn().mockResolvedValue(true);
-  // @ts-ignore
-  installer.doRemoteFilesMatchLocalShasums = vi.fn().mockResolvedValue(true);
+  installer.isRemoteVersionLatest = vi.fn().mockResolvedValue(true);
   // @ts-ignore
 
   const filenamesPending = [

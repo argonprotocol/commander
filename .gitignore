@@ -30,3 +30,5 @@ bot/caleb.json
 bot/.env
 tsconfig.*.tsbuildinfo
 *.pem
+.yarn/install-state.gz
+docker-compose.yml

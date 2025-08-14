@@ -15,29 +15,35 @@ export interface IBotStateError extends IBotStateStarting {
   serverError: string;
 }
 
-export interface IBotState extends ILastModifiedAt {
+export interface IBotSyncStatus {
   isReady: boolean;
   isStarting?: boolean;
   isWaitingForBiddingRules?: boolean;
   isSyncing?: boolean;
-  hasMiningBids: boolean;
-  hasMiningSeats: boolean;
+  maxSeatsInPlay?: number;
+  maxSeatsReductionReason?: string;
+}
+
+export interface IBotState extends ILastModifiedAt, IBotSyncStatus, IBotStateFile {
   argonBlockNumbers: IBlockNumbers;
   bitcoinBlockNumbers: IBlockNumbers;
-  bidsLastModifiedAt: Date;
-  earningsLastModifiedAt: Date;
   lastBlockNumber: number;
+  syncedToBlockNumber: number;
   lastFinalizedBlockNumber: number;
-  oldestFrameIdToSync: number;
-  currentFrameId: number;
-  currentFrameProgress: number;
-  syncProgress: number;
   queueDepth: number;
   maxSeatsPossible: number;
   maxSeatsReductionReason: string;
 }
 
-export interface IBotStateFile extends IBotState {
+export interface IBotStateFile {
+  bidsLastModifiedAt: Date;
+  earningsLastModifiedAt: Date;
+  oldestFrameIdToSync: number;
+  currentFrameProgress: number;
+  syncProgress: number;
+  hasMiningBids: boolean;
+  hasMiningSeats: boolean;
+  currentFrameId: number;
   lastBlockNumberByFrameId: {
     [frameId: number]: number;
   };

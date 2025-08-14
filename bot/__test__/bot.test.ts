@@ -1,25 +1,23 @@
-import { activateNotary, runOnTeardown, sudo, teardown, TestMainchain, TestNotary } from '@argonprotocol/testing';
-import { FrameCalculator, mnemonicGenerate } from '@argonprotocol/mainchain';
-import { afterAll, afterEach, expect, it, vi } from 'vitest';
+import { runOnTeardown, startNetwork, sudo, teardown } from '@argonprotocol/testing';
+import { FrameCalculator, getClient, mnemonicGenerate } from '@argonprotocol/mainchain';
+import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import Path from 'node:path';
 import Bot from '../src/Bot.ts';
 import * as BiddingCalculator from '@argonprotocol/commander-calculator';
+import { Dockers } from '../src/Dockers.js';
 
 afterEach(teardown);
 afterAll(teardown);
 
+let clientAddress: string;
+beforeAll(async () => {
+  const result = await startNetwork();
+  clientAddress = result.archiveUrl;
+});
+
 it('can autobid and store stats', async () => {
-  const chain = new TestMainchain();
-  await chain.launch({ miningThreads: 1 });
-  const notary = new TestNotary();
-  await notary.start({
-    uuid: chain.uuid,
-    mainchainUrl: chain.address,
-  });
-  const clientPromise = chain.client();
-  const client = await clientPromise;
-  await activateNotary(sudo(), client, notary);
+  const client = await getClient(clientAddress);
 
   const botDataDir = fs.mkdtempSync('/tmp/bot-');
 
@@ -41,10 +39,23 @@ it('can autobid and store stats', async () => {
     return {};
   });
 
+  vi.spyOn(Dockers, 'getArgonBlockNumbers').mockImplementation(async () => {
+    return {
+      localNode: 0,
+      mainNode: 0,
+    };
+  });
+  vi.spyOn(Dockers, 'getBitcoinBlockNumbers').mockImplementation(async () => {
+    return {
+      localNode: 0,
+      mainNode: 0,
+    };
+  });
+
   const bot = new Bot({
     pair: sudo(),
-    archiveRpcUrl: chain.address,
-    localRpcUrl: chain.address,
+    archiveRpcUrl: clientAddress,
+    localRpcUrl: clientAddress,
     biddingRulesPath: Path.resolve(botDataDir, 'rules.json'),
     datadir: botDataDir,
     keysMnemonic: mnemonicGenerate(),
@@ -120,12 +131,12 @@ it('can autobid and store stats', async () => {
   for (const frameId of cohortActivationFrameIdsWithEarnings) {
     const earningsData = await bot.storage.earningsFile(frameId!).get();
     expect(earningsData).toBeDefined();
-    expect(Object.keys(earningsData!.byCohortActivationFrameId).length).toBeGreaterThanOrEqual(1);
-    for (const [cohortActivationFrameId, cohortData] of Object.entries(earningsData!.byCohortActivationFrameId)) {
-      cohortActivationFrameIds.add(Number(cohortActivationFrameId!));
-      expect(Number(cohortActivationFrameId)).toBeGreaterThan(0);
-      expect(cohortData.microgonsMined).toBeGreaterThan(0);
-      microgonsMined += cohortData.microgonsMined;
+    expect(Object.keys(earningsData!.earningsByBlock).length).toBeGreaterThanOrEqual(1);
+    for (const blockEarnings of Object.values(earningsData!.earningsByBlock)) {
+      expect(blockEarnings.authorCohortActivationFrameId).toBeGreaterThan(0);
+      cohortActivationFrameIds.add(blockEarnings.authorCohortActivationFrameId);
+      expect(blockEarnings.microgonsMined).toBeGreaterThan(0n);
+      microgonsMined += blockEarnings.microgonsMined;
     }
   }
   expect(microgonsMined).toBeGreaterThanOrEqual(375_000 * voteBlocks);
@@ -151,8 +162,8 @@ it('can autobid and store stats', async () => {
   runOnTeardown(() => fs.promises.rm(path2, { recursive: true, force: true }));
   const botRestart = new Bot({
     pair: sudo(),
-    archiveRpcUrl: chain.address,
-    localRpcUrl: chain.address,
+    archiveRpcUrl: clientAddress,
+    localRpcUrl: clientAddress,
     biddingRulesPath: Path.resolve(botDataDir, 'rules.json'),
     datadir: path2,
     keysMnemonic: mnemonicGenerate(),
@@ -168,7 +179,7 @@ it('can autobid and store stats', async () => {
   for (const cohortActivationFrameId of cohortActivationFrameIdsWithEarnings) {
     const earningsFile1 = await bot.storage.earningsFile(cohortActivationFrameId).get();
     const earningsFile2 = await botRestart.storage.earningsFile(cohortActivationFrameId).get();
-    console.info('Checking earnings for rotation', cohortActivationFrameId);
+    console.info('Checking earnings for frameId', cohortActivationFrameId);
     expect(earningsFile1).toBeTruthy();
     expect(earningsFile2).toBeTruthy();
     expect(earningsFile1!).toEqual(earningsFile2!);

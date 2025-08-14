@@ -8,6 +8,7 @@ import { Dockers } from './Dockers.ts';
 import { type IBiddingRules, jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
 import { History } from './History.ts';
 import FatalError from './interfaces/FatalError.ts';
+import type { IBotSyncStatus } from './interfaces/IBotStateFile.js';
 
 interface IBotOptions {
   datadir: string;
@@ -20,7 +21,7 @@ interface IBotOptions {
   shouldSkipDockerSync?: boolean;
 }
 
-export default class Bot {
+export default class Bot implements IBotSyncStatus {
   public autobidder!: AutoBidder;
   public accountset!: Accountset;
   public blockSync!: BlockSync;
@@ -30,6 +31,12 @@ export default class Bot {
   public isWaitingForBiddingRules: boolean = false;
   public isSyncing: boolean = false;
   public isReady: boolean = false;
+  public get maxSeatsInPlay(): number {
+    return this.history.maxSeatsInPlay;
+  }
+  public get maxSeatsReductionReason(): string | undefined {
+    return this.history.maxSeatsReductionReason;
+  }
 
   public history!: History;
 
@@ -87,7 +94,7 @@ export default class Bot {
     this.accountset = new Accountset({
       client: localClientPromise,
       seedAccount: this.options.pair,
-      sessionKeyMnemonic: this.options.keysMnemonic,
+      sessionKeySeedOrMnemonic: this.options.keysMnemonic,
       subaccountRange: new Array(99).fill(0).map((_, i) => i),
     });
     this.autobidder = new AutoBidder(
@@ -98,7 +105,6 @@ export default class Bot {
     );
     this.blockSync = new BlockSync(
       this,
-      this.autobidder,
       this.accountset,
       this.storage,
       this.localClient,
@@ -156,8 +162,8 @@ export default class Bot {
   }
 
   public async shutdown() {
-    await this.blockSync.stop();
     await this.autobidder.stop();
+    await this.blockSync.stop();
     await this.accountset.client.then(x => x.disconnect());
     await this.history.handleShutdown();
   }

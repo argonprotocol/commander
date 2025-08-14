@@ -1,6 +1,6 @@
 import { IFrameRecord } from '../../interfaces/db/IFrameRecord';
 import { BaseTable, IFieldTypes } from './BaseTable';
-import { calculateAPR, convertFromSqliteFields, toSqlParams } from '../Utils';
+import { convertFromSqliteFields, toSqlParams } from '../Utils';
 import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
 import BigNumber from 'bignumber.js';
 import dayjs from 'dayjs';
@@ -14,7 +14,7 @@ export class FramesTable extends BaseTable {
   private fieldTypes: IFieldTypes = {
     boolean: ['isProcessed'],
     bigintJson: ['microgonToUsd', 'microgonToBtc', 'microgonToArgonot'],
-    bigint: ['totalSeatCost', 'microgonsMined', 'microgonsMinted', 'micronotsMined'],
+    bigint: ['totalSeatCost', 'microgonsMined', 'microgonsMinted', 'micronotsMined', 'microgonFeesMined'],
   };
 
   async insertOrUpdate(
@@ -60,24 +60,44 @@ export class FramesTable extends BaseTable {
     );
   }
 
-  async update(
-    id: number,
-    firstTick: number,
-    lastTick: number,
-    firstBlockNumber: number,
-    lastBlockNumber: number,
-    microgonToUsd: bigint[],
-    microgonToBtc: bigint[],
-    microgonToArgonot: bigint[],
-    activeSeatCount: number,
-    totalSeatCost: bigint,
-    blocksMined: number,
-    micronotsMined: bigint,
-    microgonsMined: bigint,
-    microgonsMinted: bigint,
-    progress: number,
-    isProcessed: boolean,
-  ): Promise<void> {
+  async update(args: {
+    frameId: number;
+    firstTick: number;
+    lastTick: number;
+    firstBlockNumber: number;
+    lastBlockNumber: number;
+    microgonToUsd: bigint[];
+    microgonToBtc: bigint[];
+    microgonToArgonot: bigint[];
+    activeSeatCount: number;
+    totalSeatCost: bigint;
+    blocksMined: number;
+    microgonFeesMined: bigint;
+    micronotsMined: bigint;
+    microgonsMined: bigint;
+    microgonsMinted: bigint;
+    frameProgress: number;
+    isProcessed: boolean;
+  }): Promise<void> {
+    const {
+      frameId,
+      firstTick,
+      lastTick,
+      firstBlockNumber,
+      lastBlockNumber,
+      microgonToUsd,
+      microgonToBtc,
+      microgonToArgonot,
+      activeSeatCount,
+      totalSeatCost,
+      blocksMined,
+      micronotsMined,
+      microgonsMined,
+      microgonsMinted,
+      microgonFeesMined,
+      frameProgress: progress,
+      isProcessed,
+    } = args;
     await this.db.execute(
       `UPDATE Frames SET 
         firstTick = ?, 
@@ -90,8 +110,9 @@ export class FramesTable extends BaseTable {
         activeSeatCount = ?, 
         totalSeatCost = ?,
         blocksMined = ?, 
-        micronotsMined = ?, 
-        microgonsMined = ?, 
+        micronotsMined = ?,
+        microgonsMined = ?,
+        microgonFeesMined = ?,
         microgonsMinted = ?, 
         progress = ?, 
         isProcessed = ? 
@@ -109,10 +130,11 @@ export class FramesTable extends BaseTable {
         blocksMined,
         micronotsMined,
         microgonsMined,
+        microgonFeesMined,
         microgonsMinted,
         progress,
         isProcessed,
-        id,
+        frameId,
       ]),
     );
   }
@@ -148,6 +170,7 @@ export class FramesTable extends BaseTable {
         microgonsMined: x.microgonsMined,
         microgonsMinted: x.microgonsMinted,
         micronotsMined: x.micronotsMined,
+        microgonFeesMined: x.microgonFeesMined,
 
         microgonValueOfRewards,
         progress: x.progress,
@@ -178,6 +201,7 @@ export class FramesTable extends BaseTable {
         microgonsMined: 0n,
         microgonsMinted: 0n,
         micronotsMined: 0n,
+        microgonFeesMined: 0n,
         microgonValueOfRewards: 0n,
         progress: 0,
         profit: 0,

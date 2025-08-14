@@ -11,7 +11,8 @@ import { type History, SeatReductionReason } from './History.ts';
  */
 export class AutoBidder {
   public readonly miningBids: MiningBids;
-  private cohortBidder: CohortBidder | undefined;
+  private cohortBiddersByActivationFrameId = new Map<number, CohortBidder>();
+  private isStopped: boolean = false;
   private unsubscribe?: () => void;
 
   constructor(
@@ -33,19 +34,25 @@ export class AutoBidder {
   }
 
   async stop() {
+    if (this.isStopped) return;
+    this.isStopped = true;
+    console.log('AUTOBIDDER STOPPING');
     this.unsubscribe?.();
     this.unsubscribe = undefined;
-    await this.stopCohortBidding();
+    for (const key of this.cohortBiddersByActivationFrameId.keys()) {
+      await this.onBiddingEnd(key);
+    }
+    console.log('AUTOBIDDER STOPPED');
   }
 
   private async onBiddingEnd(cohortActivationFrameId: number): Promise<void> {
-    console.log(`Bidding for frame ${cohortActivationFrameId} ended`);
-    if (this.cohortBidder?.cohortStartingFrameId !== cohortActivationFrameId) return;
-    await this.stopCohortBidding();
+    await this.cohortBiddersByActivationFrameId.get(cohortActivationFrameId)?.stop();
+    this.cohortBiddersByActivationFrameId.delete(cohortActivationFrameId);
+    console.log('Bidding stopped', { cohortActivationFrameId });
   }
 
   private async onBiddingStart(cohortActivationFrameId: number) {
-    if (this.cohortBidder?.cohortStartingFrameId === cohortActivationFrameId) return;
+    if (this.isStopped) return;
     const params = await createBidderParams(cohortActivationFrameId, await this.accountset.client, this.biddingRules);
     if (params.maxSeats === 0) return;
 
@@ -113,17 +120,9 @@ export class AutoBidder {
         });
       },
     });
-    this.cohortBidder = cohortBidder;
+    if (this.isStopped) return;
+    this.cohortBiddersByActivationFrameId.set(cohortActivationFrameId, cohortBidder);
     await this.history.initCohort(cohortActivationFrameId, cohortBidder.myAddresses);
     await cohortBidder.start();
-  }
-
-  private async stopCohortBidding() {
-    const cohortBidder = this.cohortBidder;
-    if (!cohortBidder) return;
-    this.cohortBidder = undefined;
-    const cohortActivationFrameId = cohortBidder.cohortStartingFrameId;
-    await cohortBidder.stop();
-    console.log('Bidding stopped', { cohortActivationFrameId });
   }
 }

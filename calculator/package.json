@@ -9,14 +9,14 @@
     "test:local": "ARGON_PROJECT_ROOT=../../mainchain vitest --run"
   },
   "dependencies": {
-    "@argonprotocol/mainchain": "1.3.6",
+    "@argonprotocol/mainchain": "^1.3.6",
     "dayjs": "^1.11.13",
     "zod": "^3.25.55"
   },
   "devDependencies": {
-    "@argonprotocol/testing": "1.3.6",
-    "bignumber.js": "^9.1.2",
+    "@argonprotocol/testing": "^1.3.6",
+    "bignumber.js": "^9.3.1",
     "typescript": "^5.8.3",
-    "vitest": "^3.1.2"
+    "vitest": "^3.2.4"
   }
 }
