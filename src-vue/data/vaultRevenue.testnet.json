@@ -1,1 +1,25 @@
-{ "synchedToFrame": 187, "vaultsById": {} }
+{
+  "synchedToFrame": 204,
+  "vaultsById": {
+    "5": {
+      "openedTick": 28996910,
+      "baseline": {
+        "bitcoinLocks": 0,
+        "feeRevenue": "0n",
+        "microgonLiquidityRealized": "0n",
+        "satoshis": "0n"
+      },
+      "changesByFrame": []
+    },
+    "6": {
+      "openedTick": 29005635,
+      "baseline": {
+        "bitcoinLocks": 0,
+        "feeRevenue": "0n",
+        "microgonLiquidityRealized": "0n",
+        "satoshis": "0n"
+      },
+      "changesByFrame": []
+    }
+  }
+}
