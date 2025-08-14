@@ -1,8 +1,8 @@
 #!/bin/bash
 
-pkill -f "$HOME/scripts/installer.sh"
+pkill -f "$HOME/server/scripts/installer.sh"
 
-cd ~/deploy
+cd ~/server
 
 docker compose --env-file=.env.testnet --profile=all down
 docker rmi -f $(docker images -aq)

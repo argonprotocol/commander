@@ -1,3 +1,4 @@
+import 'source-map-support/register';
 import { waitForLoad } from '@argonprotocol/mainchain';
 import { keyringFromFile } from '@argonprotocol/mainchain/clis';
 import { jsonExt, onExit, requireAll, requireEnv } from './utils.ts';

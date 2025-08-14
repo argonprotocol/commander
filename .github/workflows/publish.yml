@@ -55,8 +55,8 @@ jobs:
       - name: install frontend dependencies
         run: yarn install
 
-      - name: Update the shasums just in case
-        run: scripts/update_shasums.sh
+      - name: build server
+        run: yarn build:server
 
       - name: build and publish
         uses: tauri-apps/tauri-action@v0
@@ -74,3 +74,8 @@ jobs:
           updaterJsonKeepUniversal: true
           includeUpdaterJson: true
           args: ${{ matrix.args }}
+
+      - name: Upload server artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: 'resources/server-*'

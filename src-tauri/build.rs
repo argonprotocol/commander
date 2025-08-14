@@ -4,7 +4,6 @@ use std::path::Path;
 
 fn main() {
     println!("cargo:rerun-if-changed=migrations/");
-    println!("cargo:rerun-if-changed=../SHASUMS256");
 
     // Load environment variables from .env.production if it exists
     let env_path = Path::new(".env.production");

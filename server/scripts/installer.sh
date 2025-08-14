@@ -48,7 +48,7 @@ if ! (set -o noclobber; echo "$$" > "$LOCKFILE") 2>/dev/null; then
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] Found existing lock file with PID $pid"
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] Script path: $SCRIPT_PATH"
         } >> "$DEBUG_LOG"
-        
+
         if ps -p "$pid" > /dev/null 2>&1; then
             {
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Process $pid is still running"
@@ -97,14 +97,6 @@ source "$(dirname "$0")/helpers.sh"
 reset "FileUpload"
 start "FileUpload"
 
-echo "-----------------------------------------------------------------"
-echo "CHECKING COREFILES"
-
-check_shasum "deploy"
-check_shasum "bot"
-check_shasum "calculator"
-check_shasum "scripts"
-run_command "cp ~/SHASUMS256 ~/SHASUMS256.validated"
 
 finish "FileUpload"
 
@@ -148,7 +140,7 @@ fi
 
 ########################################################################################
 
-cd deploy
+cd server
 
 ########################################################################################
 if ! (already_ran "DockerInstall"); then
@@ -188,10 +180,10 @@ if ! (already_ran "DockerInstall"); then
     if [ -z "$version" ]; then
         failed "Could not extract Docker version from: $command_output"
     fi
-    
+
     # Get major version
     major_version=$(echo "$version" | cut -d. -f1)
-    
+
     # Compare major version
     if [ "$major_version" -lt 27 ]; then
         failed "Docker version $version is less than required major version 28"
@@ -239,7 +231,7 @@ if ! (already_ran "BitcoinInstall"); then
     # Loop until syncstatus is >= 100%
     while true; do
         sleep 1
-        command_output=$(run_command "docker exec deploy-bitcoin-1 syncstatus.sh")
+        command_output=$(run_command "docker exec server-bitcoin-1 syncstatus.sh")
         percent_value=$(echo "$command_output" | tr -d '%')
         if (( $(echo "$percent_value >= 100" | bc -l) )); then
             echo "Bitcoin Sync is complete (>= 100%)"
@@ -285,14 +277,14 @@ if ! (already_ran "ArgonInstall"); then
     # Loop until syncstatus is >= 100%
     while true; do
         sleep 1
-        command_output=$(run_command "docker exec deploy-argon-miner-1 syncstatus.sh")
+        command_output=$(run_command "docker exec server-argon-miner-1 syncstatus.sh")
         percent_value=$(echo "$command_output" | tr -d '%')
         echo "Argon Sync... ($percent_value%)"
         if (( $(echo "$percent_value >= 100" | bc -l) )); then
             echo "Argon Sync is complete (>= 100%)"
             break
         fi
-        command_output=$(run_command "docker exec deploy-argon-miner-1 iscomplete.sh")
+        command_output=$(run_command "docker exec server-argon-miner-1 iscomplete.sh")
         if [[ "$command_output" != "true" && "$command_output" != "false" && "$command_output" != "" ]]; then
             failed "Argon iscomplete.sh has error: $command_output"
         elif [[ "$command_output" == "" ]]; then

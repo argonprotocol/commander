@@ -101,7 +101,7 @@ yarn tauri [command]
 - GitHub Actions for automated builds on `version` branch pushes
 
 ### Cloud Services
-- Docker Compose configuration in `/deploy/`
+- Docker Compose configuration in `/server/`
 - Services: Bitcoin node, Argon miner, Bot API, Bitcoin data container
 - Bot can be deployed independently as Express.js server
 

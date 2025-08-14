@@ -200,12 +200,12 @@ export class InstallerCheck {
   }
 
   private static async fetchBitcoinInstallProgress(): Promise<number> {
-    const [output] = await SSH.runCommand('docker exec deploy-bitcoin-1 syncstatus.sh');
+    const [output] = await SSH.runCommand('docker exec server-bitcoin-1 syncstatus.sh');
     return parseFloat(output.trim().replace('%', '')) || 0.0;
   }
 
   private static async fetchArgonInstallProgress(): Promise<number> {
-    const [output] = await SSH.runCommand('docker exec deploy-argon-miner-1 syncstatus.sh');
+    const [output] = await SSH.runCommand('docker exec server-argon-miner-1 syncstatus.sh');
     return parseFloat(output.trim().replace('%', '')) || 0.0;
   }
 

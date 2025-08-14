@@ -6,7 +6,8 @@
   "scripts": {
     "preinstall": "husky install",
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "yarn build:server && vue-tsc --noEmit && vite build",
+    "build:server": "yarn workspace @argonprotocol/commander-bot run build && tsx ./buildServer.ts",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "sh -c 'TAURI_PORT=${COMMANDER_INSTANCE##*:}; yarn tauri dev --config=\"{\\\"build\\\":{\\\"devUrl\\\":\\\"http://localhost:${TAURI_PORT:-1420}\\\"}}\"'",
@@ -72,6 +73,7 @@
     "husky": "^9.1.7",
     "prettier": "^3.5.3",
     "svgo": "^3.3.2",
+    "tar": "^7.4.3",
     "tsx": "^4.20.3",
     "typescript": "~5.8.3",
     "vite": "^6.0.3",

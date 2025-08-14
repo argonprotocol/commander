@@ -35,33 +35,16 @@
   },
   "bundle": {
     "active": true,
-    "resources": [
-      "../bot/src/**/*",
-      "../bot/package.json",
-      "../bot/tsconfig.json",
-      "../calculator/src/**/*",
-      "../calculator/package.json",
-      "../calculator/tsconfig.json",
-      "../deploy/**/*",
-      "../scripts/**/*"
-    ],
+    "resources": ["../resources/*"],
     "category": "DeveloperTool",
     "createUpdaterArtifacts": true,
     "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ]
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
   },
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ2NjE2QzAzOTJGMDQ4MzgKUldRNFNQQ1NBMnhoMW9IWDIrWDREOVpDZnpqYjhUdGM5RW01eDdsM3phYmRtQWVleCtFaXlJOWoK",
-      "endpoints": [
-        "https://github.com/argonprotocol/commander/releases/latest/download/latest.json"
-      ]
+      "endpoints": ["https://github.com/argonprotocol/commander/releases/latest/download/latest.json"]
     }
   }
 }

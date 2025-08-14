@@ -55,7 +55,7 @@ jobs:
         id: push
         with:
           platforms: linux/amd64,linux/arm64
-          context: deploy/bitcoin
+          context: server/bitcoin
           file: Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}

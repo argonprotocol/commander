@@ -91,24 +91,3 @@ already_ran() {
     finished_filepath="${logs_dir}/${step_name}.finished"
     [ -f "$finished_filepath" ]
 }
-
-check_shasum() {
-    dir_name=$1
-
-    command_output=$(run_command "~/scripts/create_shasum.sh ~/$dir_name")
-    local_shasum=$(echo "$command_output" | tail -n1)
-    if [ -z "$local_shasum" ]; then
-        failed "create_shasum command failed"
-    fi
-
-    echo "$dir_name: $local_shasum"
-    command_output=$(run_command "cat ~/SHASUMS256")
-    expected_shasums=$(echo "$command_output")
-    if [ -z "$expected_shasums" ]; then
-        failed "Server SHASUMS256 not found"
-    fi
-
-    if ! echo "$expected_shasums" | grep "$dir_name $local_shasum" > /dev/null; then
-        failed "Server SHASUMS256 does not match: $dir_name $local_shasum"
-    fi
-}
