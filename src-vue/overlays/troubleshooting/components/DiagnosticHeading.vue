@@ -1,5 +1,5 @@
 <template>
-  <div class="relative flex flex-row items-center whitespace-nowrap font-mono">
+  <div class="relative flex flex-row items-center font-mono whitespace-nowrap">
     <Motion :initial="{ opacity: 0 }" :animate="{ opacity: 1 }" :transition="{ duration: 0.5 }" class="pr-1">
       <Motion
         :initial="{ width: 0 }"
@@ -11,14 +11,14 @@
         }"
         class="overflow-hidden"
       >
-        <label class="select-auto cursor-text">{{ typedText }}</label>
+        <label class="cursor-text select-auto">{{ typedText }}</label>
       </Motion>
     </Motion>
     <div class="grow overflow-hidden">
-      <div ref="dotsElement" class="text-right inline-block">{{ dots }}</div>
+      <div ref="dotsElement" class="inline-block text-right">{{ dots }}</div>
     </div>
-    <label v-if="isSuccess" class="text-green-600 font-bold top-0 pl-2 select-auto cursor-text">SUCCESS</label>
-    <label v-else-if="isFailure" class="text-red-600 font-bold top-0 pl-2 select-auto cursor-text">FAILURE</label>
+    <label v-if="isSuccess" class="top-0 cursor-text pl-2 font-bold text-green-600 select-auto">SUCCESS</label>
+    <label v-else-if="isFailure" class="top-0 cursor-text pl-2 font-bold text-red-600 select-auto">FAILURE</label>
   </div>
 </template>
 

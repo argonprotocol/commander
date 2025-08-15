@@ -45,22 +45,21 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     cachedBlockLoading,
   ]);
 
-  function extractBlockRewardsFromEvent(blockRewardEvent: any) {
-    if (!blockRewardEvent) {
-      return { microgons: 0n, micronots: 0n };
-    }
-    const micronots = blockRewardEvent?.event?.data.rewards[0].ownership.toBigInt();
-    const microgons = blockRewardEvent?.event?.data.rewards[0].argons.toBigInt();
-    return { microgons, micronots };
-  }
-
   async function fetchBlock(client: MainchainClient, blockHash: BlockHash) {
     const block = await client.derive.chain.getBlock(blockHash);
     const events = await client.query.system.events.at(blockHash);
-    const blockRewardEvent = events.filter(({ event }: { event: any }) =>
-      client.events.blockRewards.RewardCreated.is(event),
-    )[0];
-    const { microgons, micronots } = extractBlockRewardsFromEvent(blockRewardEvent);
+    const blockRewards = events.map(({ event }: { event: any }) => {
+      if (client.events.blockRewards.RewardCreated.is(event)) {
+        return event.data.rewards.map(x => ({
+          micronots: x.ownership.toBigInt(),
+          microgons: x.argons.toBigInt(),
+          accountId: x.accountId.toHuman(),
+          isMining: x.rewardType.isMiner,
+          isVote: x.rewardType.isVoter,
+        }));
+      }
+    })[0];
+    const { microgons, micronots } = blockRewards?.find(x => x.isMining) ?? { microgons: 0n, micronots: 0n };
     const timestamp = (await client.query.timestamp.now.at(blockHash)).toNumber();
     const newBlock: IBlock = {
       number: block.block.header.number.toNumber(),

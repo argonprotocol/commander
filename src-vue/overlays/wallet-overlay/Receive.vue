@@ -188,7 +188,7 @@ Vue.onMounted(() => {
 @reference "../../main.css";
 
 table {
-  @apply w-11/12 mt-6 font-mono text-md;
+  @apply text-md mt-6 w-11/12 font-mono;
   thead {
     @apply font-bold uppercase;
   }
@@ -198,7 +198,7 @@ table {
 }
 
 span[tag] {
-  @apply text-xs uppercase px-2 rounded-full text-white font-bold ml-1;
+  @apply ml-1 rounded-full px-2 text-xs font-bold text-white uppercase;
 }
 
 .fade-in-out {

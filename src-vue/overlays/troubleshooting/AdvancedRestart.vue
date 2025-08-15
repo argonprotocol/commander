@@ -1,6 +1,6 @@
 <template>
   <div class="px-4">
-    <p class="text-md font-light pt-2 pb-1">
+    <p class="text-md pt-2 pb-1 font-light">
       Select the components you want to restart and then click the run button.
       <template v-if="bot.isSyncing || installer.isRunning">
         Some options are disabled because your app is in the process of {{ bot.isSyncing ? 'syncing' : 'installing' }}.
@@ -10,78 +10,78 @@
       <li>
         <header
           @click="toggleOption(Option.ReloadAppUi)"
-          class="flex flex-row items-center space-x-2 font-bold mt-2 cursor-pointer"
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
           <Checkbox :isChecked="options[Option.ReloadAppUi].isChecked" :size="5" />
           <span>Reload App Interface</span>
         </header>
-        <p class="ml-7 text-md font-light">This refreshes the UI. It does not affect the server or the database.</p>
+        <p class="text-md ml-7 font-light">This refreshes the UI. It does not affect the server or the database.</p>
       </li>
-      <li :class="[options[Option.RecreateLocalDatabase].isDisabled ? 'opacity-50 pointer-events-none' : '']">
+      <li :class="[options[Option.RecreateLocalDatabase].isDisabled ? 'pointer-events-none opacity-50' : '']">
         <header
           @click="toggleOption(Option.RecreateLocalDatabase)"
-          class="flex flex-row items-center space-x-2 font-bold mt-2 cursor-pointer"
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
           <Checkbox :isChecked="options[Option.RecreateLocalDatabase].isChecked" :size="5" />
           <span>Recreate App Database</span>
         </header>
-        <p class="ml-7 text-md font-light">
+        <p class="text-md ml-7 font-light">
           This deletes your local database and resyncs from the server. This is sometimes helpful if data structure has
           gotten out of sync between the server and your app.
         </p>
       </li>
-      <li :class="[options[Option.RestartDockers].isDisabled ? 'opacity-50 pointer-events-none' : '']">
+      <li :class="[options[Option.RestartDockers].isDisabled ? 'pointer-events-none opacity-50' : '']">
         <header
           @click="toggleOption(Option.RestartDockers)"
-          class="flex flex-row items-center space-x-2 font-bold mt-2 cursor-pointer"
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
           <Checkbox :isChecked="options[Option.RestartDockers].isChecked" :size="5" />
           <span>Restart Dockers on Cloud Machine</span>
         </header>
-        <p class="ml-7 text-md font-light">
+        <p class="text-md ml-7 font-light">
           This restarts your bitcoin and argon nodes as well as your bidding bot. No data will be touched. This can
           sometimes fix issues where one of the server processes is stuck.
         </p>
       </li>
 
-      <li :class="[options[Option.ResyncBiddingDataOnCloudMachine].isDisabled ? 'opacity-50 pointer-events-none' : '']">
+      <li :class="[options[Option.ResyncBiddingDataOnCloudMachine].isDisabled ? 'pointer-events-none opacity-50' : '']">
         <header
           @click="toggleOption(Option.ResyncBiddingDataOnCloudMachine)"
-          class="flex flex-row items-center space-x-2 font-bold mt-2 cursor-pointer"
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
           <Checkbox :isChecked="options[Option.ResyncBiddingDataOnCloudMachine].isChecked" :size="5" />
           <span>Resync Bidding Data on Cloud Machine</span>
         </header>
-        <p class="ml-7 text-md font-light">
+        <p class="text-md ml-7 font-light">
           This will delete the data on your cloud machine and recreate it from data on the Argon mainchain.
         </p>
       </li>
 
       <li
-        :class="[options[Option.ResyncBitcoinBlocksOnCloudMachine].isDisabled ? 'opacity-50 pointer-events-none' : '']"
+        :class="[options[Option.ResyncBitcoinBlocksOnCloudMachine].isDisabled ? 'pointer-events-none opacity-50' : '']"
       >
         <header
           @click="toggleOption(Option.ResyncBitcoinBlocksOnCloudMachine)"
-          class="flex flex-row items-center space-x-2 font-bold mt-2 cursor-pointer"
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
           <Checkbox :isChecked="options[Option.ResyncBitcoinBlocksOnCloudMachine].isChecked" :size="5" />
           <span>Resync Bitcoin Node on Cloud Machine</span>
         </header>
-        <p class="ml-7 text-md font-light">
+        <p class="text-md ml-7 font-light">
           This will shutdown and restart your server. No data will be touched. This can sometimes fix issues where the
           server has run into a bug and is stuck.
         </p>
       </li>
 
-      <li :class="[options[Option.ResyncArgonBlocksOnCloudMachine].isDisabled ? 'opacity-50 pointer-events-none' : '']">
+      <li :class="[options[Option.ResyncArgonBlocksOnCloudMachine].isDisabled ? 'pointer-events-none opacity-50' : '']">
         <header
           @click="toggleOption(Option.ResyncArgonBlocksOnCloudMachine)"
-          class="flex flex-row items-center space-x-2 font-bold mt-2 cursor-pointer"
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
           <Checkbox :isChecked="options[Option.ResyncArgonBlocksOnCloudMachine].isChecked" :size="5" />
           <span>Resync Argon Node on Cloud Machine</span>
         </header>
-        <p class="ml-7 text-md font-light">
+        <p class="text-md ml-7 font-light">
           This will shutdown and restart your server. No data will be touched. This can sometimes fix issues where the
           server has run into a bug and is stuck.
         </p>
@@ -89,17 +89,17 @@
 
       <li
         :class="[
-          options[Option.CompletelyWipeAndReinstallCloudMachine].isDisabled ? 'opacity-50 pointer-events-none' : '',
+          options[Option.CompletelyWipeAndReinstallCloudMachine].isDisabled ? 'pointer-events-none opacity-50' : '',
         ]"
       >
         <header
           @click="toggleOption(Option.CompletelyWipeAndReinstallCloudMachine)"
-          class="flex flex-row items-center space-x-2 font-bold mt-2 cursor-pointer"
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
           <Checkbox :isChecked="options[Option.CompletelyWipeAndReinstallCloudMachine].isChecked" :size="5" />
           <span>Completely Wipe and Reinstall Cloud Machine</span>
         </header>
-        <p class="ml-7 text-md font-light">
+        <p class="text-md ml-7 font-light">
           This will shutdown and restart your server. No data will be touched. This can sometimes fix issues where the
           server has run into a bug and is stuck.
         </p>
@@ -108,7 +108,7 @@
 
     <button
       @click="runSelectedOptions"
-      class="w-full bg-argon-button text-white py-2 rounded-lg mt-4 mb-3 cursor-pointer focus:outline-none"
+      class="bg-argon-button mt-4 mb-3 w-full cursor-pointer rounded-lg py-2 text-white focus:outline-none"
     >
       Run Restart
     </button>

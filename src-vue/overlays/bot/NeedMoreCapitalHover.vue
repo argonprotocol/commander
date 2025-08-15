@@ -1,13 +1,13 @@
 <template>
   <HoverCardRoot v-model:open="hoverState">
     <HoverCardTrigger
-      class="inline-block cursor-pointer rounded-full outline-none focus:shadow-[0_0_0_2px] focus:shadow-green-800 shadow-sm"
+      class="inline-block cursor-pointer rounded-full shadow-sm outline-none focus:shadow-[0_0_0_2px] focus:shadow-green-800"
     >
-      <AlertIcon class="w-10 h-10 text-yellow-700 inline-block relative -top-2 mr-2" />
+      <AlertIcon class="relative -top-2 mr-2 inline-block h-10 w-10 text-yellow-700" />
     </HoverCardTrigger>
     <HoverCardPortal>
       <HoverCardContent
-        class="z-100 data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFade w-[300px] rounded-xl bg-white p-5 data-[state=open]:transition-all border shadow-sm"
+        class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFade z-100 w-[300px] rounded-xl border bg-white p-5 shadow-sm data-[state=open]:transition-all"
         :side-offset="5"
       >
         <p>
@@ -18,7 +18,7 @@
           Ideally you would commit {{ microgonToArgonNm(idealCapitalCommitment).format('0,0.[00]') }} argons to win your
           goal of {{ config.biddingRules.seatGoalCount }} seats.
         </p>
-        <HoverCardArrow class="fill-white stroke-gray-300 -mt-[1px]" :width="12" :height="6" />
+        <HoverCardArrow class="-mt-[1px] fill-white stroke-gray-300" :width="12" :height="6" />
       </HoverCardContent>
     </HoverCardPortal>
   </HoverCardRoot>

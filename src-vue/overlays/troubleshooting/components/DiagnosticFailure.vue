@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="isFailure"
-    class="diagnostic-step-failure text-slate-800/50 font-md font-light pr-10 mt-1 select-auto cursor-text"
+    class="diagnostic-step-failure font-md mt-1 cursor-text pr-10 font-light text-slate-800/50 select-auto"
   >
     <slot :error="error" />
   </div>

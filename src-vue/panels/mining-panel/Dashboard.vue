@@ -594,16 +594,16 @@ Vue.onUnmounted(() => {
 @reference "../../main.css";
 
 [box] {
-  @apply bg-white rounded shadow min-h-20 border-[1px] border-slate-400/30 py-2;
+  @apply min-h-20 rounded border-[1px] border-slate-400/30 bg-white py-2 shadow;
 }
 
 [stat-box] {
-  @apply flex flex-col items-center justify-center text-argon-600;
+  @apply text-argon-600 flex flex-col items-center justify-center;
   span {
     @apply text-3xl font-bold;
   }
   label {
-    @apply text-sm text-gray-500 mt-1;
+    @apply mt-1 text-sm text-gray-500;
   }
 }
 </style>

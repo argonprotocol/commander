@@ -2,7 +2,7 @@
   <div
     v-if="isOpen"
     :style="{ top: top, left: left, transform: `translate(${translateX}, ${translateY})`, width: width }"
-    class="absolute z-[1200] border border-gray-800/20 flex flex-col rounded-md bg-white px-4 py-3 text-left shadow-xl transition-all pointer-events-none"
+    class="pointer-events-none absolute z-[1200] flex flex-col rounded-md border border-gray-800/20 bg-white px-4 py-3 text-left shadow-xl transition-all"
   >
     <div
       :style="{
@@ -26,7 +26,7 @@
         <path d="M12 0L24 12H0L12 0Z" fill="white" />
       </svg>
       <svg
-        class="absolute z-0 -top-0.5 left-[-1px] opacity-10"
+        class="absolute -top-0.5 left-[-1px] z-0 opacity-10"
         width="26"
         height="14"
         viewBox="0 0 24 12"
@@ -38,7 +38,7 @@
     </div>
 
     <div class="grow">
-      <div :class="[width ? '' : 'whitespace-nowrap']" class="py-1 text-left text-md text-slate-700 font-light">
+      <div :class="[width ? '' : 'whitespace-nowrap']" class="text-md py-1 text-left font-light text-slate-700">
         {{ label }}
       </div>
     </div>

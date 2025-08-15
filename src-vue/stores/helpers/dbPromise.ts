@@ -1,6 +1,6 @@
 import { Db } from '../../lib/Db';
 
-let dbPromise: Promise<Db>;
+let dbPromise: Promise<Db> | undefined;
 
 export function getDbPromise() {
   if (!dbPromise) {

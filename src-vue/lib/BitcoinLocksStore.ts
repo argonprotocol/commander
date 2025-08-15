@@ -79,7 +79,7 @@ export default class BitcoinLocksStore {
     if (!this.#config) {
       throw new Error('Bitcoin lock configuration is not loaded for verify time.');
     }
-    const expirationHeight = this.#config!.pendingConfirmationExpirationBlocks + lock.lockDetails.createdAtHeight;
+    const expirationHeight = this.#config.pendingConfirmationExpirationBlocks + lock.lockDetails.createdAtHeight;
 
     if (expirationHeight <= this.bitcoinBlockHeight) {
       return Date.now() - 1; // Already expired
@@ -429,7 +429,7 @@ export default class BitcoinLocksStore {
         bitcoinNetworkFee: lock.releaseBitcoinNetworkFee!,
       },
       vaultCosignature: cosignature.signature,
-      utxoRef: { txid: lock.txid!, vout: lock.vout! },
+      utxoRef: { txid: lock.txid, vout: lock.vout! },
       ownerXpriv: getChildXpriv(bip39Seed, lock.hdPath, this.bitcoinNetwork),
       addTx,
     });

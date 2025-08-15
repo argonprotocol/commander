@@ -1,5 +1,5 @@
 import * as Vue from 'vue';
-import { Menu, Submenu, PredefinedMenuItem } from '@tauri-apps/api/menu';
+import { Menu, PredefinedMenuItem, Submenu } from '@tauri-apps/api/menu';
 import { exit as tauriExit } from '@tauri-apps/plugin-process';
 import basicEmitter from './emitters/basicEmitter';
 import { open as tauriOpenUrl } from '@tauri-apps/plugin-shell';
@@ -16,7 +16,7 @@ export default async function menuStart() {
   const installer = useInstaller();
   const bot = useBot();
 
-  let commanderMenu = await Submenu.new({
+  const commanderMenu = await Submenu.new({
     text: 'Commander',
     items: [
       {
@@ -44,12 +44,12 @@ export default async function menuStart() {
         id: 'quit',
         text: 'Quit Commander',
         accelerator: 'CmdOrCtrl+Q',
-        action: () => tauriExit(),
+        action: () => void tauriExit(),
       },
     ],
   });
 
-  let editMenu = await Submenu.new({
+  const editMenu = await Submenu.new({
     text: 'Edit',
     items: [
       await PredefinedMenuItem.new({ item: 'Undo' }),
@@ -63,7 +63,7 @@ export default async function menuStart() {
     ],
   });
 
-  let miningMenu = await Submenu.new({
+  const miningMenu = await Submenu.new({
     text: 'Mining',
     items: [
       {
@@ -85,7 +85,7 @@ export default async function menuStart() {
     ],
   });
 
-  let vaultingMenu = await Submenu.new({
+  const vaultingMenu = await Submenu.new({
     text: 'Vaulting',
     items: [
       {
@@ -107,12 +107,12 @@ export default async function menuStart() {
     ],
   });
 
-  let windowMenu = await Submenu.new({
+  const windowMenu = await Submenu.new({
     text: 'Window',
     items: [await PredefinedMenuItem.new({ item: 'Minimize' }), await PredefinedMenuItem.new({ item: 'Fullscreen' })],
   });
 
-  let troubleshootingMenu = await Submenu.new({
+  const troubleshootingMenu = await Submenu.new({
     text: 'Troubleshooting',
     items: [
       {
@@ -141,31 +141,31 @@ export default async function menuStart() {
     ],
   });
 
-  let helpMenu = await Submenu.new({
+  const helpMenu = await Submenu.new({
     text: 'Help',
     items: [
-      await troubleshootingMenu,
+      troubleshootingMenu,
       await PredefinedMenuItem.new({ item: 'Separator' }),
       {
         id: 'documentation',
         text: 'Documentation',
-        action: () => tauriOpenUrl('https://argonprotocol.org/docs'),
+        action: () => void tauriOpenUrl('https://argonprotocol.org/docs'),
       },
       {
         id: 'faq',
         text: 'Frequently Asked Questions',
-        action: () => tauriOpenUrl('https://argonprotocol.org/faq'),
+        action: () => void tauriOpenUrl('https://argonprotocol.org/faq'),
       },
       await PredefinedMenuItem.new({ item: 'Separator' }),
       {
         id: 'discord-community',
         text: 'Discord User Community',
-        action: () => tauriOpenUrl('https://discord.gg/xDwwDgCYr9'),
+        action: () => void tauriOpenUrl('https://discord.gg/xDwwDgCYr9'),
       },
       {
         id: 'github-community',
         text: 'GitHub Developer Community',
-        action: () => tauriOpenUrl('https://github.com/argonprotocol/commander/issues'),
+        action: () => void tauriOpenUrl('https://github.com/argonprotocol/commander/issues'),
       },
       await PredefinedMenuItem.new({ item: 'Separator' }),
       {
@@ -181,7 +181,7 @@ export default async function menuStart() {
   });
 
   function updateMiningMenu() {
-    miningMenu.setEnabled(!installer.isRunning && !bot.isSyncing);
+    void miningMenu.setEnabled(!installer.isRunning && !bot.isSyncing);
   }
 
   await menu.setAsAppMenu().then(async res => {

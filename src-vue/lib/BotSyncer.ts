@@ -149,7 +149,7 @@ export class BotSyncer {
 
     await this.config.save();
 
-    let dbSyncProgress = await this.calculateDbSyncProgress(this.botState);
+    const dbSyncProgress = await this.calculateDbSyncProgress(this.botState);
 
     if (dbSyncProgress < 100.0) {
       this.botFns.setStatus(BotStatus.DbSyncing);

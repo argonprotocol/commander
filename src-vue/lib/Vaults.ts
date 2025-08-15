@@ -101,7 +101,7 @@ export class Vaults {
       const frameId = frameRevenue.frameId.toNumber();
       const existing = frameChanges.find(x => frameId === x.frameId);
 
-      const entry = <IVaultFrameStats>{
+      const entry = {
         satoshisAdded: frameRevenue.bitcoinLocksTotalSatoshis.toBigInt() - frameRevenue.satoshisReleased.toBigInt(),
         frameId,
         microgonLiquidityAdded: frameRevenue.bitcoinLocksMarketValue.toBigInt(),
@@ -116,7 +116,7 @@ export class Vaults {
         securitization: frameRevenue.securitization.toBigInt(),
         securitizationActivated: frameRevenue.securitizationActivated.toBigInt(),
         uncollectedEarnings: frameRevenue.uncollectedRevenue.toBigInt(),
-      };
+      } as IVaultFrameStats;
       if (existing) {
         Object.assign(existing, entry);
       } else {
@@ -141,7 +141,7 @@ export class Vaults {
 
     console.log('Synching vault revenue stats back to frame ', oldestFrameToGet);
 
-    let currentFrameId = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
+    const currentFrameId = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
     await mainchain.forEachFrame(false, async (justEndedFrameId, api, meta, abortController) => {
       if (meta.specVersion < 129) return;
       const vaultRevenues = await api.query.vaults.revenuePerFrameByVault.entries();
@@ -201,7 +201,7 @@ export class Vaults {
 
   public getTotalSatoshisLocked(): bigint {
     if (!this.stats) return 0n;
-    return Object.values(this.stats!.vaultsById).reduce((total, vault) => {
+    return Object.values(this.stats.vaultsById).reduce((total, vault) => {
       return (
         total + vault.baseline.satoshis + vault.changesByFrame.reduce((sum, change) => sum + change.satoshisAdded, 0n)
       );
@@ -213,7 +213,7 @@ export class Vaults {
   ): Promise<{ burnAmount: bigint; ratchetingFee: bigint; marketRate: bigint }> {
     const vault = this.vaultsById[lock.vaultId];
     if (!vault) throw new Error('Vault not found');
-    const ratchetPrice = new BitcoinLocks(getMainchainClient()).getRatchetPrice(lock.lockDetails, vault);
+    const ratchetPrice = await new BitcoinLocks(getMainchainClient()).getRatchetPrice(lock.lockDetails, vault);
 
     return {
       ...ratchetPrice,

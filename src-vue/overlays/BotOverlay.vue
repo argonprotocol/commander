@@ -474,7 +474,7 @@ basicEmitter.on('openBotOverlay', async () => {
   h2 {
     position: relative;
     &:before {
-      @apply bg-gradient-to-r from-argon-menu-bg to-transparent;
+      @apply from-argon-menu-bg bg-gradient-to-r to-transparent;
       content: '';
       display: block;
       width: 30px;
@@ -485,7 +485,7 @@ basicEmitter.on('openBotOverlay', async () => {
       bottom: -5px;
     }
     &:after {
-      @apply bg-gradient-to-l from-argon-menu-bg to-transparent;
+      @apply from-argon-menu-bg bg-gradient-to-l to-transparent;
       content: '';
       display: block;
       width: 30px;
@@ -498,13 +498,13 @@ basicEmitter.on('openBotOverlay', async () => {
   }
 
   [StatHeader] {
-    @apply text-[#a08fb7] font-bold text-lg group-hover:text-argon-600/70;
+    @apply group-hover:text-argon-600/70 text-lg font-bold text-[#a08fb7];
   }
 
   [PrimaryStat] {
     @apply relative;
     &::before {
-      @apply bg-gradient-to-b from-[5px] from-argon-menu-bg to-transparent;
+      @apply from-argon-menu-bg bg-gradient-to-b from-[5px] to-transparent;
       content: '';
       display: block;
       width: calc(100% + 10px);
@@ -536,7 +536,7 @@ basicEmitter.on('openBotOverlay', async () => {
     }
 
     [MainRule] {
-      @apply text-argon-700/80 font-mono font-bold border-t border-b border-slate-500/30 border-dashed py-1 mt-1 mb-1 text-center relative;
+      @apply text-argon-700/80 relative mt-1 mb-1 border-t border-b border-dashed border-slate-500/30 py-1 text-center font-mono font-bold;
       &::before {
         content: '';
         display: block;
@@ -568,7 +568,7 @@ basicEmitter.on('openBotOverlay', async () => {
       @apply inline-block;
     }
     div[InputFieldWrapper] {
-      @apply outline-none border-none text-6xl font-bold font-mono text-argon-600 hover:bg-transparent;
+      @apply text-argon-600 border-none font-mono text-6xl font-bold outline-none hover:bg-transparent;
       box-shadow: none;
     }
     div[NumArrows] {

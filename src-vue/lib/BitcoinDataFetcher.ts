@@ -148,6 +148,6 @@ async function fetchData(url: string, startDate: string, endDate: string): Promi
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
-  const data = await response.json();
+  const data = (await response.json()) as { values: IDataPoint[] };
   return data.values;
 }

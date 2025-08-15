@@ -35,7 +35,9 @@ export class CohortsTable extends BaseTable {
       return null;
     }
 
-    const record = convertSqliteBigInts(rawRecords[0], this.bigIntFields);
+    const record = convertSqliteBigInts<
+      ICohortRecord & { firstTick: number; lastBlockNumber: number; lastTick: number }
+    >(rawRecords[0], this.bigIntFields);
     const ticksPerDay = 1_440;
     const lastTick = record.firstTick + ticksPerDay * 10;
 
@@ -118,7 +120,7 @@ export class CohortsTable extends BaseTable {
     const records = await this.db.select<any[]>('SELECT * FROM Cohorts WHERE seatCountWon > 0 AND id >= ?', [
       currentFrameId - 9,
     ]);
-    return convertSqliteBigInts(records, this.bigIntFields) as ICohortRecord[];
+    return convertSqliteBigInts(records, this.bigIntFields);
   }
 
   async insertOrUpdate(

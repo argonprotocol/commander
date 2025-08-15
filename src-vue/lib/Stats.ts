@@ -157,7 +157,7 @@ export class Stats {
       if (!isOnLatestFrame) return;
 
       this.selectFrameId(frameId, true);
-      this.updateAccruedMicrogonProfits();
+      await this.updateAccruedMicrogonProfits();
 
       if (this.isSubscribedToDashboard) {
         await this.updateDashboard();
@@ -177,7 +177,7 @@ export class Stats {
     });
 
     botEmitter.on('updated-bids-data', async (_: IBidsFile['winningBids']) => {
-      this.updateMiningBids();
+      void this.updateMiningBids();
     });
 
     botEmitter.on('updated-bitcoin-activity', async () => {
@@ -377,7 +377,7 @@ export class Stats {
   private async fetchFramesFromDb(): Promise<IDashboardFrameStats[]> {
     const lastYear = await this.db.framesTable.fetchLastYear();
 
-    let maxProfitPct = Math.min(Math.max(...lastYear.map(x => x.profitPct)), 1_000);
+    const maxProfitPct = Math.min(Math.max(...lastYear.map(x => x.profitPct)), 1_000);
     return lastYear
       .map(x => {
         let score = Math.min(x.profitPct, 1_000);

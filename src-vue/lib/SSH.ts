@@ -73,7 +73,7 @@ export class SSH {
     const connection = await this.getConnection();
     try {
       const response = await connection.runCommandWithTimeout(command, 60 * 1e3);
-      return response as [string, number];
+      return response;
     } catch (e) {
       if (e instanceof InvokeTimeout) {
         console.error('SSH command timed out, retrying...', command);

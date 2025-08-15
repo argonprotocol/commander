@@ -19,8 +19,8 @@ export default async function createBidderParams(
 
   const helper = new Helper(biddingRules, calculator);
 
-  const minBid = await calculator.minimumBidAmount;
-  const maxBid = await calculator.maximumBidAmount;
+  const minBid = calculator.minimumBidAmount;
+  const maxBid = calculator.maximumBidAmount;
 
   const maxSeats = await helper.getMaxSeats();
   const maxBudget = helper.getMaxBalance(maxBid * BigInt(maxSeats));
@@ -50,7 +50,7 @@ export class Helper {
   public async getMaxSeats() {
     await this.calculator.data.isInitializedPromise;
 
-    let maxSeats = this.calculator.data.miningSeatCount / 10;
+    const maxSeats = this.calculator.data.miningSeatCount / 10;
 
     if (this.biddingRules.seatGoalType === SeatGoalType.Max) {
       return this.biddingRules.seatGoalCount || 0;

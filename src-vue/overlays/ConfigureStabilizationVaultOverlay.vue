@@ -414,7 +414,7 @@ basicEmitter.on('openConfigureStabilizationVaultOverlay', async () => {
 h2 {
   position: relative;
   &:before {
-    @apply bg-gradient-to-r from-argon-menu-bg to-transparent;
+    @apply from-argon-menu-bg bg-gradient-to-r to-transparent;
     content: '';
     display: block;
     width: 30px;
@@ -425,7 +425,7 @@ h2 {
     bottom: -5px;
   }
   &:after {
-    @apply bg-gradient-to-l from-argon-menu-bg to-transparent;
+    @apply from-argon-menu-bg bg-gradient-to-l to-transparent;
     content: '';
     display: block;
     width: 30px;
@@ -438,13 +438,13 @@ h2 {
 }
 
 [StatHeader] {
-  @apply text-[#a08fb7] font-bold text-lg group-hover:text-argon-600/70;
+  @apply group-hover:text-argon-600/70 text-lg font-bold text-[#a08fb7];
 }
 
 [PrimaryStat] {
   @apply relative;
   &::before {
-    @apply bg-gradient-to-b from-argon-menu-bg to-transparent;
+    @apply from-argon-menu-bg bg-gradient-to-b to-transparent;
     content: '';
     display: block;
     width: calc(100% + 10px);
@@ -476,7 +476,7 @@ section div[MainWrapper] {
   }
 
   [MainRule] {
-    @apply text-argon-700/80 font-mono font-bold border-t border-b border-slate-500/30 border-dashed py-1 mt-1 mb-1 text-center relative;
+    @apply text-argon-700/80 relative mt-1 mb-1 border-t border-b border-dashed border-slate-500/30 py-1 text-center font-mono font-bold;
     &::before {
       content: '';
       display: block;

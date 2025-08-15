@@ -290,7 +290,7 @@ defineExpose({
 
 <style lang="scss" scoped>
 .MARKER {
-  @apply rounded-full bg-[#63298E] absolute z-20 border border-slate-400;
+  @apply absolute z-20 rounded-full border border-slate-400 bg-[#63298E];
   width: 10px;
   height: 10px;
   transform: translate(-50%, -50%);

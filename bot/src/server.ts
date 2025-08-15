@@ -118,7 +118,12 @@ onExit(() => new Promise<void>(resolve => server.close(() => resolve())));
 
 bot.start().catch(e => {
   console.error('Error starting bot', e);
-  errorMessage = e.message;
+
+  if (e && typeof e === 'object' && 'message' in e && typeof e.message === 'string') {
+    errorMessage = e.message as string;
+  } else {
+    errorMessage = `An unknown error occurred while starting the bot -> ${e}`;
+  }
   bot.history.handleError(e);
 });
 

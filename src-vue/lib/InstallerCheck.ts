@@ -5,8 +5,8 @@ import {
   IConfigInstallDetails,
   IConfigInstallStep,
   InstallStepErrorType,
-  InstallStepStatus,
   InstallStepKey,
+  InstallStepStatus,
 } from '../interfaces/IConfig';
 import { Config } from './Config';
 import Installer from './Installer';
@@ -90,14 +90,14 @@ export class InstallerCheck {
     let prevStep: IConfigInstallStep | null = null;
 
     for (const [stepKey, estimatedMinutes] of Object.entries(stepsToProcess) as [InstallStepKey, number][]) {
-      const stepNewData = installDetailsPending[stepKey] as IConfigInstallStep;
-      const stepOldData = this.config.installDetails[stepKey] as IConfigInstallStep;
+      const stepNewData = installDetailsPending[stepKey];
+      const stepOldData = this.config.installDetails[stepKey];
       const prevStepHasCompleted = !prevStep || prevStep.status === InstallStepStatus.Completed;
       const filenameStatus = this.extractFilenameStatus(stepKey, stepOldData, serverInstallStepStatuses);
 
       if (installDetailsPending.errorType) {
         stepNewData.status = InstallStepStatus.Hidden;
-      } else if (prevStepHasCompleted && filenameStatus === 'Finished') {
+      } else if (prevStepHasCompleted && filenameStatus === InstallStepStatusType.Finished) {
         stepNewData.startDate = stepOldData.startDate || dayjs.utc().toISOString();
         stepNewData.progress = stepOldData.progress;
         if (this.installer.isRunning || stepKey === InstallStepKey.MiningLaunch) {
@@ -110,7 +110,7 @@ export class InstallerCheck {
         } else {
           stepNewData.status = InstallStepStatus.Working;
         }
-      } else if (prevStepHasCompleted && filenameStatus === 'Failed') {
+      } else if (prevStepHasCompleted && filenameStatus === InstallStepStatusType.Failed) {
         stepNewData.status = InstallStepStatus.Failed;
         stepNewData.progress = stepOldData.progress;
         installDetailsPending.errorType = stepKey as unknown as InstallStepErrorType;

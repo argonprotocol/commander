@@ -387,7 +387,7 @@ export class MyVault {
     const client = await getMainchainClient();
     const vaultId = this.createdVault.vaultId;
     const prebondedLiquidity = await client.query.liquidityPools.prebondedByVaultId(vaultId);
-    let activeLiquidity =
+    const activeLiquidity =
       this.data.stats?.changesByFrame
         .slice(0, 10)
         .reduce((total, change) => total + change.liquidityPool.vaultCapital, 0n) ?? 0n;
@@ -410,7 +410,7 @@ export class MyVault {
     if (!vaultId) {
       throw new Error('No vault created to prebond liquidity pool');
     }
-    const vault = this.createdVault!;
+    const vault = this.createdVault;
     const { bip39Seed, bitcoinLocksStore, argonKeyring, rules, tip = 0n, txProgressCallback } = args;
     const client = await getMainchainClient();
 
@@ -420,8 +420,8 @@ export class MyVault {
       this.metadata?.operationalFeeMicrogons ?? 0n,
     );
 
-    let txs = [];
-    let addedSecuritization = microgonsForSecuritization - vault.securitization;
+    const txs = [];
+    const addedSecuritization = microgonsForSecuritization - vault.securitization;
     if (addedSecuritization > 0n) {
       const tx = client.tx.vaults.modifyFunding(
         vaultId,

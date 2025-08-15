@@ -22,9 +22,9 @@ it('can backfill sync data', async () => {
   const botDataDir = fs.mkdtempSync('/tmp/block-sync-');
   runOnTeardown(() => fs.promises.rm(botDataDir, { recursive: true, force: true }));
 
-  const botStatus = <IBotSyncStatus>{
+  const botStatus = {
     isReady: false,
-  };
+  } as IBotSyncStatus;
   const storage = new Storage(botDataDir);
   const accountset = new Accountset({
     client: Promise.resolve(client),
@@ -70,8 +70,8 @@ it('can backfill sync data', async () => {
   for (let i = 1; i <= blockNumber; i++) {
     const block = result!.blocksByNumber[i];
     expect(block).toBeDefined();
-    expect(block!.number).toBe(i);
-    expect(block!.hash).toBeDefined();
+    expect(block.number).toBe(i);
+    expect(block.hash).toBeDefined();
   }
 
   await expect(blockSync.processNext()).resolves.toStrictEqual({

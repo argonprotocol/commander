@@ -23,7 +23,7 @@ export enum BotActivityType {
   SeatExpansion = 'SeatExpansion',
 }
 
-export interface IBotActivityBasic {}
+export type IBotActivityBasic = object;
 export interface IBotActivityError extends IBotActivityBasic {
   name: string;
   message: string;

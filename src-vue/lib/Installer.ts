@@ -175,6 +175,7 @@ export default class Installer {
       console.info('Installer finished');
     } catch (e) {
       console.error(`Installation failed: `, e);
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       errorMessage = `Installation failed: ${e}`;
     }
 
@@ -185,6 +186,7 @@ export default class Installer {
         this.config.installDetails = this.config.installDetails;
         await this.config.save();
       } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
         console.error(`Failed to save install status: ${e}`);
       }
     }
@@ -225,7 +227,7 @@ export default class Installer {
     this.installerCheck.shouldUseCachedInstallSteps = true;
 
     this.removeReasonsToSkipInstall();
-    this.run();
+    void this.run();
   }
 
   public async runUpgrade(): Promise<void> {
@@ -256,7 +258,7 @@ export default class Installer {
     this.config.isServerUpToDate = false;
     await this.config.save();
 
-    this.run();
+    void this.run();
   }
 
   public async upgradeBiddingBotFiles(): Promise<void> {
@@ -275,6 +277,7 @@ export default class Installer {
       await server.stopBotDocker();
       await server.startBotDocker();
     } catch (e) {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       console.error(`Failed to upgrade bidding bot files: ${e}`);
       throw e;
     } finally {
@@ -485,13 +488,14 @@ export default class Installer {
     const localServerTar = `resources/${serverTar}`;
     const remoteDir = `~/server`;
     let totalProgress = 0;
-    let totalCount = 120;
+    const totalCount = 120;
     try {
       console.log(`Removing ${remoteDir}`);
       await SSH.runCommand(`rm -rf ${remoteDir} && mkdir -p ${remoteDir}`);
       totalProgress += 10;
       progressFn?.(totalCount, totalProgress);
     } catch (e) {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       console.error(`Failed to remove remote directory ${remoteDir}: ${e}`);
       throw e;
     }
@@ -511,6 +515,7 @@ export default class Installer {
       }
       console.log(`FINISHED Uploading server to ${remoteDir}`);
     } catch (e) {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       console.error(`Failed to upload server to ${remoteDir}: ${e}`);
       throw e;
     }
@@ -526,6 +531,7 @@ export default class Installer {
       totalProgress += 10;
       progressFn?.(totalCount, totalProgress);
     } catch (e) {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       console.error(`Failed to extract server files to ${remoteDir}: ${e}`);
       throw e;
     }
@@ -552,7 +558,7 @@ export default class Installer {
   private async clearStepFiles(stepKeys: string[], options: { setFirstStepToWorking?: boolean } = {}): Promise<void> {
     const server = await this.getServer();
     if (stepKeys.includes('all')) {
-      await this.config.resetField('installDetails');
+      this.config.resetField('installDetails');
       await this.config.save();
       await server.removeAllLogFiles();
       return;
@@ -570,7 +576,7 @@ export default class Installer {
 
     for (const stepKey of stepKeys as InstallStepKey[]) {
       const stepObj = { ...defaultStepObj };
-      if (stepKey === stepKeys[0] && options.setFirstStepToWorking) {
+      if (String(stepKey) === stepKeys[0] && options.setFirstStepToWorking) {
         console.log('SETTING SERVER STEP TO WORKING3', stepKey);
         stepObj.status = InstallStepStatus.Working;
         stepObj.startDate = dayjs.utc().toISOString();

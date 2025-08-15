@@ -2,6 +2,7 @@ import * as Vue from 'vue';
 import { Stats } from '../lib/Stats';
 import { getDbPromise } from './helpers/dbPromise';
 import { useConfig, Config } from './config';
+import handleUnknownFatalError from './helpers/handleUnknownFatalError.ts';
 
 let stats: Vue.Reactive<Stats>;
 
@@ -13,7 +14,7 @@ export function useStats(): Vue.Reactive<Stats> {
     const dbPromise = getDbPromise();
     const config = useConfig();
     stats = Vue.reactive(new Stats(dbPromise, config as Config));
-    stats.load();
+    stats.load().catch(handleUnknownFatalError);
   }
 
   return stats;

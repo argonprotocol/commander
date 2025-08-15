@@ -36,7 +36,7 @@ it('can create bidder params', async () => {
     "seatGoalInterval": "Epoch",
     "baseCapitalCommitment": "10000000n",
     "requiredMicronots": "1000000n"
-  }`) as IBiddingRules;
+  }`);
   const cohortActivationFrameId = MiningFrames.calculateCurrentFrameIdFromSystemTime();
   const bidderParams = await createBidderParams(cohortActivationFrameId, client, biddingRules);
 

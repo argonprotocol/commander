@@ -157,6 +157,7 @@ export default class BiddingCalculator {
     } else if (bidDetails.formulaType === BidAmountFormulaType.BreakevenAtMediumGrowth) {
       price = this.breakevenBidAtMediumGrowth;
     } else if (bidDetails.formulaType !== BidAmountFormulaType.Custom) {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`Invalid price formula type: ${bidDetails.formulaType}`);
     }
 
@@ -283,6 +284,7 @@ export default class BiddingCalculator {
         custom: this.biddingRules.maximumBidCustom,
       };
     } else {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`Invalid bid type: ${bidType}`);
     }
   }
@@ -298,6 +300,7 @@ export default class BiddingCalculator {
         .dividedBy(2)
         .toNumber();
     } else {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`Invalid growth type: ${growthType}`);
     }
   }
@@ -313,6 +316,7 @@ export default class BiddingCalculator {
         .dividedBy(2)
         .toNumber();
     } else {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       throw new Error(`Invalid growth type: ${growthType}`);
     }
   }

@@ -26,7 +26,7 @@ export const platformName = getPlatformName();
 export const platformVersion = getVersion();
 
 appWindow.value = getCurrentWindow();
-appWindow.value.onResized(
+void appWindow.value.onResized(
   throttle(async () => {
     const isFullscreen = await getCurrentWindow().isFullscreen();
     isWindowFullscreen.value = isFullscreen;

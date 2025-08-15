@@ -1,5 +1,5 @@
 <template>
-  <ul class="pt-2 pb-5 px-4 space-y-4">
+  <ul class="space-y-4 px-4 pt-2 pb-5">
     <li>
       <header>Local Data</header>
       <p>Most of your locally cached data is stored in a sqlite database, which located in the following directory:</p>
@@ -7,10 +7,10 @@
         <input
           v-model="localDataDir"
           disabled
-          class="font-mono border border-black/20 rounded-md p-1 text-md pr-32 w-full overflow-x-scroll whitespace-nowrap"
+          class="text-md w-full overflow-x-scroll rounded-md border border-black/20 p-1 pr-32 font-mono whitespace-nowrap"
         />
         <div
-          class="absolute right-1 top-1 bottom-1 pr-2 pl-10 flex items-center bg-gradient-to-r from-transparent from-0% via-white via-20% to-white"
+          class="absolute top-1 right-1 bottom-1 flex items-center bg-gradient-to-r from-transparent from-0% via-white via-20% to-white pr-2 pl-10"
         >
           <a @click="openDataDir" class="!text-argon-500 cursor-pointer">Open Directory</a>
         </div>
@@ -23,10 +23,10 @@
         <input
           v-model="localLogDir"
           disabled
-          class="font-mono border border-black/20 rounded-md p-1 text-md pr-32 w-full overflow-x-scroll whitespace-nowrap"
+          class="text-md w-full overflow-x-scroll rounded-md border border-black/20 p-1 pr-32 font-mono whitespace-nowrap"
         />
         <div
-          class="absolute right-1 top-1 bottom-1 pr-2 pl-10 flex items-center bg-gradient-to-r from-transparent from-0% via-white via-20% to-white"
+          class="absolute top-1 right-1 bottom-1 flex items-center bg-gradient-to-r from-transparent from-0% via-white via-20% to-white pr-2 pl-10"
         >
           <a @click="openLogDir" class="!text-argon-500 cursor-pointer">Open Directory</a>
         </div>
@@ -38,7 +38,7 @@
       <input
         v-model="remoteLogDir"
         disabled
-        class="mt-2 font-mono border border-black/20 rounded-md p-1 text-md w-full overflow-x-scroll whitespace-nowrap"
+        class="text-md mt-2 w-full overflow-x-scroll rounded-md border border-black/20 p-1 font-mono whitespace-nowrap"
       />
     </li>
   </ul>
@@ -80,6 +80,6 @@ Vue.onMounted(async () => {
 @reference "../../main.css";
 
 header {
-  @apply font-bold text-lg;
+  @apply text-lg font-bold;
 }
 </style>

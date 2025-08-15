@@ -70,6 +70,7 @@ export default class Bot implements IBotSyncStatus {
     this.history = new History(this.storage);
     this.history.handleStarting();
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     this.options.shouldSkipDockerSync || (await this.waitForDockerConfirmation());
     this.history.handleDockersConfirmed();
     await new Promise(resolve => setTimeout(resolve, 5000));
@@ -173,7 +174,7 @@ export default class Bot implements IBotSyncStatus {
     await this.history.handleShutdown();
   }
 
-  private loadBiddingRules() {
+  private loadBiddingRules(): IBiddingRules {
     const rawJsonString = Fs.readFileSync(this.options.biddingRulesPath, 'utf8');
     return jsonParseWithBigInts(rawJsonString);
   }

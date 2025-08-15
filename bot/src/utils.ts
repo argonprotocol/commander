@@ -15,7 +15,7 @@ export function onExit(fn: () => void | Promise<void>) {
 
 export function requireEnv<K extends keyof (typeof process)['env']>(envVar: K): string {
   if (!process.env[envVar]) throw new Error(`process.env.${envVar} is required`);
-  return process.env[envVar] as any;
+  return process.env[envVar];
 }
 
 export function requireAll<T>(data: Partial<T>): T {
@@ -32,6 +32,7 @@ export function jsonExt(data: any, response: express.Response) {
       if (typeof value === 'bigint') {
         return `${value}n`;
       }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return value;
     },
     2,
@@ -41,5 +42,5 @@ export function jsonExt(data: any, response: express.Response) {
 
 export async function getClient(host: string): Promise<ArgonClient> {
   const provider = new WsProvider(host);
-  return (await ApiPromise.create({ provider, noInitWarn: true, throwOnConnect: true })) as any;
+  return (await ApiPromise.create({ provider, noInitWarn: true, throwOnConnect: true })) as unknown as ArgonClient;
 }

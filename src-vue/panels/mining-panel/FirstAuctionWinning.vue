@@ -178,7 +178,7 @@ Vue.onMounted(async () => {
 [FadeBgToWhite] {
   @apply relative bg-white;
   &:before {
-    @apply absolute top-0 left-0 right-0 h-full z-[-1] -translate-y-full bg-gradient-to-b from-transparent to-white;
+    @apply absolute top-0 right-0 left-0 z-[-1] h-full -translate-y-full bg-gradient-to-b from-transparent to-white;
     content: '';
   }
 }

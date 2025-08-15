@@ -1,19 +1,19 @@
 <template>
-  <HoverCardRoot :openDelay="0" :closeDelay="0" class="relative pointer-events-auto" v-model:open="isOpen">
+  <HoverCardRoot :openDelay="0" :closeDelay="0" class="pointer-events-auto relative" v-model:open="isOpen">
     <HoverCardTrigger class="cursor-pointer">
       <div
         v-if="!wallets.isLoaded"
-        class="flex flex-row items-center gap-x-2 border text-argon-700 px-4 py-0.5 rounded-md border-slate-400/50 hover:bg-slate-400/10 h-[30px] focus:outline-none hover:border-slate-400/50"
+        class="text-argon-700 flex h-[30px] flex-row items-center gap-x-2 rounded-md border border-slate-400/50 px-4 py-0.5 hover:border-slate-400/50 hover:bg-slate-400/10 focus:outline-none"
       >
         Loading...
       </div>
       <div
         v-else-if="status === Status.WaitingForSetup || status === Status.WaitingForFunding"
-        class="flex flex-row items-center gap-x-2 border text-argon-600/70 px-4 py-0.5 rounded-md hover:bg-slate-400/10 h-[30px] focus:outline-none hover:border-slate-400/50"
+        class="text-argon-600/70 flex h-[30px] flex-row items-center gap-x-2 rounded-md border px-4 py-0.5 hover:border-slate-400/50 hover:bg-slate-400/10 focus:outline-none"
         :class="[isOpen ? 'border-slate-400/60 bg-slate-400/10' : 'border-slate-400/50']"
       >
-        <div ref="eyeballsElem" class="flex flex-row items-center gap-x-0.5 h-5 -ml-0.5">
-          <div Eye class="relative w-3 h-full rounded-[100%] border border-argon-600/70">
+        <div ref="eyeballsElem" class="-ml-0.5 flex h-5 flex-row items-center gap-x-0.5">
+          <div Eye class="border-argon-600/70 relative h-full w-3 rounded-[100%] border">
             <div
               Eyeball
               :style="{
@@ -21,10 +21,10 @@
                 top: `${eyeballYPosition}%`,
                 transform: `translate(-${eyeballXPosition}%, -${eyeballYPosition}%)`,
               }"
-              class="absolute w-[7px] h-[7px] rounded-full bg-argon-600/70"
+              class="bg-argon-600/70 absolute h-[7px] w-[7px] rounded-full"
             />
           </div>
-          <div Eye class="relative w-3 h-full rounded-[100%] border border-argon-600/70">
+          <div Eye class="border-argon-600/70 relative h-full w-3 rounded-[100%] border">
             <div
               Eyeball
               :style="{
@@ -32,7 +32,7 @@
                 top: `${eyeballYPosition}%`,
                 transform: `translate(-${eyeballXPosition}%, -${eyeballYPosition}%)`,
               }"
-              class="absolute w-[7px] h-[7px] rounded-full bg-argon-600/70"
+              class="bg-argon-600/70 absolute h-[7px] w-[7px] rounded-full"
             />
           </div>
         </div>
@@ -40,10 +40,10 @@
       </div>
       <div
         v-else-if="status === Status.Funded || status === Status.FullyFunded"
-        class="flex flex-row items-center gap-x-2 border text-argon-600/70 px-3 py-0.5 rounded-md hover:bg-slate-400/10 h-[30px] focus:outline-none hover:border-slate-400/50"
+        class="text-argon-600/70 flex h-[30px] flex-row items-center gap-x-2 rounded-md border px-3 py-0.5 hover:border-slate-400/50 hover:bg-slate-400/10 focus:outline-none"
         :class="[isOpen ? 'border-slate-400/60 bg-slate-400/10' : 'border-slate-400/50']"
       >
-        <div class="w-5 h-5 relative text-argon-600 opacity-70">
+        <div class="text-argon-600 relative h-5 w-5 opacity-70">
           <StatusHappy />
           <Motion
             :animate="{ opacity: [0, 1, 0] }"
@@ -54,7 +54,7 @@
               repeatDelay: 4,
               times: [0, 0.5, 1],
             }"
-            class="absolute top-0 left-0 w-full h-full"
+            class="absolute top-0 left-0 h-full w-full"
           >
             <StatusSmiling />
           </Motion>
@@ -64,9 +64,9 @@
       <div v-else-if="wallets.isLoaded" class="group cursor-pointer">
         <div
           v-if="status === Status.Underfunded"
-          class="flex flex-row items-center gap-x-2 bg-red-500 border border-red-600 text-white px-4 py-0.5 rounded-md inner-button-shadow"
+          class="inner-button-shadow flex flex-row items-center gap-x-2 rounded-md border border-red-600 bg-red-500 px-4 py-0.5 text-white"
         >
-          <div class="w-4 h-4">
+          <div class="h-4 w-4">
             <StatusSad />
           </div>
           Underfunded
@@ -74,15 +74,15 @@
 
         <div
           v-else-if="status === Status.Overfunded"
-          class="flex flex-row items-center gap-x-2 bg-yellow-600/70 border border-yellow-600/60 text-white px-4 py-0.5 rounded-md inner-button-shadow"
+          class="inner-button-shadow flex flex-row items-center gap-x-2 rounded-md border border-yellow-600/60 bg-yellow-600/70 px-4 py-0.5 text-white"
         >
-          <div class="w-4 h-4">
+          <div class="h-4 w-4">
             <StatusNeutral />
           </div>
           Overfunded
         </div>
       </div>
-      <div v-else class="text-gray-900 px-2">Loading...</div>
+      <div v-else class="px-2 text-gray-900">Loading...</div>
     </HoverCardTrigger>
 
     <HoverCardPortal>
@@ -90,17 +90,17 @@
         :align="'end'"
         :alignOffset="0"
         :sideOffset="-3"
-        class="z-50 data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad data-[state=open]:transition-all"
+        class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad z-50 data-[state=open]:transition-all"
       >
         <div
-          class="flex flex-col shrink rounded bg-white text-md text-gray-900 shadow-lg ring-1 ring-gray-900/20 max-w-140 p-1"
+          class="text-md flex max-w-140 shrink flex-col rounded bg-white p-1 text-gray-900 shadow-lg ring-1 ring-gray-900/20"
         >
           <div
             v-if="!config.hasSavedBiddingRules && !config.hasSavedVaultingRules"
-            class="flex flex-col gap-y-2 py-4 px-4 rounded-md text-slate-900/80 w-110"
+            class="flex w-110 flex-col gap-y-2 rounded-md px-4 py-4 text-slate-900/80"
           >
             <p>This is where you'll be notified of important alerts such as when your mining bot's capital runs low.</p>
-            <table class="w-full text-left mt-3 whitespace-nowrap">
+            <table class="mt-3 w-full text-left whitespace-nowrap">
               <thead>
                 <tr>
                   <th class="w-[20%]">Token</th>
@@ -111,19 +111,19 @@
               <tbody>
                 <tr @click="openFundMiningAccountOverlay" class="group cursor-pointer">
                   <td class="group-hover:text-argon-600 group-hover:bg-argon-100/20">ARGN</td>
-                  <td class="text-right group-hover:text-argon-600 group-hover:bg-argon-100/20">
+                  <td class="group-hover:text-argon-600 group-hover:bg-argon-100/20 text-right">
                     {{ microgonToArgonNm(wallets.miningWallet.availableMicrogons).format('0,0.[00]') }}
                   </td>
-                  <td class="text-right group-hover:text-argon-600 group-hover:bg-argon-100/20">
+                  <td class="group-hover:text-argon-600 group-hover:bg-argon-100/20 text-right">
                     {{ microgonToArgonNm(wallets.vaultingWallet.availableMicrogons).format('0,0.[00]') }}
                   </td>
                 </tr>
                 <tr @click="openFundVaultingAccountOverlay" class="group cursor-pointer">
                   <td class="group-hover:text-argon-600 group-hover:bg-argon-100/20">ARGNOT</td>
-                  <td class="text-right group-hover:text-argon-600 group-hover:bg-argon-100/20">
+                  <td class="group-hover:text-argon-600 group-hover:bg-argon-100/20 text-right">
                     {{ micronotToArgonotNm(wallets.vaultingWallet.availableMicronots).format('0,0.[00]') }}
                   </td>
-                  <td class="text-right group-hover:text-argon-600 group-hover:bg-argon-100/20">
+                  <td class="group-hover:text-argon-600 group-hover:bg-argon-100/20 text-right">
                     {{ micronotToArgonotNm(wallets.miningWallet.availableMicronots).format('0,0.[00]') }}
                   </td>
                 </tr>
@@ -144,20 +144,20 @@
                 background: `linear-gradient(to right, #a600d4 0%, #EABDF7FF 50%, #a600d4 100%)`,
                 backgroundSize: '200% 100%',
               }"
-              class="w-full h-2.5 mt-1 opacity-50 rounded-sm"
+              class="mt-1 h-2.5 w-full rounded-sm opacity-50"
             />
           </div>
 
           <div
             v-if="config.hasSavedBiddingRules"
-            :class="[installer.isRunning ? 'opacity-50 pointer-events-none' : '']"
+            :class="[installer.isRunning ? 'pointer-events-none opacity-50' : '']"
           >
-            <div v-if="miningStatus === 'Funded'" class="py-5 px-6 rounded-md bg-slate-400/10">
-              <header class="flex flex-row items-center gap-x-1 text-lg font-bold text-slate-600 whitespace-nowrap">
-                <CheckboxIcon class="w-7 h-7 relative -left-0.5" />
+            <div v-if="miningStatus === 'Funded'" class="rounded-md bg-slate-400/10 px-6 py-5">
+              <header class="flex flex-row items-center gap-x-1 text-lg font-bold whitespace-nowrap text-slate-600">
+                <CheckboxIcon class="relative -left-0.5 h-7 w-7" />
                 <span>Your Mining Account Is Fully Funded</span>
               </header>
-              <p class="py-1 mt-px opacity-80">
+              <p class="mt-px py-1 opacity-80">
                 Your account has
                 {{ micronotToArgonotNm(micronotsTotal).formatIfElse('< 100', '0,0.[000000]', '0,0.[00]') }}
                 argonot{{
@@ -180,10 +180,10 @@
                 are currently available to spend), which gives your bot enough capital to fully operate. However, you
                 can always add more capital.
               </p>
-              <div class="flex flex-row gap-x-3 items-center mt-1">
-                <div class="cursor-pointer text-argon-600" @click="openFundMiningAccountOverlay">Add More Capital</div>
-                <div class="w-px h-4 bg-slate-400/80"></div>
-                <div class="cursor-pointer text-argon-600" @click="openBotOverlay">Modify Bidding Rules</div>
+              <div class="mt-1 flex flex-row items-center gap-x-3">
+                <div class="text-argon-600 cursor-pointer" @click="openFundMiningAccountOverlay">Add More Capital</div>
+                <div class="h-4 w-px bg-slate-400/80"></div>
+                <div class="text-argon-600 cursor-pointer" @click="openBotOverlay">Modify Bidding Rules</div>
               </div>
               <!-- <table class="w-full text-left mt-3 mb-5 whitespace-nowrap">
                 <thead>
@@ -215,35 +215,35 @@
                 </button>
               </div> -->
             </div>
-            <div v-else-if="miningStatus === 'Underfunded'" class="bg-red-100/70 py-4 px-4 rounded-md">
-              <header class="flex flex-row items-center gap-x-2 text-lg font-bold text-red-600 whitespace-nowrap">
-                <StatusSad class="w-5 h-5" />
+            <div v-else-if="miningStatus === 'Underfunded'" class="rounded-md bg-red-100/70 px-4 py-4">
+              <header class="flex flex-row items-center gap-x-2 text-lg font-bold whitespace-nowrap text-red-600">
+                <StatusSad class="h-5 w-5" />
                 <span>Your Mining Account Is Lacking Funds</span>
               </header>
-              <p class="py-1 mt-px opacity-80">
+              <p class="mt-px py-1 opacity-80">
                 Your accounts needs 1,000 ARGNs and 2 ARGNOTs in order to fully operate according to your bidding rules.
               </p>
-              <div class="flex flex-row gap-x-2 mt-2">
+              <div class="mt-2 flex flex-row gap-x-2">
                 <button
                   @click="openFundMiningAccountOverlay"
-                  class="px-4 py-1.5 rounded-md border border-red-600 text-red-700/70 hover:bg-red-600/10 cursor-pointer font-bold"
+                  class="cursor-pointer rounded-md border border-red-600 px-4 py-1.5 font-bold text-red-700/70 hover:bg-red-600/10"
                 >
                   Transfer Tokens Into Account
                 </button>
               </div>
             </div>
-            <div v-else class="bg-yellow-100/70 py-4 px-4 rounded-md">
-              <header class="flex flex-row items-center gap-x-2 text-lg font-bold text-yellow-600 whitespace-nowrap">
-                <StatusNeutral class="w-5 h-5" />
+            <div v-else class="rounded-md bg-yellow-100/70 px-4 py-4">
+              <header class="flex flex-row items-center gap-x-2 text-lg font-bold whitespace-nowrap text-yellow-600">
+                <StatusNeutral class="h-5 w-5" />
                 <span>Your Mining Account Has Excess Funds</span>
               </header>
-              <p class="py-1 mt-px opacity-80">
+              <p class="mt-px py-1 opacity-80">
                 Your account has an extra 10 ARGNs sitting unused. This isn't causing harm, but it's also not generating
                 yield on your asset.
               </p>
-              <div class="flex flex-row gap-x-2 mt-2">
+              <div class="mt-2 flex flex-row gap-x-2">
                 <button
-                  class="px-4 py-1.5 rounded-md border border-red-600 text-red-700/70 hover:bg-red-600/10 cursor-pointer font-bold"
+                  class="cursor-pointer rounded-md border border-red-600 px-4 py-1.5 font-bold text-red-700/70 hover:bg-red-600/10"
                 >
                   Add Capital to Bidding Budget
                 </button>
@@ -252,57 +252,57 @@
           </div>
 
           <template v-if="config.hasSavedBiddingRules && config.hasSavedVaultingRules">
-            <div class="h-px bg-gray-300/60 my-1" />
+            <div class="my-1 h-px bg-gray-300/60" />
           </template>
 
           <template v-if="config.hasSavedVaultingRules">
-            <div v-if="vaultingStatus === 'Funded'" class="py-4 px-4 rounded-md">
-              <header class="flex flex-row items-center gap-x-2 text-lg font-bold text-lime-600 whitespace-nowrap">
-                <StatusHappy class="w-5 h-5" />
+            <div v-if="vaultingStatus === 'Funded'" class="rounded-md px-4 py-4">
+              <header class="flex flex-row items-center gap-x-2 text-lg font-bold whitespace-nowrap text-lime-600">
+                <StatusHappy class="h-5 w-5" />
                 <span>Your Vaulting Account Is Looking Good</span>
               </header>
-              <p class="py-1 mt-px opacity-80">
+              <p class="mt-px py-1 opacity-80">
                 Your vaulting account has enough funds to operate. No further action is required at this time. However,
                 you can always improve your vault with more funds.
               </p>
-              <div class="flex flex-row gap-x-2 mt-2">
+              <div class="mt-2 flex flex-row gap-x-2">
                 <button
                   @click="openFundVaultingAccountOverlay"
-                  class="px-4 py-1.5 rounded-md border border-lime-600 text-lime-700/70 hover:bg-lime-600/10 cursor-pointer font-bold"
+                  class="cursor-pointer rounded-md border border-lime-600 px-4 py-1.5 font-bold text-lime-700/70 hover:bg-lime-600/10"
                 >
                   Transfer More Tokens Into Vault
                 </button>
               </div>
             </div>
-            <div v-else-if="vaultingStatus === 'Underfunded'" class="bg-red-100/70 py-4 px-4 rounded-md">
-              <header class="flex flex-row items-center gap-x-2 text-lg font-bold text-red-600 whitespace-nowrap">
-                <StatusSad class="w-5 h-5" />
+            <div v-else-if="vaultingStatus === 'Underfunded'" class="rounded-md bg-red-100/70 px-4 py-4">
+              <header class="flex flex-row items-center gap-x-2 text-lg font-bold whitespace-nowrap text-red-600">
+                <StatusSad class="h-5 w-5" />
                 <span>Your Vaulting Account Is Lacking Funds</span>
               </header>
-              <p class="py-1 mt-px opacity-80">
+              <p class="mt-px py-1 opacity-80">
                 Your accounts needs 1,000 ARGNs and 2 ARGNOTs in order to fully operate your vault effeciently.
               </p>
-              <div class="flex flex-row gap-x-2 mt-2">
+              <div class="mt-2 flex flex-row gap-x-2">
                 <button
                   @click="openFundVaultingAccountOverlay"
-                  class="px-4 py-1.5 rounded-md border border-red-600 text-red-700/70 hover:bg-red-600/10 cursor-pointer font-bold"
+                  class="cursor-pointer rounded-md border border-red-600 px-4 py-1.5 font-bold text-red-700/70 hover:bg-red-600/10"
                 >
                   Transfer Tokens Into Account
                 </button>
               </div>
             </div>
-            <div v-else class="bg-yellow-500/10 py-4 px-4 rounded-md">
-              <header class="flex flex-row items-center gap-x-2 text-lg font-bold text-yellow-600 whitespace-nowrap">
-                <StatusNeutral class="w-5 h-5" />
+            <div v-else class="rounded-md bg-yellow-500/10 px-4 py-4">
+              <header class="flex flex-row items-center gap-x-2 text-lg font-bold whitespace-nowrap text-yellow-600">
+                <StatusNeutral class="h-5 w-5" />
                 <span>Your Vaulting Account Has Excess Funds</span>
               </header>
-              <p class="py-1 mt-px opacity-80">
+              <p class="mt-px py-1 opacity-80">
                 Your account has an extra 10 ARGNs sitting unused. This isn't causing harm, but they're also not
                 generating yield.
               </p>
-              <div class="flex flex-row gap-x-2 mt-2">
+              <div class="mt-2 flex flex-row gap-x-2">
                 <button
-                  class="px-4 py-1.5 rounded-md border border-yellow-600 text-yellow-700/70 hover:bg-yellow-600/10 cursor-pointer font-bold"
+                  class="cursor-pointer rounded-md border border-yellow-600 px-4 py-1.5 font-bold text-yellow-700/70 hover:bg-yellow-600/10"
                 >
                   Add to Vault's Working Capital
                 </button>
@@ -310,7 +310,7 @@
             </div>
           </template>
         </div>
-        <HoverCardArrow :width="18" :height="10" class="fill-white stroke-gray-300 mt-[0px]" />
+        <HoverCardArrow :width="18" :height="10" class="mt-[0px] fill-white stroke-gray-300" />
       </HoverCardContent>
     </HoverCardPortal>
   </HoverCardRoot>
@@ -485,10 +485,10 @@ Vue.onUnmounted(() => {
 @reference "../main.css";
 
 th {
-  @apply text-gray-400 border-b border-gray-300/80 border-dashed py-2;
+  @apply border-b border-dashed border-gray-300/80 py-2 text-gray-400;
 }
 
 td {
-  @apply border-b border-gray-300/80 border-dashed py-2;
+  @apply border-b border-dashed border-gray-300/80 py-2;
 }
 </style>
