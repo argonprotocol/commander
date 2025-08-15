@@ -1,6 +1,5 @@
 use anyhow::Result;
 use rand::RngCore;
-use std::env as std_env;
 use std::path::{Path, PathBuf};
 use tauri;
 use tauri::{AppHandle, Manager};
@@ -9,7 +8,7 @@ pub struct Utils;
 
 impl Utils {
     pub fn get_instance_name() -> String {
-        if let Ok(instance) = std_env::var("COMMANDER_INSTANCE") {
+        if let Ok(instance) = std::env::var("COMMANDER_INSTANCE") {
             if let Some(name) = instance.split(':').next() {
                 return name.to_string();
             }
@@ -19,8 +18,25 @@ impl Utils {
         "default".to_string()
     }
 
+    pub fn is_experimental() -> bool {
+        // baked into runtime via build.rs
+        option_env!("ARGON_EXPERIMENTAL").map_or(false, |v| v == "true")
+    }
+
     pub fn get_network_name() -> String {
-        std_env::var("ARGON_NETWORK_NAME").unwrap_or_else(|_| "mainnet".to_string())
+        std::env::var("ARGON_NETWORK_NAME")
+            .unwrap_or(if Self::is_experimental() {
+                "testnet"
+            } else {
+                 #[cfg(debug_assertions)]
+                 {
+                    "testnet"
+                 }
+                 #[cfg(not(debug_assertions))]
+                 {
+                    "mainnet"
+                 }
+            }.to_string())
     }
 
     pub fn get_relative_config_instance_dir() -> PathBuf {

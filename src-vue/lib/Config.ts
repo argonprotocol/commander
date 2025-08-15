@@ -18,22 +18,22 @@ import { bip39 } from '@argonprotocol/bitcoin';
 import Countries from './Countries';
 import { invokeWithTimeout } from './tauriApi';
 import ISecurity from '../interfaces/ISecurity';
+import AppConfig from '../../app.config.json';
 
 console.log('__ARGON_NETWORK_NAME__', __ARGON_NETWORK_NAME__);
-console.log('__ARGON_NETWORK_URL__', __ARGON_NETWORK_URL__);
 console.log('__COMMANDER_INSTANCE__', __COMMANDER_INSTANCE__);
 
 export const NETWORK_NAME = __ARGON_NETWORK_NAME__ || 'mainnet';
-export const NETWORK_URL =
-  __ARGON_NETWORK_URL__ || (NETWORK_NAME === 'mainnet' ? 'wss://rpc.argon.network' : 'wss://rpc.argon.network');
+export const ENABLE_AUTO_UPDATE = __ARGON_ENABLE_AUTO_UPDATE__ ?? false;
+const networkConfig = AppConfig[NETWORK_NAME as keyof typeof AppConfig] ?? AppConfig.mainnet;
+export const NETWORK_URL = networkConfig.archiveUrl;
 export const [INSTANCE_NAME, INSTANCE_PORT] = (__COMMANDER_INSTANCE__ || 'default:1420').split(':');
 
 export const env = (import.meta as any).env ?? {};
-export const TICK_MILLIS: number = env.VITE_TICK_MILLIS || 60e3;
-export const ESPLORA_HOST: string = env.VITE_ESPLORA_HOST || 'https://mempool.space';
-export const BITCOIN_BLOCK_MILLIS: number = env.VITE_BITCOIN_BLOCK_MILLIS || 10 * 60e3; // 10 minutes
-export const DEPLOY_ENV_FILE =
-  { testnet: '.env.testnet', mainnet: '.env.mainnet', local: '.env.localnet' }[NETWORK_NAME] ?? '.env.mainnet';
+export const TICK_MILLIS: number = networkConfig.tickMillis;
+export const ESPLORA_HOST: string = networkConfig.esploraHost;
+export const BITCOIN_BLOCK_MILLIS: number = networkConfig.bitcoinBlockMillis;
+export const DEPLOY_ENV_FILE = networkConfig.serverEnvFile;
 
 export class Config {
   public readonly version: string = packageJson.version;

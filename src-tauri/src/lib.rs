@@ -7,9 +7,9 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use utils::Utils;
+#[cfg(target_os = "macos")]
 use window_vibrancy::*;
 
-mod env;
 mod migrations;
 mod ssh;
 mod ssh_pool;
@@ -123,13 +123,13 @@ async fn fetch_security(app: AppHandle) -> Result<ISecurity, String> {
 #[tauri::command]
 async fn overwrite_security(app: AppHandle, master_mnemonic: String, ssh_public_key: String, ssh_private_key: String) -> Result<String, String> {
     log::info!("overwrite_security");
-    let new_security = security::Security { 
+    let new_security = security::Security {
         master_mnemonic: master_mnemonic,
         ssh_public_key: ssh_public_key,
         ssh_private_key: ssh_private_key,
     };
     new_security.save(&app).map_err(|e| e.to_string())?;
-    
+
     Ok("success".to_string())
 }
 
@@ -157,8 +157,9 @@ fn init_logger(network_name: &String, instance_name: &String) -> tauri_plugin_lo
         .max_file_size(10_000_000)
         .with_colors(ColoredLevelConfig::default());
 
-    let rust_log =
-        std::env::var("RUST_LOG").unwrap_or("debug, tauri=debug, hyper=info, russh=error".into());
+    // load rust log from runtime env, then build, then default
+    let rust_log = std::env::var("RUST_LOG")
+        .unwrap_or(std::option_env!("RUST_LOG").unwrap_or("info, russh=error").to_string());
 
     for part in rust_log.split(',') {
         if let Some((target, level)) = part.split_once('=') {
@@ -192,12 +193,12 @@ fn init_config_instance_dir(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    env::load_env_vars();
-
     color_backtrace::install();
 
     let network_name = Utils::get_network_name();
     let instance_name = Utils::get_instance_name();
+    let enable_auto_update = option_env!("ARGON_ENABLE_AUTO_UPDATE")
+        .map_or(true, |v| v == "true");
     let logger = init_logger(&network_name, &instance_name);
 
     let relative_config_dir = Utils::get_relative_config_instance_dir();
@@ -205,9 +206,17 @@ pub fn run() {
     let db_url = format!("sqlite:{}", db_relative_path.display());
     let migrations = migrations::get_migrations();
 
+    let network_name_clone = network_name.clone();
+    let instance_name_clone = instance_name.clone();
+
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_fs::init())
+        .on_page_load(move |app, _| {
+            log::info!("Page loaded for instance '{}'", instance_name_clone);
+            let window = app.get_webview_window("main").unwrap();
+            window.eval(format!("window.__COMMANDER_INSTANCE__ = '{}'", instance_name_clone)).expect("Failed to set instance name in window");
+            window.eval(format!("window.__ARGON_NETWORK_NAME__ = '{}'", network_name_clone)).expect("Failed to set network name in window");
+            window.eval(format!("window.__ARGON_ENABLE_AUTO_UPDATE__ = {}", enable_auto_update)).expect("Failed to set experimental flag in window");
+        })
         .setup(move |app| {
             log::info!(
                 "Starting instance '{}' on network '{}'",
@@ -216,7 +225,16 @@ pub fn run() {
             );
             log::info!("Database URL = {}", db_relative_path.display());
 
+            let app_id = &app.config().identifier;
+
+            if app_id.to_lowercase().contains("experimental") {
+              if option_env!("ARGON_EXPERIMENTAL").is_none()  {
+                panic!("Experimental app built without the ARGON_EXPERIMENTAL environment variable set. Please set it to 'true' to enable experimental features.");
+              }
+            }
+
             let window = app.get_webview_window("main").unwrap();
+
             let handle = app.handle();
 
             init_config_instance_dir(&handle, &relative_config_dir)?;
@@ -227,6 +245,8 @@ pub fn run() {
 
             Ok(())
         })
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
         .plugin(logger.build())
         .plugin(tauri_plugin_process::init())

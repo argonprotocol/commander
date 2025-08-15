@@ -1,0 +1,64 @@
+---
+name: Update Channel
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tag to update channel to'
+        required: true
+        default: 'v0.0.0'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERSION: ${{ github.event.inputs.version || github.ref_name }}
+  CHANNEL_NAME: channel-stable
+  CHANNEL_TITLE: Stable channel
+  UPDATER_FILE: latest.json
+
+jobs:
+  publish-update-channel:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Override vars
+        if: ${{ github.event.inputs.version && contains(github.event.inputs.version, '-rc') || false }}
+        run: |
+          echo "CHANNEL_NAME=channel-experimental" >> $GITHUB_ENV
+          echo "CHANNEL_TITLE=Experimental channel" >> $GITHUB_ENV
+          echo "UPDATER_FILE=latest-experimental.json" >> $GITHUB_ENV
+
+      - name: Point channel tag & release to this version and latest updater file
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Ensure the channel tag points at this version
+          git fetch origin "refs/tags/$VERSION:refs/tags/$VERSION" || true
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            SHA=$(git rev-list -n1 "refs/tags/$VERSION")
+          else
+            SHA=$(git rev-parse HEAD)   # fallback when running from a manual dispatch without the tag
+          fi
+
+          git tag -f "$CHANNEL_NAME" "$SHA"
+          git push origin -f "refs/tags/$CHANNEL_NAME"
+
+          ACTION=create
+          if gh release view "$CHANNEL_NAME" >/dev/null 2>&1; then
+            ACTION=edit
+          fi
+
+          gh release "$ACTION" "$CHANNEL_NAME" -t "$CHANNEL_TITLE" -n "Pinned feed for $CHANNEL_NAME updates"
+  
+          gh release download "$VERSION" -p "$UPDATER_FILE" -D .
+          gh release upload "$CHANNEL_NAME" "$UPDATER_FILE"  --clobber

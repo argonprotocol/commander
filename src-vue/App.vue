@@ -64,6 +64,7 @@ import AboutOverlay from './overlays/AboutOverlay.vue';
 import ComplianceOverlay from './overlays/ComplianceOverlay.vue';
 import TroubleshootingOverlay from './overlays/Troubleshooting.vue';
 import ImportingOverlay from './overlays/ImportingOverlay.vue';
+import { ENABLE_AUTO_UPDATE } from './lib/Config.ts';
 
 const controller = useController();
 const config = useConfig();
@@ -88,7 +89,9 @@ Vue.onBeforeMount(async () => {
 });
 
 Vue.onMounted(async () => {
-  timeout = setInterval(() => checkForUpdates(), 60e3) as unknown as number;
+  if (ENABLE_AUTO_UPDATE) {
+    timeout = setInterval(() => checkForUpdates(), 60e3) as unknown as number;
+  }
   // Use capture phase to ensure this handler runs before other handlers
   document.addEventListener('click', clickHandler, true);
   hideTooltip();

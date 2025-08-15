@@ -1,6 +1,7 @@
 use bip39::{Language, Mnemonic};
 use rand::RngCore;
 use std::fs;
+#[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
 use tauri::{AppHandle};
 
@@ -50,10 +51,12 @@ impl Security {
     fs::write(absolute_config_dir.join("serverkey.pem"), &self.ssh_private_key)?;
     
     // Set private key permissions to 600
-    let private_key_path = absolute_config_dir.join("serverkey.pem");
-    let mut perms = fs::metadata(&private_key_path)?.permissions();
-    perms.set_mode(0o600);
-    fs::set_permissions(&private_key_path, perms)?;
+    #[cfg(not(target_os = "windows"))]{
+      let private_key_path = absolute_config_dir.join("serverkey.pem");
+      let mut perms = fs::metadata(&private_key_path)?.permissions();
+      perms.set_mode(0o600);
+      fs::set_permissions(&private_key_path, perms)?;
+    }
     
     Ok(())
   }
