@@ -1,114 +1,199 @@
 <template>
-  <div v-if="hasStarted" class="flex flex-col gap-4 min-h-[90%] font-mono px-4 py-2 min-w-180">
-    <section :run="diagnostics.isConnected">
-      <header class="relative">
-        <Motion :initial="{ opacity: 0 }" :animate="{ opacity: 1 }" :transition="{ duration: 0.5 }">
-          <Motion
-            :initial="{ width: 0 }"
-            :animate="{ width: '100%' }"
-            :transition="{ duration: 1.5, ease: 'easeOut' }"
-            class="overflow-hidden whitespace-nowrap"
-          >
-            Checking SSH Connection to Cloud Machine
-          </Motion>
-        </Motion>
-        <label class="text-green-600 font-bold absolute right-5 top-0">Y</label>
-      </header>
-      <success class="text-slate-800/50 font-md font-light pr-5">
-        Connected to {{ config.serverDetails.ipAddress }}
+  <div
+    ref="containerRef"
+    class="flex flex-col gap-4 min-h-[90%] pl-4 pr-7 pt-3 pb-5 w-200 overflow-y-auto overflow-x-hidden"
+  >
+    <DiagnosticStep ref="step1" :run="() => diagnostics.isConnected()">
+      <heading>Checking SSH connection to cloud machine</heading>
+      <success>A successful connection was made to the server located at {{ config.serverDetails.ipAddress }}</success>
+      <failure>
+        Failed to connect to {{ config.serverDetails.ipAddress }}. Your internet connection might be down or the cloud
+        machine might be offline.
+      </failure>
+    </DiagnosticStep>
+
+    <DiagnosticStep ref="step2" :run="() => diagnostics.accountAddressMatches()">
+      <heading>Checking Argon Account Identifier Match</heading>
+      <success>
+        Your app database and the cloud machine are correctly using the same wallet address of
+        {{ config.miningAccount.address }}.
       </success>
-      <!-- <failure>Failed to connect to {{ config.serverDetails.ipAddress }}. Your internet connection might be down or the cloud machine might be offline.</failure> -->
-    </section>
+      <failure>
+        Your app database and the cloud machine are using different wallet addresses. Somehow you connected a server
+        that is not compatible with the account associated with this Commander app.
+      </failure>
+    </DiagnosticStep>
 
-    <section :run="diagnostics.accountAddressMatches">
-      <header class="relative">
-        <Motion :initial="{ opacity: 0 }" :animate="{ opacity: 1 }" :transition="{ duration: 0.5 }">
-          <Motion
-            :initial="{ width: 0 }"
-            :animate="{ width: '100%' }"
-            :transition="{ duration: 1.5, ease: 'easeOut' }"
-            class="overflow-hidden whitespace-nowrap"
+    <DiagnosticStep ref="step3" :run="() => diagnostics.lastInstallCompletedSuccessfully()">
+      <heading>Checking Success of Last Install/Upgrade</heading>
+      <success v-slot="{ data }">
+        All steps of the last install/upgrade completed successfully.
+        <ul class="grid grid-cols-2 gap-2 mt-2">
+          <li
+            v-for="[key, status] in data.steps"
+            :key="key"
+            class="text-slate-800/50 whitespace-nowrap font-md font-light pr-10 select-auto cursor-text"
           >
-            Checking Argon Account Identifier Match
-          </Motion>
-        </Motion>
-        <label class="text-green-600 font-bold absolute right-5 top-0">Y</label>
-      </header>
-      <success class="text-slate-800/50 font-md font-light pr-5">
-        Your app database and the cloud machine are using the same account address.
+            {{ key }} = {{ status }}
+          </li>
+        </ul>
       </success>
-      <!-- <failure>Your app database and the cloud machine are using different account addresses.</failure> -->
-    </section>
+      <failure>One or more steps of the last install/upgrade did not complete successfully.</failure>
+    </DiagnosticStep>
 
-    <!-- <section :run="diagnostics.remoteFilesAreUpToDate">
-    <header>Remote Server Files Are Up-to-Date</header>
-    <success :data="{ files: ['/bot', '/scripts', '/deploy', '/calculator'] }">
-      /bot /scripts /deploy /calculator
-    </success>
-  </section>
+    <DiagnosticStep ref="step4" :run="() => diagnostics.remoteServerFilesAreUpToDate()">
+      <heading>Checking Remote Server Files Are Up-to-Date</heading>
+      <success v-slot="{ data }">
+        The remote server files are up-to-date and installed in their correct locations:
+        <ul class="grid grid-cols-3 gap-2 mt-2">
+          <li
+            v-for="file in data.files"
+            :key="file"
+            class="text-slate-800/50 font-md font-light pr-10 select-auto cursor-text"
+          >
+            {{ file }}
+          </li>
+        </ul>
+      </success>
+      <failure>
+        The remote files on your server are out of date with the files expected by your current version of Commmander.
+      </failure>
+    </DiagnosticStep>
 
-  <section :run="diagnostics.configFilesAreCorrect">
-    <header>Config Files Are Correct</header>
-    <success>
-      All config files are correct.
-    </success>
-    <failure>One or more config files are incorrect.</failure>
-  </section>
+    <DiagnosticStep ref="step5" :run="() => diagnostics.remoteConfigFilesAreUpToDate()">
+      <heading>Checking Remote Config Files Are Correct</heading>
+      <success v-slot="{ data }">
+        The remote server files are up-to-date and installed in their correct locations:
+        <ul class="grid grid-cols-3 gap-2 mt-2">
+          <li
+            v-for="file in data.files"
+            :key="file"
+            class="text-slate-800/50 font-md font-light pr-10 select-auto cursor-text"
+          >
+            {{ file }}
+          </li>
+        </ul>
+      </success>
+      <failure>
+        The remote config files on your server are out of date with what is expected by your current version of
+        Commmander.
+      </failure>
+    </DiagnosticStep>
 
-  <section :run="diagnostics.lastInstallCompletedSuccessfully">
-    <header>Last Install Completed Successfully</header>
-    <success :data="{ installDetails: config.installDetails }">
-      The last install completed successfully.
-    </success>
-    <failure>
-      The last install did not complete successfully.
-    </failure>
-  </section>
+    <DiagnosticStep ref="step6" :run="() => diagnostics.healthOfBitcoinNode()">
+      <heading>Checking Health of Bitcoin Node</heading>
+      <success v-slot="{ data }">
+        Your bitcoin node appears to be working correctly.
+        <ul class="flex flex-col gap-2 mt-2">
+          <li
+            v-for="[key, value] in Object.entries(data.info)"
+            :key="key"
+            class="text-slate-800/50 font-md font-light pr-10 select-auto cursor-text whitespace-nowrap overflow-hidden text-ellipsis"
+          >
+            {{ key }}: {{ value }}
+          </li>
+        </ul>
+      </success>
+      <failure v-slot="{ error }">Your bitcoin node is not working correctly: {{ error?.message }}</failure>
+    </DiagnosticStep>
 
-  <section>
-    <header>Ubuntu Is Running Correct Version</header>
-  </section>
+    <DiagnosticStep ref="step7" :run="() => diagnostics.healthOfArgonNode()">
+      <heading>Checking Health of Argon Node</heading>
+      <success v-slot="{ data }">
+        Your argon node appears to be working correctly.
+        <ul class="flex flex-col gap-2 mt-2">
+          <li
+            v-for="[key, value] in Object.entries(data.info)"
+            :key="key"
+            class="text-slate-800/50 font-md font-light pr-10 select-auto cursor-text whitespace-nowrap overflow-hidden text-ellipsis"
+          >
+            {{ key }}: {{ value }}
+          </li>
+        </ul>
+      </success>
+      <failure v-slot="{ error }">Your argon node seems to be having trouble: {{ error?.message }}</failure>
+    </DiagnosticStep>
 
-  <section>
-    <header>Bitcoin Node Is Working</header>
-    <div>
-      <div></div>
+    <div v-if="isAllSuccess" class="pt-5 text-green-600 text-xl font-bold uppercase border-t border-gray-300 mt-5">
+      Your Mining Server Appears to Be Working Correctly!
     </div>
-  </section>
 
-  <section>
-    <header>Argon Node Is Working</header>
-  </section>
+    <!-- <section>
+      <header>Mining Bot Is Working</header>
+    </section>
 
-  <section>
-    <header>Mining Bot Is Working</header>
-  </section>
-
-  <section>
-    <header>Mining Data Is Correct</header>
-  </section>
-
-  <section></section> -->
+    <section>
+      <header>Mining Data Is Correct</header>
+    </section> -->
   </div>
 </template>
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { Motion } from 'motion-v';
 import { Diagnostics } from '../../lib/Diagnostics';
-import { useConfig } from '../../stores/config';
+import { useConfig, Config } from '../../stores/config';
+import DiagnosticStep from './components/DiagnosticStep.vue';
+import success from './components/DiagnosticSuccess.vue';
+import failure from './components/DiagnosticFailure.vue';
+import heading from './components/DiagnosticHeading.vue';
 
-const hasStarted = Vue.ref(false);
 const config = useConfig();
+const diagnostics = new Diagnostics(config as Config);
 
-const diagnostics = new Diagnostics();
+const containerRef = Vue.ref<HTMLElement>();
+const isAllSuccess = Vue.ref(false);
 
-function runDiagnostics() {
-  hasStarted.value = true;
-  diagnostics.run();
+const step1 = Vue.ref<InstanceType<typeof DiagnosticStep>>();
+const step2 = Vue.ref<InstanceType<typeof DiagnosticStep>>();
+const step3 = Vue.ref<InstanceType<typeof DiagnosticStep>>();
+const step4 = Vue.ref<InstanceType<typeof DiagnosticStep>>();
+const step5 = Vue.ref<InstanceType<typeof DiagnosticStep>>();
+const step6 = Vue.ref<InstanceType<typeof DiagnosticStep>>();
+const step7 = Vue.ref<InstanceType<typeof DiagnosticStep>>();
+
+function scrollToBottom() {
+  if (containerRef.value) {
+    containerRef.value.scrollTop = containerRef.value.scrollHeight;
+  }
 }
 
-Vue.onMounted(() => {
-  runDiagnostics();
+async function runDiagnostics() {
+  await diagnostics.load();
+  await Vue.nextTick();
+
+  const steps = [step1.value, step2.value, step3.value, step4.value, step5.value, step6.value, step7.value].filter(
+    Boolean,
+  );
+  let hasFailure = false;
+
+  for (const step of steps) {
+    if (step && typeof step.run === 'function') {
+      const wasSuccess = await step.run();
+      await Vue.nextTick();
+      scrollToBottom();
+      if (!wasSuccess) {
+        hasFailure = true;
+        break;
+      }
+    }
+  }
+
+  isAllSuccess.value = !hasFailure;
+}
+
+Vue.onMounted(async () => {
+  runDiagnostics().catch(e => {
+    console.error(e);
+  });
 });
 </script>
+
+<style scoped>
+.dots-pattern {
+  background-image: radial-gradient(circle, currentColor 2px, transparent 2px);
+  background-size: 8px 8px;
+  background-repeat: repeat-x;
+  background-position: center;
+  min-height: 1em;
+}
+</style>

@@ -220,8 +220,8 @@ function toggleOption(key: Option) {
   }
 }
 
-function runSelectedOptions() {
-  restarter.run();
+async function runSelectedOptions() {
+  await restarter.run();
 }
 
 function updateDisabledOptions() {
