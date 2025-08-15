@@ -50,7 +50,8 @@ export default class Installer {
   private isLoadedDeferred!: IDeferred<void>;
   private config: Config;
   private installerCheck: InstallerCheck;
-  private server!: Server;
+
+  private _server?: Server;
 
   constructor(config: Config) {
     ensureOnlyOneInstance(this.constructor);
@@ -69,8 +70,8 @@ export default class Installer {
 
     if (this.config.isServerReadyToInstall) {
       await this.ensureIpAddressIsWhitelisted();
-
-      const accountAddressOnServer = await this.server.downloadAccountAddress();
+      const server = await this.getServer();
+      const accountAddressOnServer = await server.downloadAccountAddress();
       if (accountAddressOnServer && accountAddressOnServer !== this.config.miningAccount.address) {
         await tauriMessage(
           'The wallet address on the server does not match the wallet address in the local database. This app will shutdown.',
@@ -140,14 +141,15 @@ export default class Installer {
 
     try {
       console.info('Downloading account address');
-      const uploadedWalletAddress = await this.server.downloadAccountAddress();
+      const server = await this.getServer();
+      const uploadedWalletAddress = await server.downloadAccountAddress();
       if (!uploadedWalletAddress) {
-        await this.server.deleteBotStorageFiles();
+        await server.deleteBotStorageFiles();
       }
 
       if (this.remoteFilesNeedUpdating) {
         console.info('Uploading account address');
-        await this.server.uploadAccountAddress(this.config.miningAccount.address);
+        await server.uploadAccountAddress(this.config.miningAccount.address);
 
         console.info('Uploading core files');
         await this.uploadCoreFiles(t => (this.fileUploadProgress += (1 / t) * 49));
@@ -157,8 +159,8 @@ export default class Installer {
       await this.uploadBotConfigFiles(t => (this.fileUploadProgress += (1 / t) * 49));
 
       console.info('Starting remote script');
-      await this.server.createLogsDir();
-      await this.server.startInstallerScript();
+      await server.createLogsDir();
+      await server.startInstallerScript();
       this.fileUploadProgress = 99;
 
       this.installerCheck.shouldUseCachedInstallSteps = false;
@@ -194,7 +196,6 @@ export default class Installer {
   public async ensureIpAddressIsWhitelisted(): Promise<void> {
     // we don't have anything to connect to yet!
     if (!this.config.serverDetails.ipAddress) return;
-    await this.ensureServerIsConnected();
     const ipResponse = await fetch('https://api.ipify.org?format=json');
     const { ip: ipAddress } = await ipResponse.json();
     await SSH.runCommand(`ufw status | grep ${ipAddress} || ufw allow from ${ipAddress}`);
@@ -269,10 +270,10 @@ export default class Installer {
 
     this.isRunning = true;
     try {
-      await this.ensureServerIsConnected();
+      const server = await this.getServer();
       await this.uploadBotConfigFiles();
-      await this.server.stopBotDocker();
-      await this.server.startBotDocker();
+      await server.stopBotDocker();
+      await server.startBotDocker();
     } catch (e) {
       console.error(`Failed to upgrade bidding bot files: ${e}`);
       throw e;
@@ -283,11 +284,14 @@ export default class Installer {
     await this.config.save();
   }
 
-  private async ensureServerIsConnected(): Promise<void> {
-    if (this.server) return;
-    if (!this.config.serverDetails.ipAddress) return;
-    const connection = await SSH.getConnection();
-    this.server = new Server(connection);
+  private async getServer(): Promise<Server> {
+    // We were getting into issues where server hadn't been created yet. I decided to just force
+    // getting it in every function that needs it.
+    if (!this._server) {
+      const connection = await SSH.getConnection();
+      this._server = new Server(connection);
+    }
+    return this._server;
   }
 
   private async calculateIsReadyToRun(waitForLoaded: boolean = true): Promise<boolean> {
@@ -396,7 +400,8 @@ export default class Installer {
       return false;
     }
 
-    this.isRunning = await this.server.isInstallerScriptRunning();
+    const server = await this.getServer();
+    this.isRunning = await server.isInstallerScriptRunning();
     if (this.isRunning) {
       console.log('Install process IS running remotely');
     }
@@ -430,7 +435,8 @@ export default class Installer {
   }
 
   private async extractTmpInstallChecks(): Promise<TmpInstallChecks> {
-    const isFreshInstall = !(await this.server.downloadAccountAddress());
+    const server = await this.getServer();
+    const isFreshInstall = !(await server.downloadAccountAddress());
     console.log('IS FRESH INSTALL', isFreshInstall);
 
     if (isFreshInstall) {
@@ -453,7 +459,8 @@ export default class Installer {
   }
 
   private async isRemoteVersionLatest(): Promise<boolean> {
-    const remoteShasum = await this.server.downloadRemoteShasum();
+    const server = await this.getServer();
+    const remoteShasum = await server.downloadRemoteShasum();
     const localShasum = await this.getLocalShasum();
     const remoteFilesMatchLocalShasum = localShasum === remoteShasum;
 
@@ -527,14 +534,15 @@ export default class Installer {
   }
 
   private async uploadBotConfigFiles(progressFn?: (totalCount: number, uploadedCount: number) => void): Promise<void> {
-    await this.server.createConfigDir();
-    await this.server.uploadMiningWallet(this.config.miningAccount.toJson(''));
+    const server = await this.getServer();
+    await server.createConfigDir();
+    await server.uploadMiningWallet(this.config.miningAccount.toJson(''));
     progressFn?.(4, 1);
-    await this.server.uploadBiddingRules(this.config.biddingRules);
+    await server.uploadBiddingRules(this.config.biddingRules);
     progressFn?.(4, 2);
-    await this.server.uploadEnvState({ oldestFrameIdToSync: this.config.oldestFrameIdToSync });
+    await server.uploadEnvState({ oldestFrameIdToSync: this.config.oldestFrameIdToSync });
     progressFn?.(4, 3);
-    await this.server.uploadEnvSecurity({
+    await server.uploadEnvSecurity({
       sessionMiniSecret: this.config.miningSessionMiniSecret,
       keypairPassphrase: '',
     });
@@ -542,10 +550,11 @@ export default class Installer {
   }
 
   private async clearStepFiles(stepKeys: string[], options: { setFirstStepToWorking?: boolean } = {}): Promise<void> {
+    const server = await this.getServer();
     if (stepKeys.includes('all')) {
       await this.config.resetField('installDetails');
       await this.config.save();
-      await this.server.removeAllLogFiles();
+      await server.removeAllLogFiles();
       return;
     }
 
@@ -569,7 +578,7 @@ export default class Installer {
         console.log('CLEAR STEP', stepKey, installDetails[stepKey]?.progress, ' -> ', stepObj.progress);
       }
       installDetails[stepKey] = { ...stepObj };
-      await this.server.removeLogStep(stepKey);
+      await server.removeLogStep(stepKey);
     }
 
     console.log('clearStepFiles', stepKeys, installDetails);
