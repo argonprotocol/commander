@@ -52,8 +52,8 @@ export default class Importer {
     if (serverData.biddingRules) {
       this.config.biddingRules = serverData.biddingRules;
     }
-    this.config.oldestFrameIdToSync = serverData.oldestFrameIdToSync;
-    this.config.save();
+    this.config.oldestFrameIdToSync = serverData.oldestFrameIdToSync ?? this.config.oldestFrameIdToSync;
+    await this.config.save();
 
     this.onFinished();
   }

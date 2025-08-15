@@ -19,7 +19,7 @@ export function useConfig(): Vue.Reactive<Config> {
       .load()
       .then(() => {
         // Ensure any unsaved changes are saved when the window is closed
-        getCurrentWindow().onCloseRequested(async () => {
+        void getCurrentWindow().onCloseRequested(async () => {
           await config.save();
         });
       })

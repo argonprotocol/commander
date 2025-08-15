@@ -58,7 +58,7 @@ export class Bot {
   }
 
   public async restart(): Promise<void> {
-    const server = new Server(SSH.connection);
+    const server = new Server(await SSH.getConnection());
     this.botSyncer.isPaused = true;
     await server.stopBotDocker();
     await server.startBotDocker();

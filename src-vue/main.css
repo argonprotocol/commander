@@ -45,7 +45,7 @@ html {
 }
 
 body {
-  @apply select-none cursor-default;
+  @apply cursor-default select-none;
   height: 100%;
   border-radius: 10px;
   overflow: hidden;
@@ -53,7 +53,7 @@ body {
 }
 
 .selectable-text {
-  @apply select-text cursor-text;
+  @apply cursor-text select-text;
 }
 
 :root {
