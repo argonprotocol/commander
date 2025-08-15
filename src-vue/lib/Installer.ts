@@ -450,27 +450,28 @@ export default class Installer {
   }
 
   private async isRemoteVersionLatest(): Promise<boolean> {
-    const remoteVersion = await this.server.downloadVersion();
-    const localVersion = await this.getLocalVersion();
-    const remoteFilesMatchLocalVersion = localVersion === remoteVersion;
+    const remoteShasum = await this.server.downloadRemoteShasum();
+    const localShasum = await this.getLocalShasum();
+    const remoteFilesMatchLocalShasum = localShasum === remoteShasum;
 
-    console.info(`Remote files ${remoteFilesMatchLocalVersion ? 'DO' : 'do NOT'} match local version`);
+    console.info(`Remote files ${remoteFilesMatchLocalShasum ? 'DO' : 'do NOT'} match local shasum`);
 
-    if (!remoteFilesMatchLocalVersion) {
-      console.info(`Remote version: \n${remoteVersion}`);
-      console.info(`Local version: \n${localVersion}`);
+    if (!remoteFilesMatchLocalShasum) {
+      console.info(`Remote shasum: \n${remoteShasum}`);
+      console.info(`Local shasum: \n${localShasum}`);
     }
 
-    return remoteFilesMatchLocalVersion;
+    return remoteFilesMatchLocalShasum;
   }
 
   private async uploadCoreFiles(progressFn?: (totalCount: number, uploadedCount: number) => void): Promise<void> {
-    const version = await this.getLocalVersion();
-    console.log(`UPLOADING ~/server (version ${version})`);
-    const expectedSha = await invoke<string>('read_embedded_file', {
-      localRelativePath: `resources/server-${version}.sha256`,
-    });
-    const serverTar = `server-${version}.tar.gz`;
+    const expectedSha = await this.getLocalShasum();
+
+    const serverTar = expectedSha.split(' ').pop()?.trim();
+    if (!serverTar) {
+      throw new Error('Failed to extract server tar name from SHASUM256 file');
+    }
+
     const localServerTar = `resources/${serverTar}`;
     const remoteDir = `~/server`;
     let totalProgress = 0;
@@ -484,14 +485,16 @@ export default class Installer {
       console.error(`Failed to remove remote directory ${remoteDir}: ${e}`);
       throw e;
     }
+
     try {
       console.log(`Uploading server to ${remoteDir}`);
       await SSH.uploadEmbeddedFile(localServerTar, `~/${serverTar}`, (progress: number) => {
         totalProgress += progress;
         progressFn?.(totalCount, totalProgress);
       });
-      const [remoteSha256] = await SSH.runCommand(`sha256sum ~/${serverTar}`);
-      if (remoteSha256.split(' ')[0] !== expectedSha.split(' ')[0]) {
+
+      const [remoteSha256] = await SSH.runCommand(`cd ~ && sha256sum ${serverTar}`);
+      if (remoteSha256.replace(/\s+/, ' ').trim() !== expectedSha.replace(/\s+/, ' ').trim()) {
         console.log(`Remote SHA256: ${remoteSha256}`);
         console.log(`Embedded SHA256: ${expectedSha}`);
         throw new Error(`SHA256 mismatch: expected ${expectedSha}, got ${remoteSha256}`);
@@ -508,6 +511,7 @@ export default class Installer {
       if (status !== 0) {
         throw new Error(`Failed to extract server files: ${result}`);
       }
+      await SSH.uploadFile(expectedSha, `~/server/SHASUM256`);
       console.log(`FINISHED Extracting server files to ${remoteDir} - ${result}`);
       totalProgress += 10;
       progressFn?.(totalCount, totalProgress);
@@ -570,8 +574,8 @@ export default class Installer {
     await this.config.save();
   }
 
-  private async getLocalVersion(): Promise<string> {
-    const embeddedFiles = await invoke('read_embedded_file', { localRelativePath: 'resources/VERSION' });
+  private async getLocalShasum(): Promise<string> {
+    const embeddedFiles = await invoke('read_embedded_file', { localRelativePath: 'resources/SHASUM256' });
     if (typeof embeddedFiles !== 'string') {
       throw new Error('Failed to read local version file');
     }

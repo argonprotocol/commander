@@ -9,6 +9,7 @@ import { useConfig } from './config';
 import { type IBiddingRules } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
 import { useBot } from './bot.ts';
 import { botEmitter } from '../lib/Bot.ts';
+import { wrapApi } from '@argonprotocol/commander-calculator/src/ClientWrapper.ts';
 
 let archiveClient: Promise<MainchainClient>;
 let ourMinerClient: Promise<MainchainClient>;
@@ -31,7 +32,7 @@ export async function getMainchainClient(preferMinerNode = false): Promise<Mainc
     }
   }
 
-  archiveClient ??= getClient(NETWORK_URL);
+  archiveClient ??= getClient(NETWORK_URL).then(x => wrapApi(x, 'ARCHIVE_RPC'));
 
   return archiveClient;
 }
@@ -45,7 +46,7 @@ export function getMinerNodeClient(): Promise<MainchainClient> {
   if (!config.isLoaded) {
     throw new Error('Config must be loaded before miner node client can be initialized');
   }
-  return getClient(`ws://${config.serverDetails.ipAddress}:9944`);
+  return getClient(`ws://${config.serverDetails.ipAddress}:9944`).then(client => wrapApi(client, 'OUR_MINER_RPC'));
 }
 
 export function getMainchain(): Mainchain {

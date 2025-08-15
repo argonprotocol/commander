@@ -6,20 +6,20 @@ import { pipeline } from 'stream/promises';
 import { version as packageVersion } from './package.json';
 
 (async () => {
-  // const ts = (Date.now() / 1000).toFixed();
   const files = fs.readdirSync('./resources');
-  const serverFiles = files.filter(file => file.startsWith('server-') || file === 'VERSION');
+  const serverFiles = files.filter(file => file.startsWith('server-') || file === 'SHASUM256');
   for (const file of serverFiles) {
     fs.unlinkSync(Path.join('resources', file));
   }
   const version = `${packageVersion}`;
-  const fileName = `resources/server-${version}.tar.gz`;
-  fs.writeFileSync(`./server/VERSION`, `${version}`);
-  fs.writeFileSync(`./resources/VERSION`, `${version}`);
+  const fileName = `server-${version}.tar.gz`;
+  const filePath = Path.join('resources', fileName);
   await tar.create(
     {
-      gzip: true,
-      file: fileName,
+      gzip: { mtime: 0 } as any,
+      portable: true,
+      noMtime: true, // need for deterministic hashes
+      file: filePath,
       cwd: './server',
     },
     [''],
@@ -27,10 +27,10 @@ import { version as packageVersion } from './package.json';
 
   // Compute SHA256 checksum
   const hash = createHash('sha256');
-  const fileStream = fs.createReadStream(fileName);
+  const fileStream = fs.createReadStream(filePath);
   await pipeline(fileStream, hash);
 
   const checksum = hash.digest('hex');
   console.log(`SHA256: ${checksum}`);
-  fs.writeFileSync(`${fileName.replace('.tar.gz', '.sha256')}`, `${checksum}  ${fileName}\n`);
+  fs.writeFileSync(`resources/SHASUM256`, `${checksum}  ${fileName}\n`);
 })();

@@ -1,10 +1,12 @@
 import * as fs from 'node:fs';
 import { JsonExt } from '@argonprotocol/mainchain';
 import type { ILastModifiedAt } from './interfaces/ILastModified.ts';
+import Queue from 'p-queue';
 
 export class JsonStore<T extends Record<string, any> & ILastModifiedAt> {
   private data: T | undefined;
   private defaults!: Omit<T, 'lastModified'>;
+  private saveQueue = new Queue({ concurrency: 1 });
 
   constructor(
     private path: string,
@@ -12,17 +14,20 @@ export class JsonStore<T extends Record<string, any> & ILastModifiedAt> {
   ) {}
 
   public async mutate(mutateFn: (data: T) => boolean | void | Promise<boolean | void>): Promise<boolean> {
-    await this.load();
-    if (!this.data) {
-      this.data = structuredClone(this.defaults) as T;
-    }
-    const result = await mutateFn(this.data!);
-    if (result === false) return false;
-    this.data!.lastModifiedAt = new Date();
-    // filter non properties
-    this.data = Object.fromEntries(Object.entries(this.data!).filter(([key]) => key in this.defaults)) as T;
-    await atomicWrite(this.path, JsonExt.stringify(this.data, 2));
-    return true;
+    const result = await this.saveQueue.add(async () => {
+      await this.load();
+      if (!this.data) {
+        this.data = structuredClone(this.defaults) as T;
+      }
+      const result = await mutateFn(this.data!);
+      if (result === false) return false;
+      this.data!.lastModifiedAt = new Date();
+      // filter non properties
+      this.data = Object.fromEntries(Object.entries(this.data!).filter(([key]) => key in this.defaults)) as T;
+      await atomicWrite(this.path, JsonExt.stringify(this.data, 2));
+      return true;
+    });
+    return result ?? false;
   }
 
   public async exists(): Promise<boolean> {

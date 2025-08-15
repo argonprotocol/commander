@@ -9,6 +9,7 @@ import { type IBiddingRules, jsonParseWithBigInts } from '@argonprotocol/command
 import { History } from './History.ts';
 import FatalError from './interfaces/FatalError.ts';
 import type { IBotSyncStatus } from './interfaces/IBotStateFile.js';
+import { wrapApi } from '@argonprotocol/commander-calculator/src/ClientWrapper.js';
 
 interface IBotOptions {
   datadir: string;
@@ -74,7 +75,8 @@ export default class Bot implements IBotSyncStatus {
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     console.log('CONNECTING TO LOCAL RPC');
-    const localClientPromise = getClient(this.options.localRpcUrl);
+    const localClientPromise = getClient(this.options.localRpcUrl).then(x => wrapApi(x, 'LOCAL_RPC'));
+
     try {
       this.localClient = await localClientPromise;
     } catch (error) {
@@ -82,7 +84,7 @@ export default class Bot implements IBotSyncStatus {
       throw error;
     }
 
-    const archiveClientPromise = getClient(this.options.archiveRpcUrl);
+    const archiveClientPromise = getClient(this.options.archiveRpcUrl).then(x => wrapApi(x, 'ARCHIVE_RPC'));
     try {
       this.archiveClient = await archiveClientPromise;
     } catch (error) {
@@ -94,7 +96,7 @@ export default class Bot implements IBotSyncStatus {
     this.accountset = new Accountset({
       client: localClientPromise,
       seedAccount: this.options.pair,
-      sessionKeySeedOrMnemonic: this.options.keysMnemonic,
+      sessionKeySeedOrMnemonic: this.options.sessionMiniSecret,
       subaccountRange: new Array(99).fill(0).map((_, i) => i),
     });
     this.autobidder = new AutoBidder(
@@ -122,6 +124,9 @@ export default class Bot implements IBotSyncStatus {
         if (error instanceof FatalError) {
           console.error('Fatal error loading block sync (exiting...)', error);
           throw error;
+        }
+        if (String(error).includes('getHeader(hash?: BlockHash): Header:: 4003')) {
+          error = (error as Error).message;
         }
         console.error('Error loading block sync (retrying...)', error);
         await new Promise(resolve => setTimeout(resolve, 1000));
