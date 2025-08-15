@@ -12,13 +12,13 @@ export interface ITryServerData {
 }
 
 export class SSH {
-  private static connection: SSHConnection;
+  private static connection?: SSHConnection;
   private static config: Config;
 
   public static setConfig(config: Config): void {
     this.config = config;
     if (this.connection) {
-      this.reconnect();
+      void this.reconnect();
     }
   }
 
@@ -106,8 +106,15 @@ export class SSH {
     await connection.uploadEmbeddedFileWithTimeout(localRelativePath, remotePath, progressCallback, 120 * 1e3);
   }
 
+  public static async closeConnection(): Promise<void> {
+    if (this.connection) {
+      await this.connection.close();
+      this.connection = undefined;
+    }
+  }
+
   private static async reconnect(): Promise<void> {
-    await this.connection.close();
-    await this.connection.connect();
+    await this.connection?.close();
+    await this.connection?.connect();
   }
 }

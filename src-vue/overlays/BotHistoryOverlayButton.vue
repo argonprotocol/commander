@@ -161,7 +161,7 @@ function extractMessage(activity: IBotActivityRecord): string {
     const { prevSeatsInPlay, maxSeatsInPlay } = activity.data as IBotActivitySeatReduction;
     return `The number of seats you can win dropped from ${prevSeatsInPlay} to ${maxSeatsInPlay}`;
   } else if (activity.type === BotActivityType.BidsRejected) {
-    const { rejectedCount, microgonsPerSeat: microgonsBid } = activity.data as IBotActivityBidsRejected;
+    const { rejectedCount, microgonsPerSeat } = activity.data as IBotActivityBidsRejected;
     return `${rejectedCount} incoming bids were rejected for ${currency.symbol}${microgonToMoneyNm(microgonsPerSeat).format('0,0.00')} per seat`;
   }
 

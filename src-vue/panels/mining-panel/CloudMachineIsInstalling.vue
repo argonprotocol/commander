@@ -29,9 +29,6 @@ const installDetails = Vue.computed(() => config.installDetails);
 const serverDetails = Vue.computed(() => config.serverDetails);
 
 const hasError = Vue.computed(() => {
-  if (installer.reasonToSkipInstall === ReasonsToSkipInstall.LocalShasumsNotAccurate) {
-    return true;
-  }
   return installDetails.value.errorType;
 });
 </script>
