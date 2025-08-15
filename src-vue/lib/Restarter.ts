@@ -10,8 +10,8 @@ export default class Restarter {
   }
 
   public async run() {
-    this.recreateLocalDatabase();
-    this.reloadAppUi();
+    await this.recreateLocalDatabase();
+    await this.reloadAppUi();
   }
 
   public async reloadAppUi() {

@@ -18,7 +18,7 @@
                 left: `calc(50% + ${draggable.modalPosition.x}px)`,
                 transform: 'translate(-50%, -50%)',
               }"
-              class="absolute z-50 bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl w-7/12 max-h-11/12 overflow-scroll focus:outline-none"
+              class="absolute z-50 bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl min-w-7/12 max-h-11/12 min-h-60 overflow-scroll focus:outline-none"
             >
               <h2 
                 @mousedown="draggable.onMouseDown($event)"

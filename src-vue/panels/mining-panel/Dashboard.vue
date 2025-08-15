@@ -375,6 +375,7 @@ const currentFrame = Vue.ref<IDashboardFrameStats>({
   micronotsMinedTotal: 0n,
   microgonsMinedTotal: 0n,
   microgonsMintedTotal: 0n,
+  microgonFeesCollectedTotal: 0n,
   microgonValueOfRewards: 0n,
 
   progress: 0,

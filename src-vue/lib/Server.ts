@@ -24,6 +24,30 @@ const installStepStatusPriorityByType: Record<InstallStepStatusType, number> = {
   [InstallStepStatusType.Failed]: 3,
 };
 
+export interface IBitcoinBlockChainInfo {
+  chain: string;
+  blocks: number;
+  headers: number;
+  bestBlockHash: string;
+  difficulty: number;
+  time: number;
+  medianTime: number;
+  verificationProgress: number;
+  initialBlockDownload: boolean;
+  chainwork: string;
+  sizeOnDisk: number;
+  pruned: boolean;
+  warnings: string[];
+  localNodeBlockNumber: number;
+  mainNodeBlockNumber: number;
+}
+
+export interface IArgonBlockChainInfo {
+  localNodeBlockNumber: number;
+  mainNodeBlockNumber: number;
+  isComplete: boolean;
+}
+
 export class Server {
   private readonly connection: SSHConnection;
 
@@ -150,6 +174,60 @@ export class Server {
     return parseFloat(output.trim().replace('%', '')) || 0.0;
   }
 
+  public async fetchBitcoinBlockChainInfo(): Promise<IBitcoinBlockChainInfo> {
+    const [outputRaw1] = await this.connection.runCommandWithTimeout(
+      `docker exec server-bitcoin-1 bash -c 'latestblocks.sh'`,
+      5e3,
+    );
+    const [localNodeBlockNumber, mainNodeBlockNumber] = outputRaw1.split('-');
+    const [bitcoinConfig] = await this.connection.runCommandWithTimeout(
+      `source ~/server/.env.testnet && echo $BITCOIN_CONFIG`,
+      5e3,
+    );
+    const [outputRaw2] = await this.connection.runCommandWithTimeout(
+      `docker exec server-bitcoin-1 bash -c "bitcoin-cli --conf=\\"${bitcoinConfig.trim()}\\" getblockchaininfo"`,
+      5e3,
+    );
+    const output2 = JSON.parse(outputRaw2.trim());
+    return {
+      chain: output2.chain,
+      blocks: output2.blocks,
+      headers: output2.headers,
+      bestBlockHash: output2.bestblockhash,
+      difficulty: output2.difficulty,
+      time: output2.time,
+      medianTime: output2.mediantime,
+      verificationProgress: output2.verificationprogress,
+      initialBlockDownload: output2.initialblockdownload,
+      chainwork: output2.chainwork,
+      sizeOnDisk: output2.size_on_disk,
+      pruned: output2.pruned,
+      warnings: output2.warnings,
+      localNodeBlockNumber: parseInt(localNodeBlockNumber),
+      mainNodeBlockNumber: parseInt(mainNodeBlockNumber),
+    };
+  }
+
+  public async fetchArgonBlockChainInfo(): Promise<IArgonBlockChainInfo> {
+    const [outputRaw1] = await this.connection.runCommandWithTimeout(
+      `docker exec server-argon-miner-1 bash -c 'latestblocks.sh'`,
+      5e3,
+    );
+    const [localNodeBlockNumber, mainNodeBlockNumber] = outputRaw1.split('-');
+
+    const [outputRaw2] = await this.connection.runCommandWithTimeout(
+      `docker exec server-argon-miner-1 bash -c 'iscomplete.sh'`,
+      5e3,
+    );
+    const isComplete = outputRaw2.trim() === 'true';
+
+    return {
+      localNodeBlockNumber: parseInt(localNodeBlockNumber),
+      mainNodeBlockNumber: parseInt(mainNodeBlockNumber),
+      isComplete,
+    };
+  }
+
   public async fetchArgonInstallProgress(): Promise<number> {
     const [output] = await this.connection.runCommandWithTimeout('docker exec server-argon-miner-1 syncstatus.sh', 5e3);
     return parseFloat(output.trim().replace('%', '')) || 0.0;
@@ -187,5 +265,9 @@ export class Server {
       return output.trim();
     }
     return '';
+  }
+
+  public async deleteBotStorageFiles(): Promise<void> {
+    await this.connection.runCommandWithTimeout('rm -rf ~/data/bot-*', 5e3);
   }
 }

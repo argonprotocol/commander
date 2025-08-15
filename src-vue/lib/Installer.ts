@@ -144,7 +144,7 @@ export default class Installer {
       console.info('Downloading account address');
       const uploadedWalletAddress = await this.server.downloadAccountAddress();
       if (!uploadedWalletAddress) {
-        await this.deleteRemoteBotData();
+        await this.server.deleteBotStorageFiles();
       }
 
       if (this.remoteFilesNeedUpdating) {
@@ -281,10 +281,6 @@ export default class Installer {
     }
 
     await this.config.save();
-  }
-
-  private async deleteRemoteBotData(): Promise<void> {
-    await SSH.runCommand('rm -rf ~/data/bot-*');
   }
 
   private async calculateIsReadyToRun(waitForLoaded: boolean = true): Promise<boolean> {
