@@ -67,11 +67,9 @@ export default class Installer {
   public async load(): Promise<void> {
     await this.config.isLoadedPromise;
 
-    const connection = await SSH.getConnection();
-    this.server = new Server(connection);
-
-    await this.ensureIpAddressIsWhitelisted();
     if (this.config.isServerReadyToInstall) {
+      await this.ensureIpAddressIsWhitelisted();
+
       const accountAddressOnServer = await this.server.downloadAccountAddress();
       if (accountAddressOnServer && accountAddressOnServer !== this.config.miningAccount.address) {
         await tauriMessage(
@@ -196,6 +194,7 @@ export default class Installer {
   public async ensureIpAddressIsWhitelisted(): Promise<void> {
     // we don't have anything to connect to yet!
     if (!this.config.serverDetails.ipAddress) return;
+    await this.ensureServerIsConnected();
     const ipResponse = await fetch('https://api.ipify.org?format=json');
     const { ip: ipAddress } = await ipResponse.json();
     await SSH.runCommand(`ufw status | grep ${ipAddress} || ufw allow from ${ipAddress}`);
@@ -270,6 +269,7 @@ export default class Installer {
 
     this.isRunning = true;
     try {
+      await this.ensureServerIsConnected();
       await this.uploadBotConfigFiles();
       await this.server.stopBotDocker();
       await this.server.startBotDocker();
@@ -281,6 +281,13 @@ export default class Installer {
     }
 
     await this.config.save();
+  }
+
+  private async ensureServerIsConnected(): Promise<void> {
+    if (this.server) return;
+    if (!this.config.serverDetails.ipAddress) return;
+    const connection = await SSH.getConnection();
+    this.server = new Server(connection);
   }
 
   private async calculateIsReadyToRun(waitForLoaded: boolean = true): Promise<boolean> {
