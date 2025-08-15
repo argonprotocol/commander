@@ -131,8 +131,8 @@ export class Server {
     await this.connection.runCommandWithTimeout('mkdir -p ~/logs', 5e3);
   }
 
-  public async downloadVersion(): Promise<string> {
-    const [version] = await this.connection.runCommandWithTimeout('cat ~/server/VERSION 2>/dev/null || true', 5e3);
+  public async downloadRemoteShasum(): Promise<string> {
+    const [version] = await this.connection.runCommandWithTimeout('cat ~/server/SHASUM256 2>/dev/null || true', 5e3);
     return version.trim();
   }
 

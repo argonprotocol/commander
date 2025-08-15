@@ -32,6 +32,5 @@ tsconfig.*.tsbuildinfo
 *.pem
 .yarn/install-state.gz
 docker-compose.yml
-resources/VERSION
-resources/*.tar*
-/server/VERSION
+resources/server-*
+resources/SHASUM256

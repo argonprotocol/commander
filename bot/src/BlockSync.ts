@@ -15,7 +15,7 @@ import { type Storage } from './Storage.ts';
 import type { IBotState, IBotStateFile, IBotSyncStatus } from './interfaces/IBotStateFile.ts';
 import type { IWinningBid } from './interfaces/IBidsFile.ts';
 import { JsonStore } from './JsonStore.ts';
-import { Mainchain, MiningFrames } from '@argonprotocol/commander-calculator';
+import { Mainchain } from '@argonprotocol/commander-calculator';
 import { Dockers } from './Dockers.ts';
 import type { IEarningsFile } from './interfaces/IEarningsFile.ts';
 import type { IBlock, IBlockSyncFile } from './interfaces/IBlockSyncFile.ts';
@@ -49,8 +49,18 @@ export class BlockSync {
   private mainchain!: Mainchain;
   private lastExchangeRateDate?: Date;
   private lastExchangeRateFrameId?: number;
-  private tickDurationMillis: number = 60000; // 1 minute in milliseconds
+  private get tickDurationMillis() {
+    return this.frameConfig?.tickMillis ?? 60e3;
+  }
   private frameCalculator = new FrameCalculator();
+  private latestBestBlockHeader?: Header;
+  private frameConfig!: {
+    ticksBetweenFrames: number;
+    slotBiddingStartAfterTicks: number;
+    genesisTick: number;
+    tickMillis: number;
+    biddingStartTick: number;
+  };
 
   constructor(
     public bot: IBotSyncStatus,
@@ -69,23 +79,27 @@ export class BlockSync {
   async load() {
     this.isStopping = false;
     this.localClient = await this.accountset.client;
+    this.frameConfig ??= await this.frameCalculator.load(this.archiveClient);
 
     const finalizedHash = await this.localClient.rpc.chain.getFinalizedHead();
     const finalizedHeader = await this.localClient.rpc.chain.getHeader(finalizedHash);
     this.latestFinalizedBlockNumber = finalizedHeader.number.toNumber();
-    await this.setOldestFrameIdIfNeeded(finalizedHeader);
 
     this.latestTick = await this.localClient.query.ticks.currentTick().then(x => x.toNumber());
-    this.tickDurationMillis = (await this.localClient.query.ticks.genesisTicker()).tickDurationMillis.toNumber();
     this.earliestQueuedTick = this.latestTick;
 
-    const botStateData = (await this.botStateFile.get())!;
-    const oldestTickRange = await MiningFrames.getTickRangeForFrame(this.localClient, botStateData.oldestFrameIdToSync);
-    this.oldestFrameIdToSync = botStateData.oldestFrameIdToSync;
-    this.oldestTick = oldestTickRange[0];
+    await this.botStateFile.mutate(async x => {
+      if (!x.oldestFrameIdToSync) {
+        x.oldestFrameIdToSync = this.oldestFrameIdToSync ?? (await this.getFrameIdFromHeader(finalizedHeader));
+      }
+      this.oldestFrameIdToSync = x.oldestFrameIdToSync;
+      const oldestTickRange = await this.frameCalculator.getTickRangeForFrame(this.localClient, x.oldestFrameIdToSync);
+      this.oldestTick = oldestTickRange[0];
+      x.syncProgress = this.calculateProgress(this.currentTick, [this.oldestTick, this.latestTick]);
 
-    console.log('Sync starting', {
-      ...botStateData,
+      console.log('Sync starting', {
+        ...x,
+      });
     });
 
     const startingMinerState = await this.accountset.loadRegisteredMiners(this.localClient);
@@ -172,7 +186,7 @@ export class BlockSync {
 
   async start() {
     const unsub1 = await this.localClient.rpc.chain.subscribeNewHeads(header => {
-      this.backfillBestBlockHeader(header);
+      this.latestBestBlockHeader = header;
     });
     const unsub2 = await this.localClient.rpc.chain.subscribeFinalizedHeads(header => {
       this.latestFinalizedBlockNumber = header.number.toNumber();
@@ -256,6 +270,11 @@ export class BlockSync {
     if (this.isStopping) return;
 
     try {
+      const latestBestBlockHeader = this.latestBestBlockHeader;
+      this.latestBestBlockHeader = undefined;
+      if (latestBestBlockHeader) {
+        await this.backfillBestBlockHeader(latestBestBlockHeader);
+      }
       this.inProcessSync = this.processNext();
       const result = await this.inProcessSync;
       if (result?.remaining ?? 0 > 0) {
@@ -295,7 +314,7 @@ export class BlockSync {
 
     const currentFrameId = await this.frameCalculator.getForTick(this.localClient, tick);
     if (this.lastProcessed?.frameId !== currentFrameId) {
-      this.currentFrameTickRange = await MiningFrames.getTickRangeForFrame(this.localClient, currentFrameId);
+      this.currentFrameTickRange = await this.frameCalculator.getTickRangeForFrame(this.localClient, currentFrameId);
     }
 
     const { hasMiningBids, hasMiningSeats } = await this.syncBidding(currentFrameId, blockMeta, events);
@@ -327,13 +346,13 @@ export class BlockSync {
           argonsMined: microgonsMined,
           argonotsMined: micronotsMined,
         } = cohortEarningsAtFrameId[miningCohortActivationFrameId as any];
-        const blockFees = await this.mainchain.fetchMicrogonBlockFeesMined(blockMeta.hash);
+
         x.earningsByBlock[blockNumber] = {
           blockHash: blockMeta.hash,
           authorCohortActivationFrameId: Number(miningCohortActivationFrameId),
           authorAddress: blockMeta.author,
           blockMinedAt: tickDate.toString(),
-          microgonFeesCollected: blockFees,
+          microgonFeesCollected: await api.query.blockRewards.blockFees().then(x => x.toBigInt()),
           micronotsMined,
           microgonsMined,
           microgonsMinted,
@@ -496,17 +515,6 @@ export class BlockSync {
       return this.archiveClient;
     }
     return this.localClient;
-  }
-
-  private async setOldestFrameIdIfNeeded(finalizedHeader: Header): Promise<void> {
-    const botStateData = await this.botStateFile.get();
-    if (botStateData && botStateData.oldestFrameIdToSync > 0) return;
-
-    const oldestFrameIdToSync = this.oldestFrameIdToSync ?? (await this.getFrameIdFromHeader(finalizedHeader));
-    await this.botStateFile.mutate(x => {
-      x.oldestFrameIdToSync = oldestFrameIdToSync;
-      x.syncProgress = this.calculateProgress(this.currentTick, [this.oldestTick, this.latestTick]);
-    });
   }
 
   private async getFrameIdFromHeader(header: Header): Promise<number> {
