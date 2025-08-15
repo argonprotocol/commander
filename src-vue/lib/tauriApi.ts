@@ -13,7 +13,11 @@ export function invokeWithTimeout<T>(cmd: string, args: Record<string, any>, tim
     setTimeout(() => reject(new InvokeTimeout('Invoke timed out')), timeoutMs),
   );
 
-  const invocation = invoke<T>(cmd, args);
-
-  return Promise.race([invocation, timeout]);
+  try {
+    const invocation = invoke<T>(cmd, args);
+    return Promise.race([invocation, timeout]);
+  } catch (e) {
+    console.error(`Error invoking ${cmd}`, e);
+    throw e;
+  }
 }

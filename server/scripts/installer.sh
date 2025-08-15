@@ -88,7 +88,7 @@ fi
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Script path: $SCRIPT_PATH"
 } >> "$DEBUG_LOG"
 
-logs_dir=~/install-logs
+logs_dir=~/logs
 
 # Source the helpers file
 source "$(dirname "$0")/helpers.sh"

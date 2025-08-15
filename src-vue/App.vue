@@ -37,6 +37,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
+import menuStart from './menuStart.ts';
 import MiningPanel from './panels/MiningPanel.vue';
 import VaultingPanel from './panels/VaultingPanel.vue';
 import LiquidLockingPanel from './panels/LiquidLockingPanel.vue';
@@ -62,8 +63,6 @@ import { hideTooltip } from './lib/TooltipUtils';
 import AboutOverlay from './overlays/AboutOverlay.vue';
 import ComplianceOverlay from './overlays/ComplianceOverlay.vue';
 import TroubleshootingOverlay from './overlays/Troubleshooting.vue';
-import { listen } from '@tauri-apps/api/event';
-import basicEmitter from './emitters/basicEmitter';
 import ImportingOverlay from './overlays/ImportingOverlay.vue';
 
 const controller = useController();
@@ -83,49 +82,6 @@ const showMiningPanel = Vue.computed(() => {
 function clickHandler() {
   hideTooltip();
 }
-
-// Listen for Tauri events from the backend
-listen('openAboutOverlay', () => {
-  basicEmitter.emit('openAboutOverlay');
-});
-
-listen('openMiningDashboard', () => {
-  controller.setPanel('mining');
-});
-
-listen('openVaultingDashboard', () => {
-  controller.setPanel('vaulting');
-});
-
-listen('openConfigureMiningBot', () => {
-  basicEmitter.emit('openBotOverlay');
-});
-
-listen('openConfigureVaultSettings', () => {
-  basicEmitter.emit('openConfigureStabilizationVaultOverlay');
-});
-
-listen('openMiningWalletOverlay', event => {
-  basicEmitter.emit('openWalletOverlay', { walletId: 'mining', screen: 'receive' });
-});
-
-listen('openVaultingWalletOverlay', event => {
-  basicEmitter.emit('openWalletOverlay', { walletId: 'vaulting', screen: 'receive' });
-});
-
-listen('openSecuritySettings', () => {
-  basicEmitter.emit('openSecuritySettingsOverlay');
-});
-
-listen('openJurisdictionalCompliance', () => {
-  basicEmitter.emit('openComplianceOverlay');
-});
-
-listen('openTroubleshootingOverlay', (event: any) => {
-  basicEmitter.emit('openTroubleshootingOverlay', {
-    screen: event.payload as 'server-diagnostics' | 'data-and-log-files' | 'options-for-restart',
-  });
-});
 
 Vue.onBeforeMount(async () => {
   await waitForLoad();
@@ -149,4 +105,6 @@ Vue.onErrorCaptured((error, instance) => {
   console.error(instance?.$options.name, error);
   return false;
 });
+
+menuStart();
 </script>

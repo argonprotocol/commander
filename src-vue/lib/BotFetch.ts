@@ -16,7 +16,8 @@ export class BotFetch {
     if (botPath.startsWith('/')) {
       botPath = botPath.slice(1);
     }
-    const url = `http://${SSH.ipAddress}:3000/${botPath}`;
+    const ipAddress = await SSH.getIpAddress();
+    const url = `http://${ipAddress}:3000/${botPath}`;
     console.log(`Fetching: ${url}`);
     const result = await fetch(url);
     if (!result.ok) {

@@ -1,0 +1,205 @@
+import * as Vue from 'vue';
+import { Menu, Submenu, PredefinedMenuItem } from '@tauri-apps/api/menu';
+import { exit as tauriExit } from '@tauri-apps/plugin-process';
+import basicEmitter from './emitters/basicEmitter';
+import { open as tauriOpenUrl } from '@tauri-apps/plugin-shell';
+import { useController } from './stores/controller';
+import { useInstaller } from './stores/installer';
+import { useBot } from './stores/bot';
+
+function openAboutOverlay() {
+  basicEmitter.emit('openAboutOverlay');
+}
+
+export default async function menuStart() {
+  const controller = useController();
+  const installer = useInstaller();
+  const bot = useBot();
+
+  let commanderMenu = await Submenu.new({
+    text: 'Commander',
+    items: [
+      {
+        id: 'about',
+        text: 'About Commander',
+        action: openAboutOverlay,
+      },
+      {
+        id: 'check-updates',
+        text: 'Check for Updates',
+      },
+      await PredefinedMenuItem.new({ item: 'Separator' }),
+      {
+        id: 'security-settings',
+        text: 'Security Settings',
+        action: () => basicEmitter.emit('openSecuritySettingsOverlay'),
+      },
+      {
+        id: 'jurisdictional-compliance',
+        text: 'Jurisdictional Compliance',
+        action: () => basicEmitter.emit('openComplianceOverlay'),
+      },
+      await PredefinedMenuItem.new({ item: 'Separator' }),
+      {
+        id: 'quit',
+        text: 'Quit Commander',
+        accelerator: 'CmdOrCtrl+Q',
+        action: () => tauriExit(),
+      },
+    ],
+  });
+
+  let editMenu = await Submenu.new({
+    text: 'Edit',
+    items: [
+      await PredefinedMenuItem.new({ item: 'Undo' }),
+      await PredefinedMenuItem.new({ item: 'Redo' }),
+      await PredefinedMenuItem.new({ item: 'Separator' }),
+      await PredefinedMenuItem.new({ item: 'Cut' }),
+      await PredefinedMenuItem.new({ item: 'Copy' }),
+      await PredefinedMenuItem.new({ item: 'Paste' }),
+      await PredefinedMenuItem.new({ item: 'SelectAll' }),
+      await PredefinedMenuItem.new({ item: 'Separator' }),
+    ],
+  });
+
+  let miningMenu = await Submenu.new({
+    text: 'Mining',
+    items: [
+      {
+        id: 'mining-dashboard',
+        text: 'Open Mining',
+        action: () => controller.setPanel('mining'),
+      },
+      {
+        id: 'token-transfer-to-mining',
+        text: 'Open Mining Wallet',
+        action: () => basicEmitter.emit('openWalletOverlay', { walletId: 'mining', screen: 'receive' }),
+      },
+      await PredefinedMenuItem.new({ item: 'Separator' }),
+      {
+        id: 'configure-mining-bot',
+        text: 'Configure Mining Bot',
+        action: () => basicEmitter.emit('openBotOverlay'),
+      },
+    ],
+  });
+
+  let vaultingMenu = await Submenu.new({
+    text: 'Vaulting',
+    items: [
+      {
+        id: 'vaulting-dashboard',
+        text: 'Open Vaulting',
+        action: () => controller.setPanel('vaulting'),
+      },
+      {
+        id: 'token-transfer-to-vaulting',
+        text: 'Open Vaulting Wallet',
+        action: () => basicEmitter.emit('openWalletOverlay', { walletId: 'vaulting', screen: 'receive' }),
+      },
+      await PredefinedMenuItem.new({ item: 'Separator' }),
+      {
+        id: 'configure-vault-settings',
+        text: 'Configure Vault Settings',
+        action: () => basicEmitter.emit('openConfigureStabilizationVaultOverlay'),
+      },
+    ],
+  });
+
+  let windowMenu = await Submenu.new({
+    text: 'Window',
+    items: [await PredefinedMenuItem.new({ item: 'Minimize' }), await PredefinedMenuItem.new({ item: 'Fullscreen' })],
+  });
+
+  let troubleshootingMenu = await Submenu.new({
+    text: 'Troubleshooting',
+    items: [
+      {
+        id: 'server-diagnostics',
+        text: 'Server Diagnostics',
+        action: () => basicEmitter.emit('openTroubleshootingOverlay', { screen: 'server-diagnostics' }),
+      },
+      {
+        id: 'data-and-log-files',
+        text: 'Data and Logging',
+        action: () => basicEmitter.emit('openTroubleshootingOverlay', { screen: 'data-and-log-files' }),
+      },
+      await PredefinedMenuItem.new({ item: 'Separator' }),
+      {
+        id: 'reload',
+        text: 'Simple UI Restart',
+        accelerator: 'CmdOrCtrl+R',
+        action: () => window.location.reload(),
+      },
+      {
+        id: 'options-for-restart',
+        text: 'Advanced Restart',
+        accelerator: 'CmdOrCtrl+Shift+R',
+        action: () => basicEmitter.emit('openTroubleshootingOverlay', { screen: 'options-for-restart' }),
+      },
+    ],
+  });
+
+  let helpMenu = await Submenu.new({
+    text: 'Help',
+    items: [
+      await troubleshootingMenu,
+      await PredefinedMenuItem.new({ item: 'Separator' }),
+      {
+        id: 'documentation',
+        text: 'Documentation',
+        action: () => tauriOpenUrl('https://argonprotocol.org/docs'),
+      },
+      {
+        id: 'faq',
+        text: 'Frequently Asked Questions',
+        action: () => tauriOpenUrl('https://argonprotocol.org/faq'),
+      },
+      await PredefinedMenuItem.new({ item: 'Separator' }),
+      {
+        id: 'discord-community',
+        text: 'Discord User Community',
+        action: () => tauriOpenUrl('https://discord.gg/xDwwDgCYr9'),
+      },
+      {
+        id: 'github-community',
+        text: 'GitHub Developer Community',
+        action: () => tauriOpenUrl('https://github.com/argonprotocol/commander/issues'),
+      },
+      await PredefinedMenuItem.new({ item: 'Separator' }),
+      {
+        id: 'about',
+        text: 'About',
+        action: openAboutOverlay,
+      },
+    ],
+  });
+
+  const menu = await Menu.new({
+    items: [commanderMenu, editMenu, miningMenu, vaultingMenu, windowMenu, helpMenu],
+  });
+
+  function updateMiningMenu() {
+    miningMenu.setEnabled(!installer.isRunning && !bot.isSyncing);
+  }
+
+  await menu.setAsAppMenu().then(async res => {
+    Vue.watch(
+      () => installer.isRunning,
+      () => updateMiningMenu(),
+      { immediate: true },
+    );
+    Vue.watch(
+      () => bot.isSyncing,
+      () => updateMiningMenu(),
+      { immediate: true },
+    );
+
+    //   // Update individual menu item text
+    //   const statusItem = await menu.get('status');
+    //   if (statusItem) {
+    //     await statusItem.setText('Status: Ready');
+    //   }
+  });
+}

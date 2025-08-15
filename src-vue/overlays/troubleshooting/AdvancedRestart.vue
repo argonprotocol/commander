@@ -1,8 +1,10 @@
 <template>
   <div class="px-4">
     <p class="text-md font-light pt-2 pb-1">
-      There are multiple restart options available. It begins with a simple relaod of the app, but you can go as far as
-      completely wiping and reinstalling your cloud machine.
+      Select the components you want to restart and then click the run button.
+      <template v-if="bot.isSyncing || installer.isRunning">
+        Some options are disabled because your app is in the process of {{ bot.isSyncing ? 'syncing' : 'installing' }}.
+      </template>
     </p>
     <ol>
       <li>
@@ -63,7 +65,7 @@
           class="flex flex-row items-center space-x-2 font-bold mt-2 cursor-pointer"
         >
           <Checkbox :isChecked="options[Option.ResyncBitcoinBlocksOnCloudMachine].isChecked" :size="5" />
-          <span>Resync Bitcoin Block Data on Cloud Machine</span>
+          <span>Resync Bitcoin Node on Cloud Machine</span>
         </header>
         <p class="ml-7 text-md font-light">
           This will shutdown and restart your server. No data will be touched. This can sometimes fix issues where the
@@ -77,7 +79,7 @@
           class="flex flex-row items-center space-x-2 font-bold mt-2 cursor-pointer"
         >
           <Checkbox :isChecked="options[Option.ResyncArgonBlocksOnCloudMachine].isChecked" :size="5" />
-          <span>Resync Argon Block Data on Cloud Machine</span>
+          <span>Resync Argon Node on Cloud Machine</span>
         </header>
         <p class="ml-7 text-md font-light">
           This will shutdown and restart your server. No data will be touched. This can sometimes fix issues where the
@@ -119,8 +121,13 @@ import Checkbox from '../../components/Checkbox.vue';
 import Restarter from '../../lib/Restarter';
 import { getDbPromise } from '../../stores/helpers/dbPromise';
 import { useConfig } from '../../stores/config';
+import { useInstaller } from '../../stores/installer';
+import { useBot } from '../../stores/bot';
 
 const config = useConfig();
+const installer = useInstaller();
+const bot = useBot();
+
 const dbPromise = getDbPromise();
 const restarter = new Restarter(dbPromise);
 
@@ -216,4 +223,16 @@ function toggleOption(key: Option) {
 function runSelectedOptions() {
   restarter.run();
 }
+
+function updateDisabledOptions() {
+  if (!installer.isRunning && !bot.isSyncing) return;
+
+  options.value[Option.RestartDockers].isDisabled = true;
+  options.value[Option.ResyncBiddingDataOnCloudMachine].isDisabled = true;
+  options.value[Option.ResyncBitcoinBlocksOnCloudMachine].isDisabled = true;
+  options.value[Option.ResyncArgonBlocksOnCloudMachine].isDisabled = true;
+}
+
+Vue.watch(() => installer.isRunning, updateDisabledOptions, { immediate: true });
+Vue.watch(() => bot.isSyncing, updateDisabledOptions, { immediate: true });
 </script>

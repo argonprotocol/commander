@@ -10,7 +10,6 @@ use utils::Utils;
 use window_vibrancy::*;
 
 mod env;
-mod menu;
 mod migrations;
 mod ssh;
 mod ssh_pool;
@@ -226,14 +225,7 @@ pub fn run() {
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(16.0))
                 .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
 
-            // Create the application menu
-            let menu = menu::create_menu(app)?;
-            app.set_menu(menu)?;
-
             Ok(())
-        })
-        .on_menu_event(|app, event| {
-            menu::handle_menu_event(&app, &event);
         })
         .plugin(tauri_plugin_http::init())
         .plugin(logger.build())

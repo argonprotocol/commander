@@ -17,13 +17,13 @@
                 top: `calc(50% + ${draggable.modalPosition.y}px)`,
                 left: `calc(50% + ${draggable.modalPosition.x}px)`,
                 transform: 'translate(-50%, -50%)',
-                cursor: draggable.isDragging ? 'grabbing' : 'default',
               }"
               class="absolute z-50 bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl w-7/12 max-h-11/12 overflow-scroll focus:outline-none"
             >
               <h2 
                 @mousedown="draggable.onMouseDown($event)"
                 :class="[activeScreen === 'overview' ? 'pb-3 px-3 mb-2' : 'pb-3 pl-2 pr-3 mb-2']"
+                :style="{ cursor: draggable.isDragging ? 'grabbing' : 'grab' }"
                 class="flex flex-row items-center w-full pt-3 space-x-4 text-5xl font-bold border-b border-black/20"
               >
                 <div v-if="activeScreen !== 'overview'" class="flex flex-row items-center hover:bg-[#f1f3f7] rounded-md p-1 pl-0 mr-2 cursor-pointer">
@@ -31,7 +31,7 @@
                 </div>
                 <DialogTitle v-if="activeScreen === 'overview'" class="text-2xl font-bold grow">Troubleshooting</DialogTitle>
                 <DialogTitle v-else-if="activeScreen === 'server-diagnostics'" class="text-2xl font-bold grow">Server Diagnostics</DialogTitle>
-                <DialogTitle v-else-if="activeScreen === 'data-and-log-files'" class="text-2xl font-bold grow">Data and Logging Files</DialogTitle>
+                <DialogTitle v-else-if="activeScreen === 'data-and-log-files'" class="text-2xl font-bold grow">Data and Logging</DialogTitle>
                 <DialogTitle v-else-if="activeScreen === 'options-for-restart'" class="text-2xl font-bold grow">Advanced Restart</DialogTitle>
                 <div @click="closeOverlay" class="mr-1 z-10 flex items-center justify-center text-sm/6 font-semibold cursor-pointer border rounded-md w-[30px] h-[30px] focus:outline-none border-slate-400/60 hover:border-slate-500/60 hover:bg-[#f1f3f7]">
                   <XMarkIcon class="w-5 h-5 text-[#B74CBA] stroke-4" />

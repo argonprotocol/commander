@@ -9,6 +9,8 @@ vi.mock('../lib/SSH', async () => {
 import Installer, { resetInstaller } from '../lib/Installer';
 import { Config } from '../lib/Config';
 import { createMockedDbPromise } from './helpers/db';
+import { IInstallStepStatuses, InstallStepStatusType } from '../lib/Server';
+import { InstallStepKey } from '../interfaces/IConfig';
 
 beforeEach(() => {
   resetInstaller();
@@ -89,35 +91,25 @@ it.only('should run through entire install process', async () => {
   installer.isRemoteVersionLatest = vi.fn().mockResolvedValue(true);
   // @ts-ignore
 
-  const filenamesPending = [
-    'FileUpload.started',
-    'FileUpload.finished',
-    'FileUpload.log',
-    'UbuntuCheck.started',
-    'UbuntuCheck.finished',
-    'UbuntuCheck.log',
-    'DockerInstall.started',
-    'DockerInstall.finished',
-    'DockerInstall.log',
-    'ArgonInstall.started',
-    'ArgonInstall.finished',
-    'ArgonInstall.log',
-    'BitcoinInstall.started',
-    'BitcoinInstall.finished',
-    'BitcoinInstall.log',
-    'MiningLaunch.started',
-    'MiningLaunch.finished',
-    'MiningLaunch.log',
+  const installStepStatusPending: [InstallStepKey, InstallStepStatusType][] = [
+    [InstallStepKey.FileUpload, InstallStepStatusType.Finished],
+    [InstallStepKey.UbuntuCheck, InstallStepStatusType.Finished],
+    [InstallStepKey.DockerInstall, InstallStepStatusType.Finished],
+    [InstallStepKey.ArgonInstall, InstallStepStatusType.Finished],
+    [InstallStepKey.BitcoinInstall, InstallStepStatusType.Finished],
+    [InstallStepKey.MiningLaunch, InstallStepStatusType.Finished],
   ];
-  const filenamesCompleted: string[] = [];
+  const installStepStatusCompleted: IInstallStepStatuses = {};
 
   // @ts-ignore
-  installer.installerCheck.fetchLogFilenames = vi.fn(() => {
-    if (filenamesPending.length) {
-      const nextFiles = filenamesPending.splice(0, 3);
-      filenamesCompleted.push(...nextFiles);
+  installer.installerCheck.fetchInstallStepStatuses = vi.fn(() => {
+    if (installStepStatusPending.length) {
+      const nextFiles = installStepStatusPending.splice(0, 2);
+      for (const [key, status] of nextFiles) {
+        installStepStatusCompleted[key] = status;
+      }
     }
-    return filenamesCompleted;
+    return installStepStatusCompleted;
   });
 
   await installer.load();

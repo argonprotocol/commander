@@ -84,9 +84,6 @@ export default class BiddingCalculator {
     this.minimumBidAmount = this.calculateBidAmount('minimum');
     this.maximumBidAmount = this.calculateBidAmount('maximum');
 
-    console.log('minimumBidAmount', this.minimumBidAmount);
-    console.log('maximumBidAmount', this.maximumBidAmount);
-
     if (this.pivotPoint === 'MinimumBid') {
       if (this.minimumBidAmount > this.maximumBidAmount) {
         this.maximumBidAmountFromMinimumBid = this.minimumBidAmount;
@@ -128,12 +125,6 @@ export default class BiddingCalculator {
     const totalRewards = this.calculateMinRewardsThisSeat();
     const costOfArgonotBidLossInMicrogons = this.calculateCostOfArgonotBidLossInMicrogons(
       this.biddingRules.argonotPriceChangePctMin,
-    );
-    console.log(
-      'breakevenBidAtSlowGrowth',
-      totalRewards / 1_000_000n,
-      this.data.estimatedTransactionFee / 1_000_000n,
-      costOfArgonotBidLossInMicrogons / 1_000_000n,
     );
     return totalRewards - (this.data.estimatedTransactionFee + costOfArgonotBidLossInMicrogons);
   }

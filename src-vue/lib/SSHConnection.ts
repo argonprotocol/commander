@@ -7,7 +7,7 @@ export interface ISSHConfig {
   privateKey?: string;
 }
 
-export default class SSHConnection {
+export class SSHConnection {
   public isConnected = false;
   public isConnectedPromise?: Promise<void>;
 
@@ -57,9 +57,18 @@ export default class SSHConnection {
     return this.isConnectedPromise;
   }
 
-  public async runCommandWithTimeout(command: string, timeout: number): Promise<[string, number]> {
-    const payload = { address: this.address, command };
-    return await invokeWithTimeout('ssh_run_command', payload, timeout);
+  public async runCommandWithTimeout(command: string, timeout: number, retries = 0): Promise<[string, number]> {
+    try {
+      const payload = { address: this.address, command };
+      return await invokeWithTimeout('ssh_run_command', payload, timeout);
+    } catch (e) {
+      if (e === 'SSHCommandMissingExitStatus' && retries < 3) {
+        console.error(`Failed to run command... retrying (${retries + 1}/3): % ${command}: ${e}`);
+        return this.runCommandWithTimeout(command, timeout, retries + 1);
+      }
+      console.error(`Error running command ${command}`, e);
+      throw e;
+    }
   }
 
   public async uploadFileWithTimeout(contents: string, remotePath: string, timeout: number): Promise<void> {
