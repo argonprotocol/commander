@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Tag to publish"
+        description: 'Tag to publish'
         required: true
-        default: "v0.0.0"
+        default: 'v0.0.0'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,6 +18,10 @@ concurrency:
 
 env:
   VERSION: ${{ github.event.inputs.version || github.ref_name }}
+  IS_EXPERIMENTAL: false
+  CHANNEL_JSON_FILENAME: latest.json
+  CHANNEL_NAME: channel-stable
+  CHANNEL_TITLE: Stable channel
 
 jobs:
   publish-tauri:
@@ -27,10 +31,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest"
-            args: "--target universal-apple-darwin"
-          - platform: "windows-latest"
-            args: ""
+          - platform: 'macos-latest'
+            args: '--target universal-apple-darwin'
+          - platform: 'windows-latest'
+            args: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -50,7 +54,7 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: "./src-tauri -> target"
+          workspaces: './src-tauri -> target'
 
       - name: install frontend dependencies
         run: yarn install
@@ -58,17 +62,28 @@ jobs:
       - name: build server
         run: yarn build:server
 
+      - name: Override vars
+        if: ${{ github.event.inputs.version && contains(github.event.inputs.version, '-rc') || false }}
+        run: |
+          echo "IS_EXPERIMENTAL=true" >> $GITHUB_ENV
+          echo "CHANNEL_JSON_FILENAME=latest-experimental.json" >> $GITHUB_ENV
+          echo "CHANNEL_NAME=channel-experimental" >> $GITHUB_ENV
+          echo "CHANNEL_TITLE=Experimental channel" >> $GITHUB_ENV
+
       - name: build and publish
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_CONFIG: ${{ env.IS_EXPERIMENTAL && 'src-tauri/tauri.experimental.conf.json' || 'src-tauri/tauri.conf.json' }}
+          ARGON_EXPERIMENTAL: ${{ env.IS_EXPERIMENTAL && 'true' || 'false' }}
+
         with:
           includeDebug: true
           tagName: ${{ env.VERSION }}
           releaseName: ${{ env.VERSION }}
-          releaseBody: "Release ${{ env.VERSION }}"
+          releaseBody: 'Release ${{ env.VERSION }}'
           releaseDraft: true
           prerelease: true
           updaterJsonKeepUniversal: true
@@ -76,6 +91,47 @@ jobs:
           args: ${{ matrix.args }}
 
       - name: Upload server artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          path: 'resources/server-*'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tar -czf server.tar.gz ./resources/*
+          gh release upload ${{ env.VERSION }} server.tar.gz --clobber
+
+      - name: Publish to channel release
+        if: ${{ env.IS_EXPERIMENTAL == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$VERSION" -p latest.json -D .
+          cp latest.json "$CHANNEL_JSON_FILENAME"
+          gh release upload "$VERSION" "$CHANNEL_JSON_FILENAME" --clobber
+          gh release delete-asset "$VERSION" latest.json -y
+
+      - name: Point channel tag & release to this version and mirror assets
+        if: ${{ matrix.platform == 'macos-latest' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Ensure the channel tag points at this version
+          git fetch --tags --force
+          git tag -f "$CHANNEL_NAME" "$VERSION"
+          git push origin -f "refs/tags/$CHANNEL_NAME"
+
+          # Ensure the channel release exists (and is a pre-release)
+          if gh release view "$CHANNEL_NAME" >/dev/null 2>&1; then
+            gh release edit "$CHANNEL_NAME" -t "$CHANNEL_TITLE" --prerelease=true -n "Pinned feed for $CHANNEL_NAME updates"
+          else
+            gh release create "$CHANNEL_NAME" -t "$CHANNEL_TITLE" -n "Pinned feed for $CHANNEL_NAME updates" --prerelease=true
+          fi
+
+          # Download ALL assets from the versioned release and upload them to the channel release
+          mkdir -p assets
+          gh release view "$VERSION" --json assets --jq '.assets[].name' | while read -r name; do
+            # Download the asset by name
+            gh release download "$VERSION" -p "$name" -D assets
+          done
+
+          # Mirror them to the channel release (overwrite if they already exist)
+          gh release upload "$CHANNEL_NAME" assets/* --clobber

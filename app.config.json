@@ -1,0 +1,23 @@
+{
+  "local": {
+    "archiveUrl": "ws://localhost:9944",
+    "tickMillis": 10000,
+    "bitcoinBlockMillis": 100000,
+    "esploraHost": "http://localhost:3002",
+    "serverEnvFile": ".env.localnet"
+  },
+  "testnet": {
+    "archiveUrl": "wss://rpc.testnet.argonprotocol.org",
+    "tickMillis": 60000,
+    "bitcoinBlockMillis": 600000,
+    "esploraHost": "http://bitcoin-node0.testnet.argonprotocol.org:3002",
+    "serverEnvFile": ".env.testnet"
+  },
+  "mainnet": {
+    "archiveUrl": "wss://rpc.argon.network",
+    "tickMillis": 60000,
+    "bitcoinBlockMillis": 600000,
+    "esploraHost": "https://mempool.space/api",
+    "serverEnvFile": ".env.mainnet"
+  }
+}

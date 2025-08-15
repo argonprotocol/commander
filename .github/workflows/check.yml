@@ -2,6 +2,9 @@ name: Lint and ESLint Check
 on:
   push:
 
+permissions:
+  contents: read
+
 jobs:
   lint-and-eslint:
     runs-on: ubuntu-latest
