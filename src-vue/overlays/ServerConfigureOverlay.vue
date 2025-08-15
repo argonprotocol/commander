@@ -49,12 +49,12 @@
           <CopyToClipboard
             ref="copyToClipboard"
             @click="highlightCopiedContent"
-            :content="config.serverDetails.sshPublicKey"
+            :content="config.security.sshPublicKey"
             class="relative mb-3"
           >
             <input
               type="text"
-              :value="config.serverDetails.sshPublicKey"
+              :value="config.security.sshPublicKey"
               class="bg-white py-3 pl-3 pr-8 border border-slate-300 rounded-md w-full pointer-events-none"
               readonly
             />
@@ -69,7 +69,7 @@
                 class="bg-white py-3 pl-3 pr-8 border border-slate-300 rounded-md w-full pointer-events-none overflow-hidden"
               >
                 <span class="bg-blue-200 whitespace-nowrap w-full inline-block">
-                  {{ config.serverDetails.sshPublicKey }}
+                  {{ config.security.sshPublicKey }}
                 </span>
               </div>
               <div
@@ -196,7 +196,7 @@ async function updateServer() {
       ...config.serverDetails,
       ipAddress: ipAddress.value,
     };
-    await SSH.tryConnection(newServerDetails);
+    await SSH.tryConnection(newServerDetails, config.security.sshPrivateKey);
 
     config.isServerReadyToInstall = true;
     config.isServerUpToDate = false;

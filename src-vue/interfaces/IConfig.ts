@@ -32,16 +32,8 @@ export enum InstallStepStatus {
   Hidden = 'Hidden',
 }
 
-export const ConfigSecuritySchema = z.object({
-  walletMnemonic: z.string(),
-  sessionMnemonic: z.string(),
-  walletJson: z.string(),
-});
-
 export const ConfigServerDetailsSchema = z.object({
   ipAddress: z.string(),
-  sshPublicKey: z.string(),
-  sshPrivateKey: z.string(),
   sshUser: z.string(),
 });
 
@@ -77,7 +69,6 @@ export const ConfigSyncDetailsSchema = z.object({
 export const ConfigSchema = z.object({
   version: z.string(),
   requiresPassword: z.boolean(),
-  security: ConfigSecuritySchema,
   serverDetails: ConfigServerDetailsSchema,
   installDetails: ConfigInstallDetailsSchema,
   oldestFrameIdToSync: z.number(),
@@ -108,7 +99,6 @@ export const ConfigSchema = z.object({
 
 // ---- Optional Type Inference ---- //
 
-export type IConfigSecurity = z.infer<typeof ConfigSecuritySchema>;
 export type IConfigServerDetails = z.infer<typeof ConfigServerDetailsSchema>;
 export type IConfigInstallDetails = z.infer<typeof ConfigInstallDetailsSchema>;
 export type IConfigInstallStep = z.infer<typeof ConfigInstallStep>;
@@ -121,8 +111,7 @@ export type IConfigStringified = {
 
 export interface IConfigDefaults {
   requiresPassword: () => IConfig['requiresPassword'];
-  security: () => IConfig['security'];
-  serverDetails: () => Promise<IConfig['serverDetails']>;
+  serverDetails: () => IConfig['serverDetails'];
   installDetails: () => IConfig['installDetails'];
   oldestFrameIdToSync: () => IConfig['oldestFrameIdToSync'];
   isVaultReadyToCreate: () => IConfig['isVaultReadyToCreate'];

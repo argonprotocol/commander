@@ -6,7 +6,7 @@
         v-if="!bot.isBroken && !config.isWaitingForUpgradeApproval"
         class="relative mx-auto inline-block w-6/10 h-full"
       >
-        <div v-if="!bot.isSyncing" class="fade-in-out text-[55px] font-bold text-gray-300 text-center mt-32 mb-4 whitespace-nowrap pt-16">
+        <div v-if="!bot.isSyncing && !installer.isRunning" class="fade-in-out text-[55px] font-bold text-gray-300 text-center mt-32 mb-4 whitespace-nowrap pt-16">
           CONNECTING TO
           <div class="text-7xl">BIDDING BOT</div>
         </div>
@@ -20,10 +20,12 @@ import * as Vue from 'vue';
 import { useStats } from '../../stores/stats';
 import { useConfig } from '../../stores/config';
 import { useBot } from '../../stores/bot';
+import { useInstaller } from '../../stores/installer';
 
 const stats = useStats();
 const config = useConfig();
 const bot = useBot();
+const installer = useInstaller();
 
 Vue.onMounted(() => stats.subscribeToActivity());
 Vue.onUnmounted(() => stats.unsubscribeFromActivity());

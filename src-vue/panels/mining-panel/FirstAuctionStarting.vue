@@ -114,8 +114,8 @@ Vue.onMounted(async () => {
   if (!startOfAuctionClosing.value || !startOfNextCohort.value) {
     const tickAtStartOfAuctionClosing = await mainchain.getTickAtStartOfAuctionClosing();
     const tickAtStartOfNextCohort = await mainchain.getTickAtStartOfNextCohort();
-    startOfAuctionClosing.value = dayjs.utc(Number(tickAtStartOfAuctionClosing) * 60 * 1000);
-    startOfNextCohort.value = dayjs.utc(Number(tickAtStartOfNextCohort) * 60 * 1000);
+    startOfAuctionClosing.value = dayjs.utc(tickAtStartOfAuctionClosing * 60 * 1000);
+    startOfNextCohort.value = dayjs.utc(tickAtStartOfNextCohort * 60 * 1000);
   }
 });
 </script>

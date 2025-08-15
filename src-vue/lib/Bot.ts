@@ -2,11 +2,11 @@ import { Config } from './Config';
 import { Db } from './Db';
 import { BotSyncer, BotStatus } from './BotSyncer';
 import { ensureOnlyOneInstance } from './Utils';
-
 import { type IBidsFile } from '@argonprotocol/commander-bot';
 import mitt, { type Emitter } from 'mitt';
 import Installer from './Installer';
 import { SSH } from './SSH';
+import { Server } from './Server';
 
 export type IBotEmitter = {
   'updated-cohort-data': number;
@@ -58,9 +58,10 @@ export class Bot {
   }
 
   public async restart(): Promise<void> {
+    const server = new Server(SSH.connection);
     this.botSyncer.isPaused = true;
-    await SSH.stopBotDocker();
-    await SSH.startBotDocker();
+    await server.stopBotDocker();
+    await server.startBotDocker();
     this.botSyncer.isPaused = false;
   }
 

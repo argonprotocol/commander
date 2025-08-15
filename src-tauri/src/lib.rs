@@ -1,8 +1,6 @@
 use log;
 use log::trace;
 use serde;
-use ssh::SSH;
-use ssh_singleton::*;
 use std;
 use std::fs;
 use std::path::PathBuf;
@@ -12,54 +10,30 @@ use utils::Utils;
 use window_vibrancy::*;
 
 mod env;
-mod menu;
 mod migrations;
 mod ssh;
-mod ssh_singleton;
+mod ssh_pool;
 mod utils;
+mod security;
 
-#[derive(serde::Serialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
-struct IKeys {
-    private_key: String,
-    public_key: String,
-}
-
-#[tauri::command]
-async fn try_ssh_connection(
-    host: &str,
-    username: String,
-    private_key: String,
-) -> Result<String, String> {
-    log::info!("try_ssh_connection");
-    let (host, port) = Utils::extract_host_port(host);
-    let ssh_config = ssh::SSHConfig::new(&host, port, username, private_key).unwrap();
-    let ssh = SSH::connect(&ssh_config).await.map_err(|e| {
-        log::error!("Error connecting to SSH: {:#}", e);
-        e.to_string()
-    })?;
-
-    ssh.run_command("echo 'test'")
-        .await
-        .map_err(|e| e.to_string())?;
-    replace_ssh_singleton_connection(ssh)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    Ok("success".to_string())
+struct ISecurity {
+    master_mnemonic: String,
+    ssh_public_key: String,
+    ssh_private_key: String,
 }
 
 #[tauri::command]
 async fn open_ssh_connection(
+    address: &str,
     host: &str,
+    port: u16,
     username: String,
     private_key: String,
 ) -> Result<String, String> {
     log::info!("ensure_ssh_connection");
-    let (host, port) = Utils::extract_host_port(host);
-    let ssh_config = ssh::SSHConfig::new(&host, port, username, private_key).unwrap();
-    test_open_ssh_connection(&ssh_config).await.map_err(|e| {
+    ssh_pool::open_connection(&address, &host, port, username, private_key).await.map_err(|e| {
         log::error!("Error connecting to SSH: {:#}", e);
         e.to_string()
     })?;
@@ -68,9 +42,9 @@ async fn open_ssh_connection(
 }
 
 #[tauri::command]
-async fn close_ssh_connection() -> Result<String, String> {
+async fn close_ssh_connection(address: &str) -> Result<String, String> {
     log::info!("close_ssh_connection");
-    close_ssh_singleton_connection()
+    ssh_pool::close_connection(&address)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -78,8 +52,8 @@ async fn close_ssh_connection() -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn ssh_run_command(command: String) -> Result<(String, u32), String> {
-    let ssh: ssh::SSH = get_ssh_singleton_connection()
+async fn ssh_run_command(address: &str, command: String) -> Result<(String, u32), String> {
+    let ssh: ssh::SSH = ssh_pool::get_connection(&address)
         .await
         .map_err(|e| e.to_string())?
         .ok_or("No SSH connection")?;
@@ -88,27 +62,9 @@ async fn ssh_run_command(command: String) -> Result<(String, u32), String> {
 }
 
 #[tauri::command]
-async fn ssh_upload_embedded_file(
-    app: AppHandle,
-    local_path: String,
-    remote_path: String,
-    event_progress_key: String,
-) -> Result<String, String> {
-    log::info!("ssh_upload_embedded_file: {}, {}", local_path, remote_path);
-    let ssh: ssh::SSH = get_ssh_singleton_connection()
-        .await
-        .map_err(|e| e.to_string())?
-        .ok_or("No SSH connection")?;
-    ssh.upload_embedded_file(&app, &local_path, &remote_path, event_progress_key)
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok("success".to_string())
-}
-
-#[tauri::command]
-async fn ssh_upload_file(contents: String, remote_path: String) -> Result<String, String> {
+async fn ssh_upload_file(address: &str, contents: String, remote_path: String) -> Result<String, String> {
     log::info!("ssh_upload_file: {}, {}", contents, remote_path);
-    let ssh: ssh::SSH = get_ssh_singleton_connection()
+    let ssh: ssh::SSH = ssh_pool::get_connection(&address)
         .await
         .map_err(|e| e.to_string())?
         .ok_or("No SSH connection")?;
@@ -119,31 +75,70 @@ async fn ssh_upload_file(contents: String, remote_path: String) -> Result<String
 }
 
 #[tauri::command]
-async fn get_ssh_keys() -> Result<IKeys, String> {
-    log::info!("get_ssh_keys");
-    let (private_key, public_key) = SSH::generate_keys().inspect_err(|e| {
-        log::error!("Error generating ssh_keys {}", e);
-    })?;
+async fn ssh_upload_embedded_file(
+    app: AppHandle,
+    address: &str,
+    local_relative_path: String,
+    remote_path: String,
+    event_progress_key: String,
+) -> Result<String, String> {
+    log::info!("ssh_upload_embedded_file: {}, {}", local_relative_path, remote_path);
+    let ssh: ssh::SSH = ssh_pool::get_connection(&address)
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or("No SSH connection")?;
+    ssh.upload_embedded_file(&app, &local_relative_path, &remote_path, event_progress_key)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok("success".to_string())
+}
 
-    Ok(IKeys {
-        private_key,
-        public_key,
+#[tauri::command]
+async fn read_embedded_file(app: AppHandle, local_relative_path: String) -> Result<String, String> {
+    log::info!("read_embedded_file: {}", local_relative_path);
+    let absolute_local_path = Utils::get_embedded_path(&app, local_relative_path.clone())
+        .map_err(|e| format!("Error resolving embedded path: {}", e))?;
+
+    if !absolute_local_path.exists() {
+        return Err(format!("File does not exist: {}", local_relative_path).to_string());
+    }
+
+    let content = fs::read_to_string(&absolute_local_path)
+        .map_err(|e| format!("Error reading file {}: {}", local_relative_path, e))?;
+    Ok(content)
+}
+
+#[tauri::command]
+async fn fetch_security(app: AppHandle) -> Result<ISecurity, String> {
+    log::info!("fetch_security");
+    let security = security::Security::load(&app).map_err(|e| e.to_string())?;
+
+    Ok(ISecurity {
+        master_mnemonic: security.master_mnemonic,
+        ssh_public_key: security.ssh_public_key,
+        ssh_private_key: security.ssh_private_key,
     })
 }
 
 #[tauri::command]
-async fn read_embedded_file(app: AppHandle, path: String) -> Result<String, String> {
-    log::info!("read_embedded_file: {}", path);
-    let embedded_path = Utils::get_embedded_path(&app, path.clone())
-        .map_err(|e| format!("Error resolving embedded path: {}", e))?;
+async fn overwrite_security(app: AppHandle, master_mnemonic: String, ssh_public_key: String, ssh_private_key: String) -> Result<String, String> {
+    log::info!("overwrite_security");
+    let new_security = security::Security { 
+        master_mnemonic: master_mnemonic,
+        ssh_public_key: ssh_public_key,
+        ssh_private_key: ssh_private_key,
+    };
+    new_security.save(&app).map_err(|e| e.to_string())?;
+    
+    Ok("success".to_string())
+}
 
-    if !embedded_path.exists() {
-        return Err(format!("File does not exist: {}", path).to_string());
-    }
-
-    let content = fs::read_to_string(&embedded_path)
-        .map_err(|e| format!("Error reading file {}: {}", path, e))?;
-    Ok(content)
+#[tauri::command]
+async fn run_db_migrations(app: AppHandle) -> Result<(), String> {
+    log::info!("run_db_migrations");
+    let absolute_db_path = Utils::get_absolute_config_instance_dir(&app).join("database.sqlite");
+    migrations::run_db_migrations(absolute_db_path).await.map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 ////////////////////////////////////////////////////////////
@@ -212,6 +207,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(move |app| {
             log::info!(
                 "Starting instance '{}' on network '{}'",
@@ -229,14 +225,7 @@ pub fn run() {
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(16.0))
                 .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
 
-            // Create the application menu
-            let menu = menu::create_menu(app)?;
-            app.set_menu(menu)?;
-
             Ok(())
-        })
-        .on_menu_event(|app, event| {
-            menu::handle_menu_event(&app, &event);
         })
         .plugin(tauri_plugin_http::init())
         .plugin(logger.build())
@@ -252,14 +241,15 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
-            try_ssh_connection,
             open_ssh_connection,
             close_ssh_connection,
             ssh_run_command,
-            ssh_upload_embedded_file,
             ssh_upload_file,
-            get_ssh_keys,
+            ssh_upload_embedded_file,
             read_embedded_file,
+            fetch_security,
+            overwrite_security,
+            run_db_migrations,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

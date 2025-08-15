@@ -14,7 +14,7 @@
         <StartingBid v-if="id === 'minimumBid'" @update:data="updateData" ref="editorInstance" />
         <MaximumBid v-else-if="id === 'maximumBid'" @update:data="updateData" ref="editorInstance" />
         <RebiddingStrategy v-else-if="id === 'rebiddingStrategy'" @update:data="updateData" ref="editorInstance" />
-        <SeatingGoal v-else-if="id === 'seatGoals'" @update:data="updateData" ref="editorInstance" />
+        <CapitalAllocation v-else-if="id === 'capitalAllocation'" @update:data="updateData" ref="editorInstance" />
         <ExpectedGrowth v-else-if="id === 'expectedGrowth'" @update:data="updateData" ref="editorInstance" />
         <CloudMachine v-else-if="id === 'cloudMachine'" @update:data="updateData" ref="editorInstance" />
       </div>
@@ -35,7 +35,7 @@ import * as Vue from 'vue';
 import StartingBid from './edit-box/StartingBid.vue';
 import MaximumBid from './edit-box/MaximumBid.vue';
 import RebiddingStrategy from './edit-box/RebiddingStrategy.vue';
-import SeatingGoal from './edit-box/SeatingGoal.vue';
+import CapitalAllocation from './edit-box/CapitalAllocation.vue';
 import ExpectedGrowth from './edit-box/ExpectedGrowth.vue';
 import CloudMachine from './edit-box/CloudMachine.vue';
 import { useConfig } from '../stores/config';
@@ -57,7 +57,7 @@ const editorInstance = Vue.ref<InstanceType<
   | typeof MaximumBid
   | typeof StartingBid
   | typeof RebiddingStrategy
-  | typeof SeatingGoal
+  | typeof CapitalAllocation
   | typeof ExpectedGrowth
   | typeof CloudMachine
 > | null>(null);
@@ -67,7 +67,7 @@ export type IEditBoxOverlayTypeForMining =
   | 'maximumBid'
   | 'minimumBid'
   | 'rebiddingStrategy'
-  | 'seatGoals'
+  | 'capitalAllocation'
   | 'expectedGrowth'
   | 'cloudMachine';
 export type IEditBoxOverlayTypeForVault =
@@ -89,7 +89,7 @@ const titles = {
   maximumBid: 'Maximum Bid',
   minimumBid: 'Starting Bid',
   rebiddingStrategy: 'Rebidding Strategy',
-  seatGoals: 'Seat Goals',
+  capitalAllocation: 'Capital Allocation',
   expectedGrowth: 'Expected Growth',
   cloudMachine: 'Cloud Machine',
 };

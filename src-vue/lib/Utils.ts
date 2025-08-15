@@ -1,4 +1,5 @@
-import { JsonExt } from '@argonprotocol/mainchain';
+import { JsonExt, u8aToHex } from '@argonprotocol/mainchain';
+import { mnemonicToMiniSecret, ed25519DeriveHard, keyExtractSuri } from '@polkadot/util-crypto';
 import { jsonStringifyWithBigIntsEnhanced, jsonParseWithBigIntsEnhanced } from '@argonprotocol/commander-calculator';
 import { IFieldTypes } from './db/BaseTable.ts';
 
@@ -208,4 +209,14 @@ export function createDeferred<T>(): {
     resolve,
     reject,
   };
+}
+
+export function miniSecretFromUri(uri: string, password?: string): string {
+  const { phrase, path } = keyExtractSuri(uri);
+  let mini = mnemonicToMiniSecret(phrase, password); // base 32B
+  for (const j of path) {
+    if (!j.isHard) throw new Error('ed25519 soft derivation not supported');
+    mini = ed25519DeriveHard(mini, j.chainCode);
+  }
+  return u8aToHex(mini);
 }

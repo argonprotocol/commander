@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <TransitionRoot class="absolute inset-0 z-10" :show="isOpen">
+  <TransitionRoot class="absolute inset-0 z-10 pointer-events-none" :show="isOpen">
     <TransitionChild
       as="template"
       enter="ease-out duration-300"
@@ -10,7 +10,7 @@
       leave-from="opacity-100"
       leave-to="opacity-0"
     >
-      <BgOverlay />
+      <BgOverlay :enableTopBar="true" />
     </TransitionChild>
 
     <div class="absolute inset-0 z-100 overflow-y-auto pt-[1px] flex items-center justify-center pointer-events-none">
@@ -29,22 +29,25 @@
             top: `calc(50% + ${draggable.modalPosition.y}px)`,
             left: `calc(50% + ${draggable.modalPosition.x}px)`,
             transform: 'translate(-50%, -50%)',
-            cursor: draggable.isDragging ? 'grabbing' : 'default',
           }"
           :class="isUpgrading ? 'w-8/12 min-h-[500px]' : 'w-160'"
-          class="absolute flex flex-col min-h-60 bg-white border border-black/40 px-7 pb-4 rounded-lg pointer-events-auto shadow-xl overflow-scroll"
+          class="absolute flex flex-col min-h-60 bg-white border border-black/40 px-1 pb-4 rounded-lg pointer-events-auto shadow-xl overflow-scroll"
         >
-          <h2 v-if="isUpgrading" class="text-xl font-bold text-slate-800/70 pt-5">
+          <h2 v-if="isUpgrading" 
+            @mousedown="draggable.onMouseDown($event)" 
+            :style="{ cursor: draggable.isDragging ? 'grabbing' : 'grab' }"
+            class="px-6 text-xl font-bold text-slate-800/70 pt-6 pb-5 relative z-10"
+          >
             {{ installer.isFreshInstall ? 'Installing' : 'Upgrading' }} Your Cloud Machine...
           </h2>
-          <h2 v-else class="text-2xl font-bold text-slate-800/70 border-b border-slate-300 pt-6 pb-3 mb-6">
+          <h2 v-else @mousedown="draggable.onMouseDown($event)" class="px-6 text-2xl font-bold text-slate-800/70 border-b border-slate-300 pt-6 pb-3 mb-6 relative z-10">
             Upgrade Required
           </h2>
 
-          <div v-if="isUpgrading" class="flex flex-col grow h-full">
+          <div v-if="isUpgrading" class="flex flex-col grow h-full -mt-4 px-6">
             <InstallProgress :isCompact="true" />
           </div>
-          <div v-else>
+          <div v-else class="px-6">
             <p>
               You have been upgraded to Commander version {{ config.version }}. This new version requires an upgrade to
               your cloud machine. Click the "Upgrade" button, and we'll take care of the details.

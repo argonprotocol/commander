@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
-import { bigIntMax, bigIntMin, bigIntMultiplyNumber, bigNumberToBigInt } from './utils.js';
+import { bigIntMax, bigIntMin, bigNumberToBigInt } from './utils.js';
 import { BidAmountAdjustmentType, BidAmountFormulaType, type IBiddingRules } from './IBiddingRules.ts';
 import { MICROGONS_PER_ARGON } from '@argonprotocol/commander-calculator/src/Mainchain.ts';
 
@@ -123,18 +123,18 @@ export default class BiddingCalculator {
 
   public get breakevenBidAtSlowGrowth(): bigint {
     const totalRewards = this.calculateMinRewardsThisSeat();
-    const costOfArgonotLossInMicrogons = this.calculateCostOfArgonotLossInMicrogons(
+    const costOfArgonotBidLossInMicrogons = this.calculateCostOfArgonotBidLossInMicrogons(
       this.biddingRules.argonotPriceChangePctMin,
     );
-    return totalRewards - (this.data.estimatedTransactionFee + costOfArgonotLossInMicrogons);
+    return totalRewards - (this.data.estimatedTransactionFee + costOfArgonotBidLossInMicrogons);
   }
 
   public get breakevenBidAtFastGrowth(): bigint {
     const optimisticRewards = this.calculateOptimisticRewardsThisSeat();
-    const costOfArgonotLossInMicrogons = this.calculateCostOfArgonotLossInMicrogons(
+    const costOfArgonotBidLossInMicrogons = this.calculateCostOfArgonotBidLossInMicrogons(
       this.biddingRules.argonotPriceChangePctMax,
     );
-    return optimisticRewards - (this.data.estimatedTransactionFee + costOfArgonotLossInMicrogons);
+    return optimisticRewards - (this.data.estimatedTransactionFee + costOfArgonotBidLossInMicrogons);
   }
 
   public get breakevenBidAtMediumGrowth(): bigint {
@@ -169,16 +169,17 @@ export default class BiddingCalculator {
     } else if (bidDetails.adjustmentType === BidAmountAdjustmentType.Absolute) {
       price += bidDetails.adjustAbsolute;
     } else if (bidDetails.adjustmentType === BidAmountAdjustmentType.Relative) {
-      price += bigIntMultiplyNumber(price, bidDetails.adjustRelative / 100);
+      const adjustmentAmountBn = BigNumber(price).multipliedBy(bidDetails.adjustRelative / 100);
+      price += bigNumberToBigInt(adjustmentAmountBn);
     }
 
     return price;
   }
 
-  private calculateCostOfArgonotLossInMicrogons(argonotPriceChangePct: number): bigint {
-    const lossMultiplier = BigInt(Math.floor(argonotPriceChangePct * (MICROGONS_PER_ARGON / 100)));
-    const lossInMicronots = -(this.data.micronotsRequiredForBid * lossMultiplier);
-    const lossInMicrogons = this.micronotToMicrogon(lossInMicronots);
+  private calculateCostOfArgonotBidLossInMicrogons(argonotPriceChangePct: number): bigint {
+    const lossMultiplierBn = BigNumber(argonotPriceChangePct).dividedBy(100);
+    const lossInMicronotsBn = BigNumber(-this.data.micronotsRequiredForBid).multipliedBy(lossMultiplierBn);
+    const lossInMicrogons = this.micronotToMicrogon(bigNumberToBigInt(lossInMicronotsBn));
     return bigIntMax(0n, lossInMicrogons);
   }
 
@@ -192,8 +193,8 @@ export default class BiddingCalculator {
     const argonotPriceChangePct = this.extractArgonotPriceChangePct(growthType);
     const argonCirculationGrowthPct = this.extractArgonCirculationGrowthPct(growthType);
 
-    const costOfArgonotLossInMicrogons = this.calculateCostOfArgonotLossInMicrogons(argonotPriceChangePct);
-    const totalCostBn = BigNumber(microgonsBid + transactionFee + costOfArgonotLossInMicrogons);
+    const costOfArgonotBidLossInMicrogons = this.calculateCostOfArgonotBidLossInMicrogons(argonotPriceChangePct);
+    const totalCostBn = BigNumber(microgonsBid + transactionFee + costOfArgonotBidLossInMicrogons);
 
     const microgonsToMine = this.data.microgonsToMineThisSeat;
     const microgonsToMint = this.calculateMicrogonsToMintThisSeat(argonCirculationGrowthPct);
@@ -202,9 +203,6 @@ export default class BiddingCalculator {
     const totalRewardsBn = BigNumber(microgonsToMine + micronotsMinedAsMicrogons + microgonsToMint);
 
     let tdpr = totalRewardsBn.minus(totalCostBn).dividedBy(totalCostBn).multipliedBy(100).toNumber();
-    // if (growthType === 'slow') {
-    //   console.log(bidType, minimumBidAmount, maximumBidAmount, microgonsBid);
-    // }
 
     if (tdpr < 1000) {
       tdpr = Math.round(tdpr * 100) / 100;
@@ -227,30 +225,34 @@ export default class BiddingCalculator {
   }
 
   private calculateOptimisticRewardsThisSeat(): bigint {
-    const micronotsMinedAsMicrogons = this.micronotMinedAsMicrogonValue(this.biddingRules.argonotPriceChangePctMax);
     const microgonsToMine = this.data.microgonsToMineThisSeat;
     const microgonsToMint = this.calculateMicrogonsToMintThisSeat(this.biddingRules.argonCirculationGrowthPctMax);
+    const micronotsMinedAsMicrogons = this.micronotMinedAsMicrogonValue(this.biddingRules.argonotPriceChangePctMax);
     return microgonsToMine + micronotsMinedAsMicrogons + microgonsToMint;
   }
 
   private micronotMinedAsMicrogonValue(argonotPriceChangePct: number): bigint {
+    const tenDayPriceChangePct = this.convertAnnualToTenDayRate(argonotPriceChangePct);
     const micronots = this.data.micronotsToMineThisSeat;
     const asMicrogons = this.micronotToMicrogon(micronots);
-    const priceChangeMultiplier = 1 + argonotPriceChangePct / 100;
-    return bigIntMultiplyNumber(asMicrogons, priceChangeMultiplier);
+    const priceChangeMultiplierBn = BigNumber(1 + tenDayPriceChangePct / 100);
+    const microgonValueBn = BigNumber(asMicrogons).multipliedBy(priceChangeMultiplierBn);
+    return bigNumberToBigInt(microgonValueBn);
   }
 
   private calculateMicrogonsToMintThisSeat(argonCirculationGrowthPct: number): bigint {
     if (!argonCirculationGrowthPct) return 0n;
 
+    const tenDayCirculationGrowthPct = this.convertAnnualToTenDayRate(argonCirculationGrowthPct);
     const microgonsInCirculation = this.data.microgonsInCirculation;
     // Convert annual growth rate to 10-day growth rate by taking the 36.5th root
     // Use Math.pow for decimal exponents since BigNumber.pow only accepts integers
-    const annualMultiplier = 1 + argonCirculationGrowthPct / 100;
+    const annualMultiplier = 1 + tenDayCirculationGrowthPct / 100;
     const epochMultiplier = Math.pow(annualMultiplier, 1 / 36.5);
 
     const microgonsToMintThisEpochBn = BigNumber(microgonsInCirculation).multipliedBy(epochMultiplier - 1);
-    const microgonsToMintThisSeatBn = microgonsToMintThisEpochBn.dividedBy(this.data.miningSeatCount);
+    const microgonsToMintThisSeatBn =
+      this.data.miningSeatCount === 0 ? BigNumber(0) : microgonsToMintThisEpochBn.dividedBy(this.data.miningSeatCount);
     const microgonsToMintThisSeat = bigNumberToBigInt(microgonsToMintThisSeatBn);
 
     return microgonsToMintThisSeat;
@@ -313,5 +315,17 @@ export default class BiddingCalculator {
     } else {
       throw new Error(`Invalid growth type: ${growthType}`);
     }
+  }
+
+  private convertAnnualToTenDayRate(annualPct: number): number {
+    if (annualPct < -100) {
+      throw new RangeError('annualPct cannot go lower than -100');
+    }
+
+    const annualFactor = 1 + annualPct / 100;
+    const periodsPerYear = 365 / 10;
+    const rate = Math.pow(annualFactor, 1 / periodsPerYear) - 1;
+
+    return rate * 100;
   }
 }

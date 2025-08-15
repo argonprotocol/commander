@@ -58,7 +58,7 @@ it('can autobid and store stats', async () => {
     localRpcUrl: clientAddress,
     biddingRulesPath: Path.resolve(botDataDir, 'rules.json'),
     datadir: botDataDir,
-    keysMnemonic: mnemonicGenerate(),
+    sessionMiniSecret: mnemonicGenerate(),
     shouldSkipDockerSync: true,
   });
 
@@ -116,7 +116,7 @@ it('can autobid and store stats', async () => {
   expect(cohort1Bids).toBeTruthy();
   console.log(`Cohort 1`, cohort1Bids);
   expect(cohort1Bids?.micronotsStakedPerSeat).toBeGreaterThanOrEqual(10000);
-  expect(cohort1Bids?.seatsWon).toBe(10);
+  expect(cohort1Bids?.seatCountWon).toBe(10);
   expect(cohort1Bids?.microgonsBidTotal).toBe(10_000n * 10n);
 
   // wait for sync state to equal latest finalized
@@ -166,7 +166,7 @@ it('can autobid and store stats', async () => {
     localRpcUrl: clientAddress,
     biddingRulesPath: Path.resolve(botDataDir, 'rules.json'),
     datadir: path2,
-    keysMnemonic: mnemonicGenerate(),
+    sessionMiniSecret: mnemonicGenerate(),
     oldestFrameIdToSync: Math.min(...cohortActivationFrameIds) - 1,
     shouldSkipDockerSync: true,
   });

@@ -114,7 +114,7 @@ export class AutoBidder {
         const { tick, blockNumber, bidError, microgonsPerSeat, rejectedCount, submittedCount } = args;
         this.history.handleBidsRejected(tick, blockNumber, {
           bidError,
-          microgonsBid: microgonsPerSeat,
+          microgonsPerSeat,
           rejectedCount,
           submittedCount,
         });

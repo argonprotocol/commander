@@ -1,26 +1,13 @@
-export interface IActiveBids {
-  subaccounts: IBidsFileSubaccount[];
-}
-
-export interface IBidsFileSubaccount {
-  index: number;
-  address: string;
-  bidPosition: number | null;
-  microgonsBid: bigint | null;
-  isRebid: boolean | null;
-  lastBidAtTick: number | null;
-}
-
 export interface IDashboardGlobalStats {
-  totalSeats: number;
-  framesMined: number;
+  seatsTotal: number;
+  framesCompleted: number;
   framesRemaining: number;
   framedCost: bigint;
-  totalMicrogonsBid: bigint;
-  totalTransactionFees: bigint;
-  totalMicronotsMined: bigint;
-  totalMicrogonsMined: bigint;
-  totalMicrogonsMinted: bigint;
+  microgonsBidTotal: bigint;
+  transactionFeesTotal: bigint;
+  micronotsMinedTotal: bigint;
+  microgonsMinedTotal: bigint;
+  microgonsMintedTotal: bigint;
 }
 
 export interface IDashboardFrameStats {
@@ -28,15 +15,15 @@ export interface IDashboardFrameStats {
   date: string;
   firstTick: number;
   lastTick: number;
-  activeSeatCount: number;
-  relativeSeatCost: bigint;
-  blocksMined: number;
+  seatCountActive: number;
+  seatCostTotalFramed: bigint;
+  blocksMinedTotal: number;
   microgonToUsd: bigint[];
   microgonToArgonot: bigint[];
-  microgonsMined: bigint;
-  microgonFeesMined: bigint;
-  microgonsMinted: bigint;
-  micronotsMined: bigint;
+  microgonsMinedTotal: bigint;
+  microgonsMintedTotal: bigint;
+  micronotsMinedTotal: bigint;
+  microgonFeesCollectedTotal: bigint;
   microgonValueOfRewards: bigint;
   progress: number;
   profit: number;

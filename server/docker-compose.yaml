@@ -114,13 +114,13 @@ services:
     environment:
       - PORT=3000
       - BIDDING_RULES_PATH=/tmp/biddingRules.json
-      - KEYPAIR_PATH=/tmp/wallet.json
+      - KEYPAIR_PATH=/tmp/walletMining.json
       - LOCAL_RPC_URL=ws://argon-miner:9944
       - ARCHIVE_NODE_URL=${ARGON_ARCHIVE_NODE}
       - DATADIR=/data
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ../config/wallet.json:/tmp/wallet.json
+      - ../config/walletMining.json:/tmp/walletMining.json
       - ../config/biddingRules.json:/tmp/biddingRules.json
       - ../data:/data
     profiles:

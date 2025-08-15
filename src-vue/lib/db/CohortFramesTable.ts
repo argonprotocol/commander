@@ -3,46 +3,51 @@ import { BaseTable } from './BaseTable';
 import { convertSqliteBigInts, fromSqliteBigInt, toSqliteBigInt } from '../Utils';
 
 export class CohortFramesTable extends BaseTable {
-  private bigIntFields: string[] = ['micronotsMined', 'microgonsMined', 'microgonsMinted', 'microgonFeesMined'];
+  private bigIntFields: string[] = [
+    'micronotsMinedTotal',
+    'microgonsMinedTotal',
+    'microgonsMintedTotal',
+    'microgonFeesCollectedTotal',
+  ];
 
   async insertOrUpdate(args: {
     frameId: number;
     cohortActivationFrameId: number;
-    blocksMined: number;
-    micronotsMined: bigint;
-    microgonsMined: bigint;
-    microgonsMinted: bigint;
-    microgonFeesMined: bigint;
+    blocksMinedTotal: number;
+    micronotsMinedTotal: bigint;
+    microgonsMinedTotal: bigint;
+    microgonsMintedTotal: bigint;
+    microgonFeesCollectedTotal: bigint;
   }): Promise<void> {
     const {
       frameId,
       cohortActivationFrameId,
-      blocksMined,
-      micronotsMined,
-      microgonsMined,
-      microgonsMinted,
-      microgonFeesMined,
+      blocksMinedTotal,
+      micronotsMinedTotal,
+      microgonsMinedTotal,
+      microgonsMintedTotal,
+      microgonFeesCollectedTotal,
     } = args;
     await this.db.execute(
       `INSERT INTO CohortFrames (
-          frameId, cohortId, blocksMined, micronotsMined, microgonsMined, microgonsMinted
+          frameId, cohortId, blocksMinedTotal, micronotsMinedTotal, microgonsMinedTotal, microgonsMintedTotal, microgonFeesCollectedTotal
         ) VALUES (
-          ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?
         ) ON CONFLICT(frameId, cohortId) DO UPDATE SET 
-          blocksMined = excluded.blocksMined, 
-          micronotsMined = excluded.micronotsMined, 
-          microgonsMined = excluded.microgonsMined, 
-          microgonsMinted = excluded.microgonsMinted,
-          microgonFeesMined = excluded.microgonFeesMined
+          blocksMinedTotal = excluded.blocksMinedTotal, 
+          micronotsMinedTotal = excluded.micronotsMinedTotal, 
+          microgonsMinedTotal = excluded.microgonsMinedTotal, 
+          microgonsMintedTotal = excluded.microgonsMintedTotal,
+          microgonFeesCollectedTotal = excluded.microgonFeesCollectedTotal
       `,
       [
         frameId,
         cohortActivationFrameId,
-        blocksMined,
-        toSqliteBigInt(micronotsMined),
-        toSqliteBigInt(microgonsMined),
-        toSqliteBigInt(microgonsMinted),
-        toSqliteBigInt(microgonFeesMined),
+        blocksMinedTotal,
+        toSqliteBigInt(micronotsMinedTotal),
+        toSqliteBigInt(microgonsMinedTotal),
+        toSqliteBigInt(microgonsMintedTotal),
+        toSqliteBigInt(microgonFeesCollectedTotal),
       ],
     );
   }
@@ -54,20 +59,20 @@ export class CohortFramesTable extends BaseTable {
     return convertSqliteBigInts(records, this.bigIntFields);
   }
 
-  public async fetchGlobalStats(): Promise<Omit<ICohortFrameStats, 'totalBlocksMined'>> {
+  public async fetchGlobalStats(): Promise<Omit<ICohortFrameStats, 'blocksMinedTotal'>> {
     const [rawResults] = await this.db.select<[any]>(
       `SELECT 
-        COALESCE(sum(micronotsMined), 0) as totalMicronotsMined,
-        COALESCE(sum(microgonsMined), 0) as totalMicrogonsMined,
-        COALESCE(sum(microgonsMinted), 0) as totalMicrogonsMinted
+        COALESCE(sum(micronotsMinedTotal), 0) as micronotsMinedTotal,
+        COALESCE(sum(microgonsMinedTotal), 0) as microgonsMinedTotal,
+        COALESCE(sum(microgonsMintedTotal), 0) as microgonsMintedTotal
       FROM CohortFrames`,
     );
 
     const results = rawResults;
     return {
-      totalMicronotsMined: fromSqliteBigInt(results.totalMicronotsMined),
-      totalMicrogonsMined: fromSqliteBigInt(results.totalMicrogonsMined),
-      totalMicrogonsMinted: fromSqliteBigInt(results.totalMicrogonsMinted),
+      micronotsMinedTotal: fromSqliteBigInt(results.micronotsMinedTotal),
+      microgonsMinedTotal: fromSqliteBigInt(results.microgonsMinedTotal),
+      microgonsMintedTotal: fromSqliteBigInt(results.microgonsMintedTotal),
     };
   }
 }

@@ -9,7 +9,7 @@
       <WindowControls />
       <div class="text-xl font-bold whitespace-nowrap">
         Argon Commander
-        <span class="font-light text-lg">({{ NETWORK_NAME }}<template v-if="INSTANCE_NAME !== 'default'">, {{ INSTANCE_NAME.slice(0, 5) }}<template v-if="INSTANCE_NAME.length > 5">...</template></template>)</span>
+        <span class="font-light text-lg">({{ NETWORK_NAME }}<template v-if="INSTANCE_NAME !== 'default'">, {{ INSTANCE_NAME?.slice(0, 5) }}<template v-if="INSTANCE_NAME.length > 5">...</template></template>)</span>
       </div>
     </div>
 
@@ -38,11 +38,13 @@
       </ul>
     </div>
 
-    <div class="flex flex-row mr-2 space-x-1 items-center justify-end w-1/2 pointer-events-none relative top-[1px]">
-      <div class="pointer-events-auto"><StatusMenu /></div>
-      <div class="pointer-events-auto"><CurrencyMenu /></div>
-      <div class="bg-slate-400/50 w-[1px] h-[28px]"></div>
-      <div class="pointer-events-auto"><AccountMenu /></div>
+    <div v-if="controller.isLoaded" 
+      class="flex flex-row mr-3 space-x-2 items-center justify-end w-1/2 pointer-events-none relative top-[1px]"
+      :class="[wallets.isLoaded ? '' : 'opacity-20']"
+    >
+      <div :class="[controller.panel === 'mining' && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><StatusMenu /></div>
+      <div :class="[controller.panel === 'mining' && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><CurrencyMenu /></div>
+      <div :class="[controller.panel === 'mining' && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><AccountMenu /></div>
     </div>
   </div>
 </template>
@@ -56,8 +58,12 @@ import CurrencyMenu from './CurrencyMenu.vue';
 import { INSTANCE_NAME } from '../lib/Config';
 import StatusMenu from './StatusMenu.vue';
 import AccountMenu from './AccountMenu.vue';
+import { useWallets } from '../stores/wallets';
+import { useBot } from '../stores/bot';
 
 const controller = useController();
+const wallets = useWallets();
+const bot = useBot();
 </script>
 
 <style scoped>

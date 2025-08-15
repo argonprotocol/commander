@@ -30,6 +30,11 @@ export enum SeatGoalInterval {
   Epoch = 'Epoch',
 }
 
+export enum ProfitUsage {
+  Reinvest = 'Reinvest',
+  Accumulate = 'Accumulate',
+}
+
 export const BiddingRulesSchema = z.object({
   argonCirculationGrowthPctMin: z.number(),
   argonCirculationGrowthPctMax: z.number(),

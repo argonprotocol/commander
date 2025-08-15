@@ -122,7 +122,7 @@ const resources: Record<'mining' | 'vaulting', Vue.ComputedRef<IResource[]>> = {
         name: 'Mining Bids',
         icon: MiningBidToken,
         itemCountStr: numeral(stats.myMiningBids.bidCount).format('0,0'),
-        itemCountLabel: `Bids @ ${numeral(stats.myMiningBids.microgonsBid / BigInt(stats.myMiningBids.bidCount || 1)).format('0,0.00')} Per Bid`,
+        itemCountLabel: `Bids @ ${numeral(stats.myMiningBids.microgonsBidTotal / BigInt(stats.myMiningBids.bidCount || 1)).format('0,0.00')} Per Bid`,
         microgonValue: wallets.miningBidValue,
         diff: 0,
       },

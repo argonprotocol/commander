@@ -83,6 +83,12 @@ export class Storage {
           microgonToBtc: [],
           microgonToArgonot: [],
           earningsByBlock: {},
+
+          transactionFeesTotal: 0n,
+          microgonRevenue: 0n,
+          microgonProfits: 0n,
+          accruedMicrogonProfits: 0n,
+          previousFrameAccruedMicrogonProfits: null,
         };
       });
       this.lruCache.set(key, entry);
@@ -99,7 +105,7 @@ export class Storage {
         cohortActivationFrameId,
         frameBiddingProgress: 0,
         lastBlockNumber: 0,
-        seatsWon: 0,
+        seatCountWon: 0,
         microgonsBidTotal: 0n,
         transactionFeesByBlock: {},
         micronotsStakedPerSeat: 0n,

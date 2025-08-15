@@ -120,7 +120,7 @@ export class BotSyncer {
         activeBidsFile.lastBlockNumber,
         bid.address,
         bid.subAccountIndex,
-        bid.microgonsBid ?? 0n,
+        bid.microgonsPerSeat ?? 0n,
         bidPosition,
         bid.lastBidAtTick,
       );
@@ -212,38 +212,38 @@ export class BotSyncer {
 
     const earningsByCohortActivationFrameId: { [frameId: number]: IFrameEarningsRollup } = {};
     let maxBlockNumber = 0;
-    for (const [blockNumberStr, earnings] of Object.entries(earningsFile.earningsByBlock)) {
+    for (const [blockNumberStr, earningsOfBlock] of Object.entries(earningsFile.earningsByBlock)) {
       const blockNumber = parseInt(blockNumberStr, 10);
-      const cohortActivationFrameId = earnings.authorCohortActivationFrameId;
+      const cohortActivationFrameId = earningsOfBlock.authorCohortActivationFrameId;
       earningsByCohortActivationFrameId[cohortActivationFrameId] ??= {
         lastBlockMinedAt: '',
-        blocksMined: 0,
-        microgonFeesMined: 0n,
-        microgonsMined: 0n,
-        microgonsMinted: 0n,
-        micronotsMined: 0n,
+        blocksMinedTotal: 0,
+        microgonFeesCollectedTotal: 0n,
+        microgonsMinedTotal: 0n,
+        microgonsMintedTotal: 0n,
+        micronotsMinedTotal: 0n,
       };
 
-      const earningsDuringBlock = earningsByCohortActivationFrameId[cohortActivationFrameId];
-      earningsDuringBlock.blocksMined += 1;
+      const earningsDuringFrame = earningsByCohortActivationFrameId[cohortActivationFrameId];
+      earningsDuringFrame.blocksMinedTotal += 1;
       if (blockNumber > maxBlockNumber) {
-        earningsDuringBlock.lastBlockMinedAt = earnings.blockMinedAt;
+        earningsDuringFrame.lastBlockMinedAt = earningsOfBlock.blockMinedAt;
         maxBlockNumber = blockNumber;
       }
-      earningsDuringBlock.lastBlockMinedAt = earnings.blockMinedAt;
-      earningsDuringBlock.microgonFeesMined += earnings.microgonFeesMined;
-      earningsDuringBlock.microgonsMined += earnings.microgonsMined;
-      earningsDuringBlock.microgonsMinted += earnings.microgonsMinted;
-      earningsDuringBlock.micronotsMined += earnings.micronotsMined;
+      earningsDuringFrame.lastBlockMinedAt = earningsOfBlock.blockMinedAt;
+      earningsDuringFrame.microgonFeesCollectedTotal += earningsOfBlock.microgonFeesCollected;
+      earningsDuringFrame.microgonsMinedTotal += earningsOfBlock.microgonsMined;
+      earningsDuringFrame.microgonsMintedTotal += earningsOfBlock.microgonsMinted;
+      earningsDuringFrame.micronotsMinedTotal += earningsOfBlock.micronotsMined;
     }
     const cohortEarningsByFrameId = await this.injectMissingCohortEarnings(earningsByCohortActivationFrameId, frameId);
     const cohortEarningsEntries = Object.entries(cohortEarningsByFrameId);
 
-    let blocksMined = 0;
-    let micronotsMined = 0n;
-    let microgonsMined = 0n;
-    let microgonsMinted = 0n;
-    let microgonFeesMined = 0n;
+    let blocksMinedTotal = 0;
+    let micronotsMinedTotal = 0n;
+    let microgonsMinedTotal = 0n;
+    let microgonsMintedTotal = 0n;
+    let microgonFeesCollectedTotal = 0n;
 
     for (const [cohortActivationFrameIdStr, cohortEarningsDuringFrame] of cohortEarningsEntries) {
       const cohortActivationFrameId = parseInt(cohortActivationFrameIdStr, 10);
@@ -252,21 +252,21 @@ export class BotSyncer {
         processedCohorts.add(cohortActivationFrameId);
       }
       await this.syncDbCohortFrame(cohortActivationFrameId, frameId, cohortEarningsDuringFrame);
-      blocksMined += cohortEarningsDuringFrame.blocksMined;
-      micronotsMined += cohortEarningsDuringFrame.micronotsMined;
-      microgonsMined += cohortEarningsDuringFrame.microgonsMined;
-      microgonsMinted += cohortEarningsDuringFrame.microgonsMinted;
-      microgonFeesMined += cohortEarningsDuringFrame.microgonFeesMined;
+      blocksMinedTotal += cohortEarningsDuringFrame.blocksMinedTotal;
+      micronotsMinedTotal += cohortEarningsDuringFrame.micronotsMinedTotal;
+      microgonsMinedTotal += cohortEarningsDuringFrame.microgonsMinedTotal;
+      microgonsMintedTotal += cohortEarningsDuringFrame.microgonsMintedTotal;
+      microgonFeesCollectedTotal += cohortEarningsDuringFrame.microgonFeesCollectedTotal;
     }
 
-    const { activeSeatCount, totalSeatCost } = await this.db.cohortsTable.fetchActiveSeatData(
+    const { seatCountActive, seatCostTotalFramed } = await this.db.cohortsTable.fetchActiveSeatData(
       frameId,
       earningsFile.frameProgress,
     );
 
     const isProcessed = earningsFile.frameProgress === 100.0;
     await this.db.framesTable.update({
-      frameId,
+      id: frameId,
       firstTick: earningsFile.firstTick,
       lastTick: earningsFile.lastTick,
       firstBlockNumber: earningsFile.firstBlockNumber,
@@ -275,15 +275,16 @@ export class BotSyncer {
       microgonToBtc: earningsFile.microgonToBtc,
       microgonToArgonot: earningsFile.microgonToArgonot,
 
-      activeSeatCount,
-      totalSeatCost,
-      blocksMined,
-      micronotsMined,
-      microgonsMined,
-      microgonsMinted,
-      microgonFeesMined,
+      seatCountActive,
+      seatCostTotalFramed,
+      blocksMinedTotal,
+      micronotsMinedTotal,
+      microgonsMinedTotal,
+      microgonsMintedTotal,
+      microgonFeesCollectedTotal,
+      accruedMicrogonProfits: earningsFile.accruedMicrogonProfits,
 
-      frameProgress: earningsFile.frameProgress,
+      progress: earningsFile.frameProgress,
       isProcessed,
     });
   }
@@ -301,7 +302,7 @@ export class BotSyncer {
       const cohort = await this.db.cohortsTable.fetchById(frameIdToCheck);
 
       if (cohort) {
-        didWinSeats = !!cohort.seatsWon;
+        didWinSeats = !!cohort.seatCountWon;
       } else {
         const bidsFile = await this.fetchBidsFileFromCache({ cohortActivationFrameId: frameIdToCheck });
         didWinSeats = !!bidsFile.winningBids.filter(x => typeof x.subAccountIndex === 'number').length;
@@ -310,11 +311,11 @@ export class BotSyncer {
       if (didWinSeats) {
         cohortEarningsByFrameId[frameIdToCheck] = {
           lastBlockMinedAt: '',
-          blocksMined: 0,
-          microgonsMined: 0n,
-          microgonsMinted: 0n,
-          micronotsMined: 0n,
-          microgonFeesMined: 0n,
+          blocksMinedTotal: 0,
+          microgonsMinedTotal: 0n,
+          microgonsMintedTotal: 0n,
+          micronotsMinedTotal: 0n,
+          microgonFeesCollectedTotal: 0n,
         };
       }
     }
@@ -333,47 +334,32 @@ export class BotSyncer {
       const framesCompleted = Math.min(this.botState.currentFrameId - cohortActivationFrameId, 10);
       const miningSeatCount = BigInt(await this.mainchain.getMiningSeatCount());
       const progress = Math.min((framesCompleted * 100 + this.botState.currentFrameProgress) / 10, 100);
-      const micronotsStaked = bidsFile.micronotsStakedPerSeat * BigInt(bidsFile.seatsWon);
+      const micronotsStaked = bidsFile.micronotsStakedPerSeat * BigInt(bidsFile.seatCountWon);
 
       const microgonsToBeMinedDuringCohort = bidsFile.microgonsToBeMinedPerBlock * BigInt(TICKS_PER_COHORT);
       const micronotsToBeMinedDuringCohort = await this.mainchain.getMinimumBlockRewardsDuringTickRange(
-        BigInt(cohortStartingTick),
-        BigInt(cohortEndingTick),
+        cohortStartingTick,
+        cohortEndingTick,
       );
       const microgonsToBeMinedPerSeat = microgonsToBeMinedDuringCohort / miningSeatCount;
       const micronotsToBeMinedPerSeat = micronotsToBeMinedDuringCohort / miningSeatCount;
-      const transactionFees = Object.values(bidsFile.transactionFeesByBlock).reduce((acc, fee) => acc + fee, 0n);
+      const transactionFeesTotal = Object.values(bidsFile.transactionFeesByBlock).reduce((acc, fee) => acc + fee, 0n);
+      const microgonsBidPerSeat =
+        bidsFile.seatCountWon > 0 ? bidsFile.microgonsBidTotal / BigInt(bidsFile.seatCountWon) : 0n;
 
       await this.db.cohortsTable.insertOrUpdate(
         cohortActivationFrameId,
         progress,
-        transactionFees,
+        transactionFeesTotal,
         micronotsStaked,
-        bidsFile.microgonsBidTotal,
-        bidsFile.seatsWon,
+        microgonsBidPerSeat,
+        bidsFile.seatCountWon,
         microgonsToBeMinedPerSeat,
         micronotsToBeMinedPerSeat,
       );
-
-      await this.updateDbCohortAccounts(cohortActivationFrameId, bidsFile);
     } catch (e) {
       console.error('Error syncing cohort:', e);
       throw e;
-    }
-  }
-
-  private async updateDbCohortAccounts(cohortActivationFrameId: number, bidsFile: IBidsFile): Promise<void> {
-    await this.db.cohortAccountsTable.deleteForCohort(cohortActivationFrameId);
-
-    for (const subaccount of bidsFile.winningBids) {
-      if (typeof subaccount.subAccountIndex !== 'number') return;
-      await this.db.cohortAccountsTable.insert(
-        subaccount.subAccountIndex,
-        cohortActivationFrameId,
-        subaccount.address,
-        subaccount.microgonsBid ?? 0n,
-        subaccount.bidPosition ?? 0,
-      );
     }
   }
 

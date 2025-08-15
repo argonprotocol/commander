@@ -25,7 +25,7 @@
           <tbody class="font-light font-mono">
             <tr v-for="(bid, index) in allWinningBids" :key="bid.address">
               <td class="text-left opacity-50">{{ index + 1 }})</td>
-              <td class="text-left">{{ currency.symbol }}{{ formatMicrogonsBid(bid.microgonsBid) }}</td>
+              <td class="text-left">{{ currency.symbol }}{{ formatMicrogonsBid(bid.microgonsPerSeat) }}</td>
               <td class="text-left">{{ lastBidAtTickFromNow(bid.lastBidAtTick) }}</td>
               <td class="text-right relative">
                 {{ bid.address.slice(0, 10) }}...{{ bid.address.slice(-7) }}
@@ -108,7 +108,10 @@ function formatMicrogonsBid(microgonsBid: bigint | undefined): string {
 
 function lastBidAtTickFromNow(lastBidAtTick: number | undefined): string {
   if (!lastBidAtTick) return '---';
-  return dayjs.utc(lastBidAtTick * TICK_MILLIS).fromNow();
+  return dayjs
+    .utc(lastBidAtTick * TICK_MILLIS)
+    .local()
+    .fromNow();
 }
 
 Vue.onMounted(async () => {

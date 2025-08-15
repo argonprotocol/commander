@@ -2,7 +2,7 @@
 <template>
   <div class="h-screen w-screen flex flex-col overflow-hidden cursor-default">
     <TopBar />
-    <main v-if="controller.isLoaded" class="flex-grow relative">
+    <main v-if="controller.isLoaded && !controller.isImporting" class="flex-grow relative">
       <MiningPanel v-if="showMiningPanel" />
       <VaultingPanel v-else-if="controller.panel === 'vaulting'" />
       <LiquidLockingPanel v-else-if="controller.panel === 'liquid-locking'" />
@@ -30,11 +30,14 @@
       <AboutOverlay />
       <ComplianceOverlay />
     </template>
+    <TroubleshootingOverlay />
+    <ImportingOverlay />
   </div>
 </template>
 
 <script setup lang="ts">
 import * as Vue from 'vue';
+import menuStart from './menuStart.ts';
 import MiningPanel from './panels/MiningPanel.vue';
 import VaultingPanel from './panels/VaultingPanel.vue';
 import LiquidLockingPanel from './panels/LiquidLockingPanel.vue';
@@ -59,8 +62,8 @@ import TooltipOverlay from './overlays/TooltipOverlay.vue';
 import { hideTooltip } from './lib/TooltipUtils';
 import AboutOverlay from './overlays/AboutOverlay.vue';
 import ComplianceOverlay from './overlays/ComplianceOverlay.vue';
-import { listen } from '@tauri-apps/api/event';
-import basicEmitter from './emitters/basicEmitter';
+import TroubleshootingOverlay from './overlays/Troubleshooting.vue';
+import ImportingOverlay from './overlays/ImportingOverlay.vue';
 
 const controller = useController();
 const config = useConfig();
@@ -80,35 +83,6 @@ function clickHandler() {
   hideTooltip();
 }
 
-// Listen for Tauri events from the backend
-listen('openAboutOverlay', () => {
-  basicEmitter.emit('openAboutOverlay');
-});
-
-listen('openMiningDashboard', () => {
-  controller.setPanel('mining');
-});
-
-listen('openVaultingDashboard', () => {
-  controller.setPanel('vaulting');
-});
-
-listen('openConfigureMiningBot', () => {
-  basicEmitter.emit('openBotOverlay');
-});
-
-listen('openConfigureVaultSettings', () => {
-  basicEmitter.emit('openConfigureStabilizationVaultOverlay');
-});
-
-listen('openMiningWalletOverlay', event => {
-  basicEmitter.emit('openWalletOverlay', { walletId: 'mining', screen: 'receive' });
-});
-
-listen('openVaultingWalletOverlay', event => {
-  basicEmitter.emit('openWalletOverlay', { walletId: 'vaulting', screen: 'receive' });
-});
-
 Vue.onBeforeMount(async () => {
   await waitForLoad();
 });
@@ -126,4 +100,11 @@ Vue.onBeforeUnmount(() => {
   }
   document.removeEventListener('click', clickHandler, true);
 });
+
+Vue.onErrorCaptured((error, instance) => {
+  console.error(instance?.$options.name, error);
+  return false;
+});
+
+menuStart();
 </script>

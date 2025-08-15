@@ -1,6 +1,7 @@
 import * as Vue from 'vue';
 import { defineStore } from 'pinia';
-import { ask } from '@tauri-apps/plugin-dialog';
+import { ask as askDialog } from '@tauri-apps/plugin-dialog';
+import { exit as tauriExit } from '@tauri-apps/plugin-process';
 import { getMainchainClient } from './mainchain.ts';
 import handleUnknownFatalError from './helpers/handleUnknownFatalError.ts';
 import { useConfig } from './config.ts';
@@ -44,11 +45,11 @@ export const useWallets = defineStore('wallets', () => {
   });
 
   const miningSeatValue = Vue.computed(() => {
-    return stats.myMiningSeats.microgonsBid;
+    return stats.myMiningSeats.microgonsBidTotal;
   });
 
   const miningBidValue = Vue.computed(() => {
-    return stats.myMiningBids.microgonsBid;
+    return stats.myMiningBids.microgonsBidTotal;
   });
 
   const totalMiningResources = Vue.computed(() => {
@@ -133,10 +134,13 @@ export const useWallets = defineStore('wallets', () => {
         isLoadedResolve();
         isLoaded.value = true;
       } catch (error) {
-        await ask('Wallets failed to load correctly. Click Ok to try again.', {
-          title: 'Argon Commander',
+        const shouldRetry = await askDialog('Wallets failed to load correctly. Would you like to retry?', {
+          title: 'Difficulty Loading Wallets',
           kind: 'warning',
         });
+        if (!shouldRetry) {
+          await tauriExit(1);
+        }
       }
     }
   }

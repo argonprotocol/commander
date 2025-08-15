@@ -9,7 +9,7 @@ export interface IBidsFile extends ILastModifiedAt {
   transactionFeesByBlock: { [blockNumber: number]: bigint };
   micronotsStakedPerSeat: bigint;
   microgonsToBeMinedPerBlock: bigint;
-  seatsWon: number;
+  seatCountWon: number;
   winningBids: Array<IWinningBid>;
 }
 
@@ -18,5 +18,5 @@ export interface IWinningBid {
   subAccountIndex?: number;
   lastBidAtTick?: number;
   bidPosition?: number;
-  microgonsBid?: bigint;
+  microgonsPerSeat?: bigint;
 }

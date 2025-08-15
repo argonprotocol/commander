@@ -17,7 +17,8 @@ import type { IWinningBid } from './interfaces/IBidsFile.ts';
 import { JsonStore } from './JsonStore.ts';
 import { Mainchain, MiningFrames } from '@argonprotocol/commander-calculator';
 import { Dockers } from './Dockers.ts';
-import type { IBlock, IBlockSyncFile } from './interfaces/IBlockSyncFile.js';
+import type { IEarningsFile } from './interfaces/IEarningsFile.ts';
+import type { IBlock, IBlockSyncFile } from './interfaces/IBlockSyncFile.ts';
 
 export interface ILastProcessed {
   date: Date;
@@ -332,7 +333,7 @@ export class BlockSync {
           authorCohortActivationFrameId: Number(miningCohortActivationFrameId),
           authorAddress: blockMeta.author,
           blockMinedAt: tickDate.toString(),
-          microgonFeesMined: blockFees,
+          microgonFeesCollected: blockFees,
           micronotsMined,
           microgonsMined,
           microgonsMinted,
@@ -341,6 +342,10 @@ export class BlockSync {
         // there's a chance we've re-orged and the block is not a mining block anymore, so clear it
         delete x.earningsByBlock[blockNumber];
       }
+
+      const calculatedProfits = await this.calculateAccruedMicrogonProfits(x);
+      x.accruedMicrogonProfits = calculatedProfits.accruedMicrogonProfits;
+      x.previousFrameAccruedMicrogonProfits = calculatedProfits.previousFrameAccruedMicrogonProfits;
     });
 
     this.currentTick = tick ?? 0;
@@ -409,7 +414,7 @@ export class BlockSync {
         const biddingFrameIdOfNewCohort = activationFrameIdOfNewCohort - 1;
         const lastBidsFile = this.storage.bidsFile(biddingFrameIdOfNewCohort, activationFrameIdOfNewCohort);
         await lastBidsFile.mutate(x => {
-          x.seatsWon = 0;
+          x.seatCountWon = 0;
           x.microgonsBidTotal = 0n;
           x.winningBids = [];
           x.frameBiddingProgress = 100;
@@ -418,19 +423,19 @@ export class BlockSync {
           let bidPosition = 0;
           for (const miner of newMiners) {
             const address = miner.accountId.toHuman();
-            const microgonsBid = miner.bid.toBigInt();
+            const microgonsPerSeat = miner.bid.toBigInt();
             const ourSubAccount = this.accountset.subAccountsByAddress[address];
             if (ourSubAccount) {
               hasMiningSeats = true;
-              x.seatsWon += 1;
-              x.microgonsBidTotal += microgonsBid;
+              x.seatCountWon += 1;
+              x.microgonsBidTotal += microgonsPerSeat;
             }
             x.winningBids.push({
               address,
               subAccountIndex: ourSubAccount?.index,
               lastBidAtTick: miner.bidAtTick?.toNumber(),
               bidPosition,
-              microgonsBid,
+              microgonsPerSeat,
             });
             bidPosition++;
           }
@@ -441,6 +446,8 @@ export class BlockSync {
     const cohortActivationFrameId = await api.query.miningSlot.nextFrameId().then(x => x.toNumber());
     const bidsFile = this.storage.bidsFile(cohortBiddingFrameId, cohortActivationFrameId);
     const nextCohort = await api.query.miningSlot.bidsForNextSlotCohort();
+    let transactionFeesTotal = 0n;
+
     await bidsFile.mutate(async x => {
       x.micronotsStakedPerSeat ||= await api.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
       x.microgonsToBeMinedPerBlock ||= await api.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
@@ -448,7 +455,7 @@ export class BlockSync {
       x.lastBlockNumber = blockNumber;
       x.winningBids = nextCohort.map((c, i): IWinningBid => {
         const address = c.accountId.toHuman();
-        const microgonsBid = c.bid.toBigInt();
+        const microgonsPerSeat = c.bid.toBigInt();
         const ourSubAccount = this.accountset.subAccountsByAddress[address];
         if (ourSubAccount) {
           hasMiningBids = true;
@@ -458,7 +465,7 @@ export class BlockSync {
           subAccountIndex: ourSubAccount?.index,
           lastBidAtTick: c.bidAtTick?.toNumber(),
           bidPosition: i,
-          microgonsBid,
+          microgonsPerSeat,
         };
       });
       if (biddingTransactionFees > 0n) {
@@ -466,6 +473,13 @@ export class BlockSync {
       } else {
         delete x.transactionFeesByBlock[blockNumber];
       }
+      transactionFeesTotal = Object.values(x.transactionFeesByBlock).reduce((acc, curr) => acc + curr, 0n);
+    });
+    await this.storage.earningsFile(cohortBiddingFrameId).mutate(async x => {
+      x.transactionFeesTotal = transactionFeesTotal;
+      const calculatedProfits = await this.calculateAccruedMicrogonProfits(x);
+      x.accruedMicrogonProfits = calculatedProfits.accruedMicrogonProfits;
+      x.previousFrameAccruedMicrogonProfits = calculatedProfits.previousFrameAccruedMicrogonProfits;
     });
     return { hasMiningBids, hasMiningSeats };
   }
@@ -501,6 +515,27 @@ export class BlockSync {
       throw new Error(`Error getting frame id for header ${header.number.toNumber()}`);
     }
     return currentFrameId;
+  }
+
+  private async calculateAccruedMicrogonProfits(x: IEarningsFile): Promise<{
+    accruedMicrogonProfits: bigint;
+    previousFrameAccruedMicrogonProfits: bigint | null;
+  }> {
+    if (x.previousFrameAccruedMicrogonProfits === null) {
+      const previousFrameId = x.frameId - 1;
+      const previousFrame = await this.storage.earningsFile(previousFrameId).get();
+      x.previousFrameAccruedMicrogonProfits = previousFrame?.accruedMicrogonProfits || 0n;
+    }
+    const microgonRevenue = Object.values(x.earningsByBlock).reduce((acc, curr) => {
+      return acc + curr.microgonsMinted + curr.microgonsMined;
+    }, 0n);
+    const microgonProfits = microgonRevenue - x.transactionFeesTotal;
+    const accruedMicrogonProfits = x.previousFrameAccruedMicrogonProfits + microgonProfits;
+
+    return {
+      accruedMicrogonProfits,
+      previousFrameAccruedMicrogonProfits: x.previousFrameAccruedMicrogonProfits,
+    };
   }
 
   private async extractOwnPaidTransactionFee(

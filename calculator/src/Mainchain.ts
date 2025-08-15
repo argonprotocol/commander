@@ -8,7 +8,7 @@ export type MainchainClient = ArgonClient;
 export { MICROGONS_PER_ARGON };
 export const BLOCK_REWARD_INCREASE_PER_INTERVAL = BigInt(1_000);
 export const BLOCK_REWARD_MAX = BigInt(5_000_000);
-export const BLOCK_REWARD_INTERVAL = BigInt(118);
+export const BLOCK_REWARD_INTERVAL = 118;
 
 export class Mainchain {
   constructor(public client: Promise<MainchainClient>) {}
@@ -59,29 +59,29 @@ export class Mainchain {
     return (await client.query.ticks.currentTick()).toNumber();
   }
 
-  private async getTicksSinceGenesis(currentTick: bigint): Promise<bigint> {
+  private async getTicksSinceGenesis(currentTick: number): Promise<number> {
     const client = await this.client;
-    const genesisTick = (await client.query.ticks.genesisTick()).toBigInt();
+    const genesisTick = (await client.query.ticks.genesisTick()).toNumber();
     return currentTick - genesisTick;
   }
 
-  public async minimumBlockRewardsAtTick(currentTick: bigint): Promise<bigint> {
+  public async minimumBlockRewardsAtTick(currentTick: number): Promise<bigint> {
     const blocksSinceGenesis = await this.getTicksSinceGenesis(currentTick);
     const initialReward = 500_000n; // Initial microgons reward per block
 
     // Calculate the number of intervals
-    const numIntervals = blocksSinceGenesis / BLOCK_REWARD_INTERVAL;
+    const numIntervals = Math.floor(blocksSinceGenesis / BLOCK_REWARD_INTERVAL);
 
     // Calculate the current reward per block
-    const currentReward = initialReward + numIntervals * BLOCK_REWARD_INCREASE_PER_INTERVAL;
+    const currentReward = initialReward + BigInt(numIntervals) * BLOCK_REWARD_INCREASE_PER_INTERVAL;
     return bigIntMin(currentReward, BLOCK_REWARD_MAX);
   }
 
-  public async getMinimumBlockRewardsDuringTickRange(tickStart: bigint, tickEnd: bigint): Promise<bigint> {
+  public async getMinimumBlockRewardsDuringTickRange(tickStart: number, tickEnd: number): Promise<bigint> {
     // TODO: this is wrong, we need to increment the block rewards every 118 blocks
     const rewardsPerBlock = await this.minimumBlockRewardsAtTick(tickStart);
     const blocksToCalculate = tickEnd - tickStart;
-    return rewardsPerBlock * blocksToCalculate;
+    return rewardsPerBlock * BigInt(blocksToCalculate);
   }
 
   public async getCurrentArgonTargetPrice(): Promise<number> {
@@ -98,11 +98,11 @@ export class Mainchain {
 
   public async getAggregateBidCosts(): Promise<bigint> {
     const client = await this.client;
-    const bidsPerFrame = await client.query.miningSlot.historicalBidsPerSlot();
+    const bidsPerFrame = await client.query.miningSlot.minersByCohort.entries();
 
     let aggregateBidCosts = 0n;
-    for (const bids of bidsPerFrame) {
-      aggregateBidCosts += bids.bidAmountSum.toBigInt();
+    for (const [_, cohortData] of bidsPerFrame) {
+      aggregateBidCosts += cohortData.reduce((acc, bid) => acc + bid.bid.toBigInt(), 0n);
     }
 
     return aggregateBidCosts;
@@ -114,22 +114,22 @@ export class Mainchain {
   }> {
     const client = await this.client;
     const blockRewards = await client.query.blockRewards.blockRewardsByCohort();
-    const nextCohortId = blockRewards.pop()?.[0].toBigInt() ?? 1n;
-    const currentCohortId = nextCohortId - 1n;
+    const nextCohortId = blockRewards.pop()?.[0].toNumber() ?? 1;
+    const currentCohortId = nextCohortId - 1;
 
-    const currentTick = BigInt(await this.getCurrentTick());
+    const currentTick = await this.getCurrentTick();
     const tickAtStartOfCurrentSlot = await this.getTickAtStartOfCurrentSlot();
     const ticksElapsedToday = currentTick - tickAtStartOfCurrentSlot;
 
     const rewards = { microgons: 0n, micronots: 0n };
 
     for (const [cohortId, blockReward] of blockRewards) {
-      const fullRotationsSinceCohortStart = currentCohortId - cohortId.toBigInt();
-      const ticksSinceCohortStart = fullRotationsSinceCohortStart * 1_440n + ticksElapsedToday;
-      // const startingTick = currentTick - ticksSinceCohortStart;
-      // const endingTick = currentTick;
-      const microgonsMinedInCohort = (blockReward.toBigInt() * ticksSinceCohortStart) / 10n;
-      const micronotsMinedInCohort = 0n; // TODO: this.getMicronotsMinedForRange(startingTick, endingTick);
+      const fullRotationsSinceCohortStart = currentCohortId - cohortId.toNumber();
+      const ticksSinceCohortStart = fullRotationsSinceCohortStart * 1_440 + ticksElapsedToday;
+      const startingTick = currentTick - ticksSinceCohortStart;
+      const endingTick = currentTick;
+      const microgonsMinedInCohort = (blockReward.toBigInt() * BigInt(ticksSinceCohortStart)) / 10n;
+      const micronotsMinedInCohort = (await this.getMinimumBlockRewardsDuringTickRange(startingTick, endingTick)) / 10n;
       rewards.microgons += microgonsMinedInCohort;
       rewards.micronots += micronotsMinedInCohort;
     }
@@ -191,29 +191,29 @@ export class Mainchain {
     };
   }
 
-  public async getNextSlotRange(): Promise<[bigint, bigint]> {
+  public async getNextSlotRange(): Promise<[number, number]> {
     const client = await this.client;
     const nextSlotRangeBytes = await client.rpc.state.call('MiningSlotApi_next_slot_era', '');
     const nextSlotRangeRaw = client.createType('(u64, u64)', nextSlotRangeBytes);
-    return [nextSlotRangeRaw[0].toBigInt(), nextSlotRangeRaw[1].toBigInt()];
+    return [nextSlotRangeRaw[0].toNumber(), nextSlotRangeRaw[1].toNumber()];
   }
 
-  public async getTickAtStartOfNextCohort(): Promise<bigint> {
+  public async getTickAtStartOfNextCohort(): Promise<number> {
     return (await this.getNextSlotRange())[0];
   }
 
-  public async getTickAtStartOfAuctionClosing(): Promise<bigint> {
+  public async getTickAtStartOfAuctionClosing(): Promise<number> {
     const client = await this.client;
     const tickAtStartOfNextCohort = await this.getTickAtStartOfNextCohort();
     const ticksBeforeBidEndForVrfClose = (
       await client.query.miningSlot.miningConfig()
-    ).ticksBeforeBidEndForVrfClose.toBigInt();
+    ).ticksBeforeBidEndForVrfClose.toNumber();
     return tickAtStartOfNextCohort - ticksBeforeBidEndForVrfClose;
   }
 
-  public async getTickAtStartOfCurrentSlot(): Promise<bigint> {
+  public async getTickAtStartOfCurrentSlot(): Promise<number> {
     const tickAtStartOfNextCohort = await this.getTickAtStartOfNextCohort();
-    return tickAtStartOfNextCohort - 1_440n;
+    return tickAtStartOfNextCohort - 1_440;
   }
 
   public async fetchWinningBids(): Promise<IWinningBid[]> {
@@ -224,8 +224,8 @@ export class Mainchain {
       const subAccountIndex = undefined;
       const lastBidAtTick = c.bidAtTick.toNumber();
       const bidPosition = i;
-      const microgonsBid = c.bid.toBigInt();
-      return { address, subAccountIndex, lastBidAtTick, bidPosition, microgonsBid };
+      const microgonsPerSeat = c.bid.toBigInt();
+      return { address, subAccountIndex, lastBidAtTick, bidPosition, microgonsPerSeat };
     });
   }
 

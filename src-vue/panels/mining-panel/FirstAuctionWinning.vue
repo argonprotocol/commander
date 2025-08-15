@@ -33,7 +33,7 @@
       </div>
       <div class="flex flex-col items-center justify-center min-h-[75px] fade-in-out">
         <div v-if="bidPositions.length" :class="[priceTextSize, 'text-center text-argon-600 font-bold']">
-          {{ currency.symbol }}{{ microgonToMoneyNm(stats.myMiningBids.microgonsBid).format('0,0.00') }}
+          {{ currency.symbol }}{{ microgonToMoneyNm(stats.myMiningBids.microgonsBidTotal).format('0,0.00') }}
         </div>
         <div v-else class="text-center text-7xl text-argon-600 font-bold">{{ currency.symbol }}--.--</div>
       </div>
@@ -110,7 +110,7 @@ const auctionIsClosing = Vue.ref(false);
 const maxPossibleBiddingBudget = Vue.ref(0n);
 
 const totalBiddingBudget = Vue.computed(() => {
-  const availableMicrogons = wallets.miningWallet.availableMicrogons + stats.myMiningBids.microgonsBid;
+  const availableMicrogons = wallets.miningWallet.availableMicrogons + stats.myMiningBids.microgonsBidTotal;
   return bigIntMin(maxPossibleBiddingBudget.value, availableMicrogons);
 });
 
@@ -144,8 +144,8 @@ Vue.onMounted(async () => {
   if (!startOfAuctionClosing.value || !startOfNextCohort.value) {
     const tickAtStartOfAuctionClosing = await mainchain.getTickAtStartOfAuctionClosing();
     const tickAtStartOfNextCohort = await mainchain.getTickAtStartOfNextCohort();
-    startOfAuctionClosing.value = dayjs.utc(Number(tickAtStartOfAuctionClosing) * 60 * 1000);
-    startOfNextCohort.value = dayjs.utc(Number(tickAtStartOfNextCohort) * 60 * 1000);
+    startOfAuctionClosing.value = dayjs.utc(tickAtStartOfAuctionClosing * 60 * 1000);
+    startOfNextCohort.value = dayjs.utc(tickAtStartOfNextCohort * 60 * 1000);
   }
 
   const seatCount = await biddingParamsHelper.getMaxSeats();

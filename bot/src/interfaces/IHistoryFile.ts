@@ -35,16 +35,16 @@ export interface IBotActivityBidsSubmitted extends IBotActivityBasic {
   submittedCount: number;
 }
 export interface IBotActivityBidsRejected extends IBotActivityBasic {
-  microgonsBid: bigint;
+  microgonsPerSeat: bigint;
   submittedCount: number;
   rejectedCount: number;
   bidError?: ExtrinsicError;
 }
 export interface IBotActivityBidReceived extends IBotActivityBasic {
   bidderAddress: string;
-  microgonsBid: bigint;
+  microgonsPerSeat: bigint;
   bidPosition?: number;
-  previousMicrogonsBid?: bigint;
+  previousMicrogonsPerSeat?: bigint;
   previousBidPosition?: number;
 }
 export interface IBotActivityAuctionStarted extends IBotActivityBasic {
@@ -52,8 +52,8 @@ export interface IBotActivityAuctionStarted extends IBotActivityBasic {
   availableMicrogons: bigint;
 }
 export interface IBotActivityAuctionFinished extends IBotActivityBasic {
-  mySeatsWon: number;
-  totalSeatsWon: number;
+  seatCountWon: number;
+  seatCountInAuction: number;
 }
 export interface IBotActivitySeatReduction extends IBotActivityBasic {
   reason: string;

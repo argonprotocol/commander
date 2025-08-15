@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 
@@ -14,6 +14,7 @@ import { Config } from '../lib/Config';
 import { createMockedDbPromise } from './helpers/db';
 import { InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
 import Installer from '../lib/Installer';
+import { IInstallStepStatuses, InstallStepStatusType } from '../lib/Server';
 
 it.only('jump through the install steps rapidly when time has expired', async () => {
   const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'false' });
@@ -22,10 +23,10 @@ it.only('jump through the install steps rapidly when time has expired', async ()
 
   const installer = new Installer(config);
   const installerCheck = new InstallerCheck(installer, config);
-  const filenames: string[] = [];
+  const installStepStatuses: IInstallStepStatuses = {};
 
   // @ts-ignore
-  installerCheck.fetchLogFilenames = vi.fn(() => Promise.resolve(filenames));
+  installerCheck.fetchInstallStepStatuses = vi.fn(() => Promise.resolve(installStepStatuses));
 
   for (const stepKey of Object.values(InstallStepKey)) {
     let cycleCount = stepKey === InstallStepKey.ServerConnect ? 0 : 1;
@@ -39,9 +40,9 @@ it.only('jump through the install steps rapidly when time has expired', async ()
 
       if (stepKey === InstallStepKey.ServerConnect) {
         const nextStepKey = InstallStepKey.FileUpload;
-        filenames.push(`${nextStepKey}.started`, `${nextStepKey}.log`, `${nextStepKey}.finished`);
+        installStepStatuses[nextStepKey] = InstallStepStatusType.Started;
       } else {
-        filenames.push(`${stepKey}.started`, `${stepKey}.log`, `${stepKey}.finished`);
+        installStepStatuses[stepKey] = InstallStepStatusType.Finished;
       }
 
       const statusBeforeUpdate = config.installDetails[stepKey].status;

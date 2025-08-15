@@ -6,13 +6,13 @@ import { pipeline } from 'stream/promises';
 import { version as packageVersion } from './package.json';
 
 (async () => {
-  const ts = (Date.now() / 1000).toFixed();
+  // const ts = (Date.now() / 1000).toFixed();
   const files = fs.readdirSync('./resources');
   const serverFiles = files.filter(file => file.startsWith('server-') || file === 'VERSION');
   for (const file of serverFiles) {
     fs.unlinkSync(Path.join('resources', file));
   }
-  const version = `${packageVersion}-${ts}`;
+  const version = `${packageVersion}`;
   const fileName = `resources/server-${version}.tar.gz`;
   fs.writeFileSync(`./server/VERSION`, `${version}`);
   fs.writeFileSync(`./resources/VERSION`, `${version}`);
@@ -32,5 +32,5 @@ import { version as packageVersion } from './package.json';
 
   const checksum = hash.digest('hex');
   console.log(`SHA256: ${checksum}`);
-  fs.writeFileSync(`${fileName}.sha256`, `${checksum}  ${fileName}\n`);
+  fs.writeFileSync(`${fileName.replace('.tar.gz', '.sha256')}`, `${checksum}  ${fileName}\n`);
 })();

@@ -158,7 +158,7 @@ export class History {
     tick: number,
     blockNumber: number,
     param: {
-      microgonsBid: bigint;
+      microgonsPerSeat: bigint;
       rejectedCount: number;
       submittedCount: number;
       bidError?: ExtrinsicError;
@@ -223,13 +223,13 @@ export class History {
         const prevBidIndex = this.lastBids.findIndex(y => y.address === address);
         const entry: IBotActivityBidReceived = {
           bidderAddress: address,
-          microgonsBid: bidMicrogons,
+          microgonsPerSeat: bidMicrogons,
           bidPosition: i,
         };
         if (prevBidIndex !== -1) {
           const prevBidAmount = this.lastBids[prevBidIndex].bidMicrogons;
           if (prevBidAmount !== bidMicrogons) {
-            entry.previousMicrogonsBid = prevBidAmount;
+            entry.previousMicrogonsPerSeat = prevBidAmount;
           }
           entry.previousBidPosition = prevBidIndex;
         }
@@ -250,7 +250,7 @@ export class History {
             type: BotActivityType.BidReceived,
             data: {
               bidderAddress: address,
-              microgonsBid: bidMicrogons,
+              microgonsPerSeat: bidMicrogons,
               bidPosition: null,
               previousBidPosition: i,
             },

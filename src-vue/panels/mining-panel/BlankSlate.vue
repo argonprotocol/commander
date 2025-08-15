@@ -40,7 +40,7 @@
               </template>
               <template v-else>---</template>
             </div>
-            <div>Pending Bids</div>
+            <div>Activing Seat Costs</div>
           </li>
           <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">
@@ -53,12 +53,12 @@
               </template>
               <template v-else>---</template>
             </div>
-            <div>Pending Rewards</div>
+            <div>Active Seat Rewards</div>
           </li>
           <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">
             <div class="text-4xl font-bold">
-              <template v-if="isLoaded">{{ numeral(currentAPY).format('0,0') }}%</template>
+              <template v-if="isLoaded">{{ numeral(currentAPY).formatCapped('0,0', 9_999) }}%</template>
               <template v-else>---</template>
             </div>
             <div>Annual Percentage Yield</div>

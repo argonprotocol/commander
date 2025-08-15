@@ -11,10 +11,12 @@ use std::fmt::Display;
 use std::future::Future;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
+use std::time::Duration;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::runtime::Handle;
 use tokio::sync::Mutex;
+use tokio::time::timeout;
 
 #[derive(Clone)]
 pub struct SSH {
@@ -68,8 +70,9 @@ impl Drop for SSH {
 }
 
 impl SSH {
-    pub async fn connect(config: &SSHConfig) -> Result<Self> {
-        let client = Self::authenticate(&config).await?;
+    pub async fn connect(config: &SSHConfig, timeout_duration: Duration) -> Result<Self> {
+        let client = timeout(timeout_duration, Self::authenticate(config)).await
+            .map_err(|_| anyhow::anyhow!("SSH connection timed out after {:?}", timeout_duration))??;
         let ssh = SSH {
             client: Arc::new(Mutex::new(client)),
             config: config.clone(),
@@ -163,6 +166,23 @@ impl SSH {
         Ok((output, code))
     }
 
+    pub async fn upload_file(&self, contents: &[u8], remote_path: &str) -> Result<()> {
+        // First, create the script in the remote server's home directory
+        info!("Uploading file {}", remote_path);
+        let mut channel = self.open_channel().await?;
+        let scp_command = format!("cat > {}", remote_path);
+        channel.exec(true, scp_command).await?;
+
+        // Write the contents of the setup script
+        channel.data(contents).await?;
+        channel.eof().await?;
+
+        // Wait for the copy to complete
+        while channel.wait().await.is_some() {}
+
+        Ok(())
+    }
+
     pub async fn upload_embedded_file(
         &self,
         app: &AppHandle,
@@ -204,23 +224,6 @@ impl SSH {
         app.emit(&event_progress_key, 100)?;
         writer.shutdown().await?;
         channel.eof().await?;
-        while channel.wait().await.is_some() {}
-
-        Ok(())
-    }
-
-    pub async fn upload_file(&self, contents: &[u8], remote_path: &str) -> Result<()> {
-        // First, create the script in the remote server's home directory
-        info!("Uploading file {}", remote_path);
-        let mut channel = self.open_channel().await?;
-        let scp_command = format!("cat > {}", remote_path);
-        channel.exec(true, scp_command).await?;
-
-        // Write the contents of the setup script
-        channel.data(contents).await?;
-        channel.eof().await?;
-
-        // Wait for the copy to complete
         while channel.wait().await.is_some() {}
 
         Ok(())

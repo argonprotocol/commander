@@ -1,5 +1,6 @@
 import mitt, { type Emitter } from 'mitt';
 import { ComputedRef } from 'vue';
+import Importer from '../lib/Importer';
 
 type IBasicEmitter = {
   openWalletOverlay: { walletId: string; screen: string };
@@ -25,6 +26,10 @@ type IBasicEmitter = {
   openServerConfigureOverlay: void;
   openAboutOverlay: void;
   openComplianceOverlay: void;
+  openTroubleshootingOverlay: {
+    screen: 'server-diagnostics' | 'data-and-log-files' | 'options-for-restart';
+  };
+  openImportingOverlay: Importer;
 };
 
 const basicEmitter: Emitter<IBasicEmitter> = mitt<IBasicEmitter>();

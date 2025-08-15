@@ -10,6 +10,11 @@ export interface IEarningsFile extends ILastModifiedAt {
   microgonToUsd: bigint[];
   microgonToBtc: bigint[];
   microgonToArgonot: bigint[];
+
+  transactionFeesTotal: bigint;
+  accruedMicrogonProfits: bigint;
+  previousFrameAccruedMicrogonProfits: bigint | null;
+
   earningsByBlock: {
     [blockNumber: number]: IBlockEarningsSummary;
   };
@@ -20,17 +25,17 @@ export interface IBlockEarningsSummary {
   blockMinedAt: string;
   authorCohortActivationFrameId: number;
   authorAddress: string;
-  microgonFeesMined: bigint;
   microgonsMined: bigint;
   microgonsMinted: bigint;
   micronotsMined: bigint;
+  microgonFeesCollected: bigint;
 }
 
 export interface IFrameEarningsRollup {
   lastBlockMinedAt: string;
-  blocksMined: number;
-  microgonFeesMined: bigint;
-  microgonsMined: bigint;
-  microgonsMinted: bigint;
-  micronotsMined: bigint;
+  blocksMinedTotal: number;
+  microgonFeesCollectedTotal: bigint;
+  microgonsMinedTotal: bigint;
+  microgonsMintedTotal: bigint;
+  micronotsMinedTotal: bigint;
 }

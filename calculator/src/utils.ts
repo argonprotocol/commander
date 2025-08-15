@@ -28,13 +28,6 @@ export function bigNumberToBigInt(bn: BigNumber): bigint {
   return BigInt(bn.integerValue(BigNumber.ROUND_DOWN).toString());
 }
 
-export function bigIntMultiplyNumber(x: bigint, y: number): bigint {
-  // Count decimal places in y by converting to string and checking after decimal point
-  const decimalPlaces = y.toString().split('.')[1]?.length || 0;
-  const precision = 10 ** decimalPlaces;
-  return (x * BigInt(Math.round(y * precision))) / BigInt(precision);
-}
-
 export function convertBigIntStringToNumber(bigIntStr: string | undefined): bigint | undefined {
   if (bigIntStr === undefined) return undefined;
   if (!bigIntStr) return 0n;

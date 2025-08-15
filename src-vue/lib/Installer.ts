@@ -5,17 +5,16 @@ import {
   InstallStepKey,
   InstallStepStatus,
 } from '../interfaces/IConfig';
-import { Config, NETWORK_NAME } from './Config';
-import { app } from '@tauri-apps/api';
+import { Config } from './Config';
 import { invoke } from '@tauri-apps/api/core';
 import { InstallerCheck } from './InstallerCheck';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
 import { createDeferred, ensureOnlyOneInstance, resetOnlyOneInstance } from './Utils';
 import IDeferred from '../interfaces/IDeferred';
 import { message as tauriMessage } from '@tauri-apps/plugin-dialog';
 import { exit as tauriExit } from '@tauri-apps/plugin-process';
+import { Server } from './Server';
 
 dayjs.extend(utc);
 
@@ -51,6 +50,7 @@ export default class Installer {
   private isLoadedDeferred!: IDeferred<void>;
   private config: Config;
   private installerCheck: InstallerCheck;
+  private server!: Server;
 
   constructor(config: Config) {
     ensureOnlyOneInstance(this.constructor);
@@ -67,10 +67,13 @@ export default class Installer {
   public async load(): Promise<void> {
     await this.config.isLoadedPromise;
 
+    const connection = await SSH.getConnection();
+    this.server = new Server(connection);
+
     await this.ensureIpAddressIsWhitelisted();
     if (this.config.isServerReadyToInstall) {
-      const uploadedWalletAddress = await this.fetchUploadedWalletAddress();
-      if (uploadedWalletAddress && uploadedWalletAddress !== this.config.miningAccount.address) {
+      const accountAddressOnServer = await this.server.downloadAccountAddress();
+      if (accountAddressOnServer && accountAddressOnServer !== this.config.miningAccount.address) {
         await tauriMessage(
           'The wallet address on the server does not match the wallet address in the local database. This app will shutdown.',
           {
@@ -131,21 +134,22 @@ export default class Installer {
       await this.clearStepFiles(stepsToClear);
     }
     await this.ensureIpAddressIsWhitelisted();
-    this.installerCheck.shouldUseCachedFilenames = true;
+    this.installerCheck.shouldUseCachedInstallSteps = true;
     this.fileUploadProgress = 0;
     this.installerCheck.start();
 
     let errorMessage = '';
 
     try {
-      const uploadedWalletAddress = await this.fetchUploadedWalletAddress();
+      console.info('Downloading account address');
+      const uploadedWalletAddress = await this.server.downloadAccountAddress();
       if (!uploadedWalletAddress) {
         await this.deleteRemoteBotData();
       }
 
       if (this.remoteFilesNeedUpdating) {
-        console.info('Uploading wallet address');
-        await this.uploadWalletAddress();
+        console.info('Uploading account address');
+        await this.server.uploadAccountAddress(this.config.miningAccount.address);
 
         console.info('Uploading core files');
         await this.uploadCoreFiles(t => (this.fileUploadProgress += (1 / t) * 49));
@@ -155,10 +159,11 @@ export default class Installer {
       await this.uploadBotConfigFiles(t => (this.fileUploadProgress += (1 / t) * 49));
 
       console.info('Starting remote script');
-      await this.startRemoteScript();
+      await this.server.createLogsDir();
+      await this.server.startInstallerScript();
       this.fileUploadProgress = 99;
 
-      this.installerCheck.shouldUseCachedFilenames = false;
+      this.installerCheck.shouldUseCachedInstallSteps = false;
 
       console.info('Waiting for install to complete');
       await this.installerCheck.waitForInstallToComplete();
@@ -190,7 +195,7 @@ export default class Installer {
 
   public async ensureIpAddressIsWhitelisted(): Promise<void> {
     // we don't have anything to connect to yet!
-    if (!SSH.ipAddress) return;
+    if (!this.config.serverDetails.ipAddress) return;
     const ipResponse = await fetch('https://api.ipify.org?format=json');
     const { ip: ipAddress } = await ipResponse.json();
     await SSH.runCommand(`ufw status | grep ${ipAddress} || ufw allow from ${ipAddress}`);
@@ -217,7 +222,7 @@ export default class Installer {
     await this.config.save();
 
     this.installerCheck.clearCachedFilenames();
-    this.installerCheck.shouldUseCachedFilenames = true;
+    this.installerCheck.shouldUseCachedInstallSteps = true;
 
     this.removeReasonsToSkipInstall();
     this.run();
@@ -243,7 +248,7 @@ export default class Installer {
     await this.clearStepFiles(stepsToClear, { setFirstStepToWorking: true });
 
     this.installerCheck.clearCachedFilenames();
-    this.installerCheck.shouldUseCachedFilenames = true;
+    this.installerCheck.shouldUseCachedInstallSteps = true;
 
     this.removeReasonsToSkipInstall();
     this.config.resetField('installDetails');
@@ -266,8 +271,8 @@ export default class Installer {
     this.isRunning = true;
     try {
       await this.uploadBotConfigFiles();
-      await SSH.stopBotDocker();
-      await SSH.startBotDocker();
+      await this.server.stopBotDocker();
+      await this.server.startBotDocker();
     } catch (e) {
       console.error(`Failed to upgrade bidding bot files: ${e}`);
       throw e;
@@ -388,15 +393,9 @@ export default class Installer {
       return false;
     }
 
-    try {
-      const [pid] = await SSH.runCommand('pgrep -f ~/server/scripts/installer.sh');
-      const isRunningRemotely = pid.trim() !== '';
-      if (isRunningRemotely) {
-        console.log('Install process IS running remotely');
-      }
-      this.isRunning = isRunningRemotely;
-    } catch {
-      this.isRunning = false;
+    this.isRunning = await this.server.isInstallerScriptRunning();
+    if (this.isRunning) {
+      console.log('Install process IS running remotely');
     }
 
     return this.isRunning;
@@ -413,7 +412,7 @@ export default class Installer {
 
     this.isRunning = true;
     this.installerCheck.start();
-    this.installerCheck.shouldUseCachedFilenames = false;
+    this.installerCheck.shouldUseCachedInstallSteps = false;
 
     console.info('Waiting for install to complete');
     await this.installerCheck.waitForInstallToComplete();
@@ -428,7 +427,8 @@ export default class Installer {
   }
 
   private async extractTmpInstallChecks(): Promise<TmpInstallChecks> {
-    const isFreshInstall = !(await this.serverHasSha256File());
+    const isFreshInstall = !(await this.server.downloadAccountAddress());
+    console.log('IS FRESH INSTALL', isFreshInstall);
 
     if (isFreshInstall) {
       return {
@@ -450,7 +450,7 @@ export default class Installer {
   }
 
   private async isRemoteVersionLatest(): Promise<boolean> {
-    const [remoteVersion] = await SSH.runCommand('cat ~/server/VERSION 2>/dev/null || true');
+    const remoteVersion = await this.server.downloadVersion();
     const localVersion = await this.getLocalVersion();
     const remoteFilesMatchLocalVersion = localVersion === remoteVersion;
 
@@ -464,26 +464,11 @@ export default class Installer {
     return remoteFilesMatchLocalVersion;
   }
 
-  private async serverHasSha256File(): Promise<boolean> {
-    const [, code] = await SSH.runCommand('test -f ~/version256');
-    return code === 0;
-  }
-
-  private async fetchUploadedWalletAddress(): Promise<string> {
-    const [walletAddress] = await SSH.runCommand('cat ~/address 2>/dev/null || true');
-    return walletAddress.trim();
-  }
-
-  private async uploadWalletAddress(): Promise<void> {
-    const walletAddress = this.config.miningAccount.address;
-    await SSH.uploadFile(walletAddress, '~/address');
-  }
-
   private async uploadCoreFiles(progressFn?: (totalCount: number, uploadedCount: number) => void): Promise<void> {
     const version = await this.getLocalVersion();
-    console.log(`UPLOADING SERVER VERSION ${version}`);
+    console.log(`UPLOADING ~/server (version ${version})`);
     const expectedSha = await invoke<string>('read_embedded_file', {
-      path: `resources/server-${version}.tar.gz.sha256`,
+      localRelativePath: `resources/server-${version}.sha256`,
     });
     const serverTar = `server-${version}.tar.gz`;
     const localServerTar = `resources/${serverTar}`;
@@ -501,7 +486,7 @@ export default class Installer {
     }
     try {
       console.log(`Uploading server to ${remoteDir}`);
-      await SSH.uploadEmbeddedFile(app, localServerTar, `~/${serverTar}`, progress => {
+      await SSH.uploadEmbeddedFile(localServerTar, `~/${serverTar}`, (progress: number) => {
         totalProgress += progress;
         progressFn?.(totalCount, totalProgress);
       });
@@ -535,34 +520,25 @@ export default class Installer {
   }
 
   private async uploadBotConfigFiles(progressFn?: (totalCount: number, uploadedCount: number) => void): Promise<void> {
-    const biddingRulesStr = jsonStringifyWithBigInts(this.config.biddingRules);
-    if (!biddingRulesStr) return;
-
-    const envSecurity = `SESSION_KEYS_MNEMONIC="${this.config.security.sessionMnemonic}"\n` + `KEYPAIR_PASSPHRASE=`;
-    const envState = `OLDEST_FRAME_ID_TO_SYNC=${this.config.oldestFrameIdToSync || ''}\n`;
-
-    const files = [
-      [this.config.security.walletJson, '~/config/wallet.json'],
-      [biddingRulesStr, '~/config/biddingRules.json'],
-      [envSecurity, '~/config/.env.security'],
-      [envState, '~/config/.env.state'],
-    ];
-
-    await SSH.runCommand('mkdir -p config');
-
-    let uploadedCount = 0;
-    for (const [content, path] of files) {
-      await SSH.uploadFile(content, path);
-      uploadedCount++;
-      progressFn?.(files.length, uploadedCount);
-    }
+    await this.server.createConfigDir();
+    await this.server.uploadMiningWallet(this.config.miningAccount.toJson(''));
+    progressFn?.(4, 1);
+    await this.server.uploadBiddingRules(this.config.biddingRules);
+    progressFn?.(4, 2);
+    await this.server.uploadEnvState({ oldestFrameIdToSync: this.config.oldestFrameIdToSync });
+    progressFn?.(4, 3);
+    await this.server.uploadEnvSecurity({
+      sessionMiniSecret: this.config.miningSessionMiniSecret,
+      keypairPassphrase: '',
+    });
+    progressFn?.(4, 4);
   }
 
   private async clearStepFiles(stepKeys: string[], options: { setFirstStepToWorking?: boolean } = {}): Promise<void> {
     if (stepKeys.includes('all')) {
       await this.config.resetField('installDetails');
       await this.config.save();
-      await SSH.runCommand('rm -rf ~/install-logs/*');
+      await this.server.removeAllLogFiles();
       return;
     }
 
@@ -586,7 +562,7 @@ export default class Installer {
         console.log('CLEAR STEP', stepKey, installDetails[stepKey]?.progress, ' -> ', stepObj.progress);
       }
       installDetails[stepKey] = { ...stepObj };
-      await SSH.runCommand(`rm -rf ~/install-logs/${stepKey}.*`);
+      await this.server.removeLogStep(stepKey);
     }
 
     console.log('clearStepFiles', stepKeys, installDetails);
@@ -594,17 +570,8 @@ export default class Installer {
     await this.config.save();
   }
 
-  private async startRemoteScript(): Promise<void> {
-    const remoteScriptPath = '~/server/scripts/installer.sh';
-    const remoteScriptLogPath = '~/installer.log';
-    const shellCommand = `ARGON_CHAIN=${NETWORK_NAME} nohup ${remoteScriptPath} > ${remoteScriptLogPath} 2>&1 &`;
-
-    // await SSH.runCommand(`rm -f ${remoteScriptLogPath}`);
-    await SSH.runCommand(shellCommand);
-  }
-
   private async getLocalVersion(): Promise<string> {
-    const embeddedFiles = await invoke('read_embedded_file', { path: 'resources/VERSION' });
+    const embeddedFiles = await invoke('read_embedded_file', { localRelativePath: 'resources/VERSION' });
     if (typeof embeddedFiles !== 'string') {
       throw new Error('Failed to read local version file');
     }

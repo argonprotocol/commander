@@ -32,7 +32,7 @@ const bot = new Bot({
     biddingRulesPath: process.env.BIDDING_RULES_PATH,
     archiveRpcUrl: process.env.ARCHIVE_NODE_URL,
     localRpcUrl: process.env.LOCAL_RPC_URL,
-    keysMnemonic: process.env.SESSION_KEYS_MNEMONIC,
+    sessionMiniSecret: process.env.SESSION_MINI_SECRET,
   }),
 });
 

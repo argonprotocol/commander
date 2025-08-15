@@ -29,6 +29,13 @@ impl Utils {
         PathBuf::from(network_name).join(instance_name)
     }
 
+    pub fn get_absolute_config_instance_dir(app: &AppHandle) -> PathBuf {
+        app.path().resolve(
+            Self::get_relative_config_instance_dir(),
+            tauri::path::BaseDirectory::AppConfig,
+        ).expect("Failed to resolve config instance directory")
+    }
+
     pub fn get_embedded_path(app: &AppHandle, path: impl AsRef<Path>) -> anyhow::Result<PathBuf> {
         let local_base_path = app.path().resolve(
             PathBuf::from("..").join(path),
@@ -52,17 +59,5 @@ impl Utils {
             }
         };
         Ok(key)
-    }
-
-    pub fn extract_host_port(host: &str) -> (String, u16) {
-        if host.contains(":") {
-            let mut parts = host.split(':');
-            let host_str = parts.next().unwrap_or("").to_string();
-            let port_str = parts.next().unwrap_or("22").parse().unwrap_or(22);
-
-            (host_str, port_str)
-        } else {
-            (host.to_string(), 22)
-        }
     }
 }

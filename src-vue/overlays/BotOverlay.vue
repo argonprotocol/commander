@@ -6,7 +6,7 @@
         <BgOverlay @close="cancelOverlay" />
       </DialogOverlay>
 
-      <DialogContent @escapeKeyDown="cancelOverlay">
+      <DialogContent @escapeKeyDown="cancelOverlay" :aria-describedby="undefined">
         <EditBoxOverlay
             :id="editBoxOverlayId"
             :position="editBoxOverlayPosition"
@@ -16,7 +16,7 @@
           />
         <div
           ref="dialogPanel"
-          class="BotOverlay absolute top-[40px] left-3 right-3 bottom-3 flex flex-col rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left z-20 transition-all"
+          class="BotOverlay absolute top-[40px] left-3 right-3 bottom-3 flex flex-col rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left z-20 transition-all focus:outline-none"
           style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255, 255, 255, 1);">
           <BgOverlay v-if="editBoxOverlayId" @close="editBoxOverlayId = null" :showWindowControls="false" rounded="md" class="z-100" />
           <div class="flex flex-col h-full w-full">
@@ -33,15 +33,18 @@
             <div v-if="isLoaded" class="flex flex-col grow relative w-full">
               <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
                 Commander uses an automated bidding bot to maximize your chance of winning seats. This screen allows you to 
-                configure the rules for how your bot should make decisions and place bids.
+                configure the rules for how your bot should make decisions and place bids. You can also  <span class="text-argon-600/80 hover:text-argon-600 cursor-pointer font-bold">import from an existing cloud machine</span>.
               </DialogDescription>
 
               <section class="flex flex-row border-t border-b border-slate-300 text-center pt-8 pb-8 px-5 mx-5 justify-stretch">
                 <div class="w-1/2 flex flex-col grow">
-                  <div @mouseenter="showTooltip($event, tooltip.capitalToCommit, { width: 'parent' })" @mouseleave="hideTooltip" class="flex flex-col grow group">
-                    <header StatHeader class="bg-[#FAF9FA] border border-[#DDDCDD] rounded-t-lg group-hover:text-argon-600/70 relative z-10">Capital to Commit</header>
+                  <!-- @mouseenter="showTooltip($event, tooltip.capitalToCommit, { width: 'parent' })" @mouseleave="hideTooltip"  -->
+                  <div class="flex flex-col grow group">
+                    <header StatHeader class="bg-[#FAF9FA] border border-[#DDDCDD] rounded-t-lg group-hover:text-argon-600/70 relative z-10">
+                      Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
+                    </header>
                     <div PrimaryStat class="grow relative border border-slate-500/30 rounded-lg mt-2 pb-12 pt-10 text-5xl font-bold font-mono text-argon-600 shadow-sm">
-                      <AlertIcon v-if="probableMinSeats < rules.seatGoalCount" class="w-10 h-10 text-yellow-700 inline-block relative -top-2 mr-2" />
+                      <NeedMoreCapitalHover v-if="probableMinSeats < rules.seatGoalCount" :calculator="calculator" />
                       <InputArgon v-model="rules.baseCapitalCommitment" :min="10_000_000n" :minDecimals="0" />
                     </div>
                   </div>
@@ -182,13 +185,13 @@
 
                 <section class="flex flex-row h-1/2 my-2">
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.seatGoals, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'seatGoals')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.capitalAllocation, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'capitalAllocation')" class="flex flex-col w-full h-full items-center justify-center px-8">
                       <div StatHeader>Capital Allocation</div>
                       <div MainRule v-if="rules.seatGoalType === SeatGoalType.Max && rules.seatGoalCount === 0" class="w-full">
                         Disabled
                       </div>
                       <div MainRule v-else class="w-full">
-                       Max {{ rules.seatGoalCount }} Seats Per {{ rules.seatGoalInterval }}
+                       {{ rules.seatGoalType }} {{ rules.seatGoalCount }} Seats Per {{ rules.seatGoalInterval }}
                       </div>
                       <div class="text-gray-500/60 text-md">
                         {{ rules.seatGoalType === SeatGoalType.Max ? 'Stop After Goal Reached' : 'Reinvest Profits from Operation' }}
@@ -290,6 +293,7 @@ import {
 import { bigIntAbs } from '@argonprotocol/commander-calculator/src/utils';
 import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
 import InputArgon from '../components/InputArgon.vue';
+import NeedMoreCapitalHover from './bot/NeedMoreCapitalHover.vue';
 
 const calculator = getCalculator();
 const calculatorData = getCalculatorData();
@@ -337,7 +341,7 @@ const tooltip = {
       `If your bids get knocked out of contention, your bot will wait ${rules.value.rebiddingDelay} minute${rules.value.rebiddingDelay === 1 ? '' : 's'} before submitting a new bid at ${currency.symbol}${microgonToMoneyNm(rules.value.rebiddingIncrementBy).format('0.00')} above the current winning bid.`,
   ),
   maximumBid: `Your mining bot will never submit a bid above this price. If other bidders go higher than this, you will be knocked out of contention.`,
-  seatGoals: Vue.computed(() => {
+  capitalAllocation: Vue.computed(() => {
     let interval =
       rules.value.seatGoalInterval === SeatGoalInterval.Epoch
         ? `An "epoch" is equivalent to 10 days`
@@ -410,6 +414,12 @@ function showTooltip(
 function updateAPYs() {
   calculator.updateBiddingRules(rules.value);
   calculator.calculateBidAmounts();
+
+  if (isBrandNew.value) {
+    const minimumCapitalNeeded = calculator.maximumBidAmount * BigInt(rules.value.seatGoalCount);
+    const minimumCapitalNeededRoundedUp = Math.ceil(Number(minimumCapitalNeeded) / 1_000_000) * 1_000_000;
+    config.biddingRules.baseCapitalCommitment = BigInt(minimumCapitalNeededRoundedUp);
+  }
 
   minimumBidAmount.value = calculator.minimumBidAmount;
   minimumBidAmountOverride.value = calculator.minimumBidAmountOverride;
