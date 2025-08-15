@@ -12,7 +12,7 @@ export interface ITryServerData {
 }
 
 export class SSH {
-  private static connection: SSHConnection;
+  private static connection?: SSHConnection;
   private static config: Config;
 
   public static setConfig(config: Config): void {
@@ -107,7 +107,15 @@ export class SSH {
   }
 
   private static async reconnect(): Promise<void> {
+    if (!this.connection) return;
     await this.connection.close();
     await this.connection.connect();
+  }
+
+  public static async closeConnection(): Promise<void> {
+    if (this.connection) {
+      await this.connection.close();
+      this.connection = undefined;
+    }
   }
 }

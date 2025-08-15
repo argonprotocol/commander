@@ -229,7 +229,10 @@ export class Server {
   }
 
   public async fetchArgonInstallProgress(): Promise<number> {
-    const [output] = await this.connection.runCommandWithTimeout('docker exec server-argon-miner-1 syncstatus.sh', 5e3);
+    const [output] = await this.connection.runCommandWithTimeout(
+      'docker exec server-argon-miner-1 syncstatus.sh',
+      10e3,
+    );
     return parseFloat(output.trim().replace('%', '')) || 0.0;
   }
 
