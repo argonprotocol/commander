@@ -21,7 +21,7 @@ export class Storage {
 
   public botBlockSyncFile(): JsonStore<IBlockSyncFile> {
     const key = `bot-blocks.json`;
-    let entry = this.lruCache.get(key);
+    let entry = this.lruCache.get(key) as JsonStore<IBlockSyncFile> | undefined;
     if (!entry) {
       entry = new JsonStore<IBlockSyncFile>(Path.join(this.basedir, key), () => ({
         blocksByNumber: {},
@@ -36,12 +36,12 @@ export class Storage {
 
   public botStateFile(): JsonStore<IBotStateFile> {
     const key = `bot-state.json`;
-    let entry = this.lruCache.get(key);
+    let entry = this.lruCache.get(key) as JsonStore<IBotStateFile> | undefined;
     if (!entry) {
       entry = new JsonStore<IBotStateFile>(
         Path.join(this.basedir, key),
         () =>
-          <IBotStateFile>{
+          ({
             isReady: false,
             hasMiningBids: false,
             hasMiningSeats: false,
@@ -56,7 +56,7 @@ export class Storage {
             maxSeatsPossible: 10, // TODO: instead of hardcoded 10, fetch from chain
             maxSeatsReductionReason: '',
             lastBlockNumberByFrameId: {},
-          },
+          }) as IBotStateFile,
       );
       this.lruCache.set(key, entry);
     }
@@ -68,7 +68,7 @@ export class Storage {
    */
   public earningsFile(frameId: number): JsonStore<IEarningsFile> {
     const key = `bot-earnings/frame-${frameId}.json`;
-    let entry = this.lruCache.get(key);
+    let entry = this.lruCache.get(key) as JsonStore<IEarningsFile> | undefined;
     if (!entry) {
       entry = new JsonStore<IEarningsFile>(Path.join(this.basedir, key), () => {
         const tickRange = MiningFrames.getTickRangeForFrameFromSystemTime(frameId);
@@ -98,7 +98,7 @@ export class Storage {
 
   public bidsFile(cohortBiddingFrameId: number, cohortActivationFrameId: number): JsonStore<IBidsFile> {
     const key = `bot-bids/frame-${cohortBiddingFrameId}-${cohortActivationFrameId}.json`;
-    let entry = this.lruCache.get(key);
+    let entry = this.lruCache.get(key) as JsonStore<IBidsFile> | undefined;
     if (!entry) {
       entry = new JsonStore<IBidsFile>(Path.join(this.basedir, key), () => ({
         cohortBiddingFrameId,
@@ -119,7 +119,7 @@ export class Storage {
 
   public historyFile(frameId: number): JsonStore<IHistoryFile> {
     const key = `bot-history/frame-${frameId}.json`;
-    let entry = this.lruCache.get(key);
+    let entry = this.lruCache.get(key) as JsonStore<IHistoryFile> | undefined;
     if (!entry) {
       entry = new JsonStore<IHistoryFile>(Path.join(this.basedir, key), () => {
         return {

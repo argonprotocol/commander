@@ -94,7 +94,7 @@ it('can autobid and store stats', async () => {
       const isVoteBlock = await api.query.blockSeal.isBlockFromVoteSeal().then(x => x.isTrue);
       lastFinalizedBlockNumber = x.number.toNumber();
       if (isVoteBlock) {
-        console.log(`Block ${x.number} is vote block`);
+        console.log(`Block ${x.number.toNumber()} is vote block`);
         const frameId = await new FrameCalculator().getForHeader(client, x);
         if (frameId !== undefined) cohortActivationFrameIdsWithEarnings.add(frameId);
         voteBlocks++;
@@ -129,7 +129,7 @@ it('can autobid and store stats', async () => {
   const cohortActivationFrameIds = new Set<number>();
   let microgonsMined = 0n;
   for (const frameId of cohortActivationFrameIdsWithEarnings) {
-    const earningsData = await bot.storage.earningsFile(frameId!).get();
+    const earningsData = await bot.storage.earningsFile(frameId).get();
     expect(earningsData).toBeDefined();
     expect(Object.keys(earningsData!.earningsByBlock).length).toBeGreaterThanOrEqual(1);
     for (const blockEarnings of Object.values(earningsData!.earningsByBlock)) {

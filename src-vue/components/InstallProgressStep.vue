@@ -168,19 +168,19 @@ function openServerRemoveOverlay() {
 li.Component.InstallProgressStep {
   &[isCompact='true'] {
     label {
-      @apply pl-7 mr-3;
+      @apply mr-3 pl-7;
     }
     [spinner] {
-      @apply min-w-6 min-h-6 w-6 h-6;
+      @apply h-6 min-h-6 w-6 min-w-6;
     }
   }
 
-  @apply py-2 flex-1;
+  @apply flex-1 py-2;
 
   &[status='Working'],
   &[status='Completing'] {
     label {
-      @apply text-gray-700 font-bold relative;
+      @apply relative font-bold text-gray-700;
     }
 
     [spinner] {
@@ -209,7 +209,7 @@ li.Component.InstallProgressStep {
   }
 
   [spinner] {
-    @apply hidden min-w-8 min-h-8 w-8 h-8 border mr-2 relative -left-0.5;
+    @apply relative -left-0.5 mr-2 hidden h-8 min-h-8 w-8 min-w-8 border;
   }
 }
 

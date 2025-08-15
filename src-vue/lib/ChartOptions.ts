@@ -13,6 +13,7 @@ import { getRelativePosition } from 'chart.js/helpers';
       items.push({ element, datasetIndex, index });
     }
   });
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return items;
 };
 
@@ -67,6 +68,7 @@ export function createChartOptions(fillerPoints: any[], chartPoints: any[], poin
           borderWidth: 1,
           caretSize: 10,
           enabled: false,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-return
           external: (context: any) => onTooltipFn(context.tooltip as TooltipModel<any>),
         },
       },

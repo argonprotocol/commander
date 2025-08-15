@@ -37,7 +37,7 @@ export class VaultsTable extends BaseTable {
     if (!result || result.length === 0) {
       throw new Error(`Failed to insert vault with id ${vaultId}`);
     }
-    return convertFromSqliteFields(result, this.fieldTypes)[0];
+    return convertFromSqliteFields<IVaultRecord[]>(result, this.fieldTypes)[0];
   }
 
   async save(record: IVaultRecord): Promise<void> {
@@ -57,6 +57,6 @@ export class VaultsTable extends BaseTable {
 
   async get(): Promise<IVaultRecord | undefined> {
     const rawRecords = await this.db.select<IVaultRecord[]>('SELECT * FROM Vaults LIMIT 1', []);
-    return convertFromSqliteFields(rawRecords, this.fieldTypes)[0];
+    return convertFromSqliteFields<IVaultRecord[]>(rawRecords, this.fieldTypes)[0];
   }
 }

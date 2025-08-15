@@ -248,7 +248,7 @@ export class Server {
       }
 
       const newStatusNumber = installStepStatusPriorityByType[newStatus as InstallStepStatusType];
-      const prevStatusNumber = installStepStatusPriorityByType[prevStatus as InstallStepStatusType];
+      const prevStatusNumber = installStepStatusPriorityByType[prevStatus];
 
       if (newStatusNumber > prevStatusNumber) {
         stepStatuses[key] = newStatus as InstallStepStatusType;

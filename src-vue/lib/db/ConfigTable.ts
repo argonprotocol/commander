@@ -11,11 +11,11 @@ export class ConfigTable extends BaseTable {
       data[row.key] = row.value;
     }
 
-    return data;
+    return data as Partial<IConfig>;
   }
 
   public async insertOrReplace(obj: Partial<IConfigStringified>) {
-    const db = await this.db;
+    const db = this.db;
     const entries = Object.entries(obj);
     if (entries.length === 0) return;
 

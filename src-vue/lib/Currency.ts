@@ -82,11 +82,10 @@ export class Currency {
     this.microgonExchangeRateTo.GBP = this.otherExchangeRateToMicrogons(usdExchangeRateFrom.GBP);
     this.microgonExchangeRateTo.INR = this.otherExchangeRateToMicrogons(usdExchangeRateFrom.INR);
 
-    this.config.isLoadedPromise.then(() => {
-      this.setCurrencyKey(this.config.defaultCurrencyKey, false);
-      this.isLoaded = true;
-      this.isLoadedDeferred.resolve();
-    });
+    await this.config.isLoadedPromise;
+    this.setCurrencyKey(this.config.defaultCurrencyKey, false);
+    this.isLoaded = true;
+    this.isLoadedDeferred.resolve();
   }
 
   public setCurrencyKey(currencyKey: ICurrencyKey, saveToConfig: boolean = true) {

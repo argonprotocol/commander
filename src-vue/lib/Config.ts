@@ -23,8 +23,8 @@ console.log('__ARGON_NETWORK_NAME__', __ARGON_NETWORK_NAME__);
 console.log('__ARGON_NETWORK_URL__', __ARGON_NETWORK_URL__);
 console.log('__COMMANDER_INSTANCE__', __COMMANDER_INSTANCE__);
 
-export let NETWORK_NAME = __ARGON_NETWORK_NAME__ || 'mainnet';
-export let NETWORK_URL =
+export const NETWORK_NAME = __ARGON_NETWORK_NAME__ || 'mainnet';
+export const NETWORK_URL =
   __ARGON_NETWORK_URL__ || (NETWORK_NAME === 'mainnet' ? 'wss://rpc.argon.network' : 'wss://rpc.argon.network');
 export const [INSTANCE_NAME, INSTANCE_PORT] = (__COMMANDER_INSTANCE__ || 'default:1420').split(':');
 
@@ -33,8 +33,7 @@ export const TICK_MILLIS: number = env.VITE_TICK_MILLIS || 60e3;
 export const ESPLORA_HOST: string = env.VITE_ESPLORA_HOST || 'https://mempool.space';
 export const BITCOIN_BLOCK_MILLIS: number = env.VITE_BITCOIN_BLOCK_MILLIS || 10 * 60e3; // 10 minutes
 export const DEPLOY_ENV_FILE =
-  { testnet: '.env.testnet', mainnet: '.env.mainnet', local: '.env.localnet' }[NETWORK_NAME as string] ??
-  '.env.mainnet';
+  { testnet: '.env.testnet', mainnet: '.env.mainnet', local: '.env.localnet' }[NETWORK_NAME] ?? '.env.mainnet';
 
 export class Config {
   public readonly version: string = packageJson.version;
@@ -115,11 +114,12 @@ export class Config {
       invokeWithTimeout('fetch_security', {}, 5e3),
     ]);
 
-    this._security = security as unknown as ISecurity;
+    this._security = security as ISecurity;
 
     for (const [key, value] of Object.entries(defaults)) {
       const rawValue = rawData[key as keyof typeof rawData];
       if (rawValue === undefined || rawValue === '') {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         const defaultValue = await value();
         loadedData[key] = defaultValue;
         if (key !== dbFields.biddingRules && key !== dbFields.vaultingRules) {
@@ -144,7 +144,7 @@ export class Config {
       fieldsToSave.add('miningAccountAddress');
       stringifieData['miningAccountAddress'] = JSON.stringify(this.miningAccount.address);
     } else if (this.miningAccount.address !== loadedData.miningAccountAddress) {
-      tauriMessage(
+      await tauriMessage(
         'Your database does not match your current mining account address. Something has corrupted your data.',
         {
           title: 'Mining Account Inconsistency',
@@ -382,12 +382,6 @@ export class Config {
     if (Object.keys(dataToSave).length === 0) return;
 
     await this._db.configTable.insertOrReplace(dataToSave);
-  }
-
-  public async getIpAddress(): Promise<string> {
-    const ipResponse = await fetch('https://api.ipify.org?format=json');
-    const { ip: ipAddress } = await ipResponse.json();
-    return ipAddress;
   }
 
   public resetField(field: keyof typeof dbFields) {

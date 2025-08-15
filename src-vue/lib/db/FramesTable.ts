@@ -155,7 +155,7 @@ export class FramesTable extends BaseTable {
       id, firstTick, lastTick, microgonToUsd, microgonToArgonot, seatCountActive, seatCostTotalFramed, blocksMinedTotal, micronotsMinedTotal, microgonsMinedTotal, microgonsMintedTotal, progress
     FROM Frames ORDER BY id DESC LIMIT 365`);
 
-    const records = convertFromSqliteFields(rawRecords, this.fieldTypes).map((x: any) => {
+    const records = convertFromSqliteFields<IDashboardFrameStats[]>(rawRecords, this.fieldTypes).map((x: any) => {
       const date = dayjs.utc(x.firstTick * TICK_MILLIS).format('YYYY-MM-DD');
 
       // TODO: WE need to calculate the microgon value of micronotsMinted
@@ -228,7 +228,7 @@ export class FramesTable extends BaseTable {
     const [rawRecord] = await this.db.select<[any]>('SELECT * FROM Frames WHERE id = ?', [id]);
     if (!rawRecord) throw new Error(`Frame ${id} not found`);
 
-    return convertFromSqliteFields(rawRecord, this.fieldTypes) as IFrameRecord;
+    return convertFromSqliteFields(rawRecord, this.fieldTypes);
   }
 
   async fetchProcessedCount(): Promise<number> {

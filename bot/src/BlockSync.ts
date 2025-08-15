@@ -105,12 +105,12 @@ export class BlockSync {
     const startingMinerState = await this.accountset.loadRegisteredMiners(this.localClient);
     const registeredMiners = startingMinerState
       .filter(x => x.seat !== undefined)
-      .map((x: any) => ({
+      .map(x => ({
         ...x,
-        startingFrameId: x.seat.frameId,
+        startingFrameId: x.seat?.startingFrameId,
       }));
 
-    this.accountMiners = new AccountMiners(this.accountset, registeredMiners);
+    this.accountMiners = new AccountMiners(this.accountset, registeredMiners as any);
     await this.backfillBestBlockHeader(await this.localClient.rpc.chain.getHeader());
     const data = (await this.blockSyncFile.get())!;
     console.log('After initial sync state', {
@@ -285,7 +285,7 @@ export class BlockSync {
       if (this.isStopping) return;
       throw e;
     }
-    this.scheduleTimer = setTimeout(this.scheduleNext, waitTime);
+    this.scheduleTimer = setTimeout(() => void this.scheduleNext(), waitTime);
   }
 
   async processNext(): Promise<{ processed: IBlock; remaining: number } | undefined> {
@@ -297,7 +297,7 @@ export class BlockSync {
     }
 
     const blockNumber = syncedToBlockNumber + 1;
-    const blockMeta = blockSyncData.blocksByNumber[blockNumber]!;
+    const blockMeta = blockSyncData.blocksByNumber[blockNumber];
 
     console.log('Processing block', blockMeta);
 
@@ -339,17 +339,17 @@ export class BlockSync {
       }
 
       // there can only be one mining cohort that mines a block, so we can safely use the first one
-      const miningCohortActivationFrameId = Object.keys(cohortEarningsAtFrameId)[0];
-      if (miningCohortActivationFrameId) {
+      const miningEarnings = Object.entries(cohortEarningsAtFrameId)[0];
+      if (miningEarnings) {
         const {
           argonsMinted: microgonsMinted,
           argonsMined: microgonsMined,
           argonotsMined: micronotsMined,
-        } = cohortEarningsAtFrameId[miningCohortActivationFrameId as any];
+        } = miningEarnings[1];
 
         x.earningsByBlock[blockNumber] = {
           blockHash: blockMeta.hash,
-          authorCohortActivationFrameId: Number(miningCohortActivationFrameId),
+          authorCohortActivationFrameId: Number(miningEarnings[0]),
           authorAddress: blockMeta.author,
           blockMinedAt: tickDate.toString(),
           microgonFeesCollected: await api.query.blockRewards.blockFees().then(x => x.toBigInt()),
@@ -508,7 +508,7 @@ export class BlockSync {
    * @param headerOrNumber
    */
   private getRpcClient(headerOrNumber: Header | number): ArgonClient {
-    let headerNumber = typeof headerOrNumber === 'number' ? headerOrNumber : headerOrNumber.number.toNumber();
+    const headerNumber = typeof headerOrNumber === 'number' ? headerOrNumber : headerOrNumber.number.toNumber();
     // TODO: this is currently broken when using fast sync, so setting to 0
     const SYNCHED_STATE_DEPTH = 0;
     if (headerNumber < this.latestFinalizedBlockNumber - SYNCHED_STATE_DEPTH) {

@@ -1,5 +1,5 @@
 <template>
-  <InfoIcon class="w-5 h-5 text-gray-300" />
+  <InfoIcon class="h-5 w-5 text-gray-300" />
 </template>
 
 <script setup lang="ts">

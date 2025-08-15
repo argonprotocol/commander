@@ -14,8 +14,8 @@ export function showTooltip(
   const targetRect = targetElem.getBoundingClientRect();
 
   let width: 'parent' | 'auto' | 'auto-plus' = 'auto';
-  let horizontalPosition: 'left' | 'center' | 'right' = 'center';
-  let verticalPosition: 'above' | 'below' = 'above';
+  const horizontalPosition: 'left' | 'center' | 'right' = 'center';
+  const verticalPosition: 'above' | 'below' = 'above';
 
   if (flags.width == 'parent') {
     width = 'parent';

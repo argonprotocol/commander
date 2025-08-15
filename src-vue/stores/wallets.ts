@@ -10,6 +10,7 @@ import { useStats } from './stats.ts';
 import { useCurrency } from './currency.ts';
 import { botEmitter } from '../lib/Bot.ts';
 import { MainchainClient } from '@argonprotocol/commander-calculator';
+import { BotStatus } from '../lib/BotSyncer.ts';
 
 const config = useConfig();
 
@@ -152,7 +153,7 @@ export const useWallets = defineStore('wallets', () => {
   });
 
   botEmitter.on('status-changed', status => {
-    if (isLoaded.value && status === 'Ready') {
+    if (isLoaded.value && status === BotStatus.Ready) {
       // Reload balances when bot status changes
       loadBalances().catch(error => {
         console.error('Error reloading wallet balances:', error);

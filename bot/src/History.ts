@@ -67,7 +67,7 @@ export class History {
     console.log('SAVING ACTIVITIES TO HISTORY FILE', activitiesToSave);
     void this.queue.add(() =>
       this.storage.historyFile(cohortStartingFrameId).mutate((history: IHistoryFile) => {
-        history.activities.push(...(activitiesToSave as IBotActivity[]));
+        history.activities.push(...activitiesToSave);
       }),
     );
   }
@@ -276,8 +276,8 @@ export class History {
 
   private appendActivities(...activities: Omit<IBotActivity, 'id'>[]) {
     for (const activity of activities) {
-      (activity as any).id ??= this.createId(activity.tick);
-      (activity as any).frameId ??= this.cohortStartingFrameId;
+      (activity as IBotActivity).id ??= this.createId(activity.tick);
+      (activity as IBotActivity).frameId ??= this.cohortStartingFrameId;
     }
 
     const cohortFrameId = this.cohortStartingFrameId;

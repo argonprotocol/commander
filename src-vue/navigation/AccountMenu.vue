@@ -1,12 +1,12 @@
 <template>
   <div @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
-    <DropdownMenuRoot :openDelay="0" :closeDelay="0" class="relative pointer-events-auto" v-model:open="isOpen">
+    <DropdownMenuRoot :openDelay="0" :closeDelay="0" class="pointer-events-auto relative" v-model:open="isOpen">
       <DropdownMenuTrigger
         @click="onToggle"
-        class="flex flex-row items-center justify-center text-sm/6 font-semibold text-argon-600/60 cursor-pointer border rounded-md w-[38px] h-[30px] hover:bg-slate-400/10 focus:outline-none hover:border-slate-400/50"
+        class="text-argon-600/60 flex h-[30px] w-[38px] cursor-pointer flex-row items-center justify-center rounded-md border text-sm/6 font-semibold hover:border-slate-400/50 hover:bg-slate-400/10 focus:outline-none"
         :class="[isOpen ? 'border-slate-400/60 bg-slate-400/10' : 'border-slate-400/50']"
       >
-        <ConfigIcon class="w-5 h-5" />
+        <ConfigIcon class="h-5 w-5" />
       </DropdownMenuTrigger>
 
       <DropdownMenuPortal>
@@ -16,14 +16,14 @@
           :align="'end'"
           :alignOffset="0"
           :sideOffset="-3"
-          class="z-50 data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad data-[state=open]:transition-all"
+          class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad z-50 data-[state=open]:transition-all"
         >
           <div
-            class="flex flex-col shrink p-1 rounded bg-argon-menu-bg text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
+            class="bg-argon-menu-bg flex shrink flex-col rounded p-1 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
           >
             <DropdownMenuItem
               @click="() => openBotOverlay()"
-              :class="[installer.isRunning ? 'opacity-30 pointer-events-none' : '']"
+              :class="[installer.isRunning ? 'pointer-events-none opacity-30' : '']"
               class="pt-3 pb-3"
               :disabled="installer.isRunning"
             >
@@ -35,7 +35,7 @@
                 parameters for a new bitcoin vault
               </p>
             </DropdownMenuItem>
-            <DropdownMenuSeparator divider class="bg-slate-400/30 h-[1px] w-full my-1" />
+            <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
             <DropdownMenuItem @click="() => openConfigureStabilizationVaultOverlay()" class="pt-2 pb-3">
               <header v-if="!config.hasSavedVaultingRules">Create Stabilization Vault</header>
               <header v-else>Configure Stabilization Vault Settings</header>
@@ -45,35 +45,35 @@
                 and other parameters for your vault.
               </p>
             </DropdownMenuItem>
-            <DropdownMenuSeparator divider class="bg-slate-400/30 h-[1px] w-full my-1" />
+            <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger class="py-2 relative">
-                <ChevronLeftIcon class="w-5 h-5 absolute left-0.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <DropdownMenuSubTrigger class="relative py-2">
+                <ChevronLeftIcon class="absolute top-1/2 left-0.5 h-5 w-5 -translate-y-1/2 text-gray-400" />
                 <header>Account Wallets</header>
               </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent class="min-w-50 relative -top-1">
+              <DropdownMenuSubContent class="relative -top-1 min-w-50">
                 <div
-                  class="flex flex-col shrink rounded p-1 bg-argon-menu-bg text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
+                  class="bg-argon-menu-bg flex shrink flex-col rounded p-1 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
                 >
                   <DropdownMenuItem class="py-2" @click="() => openFundMiningAccountOverlay()">
                     <header>Mining Wallet</header>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator divider class="bg-slate-400/30 h-[1px] w-full my-1" />
+                  <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
                   <DropdownMenuItem class="py-2" @click="() => openFundVaultingAccountOverlay()">
                     <header>Vaulting Wallet</header>
                   </DropdownMenuItem>
                 </div>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
-            <DropdownMenuSeparator divider class="bg-slate-400/30 h-[1px] w-full my-1" />
+            <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
             <DropdownMenuItem @click="() => openSecuritySettingsOverlay()" class="py-2">
               <header>Security and Recovery</header>
             </DropdownMenuItem>
-            <DropdownMenuSeparator divider class="bg-slate-400/30 h-[1px] w-full my-1" />
+            <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
             <DropdownMenuItem @click="() => openComplianceOverlay()" class="py-2">
               <header>Jurisdictional Compliance</header>
             </DropdownMenuItem>
-            <DropdownMenuSeparator divider class="bg-slate-400/30 h-[1px] w-full my-1" />
+            <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
             <DropdownMenuItem @click="() => openAboutOverlay()" class="py-2">
               <header>About Commander</header>
             </DropdownMenuItem>
@@ -81,7 +81,7 @@
               <header>How to Live Forever</header>
             </DropdownMenuItem> -->
           </div>
-          <DropdownMenuArrow :width="18" :height="10" class="fill-white stroke-gray-300 mt-[0px]" />
+          <DropdownMenuArrow :width="18" :height="10" class="mt-[0px] fill-white stroke-gray-300" />
         </DropdownMenuContent>
       </DropdownMenuPortal>
     </DropdownMenuRoot>
@@ -174,12 +174,12 @@ function openFundVaultingAccountOverlay() {
 @reference "../main.css";
 
 [data-reka-collection-item] {
-  @apply px-4 focus:!text-indigo-600 focus:bg-argon-menu-hover cursor-pointer focus:outline-none;
+  @apply focus:bg-argon-menu-hover cursor-pointer px-4 focus:!text-indigo-600 focus:outline-none;
   header {
-    @apply font-bold text-gray-900 whitespace-nowrap text-right;
+    @apply text-right font-bold whitespace-nowrap text-gray-900;
   }
   p {
-    @apply text-gray-700 whitespace-nowrap text-right font-light;
+    @apply text-right font-light whitespace-nowrap text-gray-700;
     line-height: 1.4em;
   }
 }

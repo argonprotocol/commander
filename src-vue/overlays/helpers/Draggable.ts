@@ -16,6 +16,8 @@ export default class Draggable {
 
     // Bind setModalRef to this to ensure proper context when used as a callback
     this.setModalRef = this.setModalRef.bind(this);
+    this.onMouseDown = this.onMouseDown.bind(this);
+    this.onDragMove = this.onDragMove.bind(this);
   }
 
   public setModalRef(el: Element | Vue.ComponentPublicInstance | null) {
@@ -30,8 +32,10 @@ export default class Draggable {
     this.isDragging = true;
     this.mouseStart = { x: event.clientX, y: event.clientY };
     this.dragStart = { ...this.modalPosition };
-    window.addEventListener('mousemove', this.onDragMove.bind(this));
-    window.addEventListener('mouseup', this.onDragEnd.bind(this));
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    window.addEventListener('mousemove', this.onDragMove);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    window.addEventListener('mouseup', this.onDragEnd);
   }
 
   private onDragMove(e: MouseEvent) {
@@ -67,7 +71,9 @@ export default class Draggable {
 
   private onDragEnd() {
     this.isDragging = false;
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     window.removeEventListener('mousemove', this.onDragMove);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     window.removeEventListener('mouseup', this.onDragEnd);
   }
 }

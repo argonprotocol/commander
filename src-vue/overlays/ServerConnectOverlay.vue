@@ -337,12 +337,12 @@ function highlightCopiedContent() {
 @reference "../main.css";
 
 ul[Steps] li {
-  @apply flex flex-col gap-2 mb-5;
+  @apply mb-5 flex flex-col gap-2;
   header {
     @apply text-lg font-bold;
   }
   [wrapper] {
-    @apply flex flex-row gap-x-10 items-start;
+    @apply flex flex-row items-start gap-x-10;
     & > div {
       @apply grow;
     }
@@ -351,14 +351,14 @@ ul[Steps] li {
     @apply mb-3;
   }
   img {
-    @apply w-60 object-contain border border-black/40 rounded-md relative top-1;
+    @apply relative top-1 w-60 rounded-md border border-black/40 object-contain;
   }
 }
 
 h2 {
   position: relative;
   &:before {
-    @apply bg-gradient-to-r from-argon-menu-bg to-transparent;
+    @apply from-argon-menu-bg bg-gradient-to-r to-transparent;
     content: '';
     display: block;
     width: 30px;
@@ -369,7 +369,7 @@ h2 {
     bottom: -5px;
   }
   &:after {
-    @apply bg-gradient-to-l from-argon-menu-bg to-transparent;
+    @apply from-argon-menu-bg bg-gradient-to-l to-transparent;
     content: '';
     display: block;
     width: 30px;

@@ -1,7 +1,7 @@
 <template>
   <div
     ref="containerRef"
-    class="flex flex-col gap-4 min-h-[90%] pl-4 pr-7 pt-3 pb-5 w-200 overflow-y-auto overflow-x-hidden"
+    class="flex min-h-[90%] w-200 flex-col gap-4 overflow-x-hidden overflow-y-auto pt-3 pr-7 pb-5 pl-4"
   >
     <DiagnosticStep ref="step1" :run="() => diagnostics.isConnected()">
       <heading>Checking SSH connection to cloud machine</heading>
@@ -28,11 +28,11 @@
       <heading>Checking Success of Last Install/Upgrade</heading>
       <success v-slot="{ data }">
         All steps of the last install/upgrade completed successfully.
-        <ul class="grid grid-cols-2 gap-2 mt-2">
+        <ul class="mt-2 grid grid-cols-2 gap-2">
           <li
             v-for="[key, status] in data.steps"
             :key="key"
-            class="text-slate-800/50 whitespace-nowrap font-md font-light pr-10 select-auto cursor-text"
+            class="font-md cursor-text pr-10 font-light whitespace-nowrap text-slate-800/50 select-auto"
           >
             {{ key }} = {{ status }}
           </li>
@@ -45,11 +45,11 @@
       <heading>Checking Remote Server Files Are Up-to-Date</heading>
       <success v-slot="{ data }">
         The remote server files are up-to-date and installed in their correct locations:
-        <ul class="grid grid-cols-3 gap-2 mt-2">
+        <ul class="mt-2 grid grid-cols-3 gap-2">
           <li
             v-for="file in data.files"
             :key="file"
-            class="text-slate-800/50 font-md font-light pr-10 select-auto cursor-text"
+            class="font-md cursor-text pr-10 font-light text-slate-800/50 select-auto"
           >
             {{ file }}
           </li>
@@ -64,11 +64,11 @@
       <heading>Checking Remote Config Files Are Correct</heading>
       <success v-slot="{ data }">
         The remote server files are up-to-date and installed in their correct locations:
-        <ul class="grid grid-cols-3 gap-2 mt-2">
+        <ul class="mt-2 grid grid-cols-3 gap-2">
           <li
             v-for="file in data.files"
             :key="file"
-            class="text-slate-800/50 font-md font-light pr-10 select-auto cursor-text"
+            class="font-md cursor-text pr-10 font-light text-slate-800/50 select-auto"
           >
             {{ file }}
           </li>
@@ -84,11 +84,11 @@
       <heading>Checking Health of Bitcoin Node</heading>
       <success v-slot="{ data }">
         Your bitcoin node appears to be working correctly.
-        <ul class="flex flex-col gap-2 mt-2">
+        <ul class="mt-2 flex flex-col gap-2">
           <li
             v-for="[key, value] in Object.entries(data.info)"
             :key="key"
-            class="text-slate-800/50 font-md font-light pr-10 select-auto cursor-text whitespace-nowrap overflow-hidden text-ellipsis"
+            class="font-md cursor-text overflow-hidden pr-10 font-light text-ellipsis whitespace-nowrap text-slate-800/50 select-auto"
           >
             {{ key }}: {{ value }}
           </li>
@@ -101,11 +101,11 @@
       <heading>Checking Health of Argon Node</heading>
       <success v-slot="{ data }">
         Your argon node appears to be working correctly.
-        <ul class="flex flex-col gap-2 mt-2">
+        <ul class="mt-2 flex flex-col gap-2">
           <li
             v-for="[key, value] in Object.entries(data.info)"
             :key="key"
-            class="text-slate-800/50 font-md font-light pr-10 select-auto cursor-text whitespace-nowrap overflow-hidden text-ellipsis"
+            class="font-md cursor-text overflow-hidden pr-10 font-light text-ellipsis whitespace-nowrap text-slate-800/50 select-auto"
           >
             {{ key }}: {{ value }}
           </li>
@@ -114,7 +114,7 @@
       <failure v-slot="{ error }">Your argon node seems to be having trouble: {{ error?.message }}</failure>
     </DiagnosticStep>
 
-    <div v-if="isAllSuccess" class="pt-5 text-green-600 text-xl font-bold uppercase border-t border-gray-300 mt-5">
+    <div v-if="isAllSuccess" class="mt-5 border-t border-gray-300 pt-5 text-xl font-bold text-green-600 uppercase">
       Your Mining Server Appears to Be Working Correctly!
     </div>
 

@@ -1,6 +1,6 @@
 import { JsonExt, u8aToHex } from '@argonprotocol/mainchain';
-import { mnemonicToMiniSecret, ed25519DeriveHard, keyExtractSuri } from '@polkadot/util-crypto';
-import { jsonStringifyWithBigIntsEnhanced, jsonParseWithBigIntsEnhanced } from '@argonprotocol/commander-calculator';
+import { ed25519DeriveHard, keyExtractSuri, mnemonicToMiniSecret } from '@polkadot/util-crypto';
+import { jsonParseWithBigIntsEnhanced, jsonStringifyWithBigIntsEnhanced } from '@argonprotocol/commander-calculator';
 import { IFieldTypes } from './db/BaseTable.ts';
 
 export function isInt(n: any) {
@@ -86,38 +86,45 @@ export function fromSqliteBigInt(num: number): bigint {
   }
 }
 
-export function convertSqliteBooleans(obj: any, booleanFields: string[]): any {
+export function convertSqliteBooleans<T = any>(obj: any, booleanFields: string[]): T {
   // Handle array of objects
   if (Array.isArray(obj)) {
-    return obj.map(item => convertSqliteBooleans(item, booleanFields));
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return obj.map(item => convertSqliteBooleans(item, booleanFields)) as T;
   }
 
   // Handle single object
   return booleanFields.reduce((acc, fieldName) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     if (!(fieldName in obj)) return acc;
     acc[fieldName] = fromSqliteBoolean(obj[fieldName]);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return acc;
-  }, obj);
+  }, obj) as T;
 }
 
-export function convertSqliteBigInts(obj: any, bigIntFields: string[]): any {
+export function convertSqliteBigInts<T = any>(obj: any, bigIntFields: string[]): T {
   // Handle array of objects
   if (Array.isArray(obj)) {
-    return obj.map(item => convertSqliteBigInts(item, bigIntFields));
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return obj.map(item => convertSqliteBigInts(item, bigIntFields)) as T;
   }
 
   // Handle single object
   return bigIntFields.reduce((acc, fieldName) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     if (!(fieldName in obj)) return acc;
     acc[fieldName] = fromSqliteBigInt(obj[fieldName]);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return acc;
-  }, obj);
+  }, obj) as T;
 }
 
-export function convertFromSqliteFields(obj: any, fields: Partial<Record<keyof IFieldTypes, string[]>>): any {
+export function convertFromSqliteFields<T = any>(obj: any, fields: Partial<Record<keyof IFieldTypes, string[]>>): T {
   // Handle array of objects
   if (Array.isArray(obj)) {
-    return obj.map(item => convertFromSqliteFields(item, fields));
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return obj.map(item => convertFromSqliteFields(item, fields)) as T;
   }
 
   // Handle single object
@@ -141,7 +148,7 @@ export function convertFromSqliteFields(obj: any, fields: Partial<Record<keyof I
       }
     }
   }
-  return obj;
+  return obj as T;
 }
 
 export function deferred<T = void>(): IDeferred<T> {
@@ -199,7 +206,7 @@ export function createDeferred<T>(): {
 } {
   let resolve!: (value: T) => void;
   let reject!: (reason?: any) => void;
-  let promise: Promise<T> = new Promise((res, rej) => {
+  const promise: Promise<T> = new Promise((res, rej) => {
     resolve = res;
     reject = rej;
   });

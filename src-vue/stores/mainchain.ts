@@ -10,6 +10,7 @@ import { type IBiddingRules } from '@argonprotocol/commander-calculator/src/IBid
 import { useBot } from './bot.ts';
 import { botEmitter } from '../lib/Bot.ts';
 import { wrapApi } from '@argonprotocol/commander-calculator/src/ClientWrapper.ts';
+import { BotStatus } from '../lib/BotSyncer.ts';
 
 let archiveClient: Promise<MainchainClient>;
 let ourMinerClient: Promise<MainchainClient>;
@@ -53,7 +54,7 @@ export function getMainchain(): Mainchain {
   if (!mainchain) {
     mainchain = new Mainchain(getMainchainClient(true));
     botEmitter.on('status-changed', async status => {
-      if (status === 'Ready') {
+      if (status === BotStatus.Ready) {
         try {
           const client = await getMinerNodeClient();
           mainchain.client = Promise.resolve(client);

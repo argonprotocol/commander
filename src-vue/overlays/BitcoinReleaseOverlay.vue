@@ -1,21 +1,21 @@
 <template>
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-xl p-6 max-w-lg w-full mx-4">
-      <div class="text-red-700 mb-6" v-if="errorMessage">{{ errorMessage }}</div>
+  <div class="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+    <div class="mx-4 w-full max-w-lg rounded-xl bg-white p-6">
+      <div class="mb-6 text-red-700" v-if="errorMessage">{{ errorMessage }}</div>
       <!-- Step 1: Confirmation -->
       <div v-if="lock.status !== 'vaultCosigned'" class="space-y-6">
         <template v-if="canAfford">
-          <div class="flex justify-between items-center mb-6">
+          <div class="mb-6 flex items-center justify-between">
             <h2 class="text-xl font-bold">Release Bitcoin</h2>
             <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
 
           <div class="mb-6">
-            <p class="text-gray-700 mb-4">
+            <p class="mb-4 text-gray-700">
               You are releasing your {{ numeral(currency.satsToBtc(lock.satoshis)).format('0,0.[00000000]') }} BTC,
               which will remove
               <span class="font-semibold">₳{{ microgonToArgonNm(releasePrice).format('0,0.[000000]') }}</span>
@@ -25,7 +25,7 @@
 
           <!-- Fee Selection -->
           <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-3">
+            <label class="mb-3 block text-sm font-medium text-gray-700">
               How fast would you like this to operate on the Bitcoin network?
             </label>
 
@@ -33,12 +33,12 @@
               <label
                 v-for="rate in feeRates"
                 :key="rate.key"
-                class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                class="flex cursor-pointer items-center rounded-lg border p-3 hover:bg-gray-50"
                 :class="selectedFeeRate === rate.key ? 'border-argon-500 bg-argon-50' : 'border-gray-200'"
               >
                 <input type="radio" :value="rate.key" v-model="selectedFeeRate" class="sr-only" />
                 <div class="flex-1">
-                  <div class="flex justify-between items-center">
+                  <div class="flex items-center justify-between">
                     <span class="font-medium">{{ rate.label }}</span>
                     <span class="text-sm text-gray-600">{{ rate.time }}</span>
                   </div>
@@ -50,28 +50,28 @@
 
           <!-- Destination Address -->
           <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Destination Bitcoin Address</label>
+            <label class="mb-2 block text-sm font-medium text-gray-700">Destination Bitcoin Address</label>
             <input
               v-model="destinationAddress"
               type="text"
               placeholder="bc1q..."
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-argon-500 focus:border-transparent"
+              class="focus:ring-argon-500 w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2"
             />
-            <p class="text-xs text-gray-500 mt-1">Where you want to receive your Bitcoin</p>
+            <p class="mt-1 text-xs text-gray-500">Where you want to receive your Bitcoin</p>
           </div>
 
           <button
             @click="sendReleaseRequest"
             :disabled="!canSendRequest || isLoading"
-            class="w-full py-3 rounded-lg font-medium transition-all"
+            class="w-full rounded-lg py-3 font-medium transition-all"
             :class="
               canSendRequest && !isLoading
-                ? 'bg-red-500 hover:bg-red-600 text-white'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                ? 'bg-red-500 text-white hover:bg-red-600'
+                : 'cursor-not-allowed bg-gray-200 text-gray-400'
             "
           >
             <span v-if="isLoading">
-              <svg class="inline w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="mr-2 inline h-5 w-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="10" stroke-width="4" stroke-linecap="round" class="text-gray-300"></circle>
                 <path
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2.93 6.93A8 8 0 0112 20v4c-6.627 0-12-5.373-12-12h4a8 8 0 008 8v4z"
@@ -86,22 +86,22 @@
             v-if="isLoading"
             :progress="releaseProgress"
             :has-error="errorMessage != ''"
-            class="inline-block w-24 h-4 mr-2"
+            class="mr-2 inline-block h-4 w-24"
           />
         </template>
         <template v-else>
-          <div class="text-red-700 mb-6">
+          <div class="mb-6 text-red-700">
             You must add ₳{{ microgonToArgonNm(neededMicrogons).format('0,0.[000000]') }} to your wallet to release this
             Bitcoin.
           </div>
-          <button @click="$emit('close')" class="w-full py-3 bg-gray-200 hover:bg-gray-300 rounded-lg">Close</button>
+          <button @click="$emit('close')" class="w-full rounded-lg bg-gray-200 py-3 hover:bg-gray-300">Close</button>
         </template>
       </div>
 
-      <div v-else class="text-center py-8">
+      <div v-else class="py-8 text-center">
         <div class="mb-6">
-          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+            <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -111,24 +111,24 @@
             </svg>
           </div>
 
-          <h3 class="text-lg font-semibold mb-2">Bitcoin Partially Released</h3>
-          <ProgressBar :progress="releaseProgress" :has-error="errorMessage != ''" class="inline-block w-24 h-4 mr-2" />
+          <h3 class="mb-2 text-lg font-semibold">Bitcoin Partially Released</h3>
+          <ProgressBar :progress="releaseProgress" :has-error="errorMessage != ''" class="mr-2 inline-block h-4 w-24" />
           <p class="text-sm text-gray-600">
             You must import this raw transaction into your bitcoin wallet to broadcast it to the Bitcoin network.
           </p>
 
-          <div class="flex flex-col mt-4 items-center">
-            <div class="flex flex-col w-full max-w-44 items-center">
-              <BitcoinQrCode class="w-44 h-44 mb-3" :size="200" :bytes="releasedTxBytes" v-if="releasedTxBytes" />
-              <CopyToClipboard :content="releasedTxHex" class="relative mb-3 mr-5 cursor-pointer">
+          <div class="mt-4 flex flex-col items-center">
+            <div class="flex w-full max-w-44 flex-col items-center">
+              <BitcoinQrCode class="mb-3 h-44 w-44" :size="200" :bytes="releasedTxBytes" v-if="releasedTxBytes" />
+              <CopyToClipboard :content="releasedTxHex" class="relative mr-5 mb-3 cursor-pointer">
                 <span class="opacity-80">
                   {{ abreviateAddress(releasedTxHex, 10) }}
-                  <CopyIcon class="w-4 h-4 ml-1 inline-block" />
+                  <CopyIcon class="ml-1 inline-block h-4 w-4" />
                 </span>
                 <template #copied>
-                  <div class="absolute top-0 left-0 w-full h-full pointer-events-none">
+                  <div class="pointer-events-none absolute top-0 left-0 h-full w-full">
                     {{ abreviateAddress(releasedTxHex, 10) }}
-                    <CopyIcon class="w-4 h-4 ml-1 inline-block" />
+                    <CopyIcon class="ml-1 inline-block h-4 w-4" />
                   </div>
                 </template>
               </CopyToClipboard>
@@ -136,7 +136,7 @@
           </div>
         </div>
 
-        <button @click="$emit('close')" class="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg">Close</button>
+        <button @click="$emit('close')" class="rounded-lg bg-gray-200 px-6 py-2 hover:bg-gray-300">Close</button>
       </div>
     </div>
   </div>

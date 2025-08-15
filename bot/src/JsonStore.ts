@@ -19,11 +19,11 @@ export class JsonStore<T extends Record<string, any> & ILastModifiedAt> {
       if (!this.data) {
         this.data = structuredClone(this.defaults) as T;
       }
-      const result = await mutateFn(this.data!);
+      const result = await mutateFn(this.data);
       if (result === false) return false;
-      this.data!.lastModifiedAt = new Date();
+      this.data.lastModifiedAt = new Date();
       // filter non properties
-      this.data = Object.fromEntries(Object.entries(this.data!).filter(([key]) => key in this.defaults)) as T;
+      this.data = Object.fromEntries(Object.entries(this.data).filter(([key]) => key in this.defaults)) as T;
       await atomicWrite(this.path, JsonExt.stringify(this.data, 2));
       return true;
     });
@@ -48,7 +48,8 @@ export class JsonStore<T extends Record<string, any> & ILastModifiedAt> {
     this.defaults = await this.defaultsFn();
     if (this.data === undefined) {
       try {
-        const data = await fs.promises.readFile(this.path, 'utf-8').then(JsonExt.parse);
+        // eslint-disable-next-line @typescript-eslint/unbound-method
+        const data = (await fs.promises.readFile(this.path, 'utf-8').then(JsonExt.parse)) as T;
         if (data.lastModifiedAt) {
           data.lastModifiedAt = new Date(data.lastModifiedAt);
         }
@@ -64,7 +65,7 @@ async function atomicWrite(path: string, contents: string) {
   try {
     await fs.promises.rename(tmp, path);
   } catch (e: unknown) {
-    if ((e as any).code === 'ENOENT') {
+    if (e && typeof e === 'object' && 'code' in e && e.code === 'ENOENT') {
       console.log(`It seems ${tmp} was already saved... nothing to worry about `);
     } else {
       throw e;
