@@ -382,6 +382,7 @@ function calculateMicronotsRequired(): bigint {
   if (rules.value?.seatGoalType === SeatGoalType.Max) {
     possibleSeats = Math.min(possibleSeats, rules.value.seatGoalCount);
   }
+  possibleSeats = Math.min(possibleSeats, calculatorData.miningSeatCount);
 
   const totalMicronotsRequired = BigInt(possibleSeats) * calculatorData.micronotsRequiredForBid;
 
@@ -442,7 +443,15 @@ function updateAPYs() {
   );
 }
 
-Vue.watch(rules, updateAPYs, { deep: true });
+Vue.watch(
+  rules,
+  () => {
+    if (isOpen.value) {
+      updateAPYs();
+    }
+  },
+  { deep: true },
+);
 
 basicEmitter.on('openBotOverlay', async () => {
   if (isOpen.value) return;
