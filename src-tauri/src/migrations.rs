@@ -34,16 +34,14 @@ impl MigrationSource<'static> for MigrationList {
 }
 
 pub fn get_migrations() -> Vec<Migration> {
-    MIGRATIONS_DIR
+    let mut out: Vec<Migration> = MIGRATIONS_DIR
         .dirs()
         .filter_map(|dir| {
             let dir_name = dir.path().file_stem()?.to_str()?;
-            let file_path = format!("{}/up.sql", dir.path().display());
-            let file = MIGRATIONS_DIR.get_file(&file_path)?;
+            let file = dir.get_file("up.sql")?;
             println!(
-                "Processing migration file: {}",
-                file_path,
-                // file.contents_utf8()?
+                "Processing migration dir: {}",
+                dir_name,
             );
             let mut parts = dir_name.splitn(2, '-');
             let version = parts.next()?.parse::<i64>().ok()?;
@@ -57,10 +55,12 @@ pub fn get_migrations() -> Vec<Migration> {
                 kind: MigrationKind::Up,
             })
         })
-        .collect()
+        .collect();
+    out.sort_by_key(|m| m.version);
+    out
 }
 
-pub async fn run_db_migrations(absolute_db_path: PathBuf) -> Result<(), String> {    
+pub async fn run_db_migrations(absolute_db_path: PathBuf) -> Result<(), String> {
     let opts = sqlx::sqlite::SqliteConnectOptions::new()
         .filename(&absolute_db_path)
         .create_if_missing(true);
@@ -68,7 +68,7 @@ pub async fn run_db_migrations(absolute_db_path: PathBuf) -> Result<(), String> 
     let pool = sqlx::SqlitePool::connect_with(opts)
         .await
         .map_err(|e| format!("Failed to connect to database: {}", e))?;
-    
+
     let migrations = MigrationList(get_migrations());
     let migrator = Migrator::new(migrations)
         .await
