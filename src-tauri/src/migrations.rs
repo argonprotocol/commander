@@ -38,7 +38,8 @@ pub fn get_migrations() -> Vec<Migration> {
         .dirs()
         .filter_map(|dir| {
             let dir_name = dir.path().file_stem()?.to_str()?;
-            let file = dir.get_file("up.sql")?;
+            let up_path = dir.path().join("up.sql");
+            let file = dir.get_file(up_path)?;
             println!(
                 "Processing migration dir: {}",
                 dir_name,
