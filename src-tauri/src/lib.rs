@@ -203,7 +203,7 @@ pub fn run() {
 
     let relative_config_dir = Utils::get_relative_config_instance_dir();
     let db_relative_path = relative_config_dir.join("database.sqlite");
-    let db_url = format!("sqlite:{}", db_relative_path.display());
+    let db_url = format!("sqlite:{}", db_relative_path.display()).replace("\\", "/");
     let migrations = migrations::get_migrations();
 
     let network_name_clone = network_name.clone();
