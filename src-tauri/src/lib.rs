@@ -197,7 +197,7 @@ pub fn run() {
 
     let network_name = Utils::get_network_name();
     let instance_name = Utils::get_instance_name();
-    let enable_auto_update = option_env!("ARGON_ENABLE_AUTO_UPDATE")
+    let enable_auto_update = option_env!("COMMANDER_ENABLE_AUTOUPDATE")
         .map_or(true, |v| v == "true");
     let logger = init_logger(&network_name, &instance_name);
 
@@ -215,7 +215,7 @@ pub fn run() {
             let window = app.get_webview_window("main").unwrap();
             window.eval(format!("window.__COMMANDER_INSTANCE__ = '{}'", instance_name_clone)).expect("Failed to set instance name in window");
             window.eval(format!("window.__ARGON_NETWORK_NAME__ = '{}'", network_name_clone)).expect("Failed to set network name in window");
-            window.eval(format!("window.__ARGON_ENABLE_AUTO_UPDATE__ = {}", enable_auto_update)).expect("Failed to set experimental flag in window");
+            window.eval(format!("window.__COMMANDER_ENABLE_AUTOUPDATE__ = {}", enable_auto_update)).expect("Failed to set experimental flag in window");
         })
         .setup(move |app| {
             log::info!(

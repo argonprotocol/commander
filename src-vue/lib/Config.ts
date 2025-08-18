@@ -24,7 +24,7 @@ console.log('__ARGON_NETWORK_NAME__', __ARGON_NETWORK_NAME__);
 console.log('__COMMANDER_INSTANCE__', __COMMANDER_INSTANCE__);
 
 export const NETWORK_NAME = __ARGON_NETWORK_NAME__ || 'mainnet';
-export const ENABLE_AUTO_UPDATE = __ARGON_ENABLE_AUTO_UPDATE__ ?? false;
+export const ENABLE_AUTO_UPDATE = __COMMANDER_ENABLE_AUTOUPDATE__ ?? false;
 const networkConfig = AppConfig[NETWORK_NAME as keyof typeof AppConfig] ?? AppConfig.mainnet;
 export const NETWORK_URL = networkConfig.archiveUrl;
 export const [INSTANCE_NAME, INSTANCE_PORT] = (__COMMANDER_INSTANCE__ || 'default:1420').split(':');

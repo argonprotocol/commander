@@ -10,4 +10,4 @@ declare module '*.vue' {
 // Global variables defined by Vite
 declare const __ARGON_NETWORK_NAME__: string;
 declare const __COMMANDER_INSTANCE__: string;
-declare const __ARGON_ENABLE_AUTO_UPDATE__: boolean;
+declare const __COMMANDER_ENABLE_AUTOUPDATE__: boolean;
