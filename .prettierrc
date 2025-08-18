@@ -7,5 +7,5 @@
   "printWidth": 120,
   "htmlWhitespaceSensitivity": "ignore",
   "plugins": ["prettier-plugin-tailwindcss"],
-  "endOfLine": "crlf"
+  "endOfLine": "lf"
 }
