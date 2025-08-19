@@ -128,7 +128,7 @@ export class Vaults {
     return revenue;
   }
 
-  public contributedCapital(vaultId: number, minimumFrameId: number, maxFrames = 10): bigint {
+  public contributedCapital(vaultId: number, maxFrames = 10): bigint {
     const vaultRevenue = this.stats?.vaultsById[vaultId];
     if (!vaultRevenue) return 0n;
 
@@ -137,7 +137,7 @@ export class Vaults {
       .reduce((total, change) => total + change.liquidityPool.externalCapital + change.liquidityPool.vaultCapital, 0n);
   }
 
-  public poolEarnings(vaultId: number, minimumFrameId: number, maxFrames = 10): bigint {
+  public poolEarnings(vaultId: number, maxFrames = 10): bigint {
     const vaultRevenue = this.stats?.vaultsById[vaultId];
     if (!vaultRevenue) return 0n;
 
@@ -153,6 +153,16 @@ export class Vaults {
     return vaultRevenue.changesByFrame.slice(0, 365).reduce((total, change) => total + change.bitcoinFeeRevenue, 0n);
   }
 
+  public getLockedBitcoin(vaultId: number): bigint {
+    const vaultRevenue = this.stats?.vaultsById[vaultId];
+    if (!vaultRevenue) return 0n;
+
+    return (
+      vaultRevenue.changesByFrame.reduce((total, change) => total + change.satoshisAdded, 0n) +
+      vaultRevenue.baseline.satoshis
+    );
+  }
+
   public async getTotalLiquidityRealized(refresh = true) {
     if (refresh) {
       await this.refreshRevenue();
@@ -164,6 +174,19 @@ export class Vaults {
         vault.changesByFrame.reduce((sum, change) => sum + change.microgonLiquidityAdded, 0n)
       );
     }, 0n);
+  }
+
+  public getTotalFeeRevenue(vaultId: number): bigint {
+    const vault = this.vaultsById[vaultId];
+    if (!vault) return 0n;
+
+    const vaultRevenue = this.stats?.vaultsById[vaultId];
+    if (!vaultRevenue) return 0n;
+
+    return (
+      vaultRevenue.baseline.feeRevenue +
+      vaultRevenue.changesByFrame.reduce((sum, change) => sum + change.bitcoinFeeRevenue, 0n)
+    );
   }
 
   public getTotalSatoshisLocked(): bigint {
@@ -201,6 +224,36 @@ export class Vaults {
       lowestPrice = lockPrice;
     }
     return lowestPrice;
+  }
+
+  public getLiquidityFillPct(vaultId: number): number {
+    const vault = this.vaultsById[vaultId];
+    if (!vault) return 0;
+
+    const epochPoolCapital = Number(this.contributedCapital(vaultId, 10));
+    const activatedSecuritization = Number(
+      this.stats?.vaultsById[vaultId]?.changesByFrame[0]?.securitizationActivated ?? 0n,
+    );
+
+    if (activatedSecuritization === 0) return 0;
+
+    return Math.round((epochPoolCapital / activatedSecuritization) * 100);
+  }
+
+  public calculateVaultApy(vaultId: number): number {
+    const vault = this.vaultsById[vaultId];
+
+    const yearFeeRevenue = Number(this.getTrailingYearVaultRevenue(vaultId));
+
+    const epochPoolCapital = Number(this.contributedCapital(vaultId, 10));
+
+    const epochPoolEarnings = Number(this.poolEarnings(vaultId, 10));
+    const epochPoolEarningsRatio = epochPoolCapital ? epochPoolEarnings / epochPoolCapital : 0;
+
+    const poolApy = (1 + epochPoolEarningsRatio) ** 36.5 - 1;
+    const feeApr = vault.securitization > 0n ? yearFeeRevenue / Number(vault.securitization) : 0;
+
+    return poolApy + feeApr;
   }
 
   private async saveStats(): Promise<void> {
