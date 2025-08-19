@@ -9,20 +9,24 @@
     <ol>
       <li>
         <header
-          @click="toggleOption(Option.ReloadAppUi)"
+          @click="toggleOption(AdvancedRestartOption.ReloadAppUi)"
           class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
-          <Checkbox :isChecked="options[Option.ReloadAppUi].isChecked" :size="5" />
+          <Checkbox :isChecked="options[AdvancedRestartOption.ReloadAppUi].isChecked" :size="5" />
           <span>Reload App Interface</span>
         </header>
         <p class="text-md ml-7 font-light">This refreshes the UI. It does not affect the server or the database.</p>
       </li>
-      <li :class="[options[Option.RecreateLocalDatabase].isDisabled ? 'pointer-events-none opacity-50' : '']">
+      <li
+        :class="[
+          options[AdvancedRestartOption.RecreateLocalDatabase].isDisabled ? 'pointer-events-none opacity-50' : '',
+        ]"
+      >
         <header
-          @click="toggleOption(Option.RecreateLocalDatabase)"
+          @click="toggleOption(AdvancedRestartOption.RecreateLocalDatabase)"
           class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
-          <Checkbox :isChecked="options[Option.RecreateLocalDatabase].isChecked" :size="5" />
+          <Checkbox :isChecked="options[AdvancedRestartOption.RecreateLocalDatabase].isChecked" :size="5" />
           <span>Recreate App Database</span>
         </header>
         <p class="text-md ml-7 font-light">
@@ -30,12 +34,12 @@
           gotten out of sync between the server and your app.
         </p>
       </li>
-      <li :class="[options[Option.RestartDockers].isDisabled ? 'pointer-events-none opacity-50' : '']">
+      <li :class="[options[AdvancedRestartOption.RestartDockers].isDisabled ? 'pointer-events-none opacity-50' : '']">
         <header
-          @click="toggleOption(Option.RestartDockers)"
+          @click="toggleOption(AdvancedRestartOption.RestartDockers)"
           class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
-          <Checkbox :isChecked="options[Option.RestartDockers].isChecked" :size="5" />
+          <Checkbox :isChecked="options[AdvancedRestartOption.RestartDockers].isChecked" :size="5" />
           <span>Restart Dockers on Cloud Machine</span>
         </header>
         <p class="text-md ml-7 font-light">
@@ -44,12 +48,18 @@
         </p>
       </li>
 
-      <li :class="[options[Option.ResyncBiddingDataOnCloudMachine].isDisabled ? 'pointer-events-none opacity-50' : '']">
+      <li
+        :class="[
+          options[AdvancedRestartOption.ResyncBiddingDataOnCloudMachine].isDisabled
+            ? 'pointer-events-none opacity-50'
+            : '',
+        ]"
+      >
         <header
-          @click="toggleOption(Option.ResyncBiddingDataOnCloudMachine)"
+          @click="toggleOption(AdvancedRestartOption.ResyncBiddingDataOnCloudMachine)"
           class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
-          <Checkbox :isChecked="options[Option.ResyncBiddingDataOnCloudMachine].isChecked" :size="5" />
+          <Checkbox :isChecked="options[AdvancedRestartOption.ResyncBiddingDataOnCloudMachine].isChecked" :size="5" />
           <span>Resync Bidding Data on Cloud Machine</span>
         </header>
         <p class="text-md ml-7 font-light">
@@ -58,13 +68,17 @@
       </li>
 
       <li
-        :class="[options[Option.ResyncBitcoinBlocksOnCloudMachine].isDisabled ? 'pointer-events-none opacity-50' : '']"
+        :class="[
+          options[AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine].isDisabled
+            ? 'pointer-events-none opacity-50'
+            : '',
+        ]"
       >
         <header
-          @click="toggleOption(Option.ResyncBitcoinBlocksOnCloudMachine)"
+          @click="toggleOption(AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine)"
           class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
-          <Checkbox :isChecked="options[Option.ResyncBitcoinBlocksOnCloudMachine].isChecked" :size="5" />
+          <Checkbox :isChecked="options[AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine].isChecked" :size="5" />
           <span>Resync Bitcoin Node on Cloud Machine</span>
         </header>
         <p class="text-md ml-7 font-light">
@@ -73,12 +87,18 @@
         </p>
       </li>
 
-      <li :class="[options[Option.ResyncArgonBlocksOnCloudMachine].isDisabled ? 'pointer-events-none opacity-50' : '']">
+      <li
+        :class="[
+          options[AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine].isDisabled
+            ? 'pointer-events-none opacity-50'
+            : '',
+        ]"
+      >
         <header
-          @click="toggleOption(Option.ResyncArgonBlocksOnCloudMachine)"
+          @click="toggleOption(AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine)"
           class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
-          <Checkbox :isChecked="options[Option.ResyncArgonBlocksOnCloudMachine].isChecked" :size="5" />
+          <Checkbox :isChecked="options[AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine].isChecked" :size="5" />
           <span>Resync Argon Node on Cloud Machine</span>
         </header>
         <p class="text-md ml-7 font-light">
@@ -89,14 +109,19 @@
 
       <li
         :class="[
-          options[Option.CompletelyWipeAndReinstallCloudMachine].isDisabled ? 'pointer-events-none opacity-50' : '',
+          options[AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine].isDisabled
+            ? 'pointer-events-none opacity-50'
+            : '',
         ]"
       >
         <header
-          @click="toggleOption(Option.CompletelyWipeAndReinstallCloudMachine)"
+          @click="toggleOption(AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine)"
           class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
         >
-          <Checkbox :isChecked="options[Option.CompletelyWipeAndReinstallCloudMachine].isChecked" :size="5" />
+          <Checkbox
+            :isChecked="options[AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine].isChecked"
+            :size="5"
+          />
           <span>Completely Wipe and Reinstall Cloud Machine</span>
         </header>
         <p class="text-md ml-7 font-light">
@@ -116,22 +141,11 @@
   </div>
 </template>
 
-<script lang="ts">
-export enum Option {
-  ReloadAppUi = 'ReloadAppUi',
-  RecreateLocalDatabase = 'RecreateLocalDatabase',
-  RestartDockers = 'RestartDockers',
-  ResyncBiddingDataOnCloudMachine = 'ResyncBiddingDataOnCloudMachine',
-  ResyncBitcoinBlocksOnCloudMachine = 'ResyncBitcoinBlocksOnCloudMachine',
-  ResyncArgonBlocksOnCloudMachine = 'ResyncArgonBlocksOnCloudMachine',
-  CompletelyWipeAndReinstallCloudMachine = 'CompletelyWipeAndReinstallCloudMachine',
-}
-</script>
-
 <script setup lang="ts">
 import * as Vue from 'vue';
 import Checkbox from '../../components/Checkbox.vue';
 import Restarter from '../../lib/Restarter';
+import { AdvancedRestartOption } from '../../interfaces/IAdvancedRestartOption';
 import { getDbPromise } from '../../stores/helpers/dbPromise';
 import { useConfig } from '../../stores/config';
 import { useInstaller } from '../../stores/installer';
@@ -146,37 +160,37 @@ const restarter = new Restarter(dbPromise);
 const isRestarting = Vue.ref(false);
 
 const options = Vue.ref({
-  [Option.ReloadAppUi]: {
+  [AdvancedRestartOption.ReloadAppUi]: {
     isChecked: false,
     isDisabled: false,
     checkedBy: '',
   },
-  [Option.RecreateLocalDatabase]: {
+  [AdvancedRestartOption.RecreateLocalDatabase]: {
     isChecked: false,
     isDisabled: installer.isRunning,
     checkedBy: '',
   },
-  [Option.RestartDockers]: {
+  [AdvancedRestartOption.RestartDockers]: {
     isChecked: false,
     isDisabled: !config.isServerInstalled,
     checkedBy: '',
   },
-  [Option.ResyncBiddingDataOnCloudMachine]: {
+  [AdvancedRestartOption.ResyncBiddingDataOnCloudMachine]: {
     isChecked: false,
     isDisabled: !config.isServerInstalled,
     checkedBy: '',
   },
-  [Option.ResyncBitcoinBlocksOnCloudMachine]: {
+  [AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine]: {
     isChecked: false,
     isDisabled: !config.isServerInstalled,
     checkedBy: '',
   },
-  [Option.ResyncArgonBlocksOnCloudMachine]: {
+  [AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine]: {
     isChecked: false,
     isDisabled: !config.isServerInstalled,
     checkedBy: '',
   },
-  [Option.CompletelyWipeAndReinstallCloudMachine]: {
+  [AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine]: {
     isChecked: false,
     isDisabled: !config.isServerInstalled && !installer.isRunning,
     checkedBy: '',
@@ -198,38 +212,78 @@ function handleSubOption(key: keyof typeof options.value, subKey: keyof typeof o
   }
 }
 
-function toggleOption(key: Option) {
+function toggleOption(key: AdvancedRestartOption) {
   const isChecked = !options.value[key].isChecked;
   options.value[key].isChecked = isChecked;
   options.value[key].checkedBy = isChecked ? 'user' : '';
 
-  if (key === Option.RecreateLocalDatabase) {
-    handleSubOption(Option.RecreateLocalDatabase, Option.ReloadAppUi, isChecked);
-  } else if (key === Option.RestartDockers) {
-    handleSubOption(Option.RestartDockers, Option.ReloadAppUi, isChecked);
-  } else if (key === Option.ResyncBiddingDataOnCloudMachine) {
-    handleSubOption(Option.ResyncBiddingDataOnCloudMachine, Option.RestartDockers, isChecked);
-  } else if (key === Option.ResyncBitcoinBlocksOnCloudMachine) {
-    handleSubOption(Option.ResyncBitcoinBlocksOnCloudMachine, Option.RestartDockers, isChecked);
-  } else if (key === Option.ResyncArgonBlocksOnCloudMachine) {
-    handleSubOption(Option.ResyncArgonBlocksOnCloudMachine, Option.RestartDockers, isChecked);
-    handleSubOption(Option.ResyncArgonBlocksOnCloudMachine, Option.ResyncBiddingDataOnCloudMachine, isChecked);
-  } else if (key === Option.CompletelyWipeAndReinstallCloudMachine) {
-    handleSubOption(Option.CompletelyWipeAndReinstallCloudMachine, Option.ReloadAppUi, isChecked);
-    handleSubOption(Option.CompletelyWipeAndReinstallCloudMachine, Option.RecreateLocalDatabase, isChecked);
-    handleSubOption(Option.CompletelyWipeAndReinstallCloudMachine, Option.RestartDockers, isChecked);
-    handleSubOption(Option.CompletelyWipeAndReinstallCloudMachine, Option.ResyncBiddingDataOnCloudMachine, isChecked);
-    handleSubOption(Option.CompletelyWipeAndReinstallCloudMachine, Option.ResyncBitcoinBlocksOnCloudMachine, isChecked);
-    handleSubOption(Option.CompletelyWipeAndReinstallCloudMachine, Option.ResyncArgonBlocksOnCloudMachine, isChecked);
+  if (key === AdvancedRestartOption.RecreateLocalDatabase) {
+    handleSubOption(AdvancedRestartOption.RecreateLocalDatabase, AdvancedRestartOption.ReloadAppUi, isChecked);
+  } else if (key === AdvancedRestartOption.RestartDockers) {
+    handleSubOption(AdvancedRestartOption.RestartDockers, AdvancedRestartOption.ReloadAppUi, isChecked);
+  } else if (key === AdvancedRestartOption.ResyncBiddingDataOnCloudMachine) {
+    handleSubOption(
+      AdvancedRestartOption.ResyncBiddingDataOnCloudMachine,
+      AdvancedRestartOption.RestartDockers,
+      isChecked,
+    );
+  } else if (key === AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine) {
+    handleSubOption(
+      AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine,
+      AdvancedRestartOption.RestartDockers,
+      isChecked,
+    );
+  } else if (key === AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine) {
+    handleSubOption(
+      AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine,
+      AdvancedRestartOption.RestartDockers,
+      isChecked,
+    );
+    handleSubOption(
+      AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine,
+      AdvancedRestartOption.ResyncBiddingDataOnCloudMachine,
+      isChecked,
+    );
+  } else if (key === AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine) {
+    handleSubOption(
+      AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine,
+      AdvancedRestartOption.ReloadAppUi,
+      isChecked,
+    );
+    handleSubOption(
+      AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine,
+      AdvancedRestartOption.RecreateLocalDatabase,
+      isChecked,
+    );
+    handleSubOption(
+      AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine,
+      AdvancedRestartOption.RestartDockers,
+      isChecked,
+    );
+    handleSubOption(
+      AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine,
+      AdvancedRestartOption.ResyncBiddingDataOnCloudMachine,
+      isChecked,
+    );
+    handleSubOption(
+      AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine,
+      AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine,
+      isChecked,
+    );
+    handleSubOption(
+      AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine,
+      AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine,
+      isChecked,
+    );
   }
 }
 
 async function runSelectedOptions() {
   isRestarting.value = true;
-  const toRestart = new Set<Option>();
+  const toRestart = new Set<AdvancedRestartOption>();
   for (const [key, { isChecked }] of Object.entries(options.value)) {
     if (isChecked) {
-      toRestart.add(key as Option);
+      toRestart.add(key as AdvancedRestartOption);
     }
   }
   await restarter.run(toRestart);
@@ -239,10 +293,10 @@ async function runSelectedOptions() {
 function updateDisabledOptions() {
   if (!installer.isRunning && !bot.isSyncing) return;
 
-  options.value[Option.RestartDockers].isDisabled = true;
-  options.value[Option.ResyncBiddingDataOnCloudMachine].isDisabled = true;
-  options.value[Option.ResyncBitcoinBlocksOnCloudMachine].isDisabled = true;
-  options.value[Option.ResyncArgonBlocksOnCloudMachine].isDisabled = true;
+  options.value[AdvancedRestartOption.RestartDockers].isDisabled = true;
+  options.value[AdvancedRestartOption.ResyncBiddingDataOnCloudMachine].isDisabled = true;
+  options.value[AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine].isDisabled = true;
+  options.value[AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine].isDisabled = true;
 }
 
 Vue.watch(() => installer.isRunning, updateDisabledOptions, { immediate: true });

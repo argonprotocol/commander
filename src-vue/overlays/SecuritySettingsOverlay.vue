@@ -30,7 +30,7 @@
               @mousedown="draggable.onMouseDown($event)"
             >
               <div v-if="currentScreen !== 'overview'" class="flex flex-row items-center hover:bg-[#f1f3f7] rounded-md p-1 pl-0 mr-2 cursor-pointer">
-                <ChevronLeftIcon @click="goto('overview')" class="w-6 h-6 cursor-pointer relative -top-0.25" />
+                <ChevronLeftIcon @click="goBack()" class="w-6 h-6 cursor-pointer relative -top-0.25" />
               </div>
               <DialogTitle class="grow">{{ title }}</DialogTitle>
               <DialogClose
@@ -41,13 +41,13 @@
               </DialogClose>
             </h2>
 
-            <SecuritySettingsOverview v-if="currentScreen === 'overview'" @close="closeOverlay" @goto="goto" />
-            <SecuritySettingsMnemonics v-if="currentScreen === 'mnemonics'" @close="closeOverlay" @goto="goto" />
-            <SecuritySettingsSSHKeys v-if="currentScreen === 'ssh'" @close="closeOverlay" @goto="goto" />
-            <SecuritySettingsEncrypt v-if="currentScreen === 'encrypt'" @close="closeOverlay" @goto="goto" />
-            <ExportRecoveryFile v-if="currentScreen === 'export'" @close="closeOverlay" @goto="goto" />
-            <Import v-if="currentScreen === 'import'" @close="closeOverlay" @goto="goto" />
-            <ImportFromMnemonic v-if="currentScreen === 'import-from-mnemonic'" @close="closeOverlay" @goto="goto" />
+            <SecuritySettingsOverview v-if="currentScreen === 'overview'" @close="closeOverlay" @goTo="goTo" />
+            <SecuritySettingsMnemonics v-if="currentScreen === 'mnemonics'" @close="closeOverlay" @goTo="goTo" />
+            <SecuritySettingsSSHKeys v-if="currentScreen === 'ssh'" @close="closeOverlay" @goTo="goTo" />
+            <SecuritySettingsEncrypt v-if="currentScreen === 'encrypt'" @close="closeOverlay" @goTo="goTo" />
+            <ExportRecoveryFile v-if="currentScreen === 'export'" @close="closeOverlay" @goTo="goTo" />
+            <Import v-if="currentScreen === 'import'" @close="closeOverlay" @goTo="goTo" />
+            <ImportFromMnemonic v-if="currentScreen === 'import-from-mnemonic'" @close="closeOverlay" @goTo="goTo" />
           </Motion>
         </DialogContent>
       </AnimatePresence>
@@ -109,7 +109,15 @@ function closeOverlay() {
   isOpen.value = false;
 }
 
-function goto(screen: 'overview' | 'encrypt' | 'mnemonics' | 'ssh' | 'import' | 'export' | 'import-from-mnemonic') {
+function goBack() {
+  if (currentScreen.value === 'import-from-mnemonic') {
+    currentScreen.value = 'import';
+  } else {
+    currentScreen.value = 'overview';
+  }
+}
+
+function goTo(screen: 'overview' | 'encrypt' | 'mnemonics' | 'ssh' | 'import' | 'export' | 'import-from-mnemonic') {
   currentScreen.value = screen;
   if (screen === 'overview') {
     overlayWidth.value = 640;

@@ -19,7 +19,7 @@ import InputMenu from '../../components/InputMenu.vue';
 import { useConfig } from '../../stores/config';
 import Countries from '../../lib/Countries';
 
-const emit = defineEmits(['close', 'goto']);
+const emit = defineEmits(['close', 'goTo']);
 
 const config = useConfig();
 const countryCode = Vue.ref(config.userJurisdiction.countryCode);
@@ -29,7 +29,7 @@ async function saveChanges() {
   if (!country) return;
 
   if (config.userJurisdiction.countryCode === country.value) {
-    emit('goto', 'overview');
+    emit('goTo', 'overview');
     return;
   }
 
@@ -43,6 +43,6 @@ async function saveChanges() {
     longitude: '',
   };
   await config.save();
-  emit('goto', 'overview');
+  emit('goTo', 'overview');
 }
 </script>

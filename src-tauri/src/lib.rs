@@ -134,6 +134,14 @@ async fn overwrite_security(app: AppHandle, master_mnemonic: String, ssh_public_
 }
 
 #[tauri::command]
+async fn overwrite_mnemonic(app: AppHandle, mnemonic: String) -> Result<String, String> {
+    log::info!("overwrite_mnemonic");
+    let mut security = security::Security::load(&app).map_err(|e| e.to_string())?;
+    security.master_mnemonic = mnemonic;
+    security.save(&app).map_err(|e| e.to_string())?;
+    Ok("success".to_string())
+}
+#[tauri::command]
 async fn run_db_migrations(app: AppHandle) -> Result<(), String> {
     log::info!("run_db_migrations");
     let absolute_db_path = Utils::get_absolute_config_instance_dir(&app).join("database.sqlite");
@@ -269,6 +277,7 @@ pub fn run() {
             read_embedded_file,
             fetch_security,
             overwrite_security,
+            overwrite_mnemonic,
             run_db_migrations,
         ])
         .run(tauri::generate_context!())

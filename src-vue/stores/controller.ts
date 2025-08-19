@@ -30,10 +30,17 @@ export const useController = defineStore('controller', () => {
     isLoadedResolve();
   }
 
-  async function importAccount(dataRaw: string) {
+  async function importFromFile(dataRaw: string) {
     isImporting.value = true;
-    const importer = new Importer(dataRaw, config as Config, dbPromise, () => (isImporting.value = false));
-    basicEmitter.emit('openImportingOverlay', importer);
+    const importer = new Importer(config as Config, dbPromise, () => (isImporting.value = false));
+    basicEmitter.emit('openImportingOverlay', { importer, dataRaw });
+  }
+
+  async function importFromMnemonic(mnemonic: string) {
+    isImporting.value = true;
+    const importer = new Importer(config as Config, dbPromise, () => (isImporting.value = false));
+    await importer.importFromMnemonic(mnemonic);
+    isImporting.value = false;
   }
 
   load().catch(handleUnknownFatalError);
@@ -44,6 +51,7 @@ export const useController = defineStore('controller', () => {
     isLoaded,
     isLoadedPromise,
     isImporting,
-    importAccount,
+    importFromFile,
+    importFromMnemonic,
   };
 });

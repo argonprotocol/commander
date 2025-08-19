@@ -6,10 +6,10 @@
     access your wallet and funds.
   </p>
 
-  <ol class="grid grid-cols-3 gap-2 px-3 mt-5 mb-6 ml-6">
+  <ol class="grid grid-cols-3 gap-2 px-3 mt-5 mb-6 ml-6 cursor-text">
     <li v-for="(word, index) in words" :key="word" class="flex items-center gap-2 py-1">
       <span class="text-slate-500">{{ index + 1 }}.</span>
-      <span>{{ word }}</span>
+      <span class="select-text">{{ word }}</span>
     </li>
   </ol>
 
@@ -27,7 +27,7 @@ const config = useConfig();
 const isCopied = Vue.ref(false);
 const words = Vue.computed(() => config.security.masterMnemonic.split(' '));
 
-const emit = defineEmits(['close', 'goto']);
+const emit = defineEmits(['close', 'goTo']);
 
 function closeOverlay() {
   emit('close');
