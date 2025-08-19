@@ -291,7 +291,7 @@ export class Stats {
         subAccountIndex: x.subAccountIndex,
         lastBidAtTick: x.lastBidAtTick,
         bidPosition: x.bidPosition,
-        microgonsPerSeat: x.microgonsBid,
+        microgonsPerSeat: x.microgonsPerSeat,
       };
     });
 
