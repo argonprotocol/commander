@@ -115,7 +115,6 @@ Vue.onMounted(async () => {
     });
   }
   nextVaults.sort((a, b) => Number(b.activatedSecuritization - a.activatedSecuritization));
-  console.log(nextVaults);
   vaults.value = nextVaults;
 });
 </script>

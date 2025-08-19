@@ -26,22 +26,22 @@ export class Mainchain {
 
   public async getLiquidityPoolPayout(): Promise<{ totalPoolRewards: bigint; totalActivatedCapital: bigint }> {
     const client = await this.clientPromise;
-    const frameStartBlockNumbers = await this.getFrameStartBlockNumbers(client);
-    const blockNumber = frameStartBlockNumbers[0];
-    const blockHash = await client.rpc.chain.getBlockHash(blockNumber);
-    const clientAt = await client.at(blockHash);
-    const events = await clientAt.query.system.events();
-
+    const currentFrameId = await this.getCurrentFrameId();
+    const minersAtFrame = await client.query.miningSlot.minersByCohort(currentFrameId);
+    const vaultPools = await client.query.liquidityPools.vaultPoolsByFrame(currentFrameId);
     let totalMicrogonsBid = 0n;
     let totalActivatedCapital = 0n;
-    for (const { event } of events) {
-      if (client.events.miningSlot.NewMiners.is(event)) {
-        for (const miner of event.data.newMiners) {
-          totalMicrogonsBid += miner.bid.toBigInt();
-        }
+    for (const miner of minersAtFrame) {
+      totalMicrogonsBid += miner.bid.toBigInt();
+    }
+    console.log('Liquidity bid pool at current frame', { totalMicrogonsBid, frameId: currentFrameId });
+    for (const [_vaultId, entry] of vaultPools) {
+      console.log('Capital activated', entry.toJSON());
+      for (const [_, balance] of entry.contributorBalances) {
+        totalActivatedCapital = balance.toBigInt();
       }
-      if (client.events.liquidityPools.NextBidPoolCapitalLocked.is(event)) {
-        totalActivatedCapital = event.data.totalActivatedCapital.toBigInt();
+      if (!entry.distributedProfits.isSome) {
+        totalActivatedCapital -= entry.distributedProfits.value.toBigInt();
       }
     }
 
