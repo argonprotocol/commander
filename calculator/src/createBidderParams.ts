@@ -10,6 +10,7 @@ export default async function createBidderParams(
   _cohortId: number,
   client: ArgonClient,
   biddingRules: IBiddingRules,
+  accruedEarnings: bigint,
 ): Promise<IBidderParams> {
   const mainchain = new Mainchain(Promise.resolve(client));
 
@@ -23,7 +24,8 @@ export default async function createBidderParams(
   const maxBid = calculator.maximumBidAmount;
 
   const maxSeats = await helper.getMaxSeats();
-  const maxBudget = helper.getMaxBalance(maxBid * BigInt(maxSeats));
+  const maxBudget = biddingRules.baseCapitalCommitment + accruedEarnings;
+
   const bidDelay = biddingRules.rebiddingDelay || 0;
   const bidIncrement = biddingRules.rebiddingIncrementBy || 1n;
   const bidderParams: IBidderParams = {

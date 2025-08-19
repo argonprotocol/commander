@@ -53,7 +53,15 @@ export class AutoBidder {
 
   private async onBiddingStart(cohortActivationFrameId: number) {
     if (this.isStopped) return;
-    const params = await createBidderParams(cohortActivationFrameId, await this.accountset.client, this.biddingRules);
+    const latestAccruedMicrogonProfits =
+      (await this.storage.earningsFile(cohortActivationFrameId - 1).get())?.accruedMicrogonProfits ??
+      (await this.storage.earningsFile(cohortActivationFrameId - 2).get())?.accruedMicrogonProfits;
+    const params = await createBidderParams(
+      cohortActivationFrameId,
+      await this.accountset.client,
+      this.biddingRules,
+      latestAccruedMicrogonProfits ?? 0n,
+    );
     if (params.maxSeats === 0) return;
 
     const cohortBiddingFrameId = cohortActivationFrameId - 1;
