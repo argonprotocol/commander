@@ -1,21 +1,40 @@
 import { invoke } from '@tauri-apps/api/core';
 import { Db } from './Db';
 import { remove, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { Option } from '../../src-vue/overlays/troubleshooting/AdvancedRestart.vue';
+import { SSH } from './SSH';
+import { Server } from './Server';
 
 export default class Restarter {
   private dbPromise: Promise<Db>;
+
+  private _server?: Server;
 
   constructor(dbPromise: Promise<Db>) {
     this.dbPromise = dbPromise;
   }
 
-  public async run() {
-    await this.recreateLocalDatabase();
-    await this.reloadAppUi();
+  public async getServer() {
+    if (!this._server) {
+      const connection = await SSH.getConnection();
+      this._server = new Server(connection);
+    }
+    return this._server;
   }
 
-  public async reloadAppUi() {
-    window.location.reload();
+  public async run(toRestart: Set<Option>) {
+    if (toRestart.has(Option.CompletelyWipeAndReinstallCloudMachine)) {
+      const server = await this.getServer();
+      await server.completelyWipeEverything();
+    }
+
+    if (toRestart.has(Option.RecreateLocalDatabase)) {
+      await this.recreateLocalDatabase();
+    }
+
+    if (toRestart.has(Option.ReloadAppUi)) {
+      window.location.reload();
+    }
   }
 
   public async recreateLocalDatabase() {

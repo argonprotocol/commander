@@ -39,11 +39,11 @@ export interface IBotStateFile {
   bidsLastModifiedAt: Date;
   earningsLastModifiedAt: Date;
   oldestFrameIdToSync: number;
-  currentFrameProgress: number;
   syncProgress: number;
   hasMiningBids: boolean;
   hasMiningSeats: boolean;
   currentFrameId: number;
+  currentFrameTickRange: [number, number];
   lastBlockNumberByFrameId: {
     [frameId: number]: number;
   };

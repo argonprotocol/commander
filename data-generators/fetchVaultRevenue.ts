@@ -16,7 +16,7 @@ export default async function fetchVaultRevenue() {
   for (const chain of ['testnet', 'mainnet'] as const) {
     const url = chain === 'mainnet' ? 'wss://rpc.argon.network' : 'wss://rpc.testnet.argonprotocol.org';
     const mainchain = new Mainchain(getClient(url));
-    setMainchainClient(mainchain.client);
+    setMainchainClient(mainchain.clientPromise);
     const vaults = new Vaults(chain);
     await vaults.load();
     const data = await vaults.refreshRevenue(mainchain);
@@ -32,7 +32,7 @@ export default async function fetchVaultRevenue() {
     }
 
     if (rebuildBaseline) {
-      const client = await mainchain.client;
+      const client = await mainchain.clientPromise;
       const utxos = await client.query.bitcoinLocks.locksByUtxoId.entries();
       for (const [_utxoId, utxo] of utxos) {
         const vaultId = utxo.unwrap().vaultId.toNumber();

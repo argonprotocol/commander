@@ -164,9 +164,13 @@ export class FramesTable extends BaseTable {
         .plus(x.micronotsMinedTotal);
       const microgonValueOfRewards = bigNumberToBigInt(microgonValueEarnedBn);
       const profitBn = BigNumber(microgonValueEarnedBn).minus(x.seatCostTotalFramed);
-      const profitPct = x.seatCostTotalFramed
-        ? BigNumber(0)
-        : profitBn.dividedBy(x.seatCostTotalFramed).multipliedBy(100);
+      const profitPctBn = x.seatCostTotalFramed
+        ? profitBn.dividedBy(x.seatCostTotalFramed).multipliedBy(100)
+        : BigNumber(0);
+
+      if (isNaN(profitPctBn.toNumber())) {
+        console.log('profitPctBn', profitPctBn.toNumber(), profitBn.toNumber(), x.seatCostTotalFramed);
+      }
 
       const record: Omit<IDashboardFrameStats, 'score'> = {
         id: x.id,
@@ -186,7 +190,7 @@ export class FramesTable extends BaseTable {
         microgonValueOfRewards,
         progress: x.progress,
         profit: profitBn.toNumber(),
-        profitPct: profitPct.toNumber(),
+        profitPct: profitPctBn.toNumber(),
       };
 
       return record;

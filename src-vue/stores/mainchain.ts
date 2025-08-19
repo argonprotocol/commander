@@ -33,8 +33,11 @@ export async function getMainchainClient(preferMinerNode = false): Promise<Mainc
     }
   }
 
-  archiveClient ??= getClient(NETWORK_URL).then(x => wrapApi(x, 'ARCHIVE_RPC'));
+  return getArchiveClient();
+}
 
+export function getArchiveClient(): Promise<MainchainClient> {
+  archiveClient ??= getClient(NETWORK_URL).then(x => wrapApi(x, 'ARCHIVE_RPC'));
   return archiveClient;
 }
 
@@ -57,7 +60,7 @@ export function getMainchain(): Mainchain {
       if (status === BotStatus.Ready) {
         try {
           const client = await getMinerNodeClient();
-          mainchain.client = Promise.resolve(client);
+          mainchain.clientPromise = Promise.resolve(client);
         } catch (error) {
           console.error('Failed to set mainchain client to our node:', error);
         }

@@ -38,26 +38,24 @@ export class Storage {
     const key = `bot-state.json`;
     let entry = this.lruCache.get(key) as JsonStore<IBotStateFile> | undefined;
     if (!entry) {
-      entry = new JsonStore<IBotStateFile>(
-        Path.join(this.basedir, key),
-        () =>
-          ({
-            isReady: false,
-            hasMiningBids: false,
-            hasMiningSeats: false,
-            argonBlockNumbers: { localNode: 0, mainNode: 0 },
-            bitcoinBlockNumbers: { localNode: 0, mainNode: 0 },
-            bidsLastModifiedAt: new Date(),
-            earningsLastModifiedAt: new Date(),
-            oldestFrameIdToSync: 0,
-            currentFrameId: 0,
-            currentFrameProgress: 0,
-            syncProgress: 0,
-            maxSeatsPossible: 10, // TODO: instead of hardcoded 10, fetch from chain
-            maxSeatsReductionReason: '',
-            lastBlockNumberByFrameId: {},
-          }) as IBotStateFile,
-      );
+      entry = new JsonStore<IBotStateFile>(Path.join(this.basedir, key), () => {
+        return {
+          isReady: false,
+          hasMiningBids: false,
+          hasMiningSeats: false,
+          argonBlockNumbers: { localNode: 0, mainNode: 0 },
+          bitcoinBlockNumbers: { localNode: 0, mainNode: 0 },
+          bidsLastModifiedAt: new Date(),
+          earningsLastModifiedAt: new Date(),
+          oldestFrameIdToSync: 0,
+          currentFrameId: 0,
+          currentFrameTickRange: [0, 0],
+          syncProgress: 0,
+          maxSeatsPossible: 10, // TODO: instead of hardcoded 10, fetch from chain
+          maxSeatsReductionReason: '',
+          lastBlockNumberByFrameId: {},
+        };
+      });
       this.lruCache.set(key, entry);
     }
     return entry;
@@ -74,9 +72,7 @@ export class Storage {
         const tickRange = MiningFrames.getTickRangeForFrameFromSystemTime(frameId);
         return {
           frameId,
-          frameProgress: 0,
-          firstTick: tickRange[0],
-          lastTick: tickRange[1],
+          frameTickRange: tickRange,
           firstBlockNumber: 0,
           lastBlockNumber: 0,
           microgonToUsd: [],
@@ -85,8 +81,6 @@ export class Storage {
           earningsByBlock: {},
 
           transactionFeesTotal: 0n,
-          microgonRevenue: 0n,
-          microgonProfits: 0n,
           accruedMicrogonProfits: 0n,
           previousFrameAccruedMicrogonProfits: null,
         };
@@ -100,18 +94,21 @@ export class Storage {
     const key = `bot-bids/frame-${cohortBiddingFrameId}-${cohortActivationFrameId}.json`;
     let entry = this.lruCache.get(key) as JsonStore<IBidsFile> | undefined;
     if (!entry) {
-      entry = new JsonStore<IBidsFile>(Path.join(this.basedir, key), () => ({
-        cohortBiddingFrameId,
-        cohortActivationFrameId,
-        frameBiddingProgress: 0,
-        lastBlockNumber: 0,
-        seatCountWon: 0,
-        microgonsBidTotal: 0n,
-        transactionFeesByBlock: {},
-        micronotsStakedPerSeat: 0n,
-        microgonsToBeMinedPerBlock: 0n,
-        winningBids: [],
-      }));
+      entry = new JsonStore<IBidsFile>(Path.join(this.basedir, key), () => {
+        const tickRange = MiningFrames.getTickRangeForFrameFromSystemTime(cohortBiddingFrameId);
+        return {
+          cohortBiddingFrameId,
+          cohortActivationFrameId,
+          biddingFrameTickRange: tickRange,
+          lastBlockNumber: 0,
+          seatCountWon: 0,
+          microgonsBidTotal: 0n,
+          transactionFeesByBlock: {},
+          micronotsStakedPerSeat: 0n,
+          microgonsToBeMinedPerBlock: 0n,
+          winningBids: [],
+        };
+      });
       this.lruCache.set(key, entry);
     }
     return entry;

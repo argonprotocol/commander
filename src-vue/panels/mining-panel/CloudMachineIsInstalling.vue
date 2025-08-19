@@ -8,8 +8,7 @@
     </p>
     <p v-else class="pt-3 pb-2 font-light">
       We are verifying and setting up your {{ serverDetails.ipAddress }} server on Digital Ocean. This may take several
-      hours. You can close this Commander app without disrupting the process once the core files have finished
-      uploading.
+      hours to complete.
     </p>
     <InstallProgress />
   </div>

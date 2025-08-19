@@ -45,6 +45,9 @@
             <SecuritySettingsMnemonics v-if="currentScreen === 'mnemonics'" @close="closeOverlay" @goto="goto" />
             <SecuritySettingsSSHKeys v-if="currentScreen === 'ssh'" @close="closeOverlay" @goto="goto" />
             <SecuritySettingsEncrypt v-if="currentScreen === 'encrypt'" @close="closeOverlay" @goto="goto" />
+            <ExportRecoveryFile v-if="currentScreen === 'export'" @close="closeOverlay" @goto="goto" />
+            <Import v-if="currentScreen === 'import'" @close="closeOverlay" @goto="goto" />
+            <ImportFromMnemonic v-if="currentScreen === 'import-from-mnemonic'" @close="closeOverlay" @goto="goto" />
           </Motion>
         </DialogContent>
       </AnimatePresence>
@@ -60,6 +63,9 @@ import SecuritySettingsOverview from './security-settings/Overview.vue';
 import SecuritySettingsEncrypt from './security-settings/Encrypt.vue';
 import SecuritySettingsMnemonics from './security-settings/Mnemonics.vue';
 import SecuritySettingsSSHKeys from './security-settings/SSHKeys.vue';
+import ExportRecoveryFile from './security-settings/ExportRecoveryFile.vue';
+import Import from './security-settings/Import.vue';
+import ImportFromMnemonic from './security-settings/ImportFromMnemonic.vue';
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogClose } from 'reka-ui';
 import { AnimatePresence, Motion } from 'motion-v';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
@@ -67,7 +73,9 @@ import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
 import Draggable from './helpers/Draggable.ts';
 
 const isOpen = Vue.ref(false);
-const currentScreen = Vue.ref<'overview' | 'mnemonics' | 'ssh' | 'encrypt' | 'import' | 'export'>('overview');
+const currentScreen = Vue.ref<
+  'overview' | 'mnemonics' | 'ssh' | 'encrypt' | 'export' | 'import' | 'import-from-mnemonic'
+>('overview');
 const overlayWidth = Vue.ref(640);
 const draggable = Vue.reactive(new Draggable());
 
@@ -78,12 +86,14 @@ const title = Vue.computed(() => {
     return 'Encryption Passphrase';
   } else if (currentScreen.value === 'ssh') {
     return 'SSH Keys for Cloud Machine';
-  } else if (currentScreen.value === 'import') {
-    return 'Import Existing Account';
   } else if (currentScreen.value === 'mnemonics') {
     return 'Account Recovery Mnemonic';
   } else if (currentScreen.value === 'export') {
-    return 'Export Account';
+    return 'Export Account Backup File';
+  } else if (currentScreen.value === 'import') {
+    return 'Import Previous Account';
+  } else if (currentScreen.value === 'import-from-mnemonic') {
+    return 'Import Previous Account from Mnemonic';
   }
   throw new Error('Invalid screen name');
 });
@@ -99,7 +109,7 @@ function closeOverlay() {
   isOpen.value = false;
 }
 
-function goto(screen: 'overview' | 'encrypt' | 'mnemonics' | 'ssh' | 'import' | 'export') {
+function goto(screen: 'overview' | 'encrypt' | 'mnemonics' | 'ssh' | 'import' | 'export' | 'import-from-mnemonic') {
   currentScreen.value = screen;
   if (screen === 'overview') {
     overlayWidth.value = 640;
@@ -111,8 +121,10 @@ function goto(screen: 'overview' | 'encrypt' | 'mnemonics' | 'ssh' | 'import' | 
     overlayWidth.value = 740;
   } else if (screen === 'import') {
     overlayWidth.value = 640;
-  } else if (screen === 'export') {
+  } else if (screen === 'import-from-mnemonic') {
     overlayWidth.value = 640;
+  } else if (screen === 'export') {
+    overlayWidth.value = 740;
   }
 }
 </script>

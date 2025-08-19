@@ -4,22 +4,18 @@ import { ask as askDialog } from '@tauri-apps/plugin-dialog';
 import { exit as tauriExit } from '@tauri-apps/plugin-process';
 import { getMainchainClient } from './mainchain.ts';
 import handleUnknownFatalError from './helpers/handleUnknownFatalError.ts';
-import { useConfig } from './config.ts';
+import { useConfig, Config } from './config.ts';
 import { createDeferred } from '../lib/Utils.ts';
 import { useStats } from './stats.ts';
 import { useCurrency } from './currency.ts';
 import { botEmitter } from '../lib/Bot.ts';
-import { MainchainClient } from '@argonprotocol/commander-calculator';
 import { BotStatus } from '../lib/BotSyncer.ts';
+import { WalletBalances, IWallet as IWalletBasic } from '../lib/WalletBalances.ts';
 
 const config = useConfig();
 
-export interface IWallet {
+export interface IWallet extends IWalletBasic {
   name: string;
-  address: string;
-  availableMicrogons: bigint;
-  availableMicronots: bigint;
-  reservedMicronots: bigint;
 }
 
 export const useWallets = defineStore('wallets', () => {
@@ -38,7 +34,7 @@ export const useWallets = defineStore('wallets', () => {
   });
 
   const vaultingWallet = Vue.reactive<IWallet>({
-    name: 'Volatility Wallet',
+    name: 'Vaulting Wallet',
     address: '',
     availableMicrogons: 0n,
     availableMicronots: 0n,
@@ -78,59 +74,35 @@ export const useWallets = defineStore('wallets', () => {
   const totalWalletMicrogons = Vue.ref(0n);
   const totalWalletMicronots = Vue.ref(0n);
 
-  const subscriptions: VoidFunction[] = [];
-  function loadArgonBalance(client: MainchainClient, wallet: IWallet) {
-    return new Promise<void>(async (resolve, _) => {
-      const sub = await client.query.system.account(wallet.address, result => {
-        const availableMicrogons = result.data.free.toBigInt();
-        const availableMicrogonsDiff = availableMicrogons - wallet.availableMicrogons;
-
-        wallet.availableMicrogons = availableMicrogons;
-
-        totalWalletMicrogons.value += availableMicrogonsDiff;
-        resolve();
-      });
-      subscriptions.push(sub);
-    });
-  }
-
-  function loadArgonotBalance(client: MainchainClient, wallet: IWallet) {
-    return new Promise<void>(async (resolve, _) => {
-      const sub = await client.query.ownership.account(wallet.address, result => {
-        const availableMicronots = result.free.toBigInt();
-        const reservedMicronots = result.reserved.toBigInt();
-        const micronotsDiff = availableMicronots + reservedMicronots - wallet.availableMicronots;
-
-        wallet.availableMicronots = availableMicronots;
-        wallet.reservedMicronots = reservedMicronots;
-
-        totalWalletMicronots.value += micronotsDiff;
-        resolve();
-      });
-      subscriptions.push(sub);
-    });
-  }
-
-  async function loadBalances() {
-    await config.isLoadedPromise;
-    if (subscriptions.length) {
-      subscriptions.forEach(x => x());
-      subscriptions.length = 0;
-    }
-    miningWallet.address = config.miningAccount.address;
-    vaultingWallet.address = config.vaultingAccount.address;
-    const client = await getMainchainClient(true);
-    for (const wallet of [miningWallet, vaultingWallet]) {
-      await Promise.all([loadArgonBalance(client, wallet), loadArgonotBalance(client, wallet)]);
-    }
-  }
-
   //////////////////////////////////////////////////////////////////////////////
+
+  const clientPromise = getMainchainClient(true);
+  const walletBalances = new WalletBalances(clientPromise);
+  walletBalances.onBalanceChange = () => {
+    totalWalletMicrogons.value = walletBalances.totalWalletMicrogons;
+    totalWalletMicronots.value = walletBalances.totalWalletMicronots;
+
+    miningWallet.address = walletBalances.miningWallet.address;
+    miningWallet.availableMicrogons = walletBalances.miningWallet.availableMicrogons;
+    miningWallet.availableMicronots = walletBalances.miningWallet.availableMicronots;
+    miningWallet.reservedMicronots = walletBalances.miningWallet.reservedMicronots;
+
+    vaultingWallet.address = walletBalances.vaultingWallet.address;
+    vaultingWallet.availableMicrogons = walletBalances.vaultingWallet.availableMicrogons;
+    vaultingWallet.availableMicronots = walletBalances.vaultingWallet.availableMicronots;
+    vaultingWallet.reservedMicronots = walletBalances.vaultingWallet.reservedMicronots;
+  };
 
   async function load() {
     while (!isLoaded.value) {
       try {
-        await loadBalances();
+        await config.isLoadedPromise;
+        await walletBalances.load({
+          miningAccountAddress: config.miningAccount.address,
+          vaultingAccountAddress: config.vaultingAccount.address,
+        });
+        await walletBalances.updateBalances();
+        await walletBalances.subscribeToBalanceUpdates();
         await Promise.all([stats.isLoadedPromise, currency.isLoadedPromise]);
         isLoadedResolve();
         isLoaded.value = true;
@@ -140,7 +112,7 @@ export const useWallets = defineStore('wallets', () => {
           kind: 'warning',
         });
         if (!shouldRetry) {
-          await tauriExit(1);
+          throw error;
         }
       }
     }
@@ -155,7 +127,7 @@ export const useWallets = defineStore('wallets', () => {
   botEmitter.on('status-changed', status => {
     if (isLoaded.value && status === BotStatus.Ready) {
       // Reload balances when bot status changes
-      loadBalances().catch(error => {
+      walletBalances.updateBalances().catch(error => {
         console.error('Error reloading wallet balances:', error);
       });
     }

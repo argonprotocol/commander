@@ -109,7 +109,17 @@ export default async function menuStart() {
 
   const windowMenu = await Submenu.new({
     text: 'Window',
-    items: [await PredefinedMenuItem.new({ item: 'Minimize' }), await PredefinedMenuItem.new({ item: 'Fullscreen' })],
+    items: [
+      await PredefinedMenuItem.new({ item: 'Minimize' }),
+      await PredefinedMenuItem.new({ item: 'Fullscreen' }),
+      await PredefinedMenuItem.new({ item: 'Separator' }),
+      {
+        id: 'reload',
+        text: 'Reload UI',
+        accelerator: 'CmdOrCtrl+R',
+        action: () => window.location.reload(),
+      },
+    ],
   });
 
   const troubleshootingMenu = await Submenu.new({
@@ -126,12 +136,6 @@ export default async function menuStart() {
         action: () => basicEmitter.emit('openTroubleshootingOverlay', { screen: 'data-and-log-files' }),
       },
       await PredefinedMenuItem.new({ item: 'Separator' }),
-      {
-        id: 'reload',
-        text: 'Simple UI Restart',
-        accelerator: 'CmdOrCtrl+R',
-        action: () => window.location.reload(),
-      },
       {
         id: 'options-for-restart',
         text: 'Advanced Restart',

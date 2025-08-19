@@ -40,6 +40,7 @@ export default class Bot implements IBotSyncStatus {
   }
 
   public history!: History;
+  public errorMessage: string | null = null;
 
   private options: IBotOptions;
   private biddingRules: IBiddingRules | null = null;
@@ -77,13 +78,16 @@ export default class Bot implements IBotSyncStatus {
 
     console.log('CONNECTING TO LOCAL RPC');
     const localClientPromise = getClient(this.options.localRpcUrl).then(x => wrapApi(x, 'LOCAL_RPC'));
-
-    try {
-      this.localClient = await localClientPromise;
-    } catch (error) {
-      console.error('Error initializing local client', error);
-      throw error;
+    while (!this.localClient) {
+      try {
+        this.localClient = await localClientPromise;
+      } catch (error) {
+        console.error('Error initializing local client, retrying...', error);
+        this.errorMessage = (error as Error).toString();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
+    this.errorMessage = null;
 
     const archiveClientPromise = getClient(this.options.archiveRpcUrl).then(x => wrapApi(x, 'ARCHIVE_RPC'));
     try {

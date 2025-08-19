@@ -100,20 +100,33 @@
           <span>Completely Wipe and Reinstall Cloud Machine</span>
         </header>
         <p class="text-md ml-7 font-light">
-          This will shutdown and restart your server. No data will be touched. This can sometimes fix issues where the
-          server has run into a bug and is stuck.
+          This will completley wipe everything on your server and reinstall it. This is a last resort option when all
+          else fails.
         </p>
       </li>
     </ol>
 
     <button
       @click="runSelectedOptions"
+      :class="[isRestarting ? 'pointer-events-none opacity-50' : '']"
       class="bg-argon-button mt-4 mb-3 w-full cursor-pointer rounded-lg py-2 text-white focus:outline-none"
     >
-      Run Restart
+      {{ isRestarting ? 'Restarting...' : 'Run Restart' }}
     </button>
   </div>
 </template>
+
+<script lang="ts">
+export enum Option {
+  ReloadAppUi = 'ReloadAppUi',
+  RecreateLocalDatabase = 'RecreateLocalDatabase',
+  RestartDockers = 'RestartDockers',
+  ResyncBiddingDataOnCloudMachine = 'ResyncBiddingDataOnCloudMachine',
+  ResyncBitcoinBlocksOnCloudMachine = 'ResyncBitcoinBlocksOnCloudMachine',
+  ResyncArgonBlocksOnCloudMachine = 'ResyncArgonBlocksOnCloudMachine',
+  CompletelyWipeAndReinstallCloudMachine = 'CompletelyWipeAndReinstallCloudMachine',
+}
+</script>
 
 <script setup lang="ts">
 import * as Vue from 'vue';
@@ -130,16 +143,7 @@ const bot = useBot();
 
 const dbPromise = getDbPromise();
 const restarter = new Restarter(dbPromise);
-
-enum Option {
-  ReloadAppUi = 'ReloadAppUi',
-  RecreateLocalDatabase = 'RecreateLocalDatabase',
-  RestartDockers = 'RestartDockers',
-  ResyncBiddingDataOnCloudMachine = 'ResyncBiddingDataOnCloudMachine',
-  ResyncBitcoinBlocksOnCloudMachine = 'ResyncBitcoinBlocksOnCloudMachine',
-  ResyncArgonBlocksOnCloudMachine = 'ResyncArgonBlocksOnCloudMachine',
-  CompletelyWipeAndReinstallCloudMachine = 'CompletelyWipeAndReinstallCloudMachine',
-}
+const isRestarting = Vue.ref(false);
 
 const options = Vue.ref({
   [Option.ReloadAppUi]: {
@@ -149,7 +153,7 @@ const options = Vue.ref({
   },
   [Option.RecreateLocalDatabase]: {
     isChecked: false,
-    isDisabled: false,
+    isDisabled: installer.isRunning,
     checkedBy: '',
   },
   [Option.RestartDockers]: {
@@ -174,7 +178,7 @@ const options = Vue.ref({
   },
   [Option.CompletelyWipeAndReinstallCloudMachine]: {
     isChecked: false,
-    isDisabled: !config.isServerInstalled,
+    isDisabled: !config.isServerInstalled && !installer.isRunning,
     checkedBy: '',
   },
 });
@@ -221,7 +225,15 @@ function toggleOption(key: Option) {
 }
 
 async function runSelectedOptions() {
-  await restarter.run();
+  isRestarting.value = true;
+  const toRestart = new Set<Option>();
+  for (const [key, { isChecked }] of Object.entries(options.value)) {
+    if (isChecked) {
+      toRestart.add(key as Option);
+    }
+  }
+  await restarter.run(toRestart);
+  isRestarting.value = false;
 }
 
 function updateDisabledOptions() {

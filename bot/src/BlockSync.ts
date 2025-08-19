@@ -319,7 +319,7 @@ export class BlockSync {
 
     const { hasMiningBids, hasMiningSeats } = await this.syncBidding(currentFrameId, blockMeta, events);
     await this.storage.earningsFile(currentFrameId).mutate(async x => {
-      x.frameProgress = this.calculateProgress(tick, this.currentFrameTickRange);
+      x.frameTickRange = this.currentFrameTickRange;
       x.firstBlockNumber ||= blockNumber;
       x.lastBlockNumber = blockNumber;
 
@@ -386,7 +386,7 @@ export class BlockSync {
       if (hasMiningSeats) x.hasMiningSeats = true;
       x.earningsLastModifiedAt = new Date();
       x.currentFrameId = currentFrameId;
-      x.currentFrameProgress = this.calculateProgress(this.currentTick, this.currentFrameTickRange);
+      x.currentFrameTickRange = this.currentFrameTickRange;
       x.syncProgress = this.calculateProgress(this.currentTick, [this.oldestTick, this.latestTick]);
       x.lastBlockNumberByFrameId[currentFrameId] = blockNumber;
     });
@@ -409,7 +409,6 @@ export class BlockSync {
   ): Promise<{ hasMiningBids: boolean; hasMiningSeats: boolean }> {
     const client = this.getRpcClient(block.number);
     const api = await client.at(block.hash);
-    const headerTick = block.tick;
 
     const blockNumber = block.number;
 
@@ -431,12 +430,16 @@ export class BlockSync {
         const { frameId, newMiners } = event.data;
         const activationFrameIdOfNewCohort = frameId.toNumber();
         const biddingFrameIdOfNewCohort = activationFrameIdOfNewCohort - 1;
+        const biddingFrameTickRange = await this.frameCalculator.getTickRangeForFrame(
+          this.localClient,
+          biddingFrameIdOfNewCohort,
+        );
         const lastBidsFile = this.storage.bidsFile(biddingFrameIdOfNewCohort, activationFrameIdOfNewCohort);
         await lastBidsFile.mutate(x => {
           x.seatCountWon = 0;
           x.microgonsBidTotal = 0n;
           x.winningBids = [];
-          x.frameBiddingProgress = 100;
+          x.biddingFrameTickRange = biddingFrameTickRange;
           x.lastBlockNumber = blockNumber;
 
           let bidPosition = 0;
@@ -470,7 +473,7 @@ export class BlockSync {
     await bidsFile.mutate(async x => {
       x.micronotsStakedPerSeat ||= await api.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
       x.microgonsToBeMinedPerBlock ||= await api.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
-      x.frameBiddingProgress = this.calculateProgress(headerTick, this.currentFrameTickRange);
+      x.biddingFrameTickRange = this.currentFrameTickRange;
       x.lastBlockNumber = blockNumber;
       x.winningBids = nextCohort.map((c, i): IWinningBid => {
         const address = c.accountId.toHuman();

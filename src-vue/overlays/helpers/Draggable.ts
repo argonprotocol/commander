@@ -8,7 +8,7 @@ export default class Draggable {
   public modalRef: Element | Vue.ComponentPublicInstance | null;
 
   constructor() {
-    this.modalPosition = { x: 0, y: 0 };
+    this.modalPosition = Vue.reactive({ x: 0, y: 0 });
     this.isDragging = false;
     this.dragStart = { x: 0, y: 0 };
     this.mouseStart = { x: 0, y: 0 };
@@ -16,8 +16,6 @@ export default class Draggable {
 
     // Bind setModalRef to this to ensure proper context when used as a callback
     this.setModalRef = this.setModalRef.bind(this);
-    this.onMouseDown = this.onMouseDown.bind(this);
-    this.onDragMove = this.onDragMove.bind(this);
   }
 
   public setModalRef(el: Element | Vue.ComponentPublicInstance | null) {
@@ -32,14 +30,13 @@ export default class Draggable {
     this.isDragging = true;
     this.mouseStart = { x: event.clientX, y: event.clientY };
     this.dragStart = { ...this.modalPosition };
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    window.addEventListener('mousemove', this.onDragMove);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    window.addEventListener('mouseup', this.onDragEnd);
+    window.addEventListener('mousemove', this.onDragMove.bind(this));
+    window.addEventListener('mouseup', this.onDragEnd.bind(this));
   }
 
   private onDragMove(e: MouseEvent) {
     if (!this.isDragging) return;
+    console.log('onDragMove', `isDragging = ${this.isDragging}`);
 
     const dx = e.clientX - this.mouseStart.x;
     const dy = e.clientY - this.mouseStart.y;
@@ -66,14 +63,14 @@ export default class Draggable {
       newY = Math.max(-maxOffsetY, Math.min(maxOffsetY, newY));
     }
 
-    this.modalPosition = { x: newX, y: newY };
+    this.modalPosition.x = newX;
+    this.modalPosition.y = newY;
   }
 
   private onDragEnd() {
     this.isDragging = false;
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    window.removeEventListener('mousemove', this.onDragMove);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    window.removeEventListener('mouseup', this.onDragEnd);
+    console.log('onDragEnd', `isDragging = ${this.isDragging}`);
+    window.removeEventListener('mousemove', this.onDragMove.bind(this));
+    window.removeEventListener('mouseup', this.onDragEnd.bind(this));
   }
 }

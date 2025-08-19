@@ -3,7 +3,7 @@ import type { ILastModifiedAt } from './ILastModified.ts';
 export interface IBidsFile extends ILastModifiedAt {
   cohortBiddingFrameId: number;
   cohortActivationFrameId: number;
-  frameBiddingProgress: number;
+  biddingFrameTickRange: [number, number];
   lastBlockNumber: number;
   microgonsBidTotal: bigint;
   transactionFeesByBlock: { [blockNumber: number]: bigint };
