@@ -95,17 +95,15 @@ import CopyToClipboard from '../../components/CopyToClipboard.vue';
 import CopyIcon from '../../assets/copy.svg?component';
 
 const config = useConfig();
-const isCopied = Vue.ref(false);
 const copyToClipboard = Vue.ref<typeof CopyToClipboard>();
 const privateKeyTextareaShadow = Vue.ref<HTMLElement>();
 const privateKeyTextareaHeight = Vue.ref('auto');
 
-const emit = defineEmits(['close', 'goto']);
+const emit = defineEmits(['close', 'goTo']);
 
 function adjustTextareaHeight() {
   if (privateKeyTextareaShadow.value) {
     privateKeyTextareaHeight.value = privateKeyTextareaShadow.value.scrollHeight + 'px';
-    console.log('privateKeyTextareaHeight.value', privateKeyTextareaHeight.value);
   } else {
     privateKeyTextareaHeight.value = 'auto';
   }

@@ -27,6 +27,7 @@ console.log('__COMMANDER_INSTANCE__', __COMMANDER_INSTANCE__);
 
 export const NETWORK_NAME = __ARGON_NETWORK_NAME__ || 'mainnet';
 export const ENABLE_AUTO_UPDATE = __COMMANDER_ENABLE_AUTOUPDATE__ ?? false;
+
 const networkConfig = AppConfig[NETWORK_NAME as keyof typeof AppConfig] ?? AppConfig.mainnet;
 export const NETWORK_URL = networkConfig.archiveUrl;
 export const [INSTANCE_NAME, INSTANCE_PORT] = (__COMMANDER_INSTANCE__ || 'default:1420').split(':');
@@ -43,17 +44,15 @@ export class Config {
   public isLoaded: boolean;
   public isLoadedPromise: Promise<void>;
 
-  public hasSavedBiddingRules: boolean;
-  public hasSavedVaultingRules: boolean;
-
   private _loadedDeferred!: IDeferred<void>;
 
   private _db!: Db;
   private _fieldsToSave: Set<string> = new Set();
   private _dbPromise: Promise<Db>;
   private _security!: ISecurity;
+  private _dbData!: IConfigStringified;
   private _loadedData!: IConfig;
-  private _stringifiedData = {} as IConfigStringified;
+  private _rawData = {} as IConfigStringified;
   private _masterAccount!: KeyringPair;
   private _miningAccount!: KeyringPair;
   private _miningAccountPreviousHistoryLoadPct: number = 0;
@@ -65,9 +64,6 @@ export class Config {
     this._loadedDeferred = createDeferred<void>();
     this.isLoadedPromise = this._loadedDeferred.promise;
     this.isLoaded = false;
-
-    this.hasSavedBiddingRules = false;
-    this.hasSavedVaultingRules = false;
 
     this._dbPromise = dbPromise;
     this._security = {
@@ -116,9 +112,9 @@ export class Config {
     const db = await this._dbPromise;
     const fieldsToSave: Set<string> = new Set();
     const loadedData: any = {};
-    const stringifiedData = {} as IConfigStringified & { miningAccountAddress: string };
+    const rawData = {} as IConfigStringified & { miningAccountAddress: string };
 
-    const [rawData, security] = await Promise.all([
+    const [dbRawData, security] = await Promise.all([
       db.configTable.fetchAllAsObject(),
       invokeWithTimeout('fetch_security', {}, 5e3),
     ]);
@@ -126,33 +122,28 @@ export class Config {
     this._security = security as ISecurity;
 
     for (const [key, value] of Object.entries(defaults)) {
-      const rawValue = rawData[key as keyof typeof rawData];
+      const rawValue = dbRawData[key as keyof typeof dbRawData];
       if (rawValue === undefined || rawValue === '') {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         const defaultValue = await value();
         loadedData[key] = defaultValue;
         if (key !== dbFields.biddingRules && key !== dbFields.vaultingRules) {
           fieldsToSave.add(key);
-          stringifiedData[key as keyof typeof stringifiedData] = jsonStringifyWithBigInts(defaultValue, null, 2);
+          rawData[key as keyof typeof rawData] = jsonStringifyWithBigInts(defaultValue, null, 2);
         }
         continue;
       }
 
       loadedData[key] = jsonParseWithBigInts(rawValue as string);
-      stringifiedData[key as keyof typeof stringifiedData] = rawValue as string;
-      if (key === dbFields.biddingRules) {
-        this.hasSavedBiddingRules = true;
-      } else if (key === dbFields.vaultingRules) {
-        this.hasSavedVaultingRules = true;
-      }
+      rawData[key as keyof typeof rawData] = rawValue as string;
     }
 
-    const isFirstTimeAppLoad = Object.keys(rawData).length === 0;
+    const isFirstTimeAppLoad = Object.keys(dbRawData).length === 0;
     if (isFirstTimeAppLoad) {
-      await this._injectFirstTimeAppData(loadedData, stringifiedData, fieldsToSave);
+      await this._injectFirstTimeAppData(loadedData, rawData, fieldsToSave);
     }
 
-    const dataToSave = Config.extractDataToSave(fieldsToSave, stringifiedData);
+    const dataToSave = Config.extractDataToSave(fieldsToSave, rawData);
     await db.configTable.insertOrReplace(dataToSave);
 
     if (this.miningAccount.address !== loadedData.miningAccountAddress) {
@@ -168,7 +159,7 @@ export class Config {
     this.isLoaded = true;
     this._db = db;
     this._loadedData = loadedData as IConfig;
-    this._stringifiedData = stringifiedData;
+    this._rawData = rawData;
     this._loadedDeferred.resolve();
 
     if (this.miningAccountHadPreviousLife && !this.miningAccountPreviousHistory) {
@@ -417,23 +408,31 @@ export class Config {
     return this.userJurisdiction.countryCode === 'KY';
   }
 
+  get hasSavedBiddingRules(): boolean {
+    this._throwErrorIfNotLoaded();
+    return !!this._rawData[dbFields.biddingRules];
+  }
+
+  get hasSavedVaultingRules(): boolean {
+    this._throwErrorIfNotLoaded();
+    return !!this._rawData[dbFields.vaultingRules];
+  }
+
   public async saveBiddingRules() {
     this._throwErrorIfNotLoaded();
-    this.hasSavedBiddingRules = true;
     this._tryFieldsToSave(dbFields.biddingRules, this.biddingRules);
     await this.save();
   }
 
   public async saveVaultingRules() {
     this._throwErrorIfNotLoaded();
-    this.hasSavedVaultingRules = true;
     this._tryFieldsToSave(dbFields.vaultingRules, this.vaultingRules);
     await this.save();
   }
 
   public async save() {
     this._throwErrorIfNotLoaded();
-    const dataToSave = Config.extractDataToSave(this._fieldsToSave, this._stringifiedData);
+    const dataToSave = Config.extractDataToSave(this._fieldsToSave, this._rawData);
     this._fieldsToSave = new Set();
     if (Object.keys(dataToSave).length === 0) return;
 
@@ -452,9 +451,9 @@ export class Config {
 
   private _tryFieldsToSave(field: keyof typeof dbFields, value: any) {
     const stringifiedValue = jsonStringifyWithBigInts(value, null, 2);
-    if (this._stringifiedData[field] === stringifiedValue) return;
+    if (this._rawData[field] === stringifiedValue) return;
 
-    this._stringifiedData[field] = stringifiedValue;
+    this._rawData[field] = stringifiedValue;
     this._fieldsToSave.add(field);
   }
 

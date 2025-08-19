@@ -188,7 +188,7 @@ async function hasError(res: express.Response): Promise<boolean> {
 
   const payload: IBotStateError = {
     ...(await createStartingPayload()),
-    serverError: errorMessage || bot.errorMessage,
+    serverError: bot.errorMessage || errorMessage,
   };
   jsonExt(payload, res);
 

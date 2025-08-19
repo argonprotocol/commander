@@ -27,7 +27,7 @@
                 class="flex flex-row items-center w-full pt-3 space-x-4 text-5xl font-bold border-b border-black/20"
               >
                 <div v-if="activeScreen !== 'overview'" class="flex flex-row items-center hover:bg-[#f1f3f7] rounded-md p-1 pl-0 mr-2 cursor-pointer">
-                  <ChevronLeftIcon @click="goto('overview')" class="w-6 h-6 cursor-pointer relative -top-0.25" />
+                  <ChevronLeftIcon @click="goTo('overview')" class="w-6 h-6 cursor-pointer relative -top-0.25" />
                 </div>
                 <DialogTitle v-if="activeScreen === 'overview'" class="text-2xl font-bold grow">Troubleshooting</DialogTitle>
                 <DialogTitle v-else-if="activeScreen === 'server-diagnostics'" class="text-2xl font-bold grow">Server Diagnostics</DialogTitle>
@@ -39,15 +39,15 @@
               </h2>
               <div v-if="activeScreen === 'overview'">
                 <ul class="flex flex-row items-center w-full text-center space-x-2 font-bold">
-                  <li @click="goto('server-diagnostics')" class="flex flex-col w-1/3 items-center cursor-pointer py-10 hover:bg-slate-100 rounded-md">
+                  <li @click="goTo('server-diagnostics')" class="flex flex-col w-1/3 items-center cursor-pointer py-10 hover:bg-slate-100 rounded-md">
                     <DiagnosticIcon class="w-14 h-14 inline-block mb-2" />
                     Server Diagnostics
                   </li>
-                  <li @click="goto('data-and-log-files')" class="flex flex-col w-1/3 items-center cursor-pointer py-10 hover:bg-slate-100 rounded-md">
+                  <li @click="goTo('data-and-log-files')" class="flex flex-col w-1/3 items-center cursor-pointer py-10 hover:bg-slate-100 rounded-md">
                     <LogsIcon class="w-14 h-14 inline-block mb-2" />
                     Data and Logging Files
                   </li>
-                  <li @click="goto('options-for-restart')" class="flex flex-col w-1/3 items-center cursor-pointer py-10 hover:bg-slate-100 rounded-md">
+                  <li @click="goTo('options-for-restart')" class="flex flex-col w-1/3 items-center cursor-pointer py-10 hover:bg-slate-100 rounded-md">
                     <RestartIcon class="w-14 h-14 inline-block mb-2" />
                     Advanced Restart
                   </li>
@@ -86,7 +86,7 @@ const isLoaded = Vue.ref(false);
 const activeScreen = Vue.ref('overview');
 const draggable = Vue.reactive(new Draggable());
 
-function goto(screen: 'overview' | 'server-diagnostics' | 'data-and-log-files' | 'options-for-restart') {
+function goTo(screen: 'overview' | 'server-diagnostics' | 'data-and-log-files' | 'options-for-restart') {
   activeScreen.value = screen;
 }
 

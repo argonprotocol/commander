@@ -46,7 +46,15 @@ export const useWallets = defineStore('wallets', () => {
   });
 
   const miningBidValue = Vue.computed(() => {
-    return stats.myMiningBids.microgonsBidTotal;
+    let previousHistoryValue = 0n;
+    for (const item of config.miningAccountPreviousHistory || []) {
+      previousHistoryValue += item.bids.reduce((acc, bid) => acc + bid.microgonsBid, 0n);
+    }
+    return stats.myMiningBids.microgonsBidTotal + previousHistoryValue;
+  });
+
+  const totalMiningMicrogons = Vue.computed(() => {
+    return miningWallet.availableMicrogons + miningSeatValue.value + miningBidValue.value;
   });
 
   const totalMiningResources = Vue.computed(() => {
@@ -142,6 +150,7 @@ export const useWallets = defineStore('wallets', () => {
     totalWalletMicronots,
     miningSeatValue,
     miningBidValue,
+    totalMiningMicrogons,
     totalMiningResources,
     totalVaultingResources,
     totalNetWorth,

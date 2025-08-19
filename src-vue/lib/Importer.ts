@@ -6,15 +6,13 @@ import { invokeWithTimeout } from './tauriApi';
 import { SSH } from './SSH';
 
 export default class Importer {
-  private dataRaw: string;
   private onFinished: () => void;
   private data: any = {};
   private config: Config;
   private dbPromise: Promise<Db>;
   public failureToReadData: boolean;
 
-  constructor(dataRaw: string, config: Config, dbPromise: Promise<Db>, onFinished: () => void) {
-    this.dataRaw = dataRaw;
+  constructor(config: Config, dbPromise: Promise<Db>, onFinished: () => void) {
     this.config = config;
     this.dbPromise = dbPromise;
     this.onFinished = onFinished;
@@ -22,9 +20,9 @@ export default class Importer {
     this.failureToReadData = false;
   }
 
-  async run() {
+  async importFromFile(dataRaw: string) {
     try {
-      this.data = jsonParseWithBigInts(this.dataRaw);
+      this.data = jsonParseWithBigInts(dataRaw);
     } catch (error) {
       console.error(error);
       this.failureToReadData = true;
@@ -55,6 +53,14 @@ export default class Importer {
     this.config.oldestFrameIdToSync = serverData.oldestFrameIdToSync ?? this.config.oldestFrameIdToSync;
     await this.config.save();
 
+    this.onFinished();
+  }
+
+  async importFromMnemonic(mnemonic: string) {
+    const restarter = new Restarter(this.dbPromise);
+    await invokeWithTimeout('overwrite_mnemonic', { mnemonic }, 10_000);
+    await restarter.recreateLocalDatabase();
+    await restarter.restart();
     this.onFinished();
   }
 

@@ -50,7 +50,7 @@ const config = useConfig();
 const isSavingExport = Vue.ref(false);
 const hasSavedExport = Vue.ref(false);
 
-const emit = defineEmits(['close', 'goto']);
+const emit = defineEmits(['close', 'goTo']);
 
 async function exportAccount() {
   const filePath = await saveFileOverlay({

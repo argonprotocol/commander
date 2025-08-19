@@ -29,7 +29,7 @@
               @mousedown="draggable.onMouseDown($event)"
             >
               <div v-if="currentScreen !== 'overview'" class="flex flex-row items-center hover:bg-[#f1f3f7] rounded-md p-1 pl-0 mr-2 cursor-pointer">
-                <ChevronLeftIcon @click="goto('overview')" class="w-6 h-6 cursor-pointer relative -top-0.25" />
+                <ChevronLeftIcon @click="goTo('overview')" class="w-6 h-6 cursor-pointer relative -top-0.25" />
               </div>
               <DialogTitle class="grow">{{ title }}</DialogTitle>
               <DialogClose
@@ -40,8 +40,8 @@
               </DialogClose>
             </h2>
 
-            <JurisdictionalOverview v-if="currentScreen === 'overview'" @close="closeOverlay" @goto="goto" />
-            <FixJurisdiction v-if="currentScreen === 'fixJurisdiction'" @close="closeOverlay" @goto="goto" />
+            <JurisdictionalOverview v-if="currentScreen === 'overview'" @close="closeOverlay" @goTo="goTo" />
+            <FixJurisdiction v-if="currentScreen === 'fixJurisdiction'" @close="closeOverlay" @goTo="goTo" />
           </Motion>
         </DialogContent>
       </AnimatePresence>
@@ -84,7 +84,7 @@ function closeOverlay() {
   isOpen.value = false;
 }
 
-function goto(screen: 'overview' | 'fixJurisdiction') {
+function goTo(screen: 'overview' | 'fixJurisdiction') {
   currentScreen.value = screen;
 }
 </script>

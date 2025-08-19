@@ -29,7 +29,7 @@ type IBasicEmitter = {
   openTroubleshootingOverlay: {
     screen: 'server-diagnostics' | 'data-and-log-files' | 'options-for-restart';
   };
-  openImportingOverlay: Importer;
+  openImportingOverlay: { importer: Importer; dataRaw: string };
 };
 
 const basicEmitter: Emitter<IBasicEmitter> = mitt<IBasicEmitter>();

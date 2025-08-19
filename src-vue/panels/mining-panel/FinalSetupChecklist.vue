@@ -17,12 +17,16 @@
             @click="openBotOverlay"
             class="flex flex-row cursor-pointer mt-8 border-t border-[#CCCEDA] py-6 hover:bg-argon-menu-hover"
           >
-            <Checkbox :isChecked="wallets.isLoaded" />
+            <Checkbox :isChecked="wallets.isLoaded && config.hasSavedBiddingRules" />
             <div class="px-4">
               <h2 class="text-2xl text-[#A600D4] font-bold">Configure Mining Bot</h2>
-              <p>
+              <p v-if="config.hasSavedBiddingRules">
                 You've already set up your starting bid threshhold, the maximum price you're willing to
                 invest, and other basic settings that are required.
+              </p>
+              <p v-else>
+                You need to confirm your starting bid threshhold, the maximum price you're willing to
+                invest, and other basic settings in order for your bot to submit bids on your behalf.
               </p>
             </div>
           </section>
@@ -42,12 +46,12 @@
               </p>
               <p v-else-if="walletIsPartiallyFunded">
                 Your account already has
-                <template v-if="wallets.miningWallet.availableMicrogons">
-                  {{ microgonToArgonNm(wallets.miningWallet.availableMicrogons || 0n).format('0,0.[00000000]') }} argon{{
-                    microgonToArgonNm(wallets.miningWallet.availableMicrogons || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
+                <template v-if="wallets.totalMiningMicrogons">
+                  {{ microgonToArgonNm(wallets.totalMiningMicrogons).format('0,0.[00000000]') }} argon{{
+                    microgonToArgonNm(wallets.totalMiningMicrogons).format('0.00000000') === '1.00000000' ? '' : 's'
                   }}
                 </template>
-                <template v-if="wallets.miningWallet.availableMicrogons && wallets.miningWallet.availableMicronots">
+                <template v-if="wallets.totalMiningMicrogons && wallets.miningWallet.availableMicronots">
                   and
                 </template>
                 <template v-if="wallets.miningWallet.availableMicronots">
@@ -73,7 +77,7 @@
                 </template>.
                 Complete this step by moving the missing tokens to your account.
               </p>
-              <p v-else>
+              <p v-else-if="config.hasSavedBiddingRules">
                 Your acccount needs a minimum of
                 {{ microgonToArgonNm(config.biddingRules?.baseCapitalCommitment || 0n).format('0,0.[00000000]') }} argon{{
                   microgonToArgonNm(config.biddingRules?.baseCapitalCommitment || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
@@ -88,7 +92,10 @@
                 to submit auction bids. A secure wallet is already attached to your account. All you need to do is move
                 some tokens.
               </p>
-              
+              <p v-else>
+                Yoru account needs both argons and argonots to submit auction bids. A secure wallet is already attached to your account. All you need to do is move
+                some tokens.
+              </p>
             </div>
           </section>
 
@@ -149,11 +156,15 @@ const { microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency
 const isLaunchingMiningBot = Vue.ref(false);
 
 const walletIsPartiallyFunded = Vue.computed(() => {
-  return (wallets.miningWallet.availableMicrogons || wallets.miningWallet.availableMicronots) > 0;
+  if (!config.hasSavedBiddingRules) {
+    return false;
+  }
+
+  return (wallets.totalMiningMicrogons || wallets.miningWallet.availableMicronots) > 0;
 });
 
 const additionalMicrogonsNeeded = Vue.computed(() => {
-  return bigIntMax(config.biddingRules.baseCapitalCommitment - wallets.miningWallet.availableMicrogons, 0n);
+  return bigIntMax(config.biddingRules.baseCapitalCommitment - wallets.totalMiningMicrogons, 0n);
 });
 
 const additionalMicronotsNeeded = Vue.computed(() => {
@@ -161,6 +172,10 @@ const additionalMicronotsNeeded = Vue.computed(() => {
 });
 
 const walletIsFullyFunded = Vue.computed(() => {
+  if (!config.hasSavedBiddingRules) {
+    return false;
+  }
+
   if (!walletIsPartiallyFunded.value) {
     return false;
   }

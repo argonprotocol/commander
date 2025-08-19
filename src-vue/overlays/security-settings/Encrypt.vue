@@ -4,13 +4,13 @@
 </template>
 
 <script setup lang="ts">
-const emit = defineEmits(['close', 'goto']);
+const emit = defineEmits(['close', 'goTo']);
 
 function closeOverlay() {
   emit('close');
 }
 
 function goBack() {
-  emit('goto', 'overview');
+  emit('goTo', 'overview');
 }
 </script>

@@ -112,7 +112,7 @@
                 <tr @click="openFundMiningAccountOverlay" class="group cursor-pointer">
                   <td class="group-hover:text-argon-600 group-hover:bg-argon-100/20">ARGN</td>
                   <td class="group-hover:text-argon-600 group-hover:bg-argon-100/20 text-right">
-                    {{ microgonToArgonNm(wallets.miningWallet.availableMicrogons).format('0,0.[00]') }}
+                    {{ microgonToArgonNm(wallets.totalMiningMicrogons).format('0,0.[00]') }}
                   </td>
                   <td class="group-hover:text-argon-600 group-hover:bg-argon-100/20 text-right">
                     {{ microgonToArgonNm(wallets.vaultingWallet.availableMicrogons).format('0,0.[00]') }}
@@ -124,7 +124,7 @@
                     {{ micronotToArgonotNm(wallets.vaultingWallet.availableMicronots).format('0,0.[00]') }}
                   </td>
                   <td class="group-hover:text-argon-600 group-hover:bg-argon-100/20 text-right">
-                    {{ micronotToArgonotNm(wallets.miningWallet.availableMicronots).format('0,0.[00]') }}
+                    {{ micronotToArgonotNm(wallets.totalMiningMicrogons).format('0,0.[00]') }}
                   </td>
                 </tr>
               </tbody>
@@ -166,9 +166,12 @@
                     : 's'
                 }}
                 and
-                {{ microgonToArgonNm(microgonsTotal).formatIfElse('< 100', '0,0.[000000]', '0,0.[00]') }}
+                {{ microgonToArgonNm(wallets.totalMiningMicrogons).formatIfElse('< 100', '0,0.[000000]', '0,0.[00]') }}
                 argon{{
-                  microgonToArgonNm(microgonsTotal).formatIfElse('< 100', '0,0.[000000]', '0,0.[00]') === '1' ? '' : 's'
+                  microgonToArgonNm(wallets.totalMiningMicrogons).formatIfElse('< 100', '0,0.[000000]', '0,0.[00]') ===
+                  '1'
+                    ? ''
+                    : 's'
                 }}
                 ({{
                   microgonToArgonNm(wallets.miningWallet.availableMicrogons).formatIfElse(
@@ -366,14 +369,6 @@ const reinvestedEarnings = Vue.computed(() => {
 
 const totalBiddingBudget = Vue.computed(() => {
   return (config.biddingRules?.baseCapitalCommitment || 0n) + reinvestedEarnings.value;
-});
-
-const microgonsTotal = Vue.computed(() => {
-  return (
-    wallets.miningWallet.availableMicrogons +
-    stats.myMiningBids.microgonsBidTotal +
-    stats.myMiningSeats.microgonsBidTotal
-  );
 });
 
 const micronotsTotal = Vue.computed(() => {

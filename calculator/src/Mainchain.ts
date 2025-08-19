@@ -3,7 +3,7 @@ import { type ArgonClient, convertFixedU128ToBigNumber, MICROGONS_PER_ARGON } fr
 import { bigIntMin, bigNumberToBigInt } from './utils.ts';
 import { type IWinningBid } from '@argonprotocol/commander-bot';
 import { MiningFrames } from './MiningFrames.ts';
-import type { ApiDecoration, ApiTypes } from '@polkadot/api/types';
+import type { ApiDecoration } from '@polkadot/api/types';
 
 export type MainchainClient = ArgonClient;
 export { MICROGONS_PER_ARGON };

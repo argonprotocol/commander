@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { Db } from './Db';
 import { remove, BaseDirectory } from '@tauri-apps/plugin-fs';
-import { Option } from '../../src-vue/overlays/troubleshooting/AdvancedRestart.vue';
+import { AdvancedRestartOption } from '../interfaces/IAdvancedRestartOption';
 import { SSH } from './SSH';
 import { Server } from './Server';
 
@@ -22,18 +22,18 @@ export default class Restarter {
     return this._server;
   }
 
-  public async run(toRestart: Set<Option>) {
-    if (toRestart.has(Option.CompletelyWipeAndReinstallCloudMachine)) {
+  public async run(toRestart: Set<AdvancedRestartOption>) {
+    if (toRestart.has(AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine)) {
       const server = await this.getServer();
       await server.completelyWipeEverything();
     }
 
-    if (toRestart.has(Option.RecreateLocalDatabase)) {
+    if (toRestart.has(AdvancedRestartOption.RecreateLocalDatabase)) {
       await this.recreateLocalDatabase();
     }
 
-    if (toRestart.has(Option.ReloadAppUi)) {
-      window.location.reload();
+    if (toRestart.has(AdvancedRestartOption.ReloadAppUi)) {
+      await this.restart();
     }
   }
 
@@ -45,5 +45,9 @@ export default class Restarter {
     await remove(dbPath, { baseDir: BaseDirectory.AppLocalData });
     await invoke('run_db_migrations');
     await db.reconnect();
+  }
+
+  public async restart() {
+    window.location.reload();
   }
 }

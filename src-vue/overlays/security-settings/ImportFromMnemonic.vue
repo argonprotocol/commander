@@ -6,10 +6,9 @@
       the button below to download. And keep it safe! It contains your account's private key, so don't share it with anyone.
     </p>
 
-    <!-- Alert for word count validation -->
-    <div v-if="wordCountError" class="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+    <div v-if="errorMessage" class="bg-red-50 border border-red-200 rounded-md p-3 mt-3 mb-2">
       <p class="text-red-700 text-sm">
-        {{ wordCountError }}
+        {{ errorMessage }}
       </p>
     </div>
   
@@ -28,7 +27,7 @@
     </ol>
 
     <button class="bg-argon-600 text-white rounded-md py-2 px-3 mb-1 cursor-pointer" @click="importAccount">
-      Import Account
+      {{ isImporting ? 'Importing Account...' : 'Import Account' }}
     </button>
     
   </div>
@@ -43,15 +42,14 @@ const config = useConfig();
 const controller = useController();
 
 const mnemonic = Vue.ref(['', '', '', '', '', '', '', '', '', '', '', '']);
-const wordCountError = Vue.ref('');
+const errorMessage = Vue.ref('');
 const hasErrors = Vue.ref(false);
-const isSavingExport = Vue.ref(false);
-const hasSavedExport = Vue.ref(false);
+const isImporting = Vue.ref(false);
 
-const emit = defineEmits(['close', 'goto']);
+const emit = defineEmits(['close', 'goTo']);
 
-function goto(screen: 'import-from-mnemonic') {
-  emit('goto', screen);
+function goTo(screen: 'import-from-mnemonic') {
+  emit('goTo', screen);
 }
 
 function handlePaste(event: ClipboardEvent) {
@@ -65,31 +63,39 @@ function handlePaste(event: ClipboardEvent) {
 
   if (words.length === 0) return;
 
-  if (words.length !== 12) {
-    wordCountError.value = `Please paste exactly 12 words. You pasted ${words.length} word${words.length === 1 ? '' : 's'}.`;
-    return;
-  }
-
-  // Clear error and populate mnemonic array
-  wordCountError.value = '';
-  mnemonic.value = words;
+  errorMessage.value = '';
+  words.forEach((word, i) => {
+    if (i < 12) mnemonic.value[i] = word;
+  });
 }
 
 function validateMnemonic() {
   // Clear error when user manually types
-  wordCountError.value = '';
+  errorMessage.value = '';
 
   // Check if all fields are filled
   const filledWords = mnemonic.value.filter(word => word.trim().length > 0);
 
   if (filledWords.length > 0 && filledWords.length !== 12) {
-    wordCountError.value = `Please enter exactly 12 words. You have ${filledWords.length} word${filledWords.length === 1 ? '' : 's'}.`;
+    errorMessage.value = `Please enter exactly 12 words. You have ${filledWords.length} word${filledWords.length === 1 ? '' : 's'}.`;
   }
 }
 
 async function importAccount() {
   hasErrors.value = mnemonic.value.some(word => !word);
-  console.log(hasErrors.value);
   if (hasErrors.value) return;
+
+  const hasSameMnemonic = config.security.masterMnemonic === mnemonic.value.join(' ');
+  if (hasSameMnemonic) {
+    errorMessage.value = 'The mnemonic you entered is the same as your current account.';
+    return;
+  }
+
+  isImporting.value = true;
+
+  controller.importFromMnemonic(mnemonic.value.join(' '));
+
+  isImporting.value = false;
+  emit('close');
 }
 </script>

@@ -1,7 +1,6 @@
 import { afterAll, afterEach, expect, it } from 'vitest';
 import { startNetwork, teardown } from '@argonprotocol/testing';
 import createBidderParams from '../src/createBidderParams.ts';
-import { type IBiddingRules } from '../src/IBiddingRules.ts';
 import { jsonParseWithBigInts } from '../src/utils.ts';
 import { getClient } from '@argonprotocol/mainchain';
 import { MiningFrames } from '../src/MiningFrames.ts';

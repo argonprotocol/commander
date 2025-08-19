@@ -39,12 +39,12 @@ import * as Vue from 'vue';
 import { useConfig } from '../../stores/config';
 import AlertIcon from '../../assets/alert.svg?component';
 
-const emit = defineEmits(['close', 'goto']);
+const emit = defineEmits(['close', 'goTo']);
 
 const config = useConfig();
 
 function fixJurisdiction() {
-  emit('goto', 'fixJurisdiction');
+  emit('goTo', 'fixJurisdiction');
 }
 
 function closeOverlay() {
