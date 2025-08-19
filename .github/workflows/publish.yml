@@ -3,7 +3,7 @@ name: Publish distributions
 
 on:
   push:
-    tags:
+    branches:
       - v[0-9]+.*
   workflow_dispatch:
     inputs:
@@ -20,6 +20,7 @@ env:
   VERSION: ${{ github.event.inputs.version || github.ref_name }}
   TAURI_CONFIG: src-tauri/tauri.conf.json
   ARGON_EXPERIMENTAL: ${{ github.event.inputs.version && contains(github.event.inputs.version, '-rc') || false }}
+  RELEASE_NOTES: ''
 
 jobs:
   publish-tauri:
@@ -44,6 +45,18 @@ jobs:
           node-version: 22
           cache: yarn
 
+      - name: install frontend dependencies
+        run: yarn install
+
+      - name: Read release notes (and ensure they exist)
+        run: |
+          RELEASE_NOTES = yarn tsx getReleaseNotes.ts ${{ env.VERSION }}
+          if [ -z "$RELEASE_NOTES" ]; then
+              echo "Release notes are empty. Please provide valid release notes."
+              exit 1
+          fi
+          echo "RELEASE_NOTES=$RELEASE_NOTES" >> $GITHUB_ENV
+
       - name: install Rust stable (macOS)
         uses: dtolnay/rust-toolchain@stable
 
@@ -64,9 +77,6 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
-
-      - name: install frontend dependencies
-        run: yarn install
 
       - name: build server
         run: yarn build:server
@@ -89,7 +99,7 @@ jobs:
           includeDebug: true
           tagName: ${{ env.VERSION }}
           releaseName: ${{ env.VERSION }}
-          releaseBody: 'Release ${{ env.VERSION }}'
+          releaseBody: ${{ env.RELEASE_NOTES }}
           releaseDraft: true
           prerelease: true
           updaterJsonKeepUniversal: true
