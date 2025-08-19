@@ -284,7 +284,10 @@ export class Mainchain {
       const currentFrameId = startingFrameId - i;
       const blockNumber = frameStartBlockNumbers[i];
       const hasAlreadySeenThisFrame = seenFrames.has(currentFrameId);
-      const shouldIterateThisFrame = iterateByEpoch && i === 0 && !hasAlreadySeenThisFrame;
+      let shouldIterateThisFrame = !hasAlreadySeenThisFrame;
+      if (iterateByEpoch && i === 0 && !shouldIterateThisFrame) {
+        shouldIterateThisFrame = true;
+      }
       console.log(`Exploring frame ${currentFrameId}`);
 
       const iterateThisFrame = async () => {

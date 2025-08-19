@@ -159,11 +159,9 @@ function openConfigureStabilizationVaultOverlay() {
   basicEmitter.emit('openConfigureStabilizationVaultOverlay');
 }
 
-const vaultsStore = useVaults();
-Vue.onMounted(async () => {
+const mainchain = getMainchain();
+async function updateRevenue() {
   try {
-    const mainchain = getMainchain();
-    await vaultsStore.load();
     const frameToLoadPoolEarnings = (await mainchain.getCurrentFrameId()) - 1;
     const list = Object.values(vaultsStore.vaultsById);
     const vaultApys: number[] = [];
@@ -215,6 +213,13 @@ Vue.onMounted(async () => {
   } catch (error) {
     console.error('Error loading vaults:', error);
   }
+}
+
+const vaultsStore = useVaults();
+Vue.onMounted(async () => {
+  await vaultsStore.load();
+  await updateRevenue();
+  void vaultsStore.refreshRevenue().then(updateRevenue);
 });
 </script>
 
