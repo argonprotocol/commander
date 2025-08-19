@@ -19,6 +19,8 @@ import Countries from './Countries';
 import { invokeWithTimeout } from './tauriApi';
 import ISecurity from '../interfaces/ISecurity';
 import AppConfig from '../../app.config.json';
+import { getMainchainClient } from '../stores/mainchain';
+import { WalletBalances } from './WalletBalances';
 
 console.log('__ARGON_NETWORK_NAME__', __ARGON_NETWORK_NAME__);
 console.log('__COMMANDER_INSTANCE__', __COMMANDER_INSTANCE__);
@@ -54,6 +56,7 @@ export class Config {
   private _stringifiedData = {} as IConfigStringified;
   private _masterAccount!: KeyringPair;
   private _miningAccount!: KeyringPair;
+  private _miningAccountPreviousHistoryLoadPct: number = 0;
   private _vaultingAccount!: KeyringPair;
   private _miningSessionMiniSecret!: string;
 
@@ -81,6 +84,12 @@ export class Config {
       },
       installDetails: Config.getDefault(dbFields.installDetails) as IConfig['installDetails'],
       oldestFrameIdToSync: Config.getDefault(dbFields.oldestFrameIdToSync) as number,
+      latestFrameIdProcessed: Config.getDefault(dbFields.latestFrameIdProcessed) as number,
+      miningAccountAddress: Config.getDefault(dbFields.miningAccountAddress) as string,
+      miningAccountHadPreviousLife: Config.getDefault(dbFields.miningAccountHadPreviousLife) as boolean,
+      miningAccountPreviousHistory: Config.getDefault(
+        dbFields.miningAccountPreviousHistory,
+      ) as IConfig['miningAccountPreviousHistory'],
       isVaultReadyToCreate: Config.getDefault(dbFields.isVaultReadyToCreate) as boolean,
       isServerReadyToInstall: Config.getDefault(dbFields.isServerReadyToInstall) as boolean,
       isServerInstalled: Config.getDefault(dbFields.isServerInstalled) as boolean,
@@ -107,7 +116,7 @@ export class Config {
     const db = await this._dbPromise;
     const fieldsToSave: Set<string> = new Set();
     const loadedData: any = {};
-    const stringifieData = {} as IConfigStringified & { miningAccountAddress: string };
+    const stringifiedData = {} as IConfigStringified & { miningAccountAddress: string };
 
     const [rawData, security] = await Promise.all([
       db.configTable.fetchAllAsObject(),
@@ -124,13 +133,13 @@ export class Config {
         loadedData[key] = defaultValue;
         if (key !== dbFields.biddingRules && key !== dbFields.vaultingRules) {
           fieldsToSave.add(key);
-          stringifieData[key as keyof typeof stringifieData] = jsonStringifyWithBigInts(defaultValue, null, 2);
+          stringifiedData[key as keyof typeof stringifiedData] = jsonStringifyWithBigInts(defaultValue, null, 2);
         }
         continue;
       }
 
       loadedData[key] = jsonParseWithBigInts(rawValue as string);
-      stringifieData[key as keyof typeof stringifieData] = rawValue as string;
+      stringifiedData[key as keyof typeof stringifiedData] = rawValue as string;
       if (key === dbFields.biddingRules) {
         this.hasSavedBiddingRules = true;
       } else if (key === dbFields.vaultingRules) {
@@ -138,12 +147,15 @@ export class Config {
       }
     }
 
-    this.isLoaded = true;
+    const isFirstTimeAppLoad = Object.keys(rawData).length === 0;
+    if (isFirstTimeAppLoad) {
+      await this._injectFirstTimeAppData(loadedData, stringifiedData, fieldsToSave);
+    }
 
-    if (!loadedData.miningAccountAddress) {
-      fieldsToSave.add('miningAccountAddress');
-      stringifieData['miningAccountAddress'] = JSON.stringify(this.miningAccount.address);
-    } else if (this.miningAccount.address !== loadedData.miningAccountAddress) {
+    const dataToSave = Config.extractDataToSave(fieldsToSave, stringifiedData);
+    await db.configTable.insertOrReplace(dataToSave);
+
+    if (this.miningAccount.address !== loadedData.miningAccountAddress) {
       await tauriMessage(
         'Your database does not match your current mining account address. Something has corrupted your data.',
         {
@@ -153,18 +165,26 @@ export class Config {
       );
     }
 
-    const dataToSave = Config.extractDataToSave(fieldsToSave, stringifieData);
-    await db.configTable.insertOrReplace(dataToSave);
-
+    this.isLoaded = true;
     this._db = db;
     this._loadedData = loadedData as IConfig;
-    this._stringifiedData = stringifieData;
+    this._stringifiedData = stringifiedData;
     this._loadedDeferred.resolve();
+
+    if (this.miningAccountHadPreviousLife && !this.miningAccountPreviousHistory) {
+      await this._bootupFromMiningAccountPreviousHistory();
+    }
   }
 
   get masterAccount(): KeyringPair {
-    this._throwErrorIfNotLoaded();
-    return (this._masterAccount ||= new Keyring({ type: 'sr25519' }).createFromUri(this.security.masterMnemonic));
+    // we will allow this to operate even if not loaded so this._injectFirstTimeAppData can set the miningAccountAddress
+    if (this._masterAccount) return this._masterAccount;
+
+    const masterAccount = new Keyring({ type: 'sr25519' }).createFromUri(this._security.masterMnemonic);
+    if (!this.isLoaded) return masterAccount;
+
+    this._masterAccount = masterAccount;
+    return this._masterAccount;
   }
 
   get miningSessionMiniSecret(): string {
@@ -173,8 +193,33 @@ export class Config {
   }
 
   get miningAccount(): KeyringPair {
+    // we will allow this to operate even if not loaded so this._injectFirstTimeAppData can set the miningAccountAddress
+    if (this._miningAccount) return this._miningAccount;
+
+    const miningAccount = this.masterAccount.derive(`//mining`);
+    if (!this.isLoaded) return miningAccount;
+
+    this._miningAccount = miningAccount;
+    return this._miningAccount;
+  }
+
+  get miningAccountHadPreviousLife(): IConfig['miningAccountHadPreviousLife'] {
     this._throwErrorIfNotLoaded();
-    return (this._miningAccount ||= this.masterAccount.derive(`//mining`));
+    return this._loadedData.miningAccountHadPreviousLife;
+  }
+
+  get miningAccountPreviousHistory(): IConfig['miningAccountPreviousHistory'] {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.miningAccountPreviousHistory;
+  }
+
+  get isBootingUpFromMiningAccountPreviousHistory(): boolean {
+    return this._loadedData.miningAccountHadPreviousLife && !this._loadedData.miningAccountPreviousHistory;
+  }
+
+  get miningAccountPreviousHistoryLoadPct(): number {
+    if (!this.isBootingUpFromMiningAccountPreviousHistory) return 100;
+    return Math.min(this._miningAccountPreviousHistoryLoadPct, 100);
   }
 
   get vaultingAccount(): KeyringPair {
@@ -195,8 +240,8 @@ export class Config {
 
   set requiresPassword(value: boolean) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.requiresPassword, value);
     this._loadedData.requiresPassword = value;
+    this._tryFieldsToSave(dbFields.requiresPassword, value);
   }
 
   get security(): ISecurity {
@@ -211,8 +256,8 @@ export class Config {
 
   set serverDetails(value: IConfig['serverDetails']) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.serverDetails, value);
     this._loadedData.serverDetails = value;
+    this._tryFieldsToSave(dbFields.serverDetails, value);
   }
 
   get installDetails(): IConfig['installDetails'] {
@@ -222,8 +267,8 @@ export class Config {
 
   set installDetails(value: IConfig['installDetails']) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.installDetails, value);
     this._loadedData.installDetails = value;
+    this._tryFieldsToSave(dbFields.installDetails, value);
   }
 
   get oldestFrameIdToSync(): number {
@@ -233,8 +278,19 @@ export class Config {
 
   set oldestFrameIdToSync(value: number) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.oldestFrameIdToSync, value);
     this._loadedData.oldestFrameIdToSync = value;
+    this._tryFieldsToSave(dbFields.oldestFrameIdToSync, value);
+  }
+
+  get latestFrameIdProcessed(): number {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.latestFrameIdProcessed;
+  }
+
+  set latestFrameIdProcessed(value: number) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.latestFrameIdProcessed = value;
+    this._tryFieldsToSave(dbFields.latestFrameIdProcessed, value);
   }
 
   get isVaultReadyToCreate(): boolean {
@@ -244,8 +300,8 @@ export class Config {
 
   set isVaultReadyToCreate(value: boolean) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.isVaultReadyToCreate, value);
     this._loadedData.isVaultReadyToCreate = value;
+    this._tryFieldsToSave(dbFields.isVaultReadyToCreate, value);
   }
 
   get isServerReadyToInstall(): boolean {
@@ -255,8 +311,8 @@ export class Config {
 
   set isServerReadyToInstall(value: boolean) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.isServerReadyToInstall, value);
     this._loadedData.isServerReadyToInstall = value;
+    this._tryFieldsToSave(dbFields.isServerReadyToInstall, value);
   }
 
   get isServerUpToDate(): boolean {
@@ -266,8 +322,8 @@ export class Config {
 
   set isServerUpToDate(value: boolean) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.isServerUpToDate, value);
     this._loadedData.isServerUpToDate = value;
+    this._tryFieldsToSave(dbFields.isServerUpToDate, value);
   }
 
   get isServerInstalled(): boolean {
@@ -277,8 +333,8 @@ export class Config {
 
   set isServerInstalled(value: boolean) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.isServerInstalled, value);
     this._loadedData.isServerInstalled = value;
+    this._tryFieldsToSave(dbFields.isServerInstalled, value);
   }
 
   get isWaitingForUpgradeApproval(): boolean {
@@ -288,8 +344,8 @@ export class Config {
 
   set isWaitingForUpgradeApproval(value: boolean) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.isWaitingForUpgradeApproval, value);
     this._loadedData.isWaitingForUpgradeApproval = value;
+    this._tryFieldsToSave(dbFields.isWaitingForUpgradeApproval, value);
   }
 
   get hasMiningSeats(): boolean {
@@ -299,8 +355,8 @@ export class Config {
 
   set hasMiningSeats(value: boolean) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.hasMiningSeats, value);
     this._loadedData.hasMiningSeats = value;
+    this._tryFieldsToSave(dbFields.hasMiningSeats, value);
   }
 
   get hasMiningBids(): boolean {
@@ -310,8 +366,8 @@ export class Config {
 
   set hasMiningBids(value: boolean) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.hasMiningBids, value);
     this._loadedData.hasMiningBids = value;
+    this._tryFieldsToSave(dbFields.hasMiningBids, value);
   }
 
   get biddingRules(): IConfig['biddingRules'] {
@@ -341,8 +397,8 @@ export class Config {
 
   set defaultCurrencyKey(value: CurrencyKey) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.defaultCurrencyKey, value);
     this._loadedData.defaultCurrencyKey = value;
+    this._tryFieldsToSave(dbFields.defaultCurrencyKey, value);
   }
 
   get userJurisdiction(): IConfig['userJurisdiction'] {
@@ -352,8 +408,8 @@ export class Config {
 
   set userJurisdiction(value: IConfig['userJurisdiction']) {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.userJurisdiction, value);
     this._loadedData.userJurisdiction = value;
+    this._tryFieldsToSave(dbFields.userJurisdiction, value);
   }
 
   get isValidJurisdiction(): boolean {
@@ -363,15 +419,15 @@ export class Config {
 
   public async saveBiddingRules() {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.biddingRules, this.biddingRules);
     this.hasSavedBiddingRules = true;
+    this._tryFieldsToSave(dbFields.biddingRules, this.biddingRules);
     await this.save();
   }
 
   public async saveVaultingRules() {
     this._throwErrorIfNotLoaded();
-    this._tryFieldsToSave(dbFields.vaultingRules, this.vaultingRules);
     this.hasSavedVaultingRules = true;
+    this._tryFieldsToSave(dbFields.vaultingRules, this.vaultingRules);
     await this.save();
   }
 
@@ -402,6 +458,64 @@ export class Config {
     this._fieldsToSave.add(field);
   }
 
+  private async _injectFirstTimeAppData(
+    loadedData: Partial<IConfig>,
+    stringifiedData: IConfigStringified,
+    fieldsToSave: Set<string>,
+  ) {
+    // We cannot use this._tryFieldsToSave because this._stringifiedData and this._fieldsToSave are not initialized yet. Instead
+    // we can set the values to their temporary loadedData and stringifiedData objects
+
+    const miningAccountAddress = this.miningAccount.address;
+    loadedData.miningAccountAddress = miningAccountAddress;
+    stringifiedData[dbFields.miningAccountAddress] = jsonStringifyWithBigInts(miningAccountAddress, null, 2);
+    fieldsToSave.add(dbFields.miningAccountAddress);
+
+    const clientPromise = getMainchainClient(true);
+    const walletBalances = new WalletBalances(clientPromise);
+    await walletBalances.load({ miningAccountAddress });
+    await walletBalances.updateBalances();
+
+    const miningHasValue = WalletBalances.doesWalletHasValue(walletBalances.miningWallet);
+    const vaultingHasValue = WalletBalances.doesWalletHasValue(walletBalances.vaultingWallet);
+    const miningAccountHadPreviousLife = miningHasValue || vaultingHasValue;
+
+    loadedData.miningAccountHadPreviousLife = miningAccountHadPreviousLife;
+    stringifiedData[dbFields.miningAccountHadPreviousLife] = jsonStringifyWithBigInts(
+      miningAccountHadPreviousLife,
+      null,
+      2,
+    );
+    fieldsToSave.add(dbFields.miningAccountHadPreviousLife);
+  }
+
+  private async _bootupFromMiningAccountPreviousHistory() {
+    const clientPromise = getMainchainClient(true);
+    const walletBalances = new WalletBalances(clientPromise);
+    await walletBalances.load({ miningAccountAddress: this.miningAccount.address });
+    walletBalances.onLoadHistoryProgress = (loadPct: number) => {
+      this._miningAccountPreviousHistoryLoadPct = loadPct;
+    };
+    const historyItems = await walletBalances.loadHistory(this.miningAccount, this.miningSessionMiniSecret);
+    const frameIdsProcessed = historyItems?.map(x => x.frameId) || [];
+    const oldestFrameIdProcessed = frameIdsProcessed.length ? Math.min(...frameIdsProcessed) : 0;
+    if (historyItems.length === 1 && !historyItems[0].seats.length) {
+      // We only found bids for today, which means today was the start
+      this.oldestFrameIdToSync = oldestFrameIdProcessed;
+      this.hasMiningBids = true;
+    } else if (historyItems.length) {
+      // We found seat history, so we can set the oldestFrameIdToSync to the previous frame of the oldest we have
+      // It must be previous frame because we can't have a seat for today if we didn't bid yesterday
+      this.oldestFrameIdToSync = oldestFrameIdProcessed - 1;
+      this.hasMiningBids = true;
+      this.hasMiningSeats = true;
+    }
+
+    this._loadedData.miningAccountPreviousHistory = historyItems;
+    this._tryFieldsToSave(dbFields.miningAccountPreviousHistory, historyItems);
+    await this.save();
+  }
+
   private static extractDataToSave(
     fieldsToSave: Set<string>,
     stringifiedData: IConfigStringified,
@@ -424,6 +538,10 @@ const dbFields = {
   serverDetails: 'serverDetails',
   installDetails: 'installDetails',
   oldestFrameIdToSync: 'oldestFrameIdToSync',
+  latestFrameIdProcessed: 'latestFrameIdProcessed',
+  miningAccountAddress: 'miningAccountAddress',
+  miningAccountHadPreviousLife: 'miningAccountHadPreviousLife',
+  miningAccountPreviousHistory: 'miningAccountPreviousHistory',
   isVaultReadyToCreate: 'isVaultReadyToCreate',
   isServerReadyToInstall: 'isServerReadyToInstall',
   isServerInstalled: 'isServerInstalled',
@@ -465,6 +583,10 @@ const defaults: IConfigDefaults = {
     };
   },
   oldestFrameIdToSync: () => 0,
+  latestFrameIdProcessed: () => 0,
+  miningAccountAddress: () => '',
+  miningAccountHadPreviousLife: () => false,
+  miningAccountPreviousHistory: () => null,
   isVaultReadyToCreate: () => false,
   isServerReadyToInstall: () => false,
   isServerInstalled: () => false,
@@ -525,7 +647,6 @@ const defaults: IConfigDefaults = {
     const geoResponse = await fetch(`https://api.hackertarget.com/geoip/?q=${ipAddress}&output=json`);
     const { city, region, state, country: countryStr, latitude, longitude } = await geoResponse.json();
     const country = Countries.closestMatch(countryStr) || ({} as any);
-    console.log('country', countryStr, country);
 
     return {
       ipAddress,

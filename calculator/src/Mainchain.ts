@@ -3,6 +3,7 @@ import { type ArgonClient, convertFixedU128ToBigNumber, MICROGONS_PER_ARGON } fr
 import { bigIntMin, bigNumberToBigInt } from './utils.ts';
 import { type IWinningBid } from '@argonprotocol/commander-bot';
 import { MiningFrames } from './MiningFrames.ts';
+import type { ApiDecoration, ApiTypes } from '@polkadot/api/types';
 
 export type MainchainClient = ArgonClient;
 export { MICROGONS_PER_ARGON };
@@ -11,22 +12,21 @@ export const BLOCK_REWARD_MAX = BigInt(5_000_000);
 export const BLOCK_REWARD_INTERVAL = 118;
 
 export class Mainchain {
-  constructor(public client: Promise<MainchainClient>) {}
+  constructor(public clientPromise: Promise<MainchainClient>) {}
 
   public async getMinimumMicronotsForBid(): Promise<bigint> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     return await client.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
   }
 
-  public async getFrameStartBlockNumbers(): Promise<number[]> {
-    const client = await this.client;
-    const frameStartBlockNumbers = await client.query.miningSlot.frameStartBlockNumbers();
+  public async getFrameStartBlockNumbers(api: ApiDecoration<'promise'>): Promise<number[]> {
+    const frameStartBlockNumbers = await api.query.miningSlot.frameStartBlockNumbers();
     return frameStartBlockNumbers.map(x => x.toNumber());
   }
 
   public async getLiquidityPoolPayout(): Promise<{ totalPoolRewards: bigint; totalActivatedCapital: bigint }> {
-    const client = await this.client;
-    const frameStartBlockNumbers = await this.getFrameStartBlockNumbers();
+    const client = await this.clientPromise;
+    const frameStartBlockNumbers = await this.getFrameStartBlockNumbers(client);
     const blockNumber = frameStartBlockNumbers[0];
     const blockHash = await client.rpc.chain.getBlockHash(blockNumber);
     const clientAt = await client.at(blockHash);
@@ -55,12 +55,12 @@ export class Mainchain {
   }
 
   public async getCurrentTick(): Promise<number> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     return (await client.query.ticks.currentTick()).toNumber();
   }
 
   private async getTicksSinceGenesis(currentTick: number): Promise<number> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     const genesisTick = (await client.query.ticks.genesisTick()).toNumber();
     return currentTick - genesisTick;
   }
@@ -85,19 +85,19 @@ export class Mainchain {
   }
 
   public async getCurrentArgonTargetPrice(): Promise<number> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     const argonPrice = (await client.query.priceIndex.current()).unwrapOrDefault();
     return convertFixedU128ToBigNumber(argonPrice.argonUsdTargetPrice.toBigInt()).toNumber();
   }
 
   public async getMiningSeatCount(): Promise<number> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     const activeMiners = (await client.query.miningSlot.activeMinersCount()).toNumber();
     return Math.max(activeMiners, 100);
   }
 
   public async getAggregateBidCosts(): Promise<bigint> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     const bidsPerFrame = await client.query.miningSlot.minersByCohort.entries();
 
     let aggregateBidCosts = 0n;
@@ -112,7 +112,7 @@ export class Mainchain {
     microgons: bigint;
     micronots: bigint;
   }> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     const blockRewards = await client.query.blockRewards.blockRewardsByCohort();
     const nextCohortId = blockRewards.pop()?.[0].toNumber() ?? 1;
     const currentCohortId = nextCohortId - 1;
@@ -138,17 +138,17 @@ export class Mainchain {
   }
 
   public async fetchMicrogonsInCirculation(): Promise<bigint> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     return (await client.query.balances.totalIssuance()).toBigInt();
   }
 
   public async fetchMicrogonsMinedPerBlockDuringNextCohort(): Promise<bigint> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     return await client.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
   }
 
   public async fetchMicrogonBlockFeesMined(blockHash?: Uint8Array | string): Promise<bigint> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     const api = blockHash ? await client.at(blockHash) : client;
     const blockFees = await api.query.blockRewards.blockFees();
     return blockFees.toBigInt();
@@ -160,7 +160,7 @@ export class Mainchain {
     ARGN: bigint;
     BTC: bigint;
   }> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     const api = blockHash ? await client.at(blockHash) : client;
     const microgonsForArgon = BigInt(1 * MICROGONS_PER_ARGON);
     const priceIndexRaw = await api.query.priceIndex.current();
@@ -192,7 +192,7 @@ export class Mainchain {
   }
 
   public async getNextSlotRange(): Promise<[number, number]> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     const nextSlotRangeBytes = await client.rpc.state.call('MiningSlotApi_next_slot_era', '');
     const nextSlotRangeRaw = client.createType('(u64, u64)', nextSlotRangeBytes);
     return [nextSlotRangeRaw[0].toNumber(), nextSlotRangeRaw[1].toNumber()];
@@ -203,7 +203,7 @@ export class Mainchain {
   }
 
   public async getTickAtStartOfAuctionClosing(): Promise<number> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     const tickAtStartOfNextCohort = await this.getTickAtStartOfNextCohort();
     const ticksBeforeBidEndForVrfClose = (
       await client.query.miningSlot.miningConfig()
@@ -217,7 +217,7 @@ export class Mainchain {
   }
 
   public async fetchWinningBids(): Promise<IWinningBid[]> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     const nextCohort = await client.query.miningSlot.bidsForNextSlotCohort();
     return nextCohort.map((c, i): IWinningBid => {
       const address = c.accountId.toHuman();
@@ -230,7 +230,7 @@ export class Mainchain {
   }
 
   public async fetchWinningBidAmountsForFrame(frameId: number): Promise<bigint[]> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     const winningBids = await client.query.miningSlot.minersByCohort(frameId);
     return winningBids.map(bid => bid.bid.toBigInt());
   }
@@ -253,7 +253,7 @@ export class Mainchain {
   }
 
   public async getCurrentFrameId(): Promise<number> {
-    const client = await this.client;
+    const client = await this.clientPromise;
     const nextFrameId = await client.query.miningSlot.nextFrameId();
     return nextFrameId.toNumber() - 1; // Subtract 1 to get the current frame ID
   }
@@ -270,45 +270,59 @@ export class Mainchain {
       abortController: AbortController,
     ) => Promise<T>,
   ): Promise<T[]> {
-    const client = await this.client;
-    let frameStartBlockNumbers = await this.getFrameStartBlockNumbers();
+    const client = await this.clientPromise;
     const abortController = new AbortController();
     const seenFrames = new Set<number>();
     const results: T[] = [];
+
+    let api = client as ApiDecoration<'promise'>;
+    let apiSpecVersion = api.runtimeVersion.specVersion.toNumber();
+    let frameStartBlockNumbers = await this.getFrameStartBlockNumbers(api);
+    let startingFrameId = await api.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
+
     for (let i = 0; i < frameStartBlockNumbers.length; i++) {
-      const startBlockNumber = frameStartBlockNumbers[i];
-      const blockHash = await client.rpc.chain.getBlockHash(startBlockNumber);
-      const api = await client.at(blockHash);
-      const specVersion = api.runtimeVersion.specVersion.toNumber();
-      if (specVersion < 124) {
-        // frameStartBlockNumbers is not available in versions < 124
-        break;
+      const currentFrameId = startingFrameId - i;
+      const blockNumber = frameStartBlockNumbers[i];
+      const hasAlreadySeenThisFrame = seenFrames.has(currentFrameId);
+      const shouldIterateThisFrame = iterateByEpoch && i === 0 && !hasAlreadySeenThisFrame;
+      console.log(`Exploring frame ${currentFrameId}`);
+
+      const iterateThisFrame = async () => {
+        const result = await callback(
+          currentFrameId,
+          api as any,
+          { blockNumber, specVersion: apiSpecVersion },
+          abortController,
+        );
+        results.push(result);
+      };
+
+      if (shouldIterateThisFrame) {
+        await iterateThisFrame();
+        if (abortController.signal.aborted || currentFrameId <= 1) {
+          break; // Stop processing if the abort signal is triggered
+        }
       }
-      const justEndedFrameId = await api.query.miningSlot.nextFrameId().then(x => x.toNumber() - 2);
-      if (seenFrames.has(justEndedFrameId)) {
-        continue; // Skip already seen frames
-      }
-      seenFrames.add(justEndedFrameId);
-      const result = await callback(
-        justEndedFrameId,
-        api as any,
-        { blockNumber: startBlockNumber, specVersion },
-        abortController,
-      );
-      results.push(result);
-      if (abortController.signal.aborted || justEndedFrameId <= 1) {
-        break; // Stop processing if the abort signal is triggered
-      }
-      if (iterateByEpoch && i === 0) {
-        // Jump to the oldest frame available
-        i = frameStartBlockNumbers.length - 2; // Skip to the last frame
-        continue;
-      }
-      if (i === frameStartBlockNumbers.length - 1) {
-        console.log(`Reloading frame start block numbers at recently ended frame ${justEndedFrameId}`);
-        frameStartBlockNumbers = await api.query.miningSlot
-          .frameStartBlockNumbers()
-          .then(frs => frs.map(x => x.toNumber()));
+      seenFrames.add(currentFrameId);
+
+      const isLastFrame = i === frameStartBlockNumbers.length - 1;
+
+      if (isLastFrame) {
+        const nextBlockHash = await client.rpc.chain.getBlockHash(blockNumber - 1);
+        const nextApi = await client.at(nextBlockHash);
+        const nextApiSpecVersion = nextApi.runtimeVersion.specVersion.toNumber();
+        if (nextApiSpecVersion < 124) {
+          // frameStartBlockNumbers is not available in versions < 124
+          if (!shouldIterateThisFrame) {
+            await iterateThisFrame();
+          }
+          break;
+        }
+        api = nextApi;
+        apiSpecVersion = nextApiSpecVersion;
+        frameStartBlockNumbers = await this.getFrameStartBlockNumbers(api);
+        startingFrameId = currentFrameId - 1;
+        console.log(`Reloaded frame start block numbers for next frame ${startingFrameId}`);
         i = -1;
       }
     }

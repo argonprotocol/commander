@@ -15,7 +15,7 @@ import {
 import { BitcoinNetwork, CosignScript, getBitcoinNetworkFromApi, getChildXpriv, HDKey } from '@argonprotocol/bitcoin';
 import { Db } from './Db.ts';
 import { getMainchain, getMainchainClient } from '../stores/mainchain.ts';
-import { deferred, IDeferred } from './Utils.ts';
+import { createDeferred, IDeferred } from './Utils.ts';
 import { IVaultRecord, VaultsTable } from './db/VaultsTable.ts';
 import IVaultingRules from '../interfaces/IVaultingRules.ts';
 import BigNumber from 'bignumber.js';
@@ -27,7 +27,7 @@ import BitcoinLocksStore from './BitcoinLocksStore.ts';
 export class MyVault {
   public data: {
     createdVault: Vault | null;
-    creatingVaultPromise?: IDeferred<{ vault: Vault; txResult: TxResult }>;
+    creatingVaultPromise?: Promise<{ vault: Vault; txResult: TxResult }>;
     metadata: IVaultRecord | null;
     stats: IVaultStats | null;
     ownLiquidityPoolCapitalDeployed: bigint;
@@ -99,9 +99,9 @@ export class MyVault {
   }
 
   public async load(reload = false): Promise<void> {
-    if (this.#waitForLoad && !reload) return this.#waitForLoad;
+    if (this.#waitForLoad && !reload) return this.#waitForLoad.promise;
 
-    this.#waitForLoad ??= deferred();
+    this.#waitForLoad ??= createDeferred();
     try {
       console.log('Loading MyVault...');
       await this.vaults.load(reload);
@@ -135,6 +135,7 @@ export class MyVault {
     } catch (error) {
       this.#waitForLoad.reject(error as Error);
     }
+    return this.#waitForLoad.promise;
   }
 
   public async subscribe() {
@@ -308,8 +309,8 @@ export class MyVault {
 
     console.log('creating a vault with address', args.argonKeyring.address);
 
-    const createVaultDeferred = deferred<{ vault: Vault; txResult: TxResult }>();
-    this.data.creatingVaultPromise = createVaultDeferred;
+    const createVaultDeferred = createDeferred<{ vault: Vault; txResult: TxResult }>();
+    this.data.creatingVaultPromise = createVaultDeferred.promise;
     try {
       const { argonKeyring, xprivSeed, masterXpubPath, rules } = args;
 
@@ -348,7 +349,7 @@ export class MyVault {
       createVaultDeferred.reject(error as Error);
     }
     this.data.creatingVaultPromise = undefined;
-    return createVaultDeferred;
+    return createVaultDeferred.promise;
   }
 
   public async updateRevenue(frameRevenues?: Vec<PalletVaultsVaultFrameRevenue>): Promise<void> {

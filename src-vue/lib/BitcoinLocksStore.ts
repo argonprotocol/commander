@@ -20,7 +20,7 @@ import {
 import { Db } from './Db.ts';
 import { BitcoinLocksTable, IBitcoinLockRecord } from './db/BitcoinLocksTable.ts';
 import { useVaults } from '../stores/vaults.ts';
-import { deferred, IDeferred } from './Utils.ts';
+import { createDeferred, IDeferred } from './Utils.ts';
 import { BITCOIN_BLOCK_MILLIS, ESPLORA_HOST } from './Config.ts';
 import { type AddressTxsUtxo } from '@mempool/mempool.js/lib/interfaces/bitcoin/addresses';
 import { type TxStatus } from '@mempool/mempool.js/lib/interfaces/bitcoin/transactions';
@@ -96,8 +96,8 @@ export default class BitcoinLocksStore {
   }
 
   async load(): Promise<void> {
-    if (this.#waitForLoad) return this.#waitForLoad;
-    this.#waitForLoad = deferred<void>();
+    if (this.#waitForLoad) return this.#waitForLoad.promise;
+    this.#waitForLoad = createDeferred<void>();
     try {
       const table = await this.getTable();
       const locks = await table.fetchAll();
@@ -117,7 +117,7 @@ export default class BitcoinLocksStore {
       console.error('Error loading BitcoinLocksStore:', error);
       this.#waitForLoad.reject(error);
     }
-    return this.#waitForLoad;
+    return this.#waitForLoad.promise;
   }
 
   async subscribe() {

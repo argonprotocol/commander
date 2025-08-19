@@ -381,7 +381,7 @@ export class Stats {
     return lastYear
       .map(x => {
         let score = Math.min(x.profitPct, 1_000);
-        if (x.profitPct > 0) {
+        if (score > 0) {
           score = (200 * score) / maxProfitPct;
         }
         return {

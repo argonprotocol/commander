@@ -151,40 +151,59 @@ export function convertFromSqliteFields<T = any>(obj: any, fields: Partial<Recor
   return obj as T;
 }
 
-export function deferred<T = void>(): IDeferred<T> {
+export function createDeferred<T = void>(isRunning: boolean = true): IDeferred<T> {
   let resolve!: (value: T) => void;
-  let reject!: (error: Error) => void;
-  let resolved = false;
-  let rejected = false;
+  let reject!: (reason?: unknown) => void;
+  let isResolved = false;
+  let isRejected = false;
 
   const promise = new Promise<T>((res, rej) => {
     resolve = (value: T) => {
-      resolved = true;
+      isResolved = true;
+      isRunning = false;
       res(value);
     };
-    reject = (err: Error) => {
-      rejected = true;
-      rej(err);
+    reject = (reason?: unknown) => {
+      isRejected = true;
+      isRunning = false;
+      rej(reason);
     };
   });
 
-  return Object.assign(promise, {
-    resolve,
-    reject,
-    get resolved() {
-      return resolved;
+  const setIsRunning = (x: boolean) => (isRunning = x);
+
+  // Create the object with arrow functions to avoid 'this' binding issues
+  const deferred: IDeferred<T> = {
+    resolve: (value: T) => resolve(value),
+    reject: (reason?: unknown) => reject(reason),
+    promise,
+    setIsRunning,
+    get isResolved() {
+      return isResolved;
     },
-    get rejected() {
-      return rejected;
+    get isRejected() {
+      return isRejected;
     },
-  });
+    get isRunning() {
+      return isRunning;
+    },
+    get isSettled() {
+      return isResolved || isRejected;
+    },
+  };
+
+  return deferred;
 }
 
-export type IDeferred<T = void> = Promise<T> & {
-  resolve(value: T): void;
-  reject(reason?: unknown): void;
-  readonly resolved: boolean;
-  readonly rejected: boolean;
+export type IDeferred<T = void> = {
+  resolve(this: void, value: T): void;
+  reject(this: void, reason?: unknown): void;
+  setIsRunning(this: void, isRunning: boolean): void;
+  promise: Promise<T>;
+  readonly isResolved: boolean;
+  readonly isRejected: boolean;
+  readonly isRunning: boolean;
+  readonly isSettled: boolean;
 };
 
 export function ensureOnlyOneInstance(constructor: any) {
@@ -197,25 +216,6 @@ export function ensureOnlyOneInstance(constructor: any) {
 
 export function resetOnlyOneInstance(constructor: any) {
   constructor.isInitialized = false;
-}
-
-export function createDeferred<T>(): {
-  promise: Promise<T>;
-  resolve: (value: T) => void;
-  reject: (reason?: any) => void;
-} {
-  let resolve!: (value: T) => void;
-  let reject!: (reason?: any) => void;
-  const promise: Promise<T> = new Promise((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-
-  return {
-    promise,
-    resolve,
-    reject,
-  };
 }
 
 export function miniSecretFromUri(uri: string, password?: string): string {

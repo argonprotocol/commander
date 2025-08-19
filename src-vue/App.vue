@@ -17,6 +17,7 @@
         <UpgradeOverlay v-if="isNeedingUpgrade" />
         <ServerBrokenOverlay v-else-if="bot.isBroken" />
         <SyncingOverlay v-else-if="bot.isSyncing" />
+        <BootingOverlay v-else-if="config.isBootingUpFromMiningAccountPreviousHistory" />
       </template>
       <ServerConnectOverlay />
       <WalletOverlay />
@@ -64,6 +65,7 @@ import AboutOverlay from './overlays/AboutOverlay.vue';
 import ComplianceOverlay from './overlays/ComplianceOverlay.vue';
 import TroubleshootingOverlay from './overlays/Troubleshooting.vue';
 import ImportingOverlay from './overlays/ImportingOverlay.vue';
+import BootingOverlay from './overlays/BootingOverlay.vue';
 import { ENABLE_AUTO_UPDATE } from './lib/Config.ts';
 
 const controller = useController();

@@ -184,11 +184,11 @@ async function isStarting(res: express.Response): Promise<boolean> {
 }
 
 async function hasError(res: express.Response): Promise<boolean> {
-  if (!errorMessage) return false;
+  if (!errorMessage && !bot.errorMessage) return false;
 
   const payload: IBotStateError = {
     ...(await createStartingPayload()),
-    serverError: errorMessage,
+    serverError: errorMessage || bot.errorMessage,
   };
   jsonExt(payload, res);
 

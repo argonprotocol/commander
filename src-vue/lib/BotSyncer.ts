@@ -144,6 +144,10 @@ export class BotSyncer {
       this.config.oldestFrameIdToSync = this.botState.oldestFrameIdToSync;
     }
 
+    if (this.config.oldestFrameIdToSync > this.config.latestFrameIdProcessed) {
+      this.config.latestFrameIdProcessed = this.config.oldestFrameIdToSync;
+    }
+
     this.config.hasMiningSeats = this.botState.hasMiningSeats;
     this.config.hasMiningBids = this.botState.hasMiningBids;
 
@@ -169,12 +173,17 @@ export class BotSyncer {
     this.isSyncingThePast = true;
 
     const oldestFrameIdToSync = this.botState.oldestFrameIdToSync;
+    const latestFrameIdProcessed = this.config.latestFrameIdProcessed;
     const currentFrameId = this.botState.currentFrameId;
+    const yesterdaysFrameId = currentFrameId - 1;
     const framesToSync = currentFrameId - oldestFrameIdToSync + 1;
 
     const promise = new Promise<void>(async resolve => {
-      for (let frameId = oldestFrameIdToSync; frameId <= currentFrameId; frameId++) {
+      for (let frameId = latestFrameIdProcessed; frameId <= currentFrameId; frameId++) {
         await this.syncDbFrame(frameId);
+        if (frameId < yesterdaysFrameId) {
+          this.config.latestFrameIdProcessed = frameId;
+        }
         progress = await this.calculateDbSyncProgress(this.botState);
         this.botFns.setDbSyncProgress(progress);
       }
@@ -192,26 +201,28 @@ export class BotSyncer {
 
   public async syncDbFrame(frameId: number): Promise<void> {
     const earningsFile = await BotFetch.fetchEarningsFile(frameId);
+    const frameProgress = await this.calculateProgress(earningsFile.frameTickRange);
 
     await this.db.framesTable.insertOrUpdate(
       frameId,
-      earningsFile.firstTick,
-      earningsFile.lastTick,
+      earningsFile.frameTickRange[0],
+      earningsFile.frameTickRange[1],
       earningsFile.firstBlockNumber,
       earningsFile.lastBlockNumber,
       earningsFile.microgonToUsd,
       earningsFile.microgonToBtc,
       earningsFile.microgonToArgonot,
-      earningsFile.frameProgress,
+      frameProgress,
       false,
     );
-
+    console.info('INSERTING FRAME', frameId);
     // Every frame should have a coresponding cohort, even if it has no seats
     await this.syncDbCohort(frameId);
     const processedCohorts: Set<number> = new Set([frameId]);
 
     const earningsByCohortActivationFrameId: { [frameId: number]: IFrameEarningsRollup } = {};
     let maxBlockNumber = 0;
+
     for (const [blockNumberStr, earningsOfBlock] of Object.entries(earningsFile.earningsByBlock)) {
       const blockNumber = parseInt(blockNumberStr, 10);
       const cohortActivationFrameId = earningsOfBlock.authorCohortActivationFrameId;
@@ -245,8 +256,10 @@ export class BotSyncer {
     let microgonsMintedTotal = 0n;
     let microgonFeesCollectedTotal = 0n;
 
+    console.log('cohortEarningsEntries', cohortEarningsEntries);
     for (const [cohortActivationFrameIdStr, cohortEarningsDuringFrame] of cohortEarningsEntries) {
       const cohortActivationFrameId = parseInt(cohortActivationFrameIdStr, 10);
+      if (cohortActivationFrameId < this.config.oldestFrameIdToSync) continue;
       if (!processedCohorts.has(cohortActivationFrameId)) {
         await this.syncDbCohort(cohortActivationFrameId);
         processedCohorts.add(cohortActivationFrameId);
@@ -261,14 +274,19 @@ export class BotSyncer {
 
     const { seatCountActive, seatCostTotalFramed } = await this.db.cohortsTable.fetchActiveSeatData(
       frameId,
-      earningsFile.frameProgress,
+      frameProgress,
     );
 
-    const isProcessed = earningsFile.frameProgress === 100.0;
+    const yesterdaysFrameId = this.botState.currentFrameId - 1;
+    const isProcessed = frameProgress === 100.0 && frameId < yesterdaysFrameId;
+    if (!isProcessed) {
+      console.log('EARNINGS FILE: ', frameId, earningsFile);
+    }
+
     await this.db.framesTable.update({
       id: frameId,
-      firstTick: earningsFile.firstTick,
-      lastTick: earningsFile.lastTick,
+      firstTick: earningsFile.frameTickRange[0],
+      lastTick: earningsFile.frameTickRange[1],
       firstBlockNumber: earningsFile.firstBlockNumber,
       lastBlockNumber: earningsFile.lastBlockNumber,
       microgonToUsd: earningsFile.microgonToUsd,
@@ -284,7 +302,7 @@ export class BotSyncer {
       microgonFeesCollectedTotal,
       accruedMicrogonProfits: earningsFile.accruedMicrogonProfits,
 
-      progress: earningsFile.frameProgress,
+      progress: frameProgress,
       isProcessed,
     });
   }
@@ -297,6 +315,7 @@ export class BotSyncer {
     for (let i = 0; i < 10; i++) {
       const frameIdToCheck = currentFrameId - i;
       if (cohortEarningsByFrameId[frameIdToCheck]) continue;
+      if (frameIdToCheck < this.config.oldestFrameIdToSync) break;
 
       let didWinSeats = false;
       const cohort = await this.db.cohortsTable.fetchById(frameIdToCheck);
@@ -324,16 +343,23 @@ export class BotSyncer {
   }
 
   private async syncDbCohort(cohortActivationFrameId: number): Promise<void> {
+    console.info('syncDbCohort', cohortActivationFrameId);
     const bidsFile = await this.fetchBidsFileFromCache({ cohortActivationFrameId });
-    if (bidsFile.frameBiddingProgress < 100.0) return;
+    const biddingFrameProgress = await this.calculateProgress(bidsFile.biddingFrameTickRange);
+    if (biddingFrameProgress < 100.0) {
+      console.info('syncDbCohort SKIPPING', cohortActivationFrameId, bidsFile);
+      return;
+    }
+
+    const currentFrameProgress = await this.calculateProgress(this.botState.currentFrameTickRange);
 
     try {
-      const mainchainClient = await this.mainchain.client;
+      const mainchainClient = await this.mainchain.clientPromise;
       const [cohortStartingTick] = await MiningFrames.getTickRangeForFrame(mainchainClient, cohortActivationFrameId);
       const cohortEndingTick = cohortStartingTick + TICKS_PER_COHORT;
       const framesCompleted = Math.min(this.botState.currentFrameId - cohortActivationFrameId, 10);
       const miningSeatCount = BigInt(await this.mainchain.getMiningSeatCount());
-      const progress = Math.min((framesCompleted * 100 + this.botState.currentFrameProgress) / 10, 100);
+      const progress = Math.min((framesCompleted * 100 + currentFrameProgress) / 10, 100);
       const micronotsStaked = bidsFile.micronotsStakedPerSeat * BigInt(bidsFile.seatCountWon);
 
       const microgonsToBeMinedDuringCohort = bidsFile.microgonsToBeMinedPerBlock * BigInt(TICKS_PER_COHORT);
@@ -459,12 +485,39 @@ export class BotSyncer {
       return 0.0;
     }
 
-    const dbFramesExpected = currentFrameId - oldestFrameIdToSync; // do not include the current frame since it is not processed yet
-    if (!dbFramesExpected) return 100.0;
+    const yesterdaysFrameId = currentFrameId - 1;
+    const dbFramesExpected = yesterdaysFrameId - oldestFrameIdToSync - 2; // do not include today or yesterday's frame since they arenot processed yet
+    if (dbFramesExpected <= 0) return 100;
 
-    const dbFramesProcessed = await this.db.framesTable.fetchProcessedCount();
-    const dbCohortsProcessed = await this.db.cohortsTable.fetchCount();
+    const dbFramesProcessed = Math.min(await this.db.framesTable.fetchProcessedCount(), dbFramesExpected);
+    const dbCohortsProcessed = Math.min(await this.db.cohortsTable.fetchCount(), dbFramesExpected);
+
+    console.log(
+      'dbFramesExpected',
+      dbFramesExpected,
+      'dbFramesProcessed',
+      dbFramesProcessed,
+      'dbCohortsProcessed',
+      dbCohortsProcessed,
+    );
 
     return (Math.min(dbFramesProcessed, dbCohortsProcessed) / dbFramesExpected) * 100;
+  }
+
+  private async getCurrentTick(): Promise<number> {
+    const client = await this.mainchain.clientPromise;
+    const currentTick = await client.query.ticks.currentTick();
+    return currentTick.toNumber();
+  }
+
+  private async calculateProgress(tickRange: [number, number]): Promise<number> {
+    const [firstTick, lastTick] = tickRange;
+    const currentTick = await this.getCurrentTick();
+    if (currentTick < firstTick) {
+      return 0;
+    } else if (currentTick > lastTick) {
+      return 100;
+    }
+    return Math.min(((currentTick - firstTick) / (lastTick - firstTick)) * 100, 100);
   }
 }

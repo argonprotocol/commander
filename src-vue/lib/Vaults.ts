@@ -1,7 +1,7 @@
 import { BitcoinLocks, type PalletVaultsVaultFrameRevenue, Vault } from '@argonprotocol/mainchain';
 import { getMainchain, getMainchainClient } from '../stores/mainchain.ts';
 import { IBitcoinLockRecord } from './db/BitcoinLocksTable.ts';
-import { convertBigIntStringToNumber, deferred, IDeferred } from './Utils.ts';
+import { convertBigIntStringToNumber, createDeferred, IDeferred } from './Utils.ts';
 import { IAllVaultStats, IVaultFrameStats } from '../interfaces/IVaultStats.ts';
 import mainnetVaultRevenueHistory from '../data/vaultRevenue.mainnet.json';
 import testnetVaultRevenueHistory from '../data/vaultRevenue.testnet.json';
@@ -18,9 +18,9 @@ export class Vaults {
   private waitForLoad?: IDeferred;
 
   public async load(reload = false): Promise<void> {
-    if (this.waitForLoad && !reload) return this.waitForLoad;
+    if (this.waitForLoad && !reload) return this.waitForLoad.promise;
 
-    this.waitForLoad ??= deferred();
+    this.waitForLoad ??= createDeferred();
     try {
       const client = await getMainchainClient();
       this.tickDuration ??= await client.query.ticks.genesisTicker().then(x => x.tickDurationMillis.toNumber());
@@ -80,7 +80,7 @@ export class Vaults {
     } catch (error) {
       this.waitForLoad.reject(error as Error);
     }
-    return this.waitForLoad;
+    return this.waitForLoad.promise;
   }
 
   public async updateVaultRevenue(vaultId: number, frameRevenues: PalletVaultsVaultFrameRevenue[]) {
@@ -134,7 +134,7 @@ export class Vaults {
   public async refreshRevenue(mainchain?: Mainchain): Promise<IAllVaultStats> {
     await this.load();
     mainchain ??= getMainchain();
-    const client = await mainchain.client;
+    const client = await mainchain.clientPromise;
 
     const revenue = this.stats ?? { synchedToFrame: 0, vaultsById: {} };
     const oldestFrameToGet = revenue.synchedToFrame;
