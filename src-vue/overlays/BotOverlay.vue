@@ -30,10 +30,13 @@
               </div>
             </h2>
 
-            <div v-if="isLoaded" class="flex flex-col grow relative w-full">
+            <div v-if="isLoaded && !wantsToImportExisting" class="flex flex-col grow relative w-full">
               <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
                 Commander uses an automated bidding bot to maximize your chance of winning seats. This screen allows you to
-                configure the rules for how your bot should make decisions and place bids. You can also  <span class="text-argon-600/80 hover:text-argon-600 cursor-pointer font-bold">import from an existing cloud machine</span>.
+                configure the rules for how your bot should make decisions and place bids. 
+                <template v-if="!config.isServerReadyToInstall && !config.isServerInstalled">
+                  You can also  <span @click="wantsToImportExisting = true" class="text-argon-600/80 hover:text-argon-600 cursor-pointer font-bold">import from an existing cloud machine</span>.
+                </template>
               </DialogDescription>
 
               <section class="flex flex-row border-t border-b border-slate-300 text-center pt-8 pb-8 px-5 mx-5 justify-stretch">
@@ -62,7 +65,8 @@
                   </span>
                 </div>
                 <div class="w-1/2 flex flex-col grow">
-                  <div @mouseenter="showTooltip($event, tooltip.estimatedAPYRange, { width: 'parent' })" @mouseleave="hideTooltip" class="flex flex-col grow group">
+                  <!-- @mouseenter="showTooltip($event, tooltip.estimatedAPYRange, { width: 'parent' })" @mouseleave="hideTooltip"  -->
+                  <div class="flex flex-col grow group">
                     <header StatHeader class="bg-[#FAF9FA] border border-[#DDDCDD] rounded-t-lg relative z-10">Annual Percentage Yields (APY)</header>
                     <div PrimaryStat class="grow flex flex-col border border-slate-500/30 rounded-lg mt-2 shadow-sm w-full px-4">
                       <table class="w-full h-full table-fixed relative z-50 whitespace-nowrap -mt-1">
@@ -74,13 +78,29 @@
                           </tr>
                           <tr class="font-bold font-mono text-argon-600 h-1/3">
                             <td class="font-light font-sans text-argon-800/40 border-t border-dashed border-slate-300 text-left pl-2 pr-10">Maximum Bid ({{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }})</td>
-                            <td class="text-lg border-t border-dashed border-slate-300">{{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</td>
-                            <td class="text-lg border-t border-dashed border-slate-300">{{ numeral(maximumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</td>
+                            <td class="text-lg border-t border-dashed border-slate-300">
+                              <Tooltip :content="`This is the return if you bid the maximum amount (${currency.symbol}${microgonToMoneyNm(maximumBidAmount).format('0,0.00')}) and the tokens grow at their slowest projected rate, which you can change in the Ecosystem Growth box below.`">
+                                {{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                              </Tooltip>
+                            </td>
+                            <td class="text-lg border-t border-dashed border-slate-300">
+                              <Tooltip :content="`This is the return if you bid the maximum amount (${currency.symbol}${microgonToMoneyNm(maximumBidAmount).format('0,0.00')}) and the tokens also grow at their fastest projected rate (you can change this in the Ecosystem Growth box below).`">
+                                {{ numeral(maximumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                              </Tooltip>
+                            </td>
                           </tr>
                           <tr class="font-bold font-mono text-argon-600 h-1/3">
                             <td class="font-light font-sans text-argon-800/40 border-t border-dashed border-slate-300 text-left pl-2 pr-10">Starting Bid ({{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }})</td>
-                            <td class="text-lg border-t border-dashed border-slate-300">{{ numeral(minimumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</td>
-                            <td class="text-lg border-t border-dashed border-slate-300">{{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</td>
+                            <td class="text-lg border-t border-dashed border-slate-300">
+                              <Tooltip :content="`If your bids are accepted at the starting price (${currency.symbol}${microgonToMoneyNm(minimumBidAmount).format('0,0.00')}) and the tokens grow at the slowest projected rate (which you can change in Ecosystem Growth) then this is your return.`">
+                                {{ numeral(minimumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                              </Tooltip>
+                            </td>
+                            <td class="text-lg border-t border-dashed border-slate-300">
+                              <Tooltip :content="`If your bids are accepted at the starting price (${currency.symbol}${microgonToMoneyNm(minimumBidAmount).format('0,0.00')}) and the tokens grow at their fastest projected rate (which you can change in Ecosystem Growth) then this is your return.`">
+                                {{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                              </Tooltip>
+                            </td>
                           </tr>
                         </tbody>
                       </table>
@@ -245,17 +265,43 @@
                 </section>
               </div>
             </div>
+            <div v-else-if="isLoaded && wantsToImportExisting" class="flex flex-col items-center justify-center grow relative w-full">
+              <div class="flex flex-col relative w-120">
+                <div class="flex flex-row items-center text-gray-500/60 hover:text-argon-600/70 cursor-pointer" @click="cancelImport()">
+                  <ArrowLongLeftIcon class="w-5 h-5 inline-block relative mb-5" />
+                  <span class="ml-1 mb-5">Go Back</span>
+                </div>
+                <div class="text-2xl font-bold text-gray-500 mb-1">Import From Existing Cloud Machine</div>
+                <div class="text-md text-gray-600/80">
+                  <div class="mb-4">
+                    This will overwrite your current settings with configuration data from the server located at the IP address you
+                    enter below. This server will also be used to run your bot, and it must be accessible through the same 
+                    SSH creditionals connected to this app.
+                  </div>
+                  <div class="pr-5">
+                    <div v-if="importError" class="flex flex-row bg-red-50/80 border border-red-600/10 border-b-0 text-red-600 text-md px-3 py-2 rounded-md">
+                      <ArrowTurnLeftDownIcon class="w-5 h-5 inline-block mr-1 relative top-1.5" />
+                      <span>{{ importError }}</span>
+                    </div>
+                    <input v-model="importIpAddress" type="text" class="w-full border border-gray-300 rounded-md px-3 py-2 mb-4" placeholder="0.0.0.0" @keyup.enter="startImport" />
+                  </div>
+                  <button @click="startImport" class="bg-argon-button hover:border-argon-800 text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
+                    {{ isImporting ? 'Importing Config...' : 'Import Config' }}
+                  </button>
+                </div>
+              </div>
+            </div>
             <div v-else>Loading...</div>
 
             <div class="flex flex-row justify-end border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
-              <div class="flex flex-row space-x-4 justify-center items-center">
+              <div :class="[wantsToImportExisting ? 'opacity-50 pointer-events-none' : '']" class="flex flex-row space-x-4 justify-center items-center">
                 <ActiveBidsOverlayButton :loadFromMainchain="true" class="mr-10">
                   <span class="text-argon-600/70 cursor-pointer">Show Existing Mining Bids</span>
                 </ActiveBidsOverlayButton>
-                <button @click="cancelOverlay" class="border border-argon-button text-xl font-bold text-gray-500 px-7 py-1 rounded-md cursor-pointer">
+                <button @click="cancelOverlay" class="border border-argon-button/50 hover:border-argon-button text-xl font-bold text-gray-500 px-7 py-1 rounded-md cursor-pointer">
                   <span>Cancel</span>
                 </button>
-                <button @click="saveRules" @mouseenter="showTooltip($event, tooltip.saveRules, { width: 'parent' })" @mouseleave="hideTooltip" class="bg-argon-button text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
+                <button @click="saveRules" @mouseenter="showTooltip($event, tooltip.saveRules, { width: 'parent' })" @mouseleave="hideTooltip" class="bg-argon-button hover:border-argon-800 text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
                   <span v-if="!isSaving">{{ isBrandNew ? 'Create Mining Bot' : 'Update Settings' }}</span>
                   <span v-else>{{ isBrandNew ? 'Creating Mining Bot...' : 'Updating Settings...' }}</span>
                 </button>
@@ -272,17 +318,20 @@
 import * as Vue from 'vue';
 import BigNumber from 'bignumber.js';
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogDescription } from 'reka-ui';
+import Tooltip from '../components/Tooltip.vue';
 import basicEmitter from '../emitters/basicEmitter';
-import { useConfig } from '../stores/config';
+import { useConfig, Config } from '../stores/config';
 import { useCurrency } from '../stores/currency';
+import { getCalculator, getCalculatorData } from '../stores/mainchain';
+import { getDbPromise } from '../stores/helpers/dbPromise';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
 import BgOverlay from '../components/BgOverlay.vue';
-import { XMarkIcon } from '@heroicons/vue/24/outline';
+import { ArrowLongLeftIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { ArrowTurnLeftDownIcon } from '@heroicons/vue/24/solid';
 import AlertIcon from '../assets/alert.svg?component';
 import { showTooltip as showTooltipOriginal, hideTooltip } from '../lib/TooltipUtils';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForMining } from './EditBoxOverlay.vue';
 import { type IBiddingRules } from '@argonprotocol/commander-core';
-import { getCalculator, getCalculatorData } from '../stores/mainchain';
 import ActiveBidsOverlayButton from './ActiveBidsOverlayButton.vue';
 import {
   BidAmountAdjustmentType,
@@ -294,6 +343,7 @@ import { bigIntAbs } from '@argonprotocol/commander-core/src/utils';
 import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
 import InputArgon from '../components/InputArgon.vue';
 import NeedMoreCapitalHover from './bot/NeedMoreCapitalHover.vue';
+import Importer from '../lib/Importer';
 
 const calculator = getCalculator();
 const calculatorData = getCalculatorData();
@@ -302,6 +352,8 @@ let previousBiddingRules: string | null = null;
 
 const currency = useCurrency();
 const config = useConfig();
+const dbPromise = getDbPromise();
+
 const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
 const rules = Vue.computed(() => {
@@ -312,6 +364,11 @@ const isBrandNew = Vue.ref(true);
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
+const wantsToImportExisting = Vue.ref(false);
+
+const importIpAddress = Vue.ref('');
+const importError = Vue.ref<string | null>(null);
+const isImporting = Vue.ref(false);
 
 const editBoxOverlayId = Vue.ref<IEditBoxOverlayTypeForMining | null>(null);
 const editBoxOverlayPosition = Vue.ref<{ top?: number; left?: number; width?: number } | undefined>(undefined);
@@ -390,6 +447,34 @@ function calculateMicronotsRequired(): bigint {
   return BigInt(Math.ceil(Number(totalMicronotsRequired) / 1_000_000) * 1_000_000);
 }
 
+async function startImport() {
+  isImporting.value = true;
+  importError.value = null;
+
+  if (!importIpAddress.value) {
+    isImporting.value = true;
+    importError.value = 'You must enter an IP address';
+    return;
+  }
+
+  try {
+    const importer = new Importer(config as Config, dbPromise);
+    await importer.importFromServer(importIpAddress.value);
+  } catch (error) {
+    isImporting.value = false;
+    importError.value = error instanceof Error ? error.message : 'An unknown error occurred';
+  }
+
+  isBrandNew.value = false;
+  wantsToImportExisting.value = false;
+  isImporting.value = false;
+}
+
+function cancelImport() {
+  isImporting.value = false;
+  wantsToImportExisting.value = false;
+}
+
 async function saveRules() {
   isSaving.value = true;
 
@@ -415,12 +500,6 @@ function showTooltip(
 function updateAPYs() {
   calculator.updateBiddingRules(rules.value);
   calculator.calculateBidAmounts();
-
-  if (isBrandNew.value) {
-    const minimumCapitalNeeded = calculator.maximumBidAmount * BigInt(rules.value.seatGoalCount);
-    const minimumCapitalNeededRoundedUp = Math.ceil(Number(minimumCapitalNeeded) / 1_000_000) * 1_000_000;
-    config.biddingRules.baseCapitalCommitment = BigInt(minimumCapitalNeededRoundedUp);
-  }
 
   minimumBidAmount.value = calculator.minimumBidAmount;
   minimumBidAmountOverride.value = calculator.minimumBidAmountOverride;
@@ -457,10 +536,16 @@ basicEmitter.on('openBotOverlay', async () => {
   if (isOpen.value) return;
   isLoaded.value = false;
   isOpen.value = true;
+  wantsToImportExisting.value = false;
 
   isBrandNew.value = !config.hasSavedBiddingRules;
   calculatorData.isInitializedPromise.then(() => {
     previousBiddingRules = jsonStringifyWithBigInts(config.biddingRules);
+    if (isBrandNew.value) {
+      const minimumCapitalNeeded = calculator.maximumBidAmount * BigInt(rules.value.seatGoalCount);
+      const minimumCapitalNeededRoundedUp = Math.ceil(Number(minimumCapitalNeeded) / 1_000_000) * 1_000_000;
+      rules.value.baseCapitalCommitment = BigInt(minimumCapitalNeededRoundedUp);
+    }
     updateAPYs();
     isLoaded.value = true;
   });

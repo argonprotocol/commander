@@ -125,8 +125,7 @@
           <span>Completely Wipe and Reinstall Cloud Machine</span>
         </header>
         <p class="text-md ml-7 font-light">
-          This will completley wipe everything on your server and reinstall it. This is a last resort option when all
-          else fails.
+          This will wipe everything on your server and reinstall it. This is a last resort option when all else fails.
         </p>
       </li>
     </ol>

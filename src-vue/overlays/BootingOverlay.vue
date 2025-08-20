@@ -50,7 +50,7 @@
             </button>
           </div>
           <div v-else class="text-slate-900 font-md mb-3">
-            <p>This app seems to have been previously used, but all its data was wiped. We're combing through the blockchain to see if we can piece it back together.</p>
+            <p>This wallet connected to this app seems to have been previously used. We're looking through the blockchain to see if we can find any mining seats owned by you.</p>
           </div>
           <ProgressBar :progress="config.miningAccountPreviousHistoryLoadPct" class="mt-3" />
         </div>
