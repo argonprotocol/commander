@@ -2,3 +2,4 @@
 
 yarn run lint
 yarn run eslint
+yarn run precommit

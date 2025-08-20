@@ -18,7 +18,7 @@ import { bip39 } from '@argonprotocol/bitcoin';
 import Countries from './Countries';
 import { invokeWithTimeout } from './tauriApi';
 import ISecurity from '../interfaces/ISecurity';
-import { getMainchainClient } from '../stores/mainchain';
+import { getMainchain, getMainchainClient } from '../stores/mainchain';
 import { WalletBalances } from './WalletBalances';
 
 export class Config {
@@ -453,8 +453,7 @@ export class Config {
     stringifiedData[dbFields.miningAccountAddress] = jsonStringifyWithBigInts(miningAccountAddress, null, 2);
     fieldsToSave.add(dbFields.miningAccountAddress);
 
-    const clientPromise = getMainchainClient(true);
-    const walletBalances = new WalletBalances(clientPromise);
+    const walletBalances = new WalletBalances(getMainchain());
     await walletBalances.load({ miningAccountAddress });
     await walletBalances.updateBalances();
 
@@ -472,8 +471,7 @@ export class Config {
   }
 
   private async _bootupFromMiningAccountPreviousHistory() {
-    const clientPromise = getMainchainClient(true);
-    const walletBalances = new WalletBalances(clientPromise);
+    const walletBalances = new WalletBalances(getMainchain());
     await walletBalances.load({ miningAccountAddress: this.miningAccount.address });
     walletBalances.onLoadHistoryProgress = (loadPct: number) => {
       this._miningAccountPreviousHistoryLoadPct = loadPct;

@@ -1,15 +1,13 @@
 import * as Fs from 'node:fs';
 import { Accountset, type ArgonClient, type KeyringPair } from '@argonprotocol/mainchain';
-import { getClient } from './utils.ts';
 import { Storage } from './Storage.ts';
 import { AutoBidder } from './AutoBidder.ts';
 import { BlockSync } from './BlockSync.ts';
 import { Dockers } from './Dockers.ts';
-import { type IBiddingRules, jsonParseWithBigInts } from '@argonprotocol/commander-core';
+import { type IBiddingRules, jsonParseWithBigInts, MainchainClients } from '@argonprotocol/commander-core';
 import { History } from './History.ts';
 import FatalError from './interfaces/FatalError.ts';
 import type { IBotSyncStatus } from './interfaces/IBotStateFile.js';
-import { wrapApi } from '@argonprotocol/commander-core/src/ClientWrapper.js';
 
 interface IBotOptions {
   datadir: string;
@@ -45,7 +43,7 @@ export default class Bot implements IBotSyncStatus {
   private options: IBotOptions;
   private biddingRules: IBiddingRules | null = null;
   private localClient!: ArgonClient;
-  private archiveClient!: ArgonClient;
+  private mainchainClients!: MainchainClients;
 
   constructor(options: IBotOptions) {
     this.options = options;
@@ -77,35 +75,36 @@ export default class Bot implements IBotSyncStatus {
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     console.log('CONNECTING TO LOCAL RPC');
-    const localClientPromise = getClient(this.options.localRpcUrl).then(x => wrapApi(x, 'LOCAL_RPC'));
+    this.errorMessage = null;
+
+    try {
+      this.mainchainClients = new MainchainClients(this.options.archiveRpcUrl);
+      await this.mainchainClients.archiveClientPromise;
+    } catch (error) {
+      console.error('Error initializing archive client', error);
+      throw error;
+    }
+
     while (!this.localClient) {
       try {
-        this.localClient = await localClientPromise;
+        this.localClient = await this.mainchainClients.setPrunedClient(this.options.localRpcUrl);
       } catch (error) {
         console.error('Error initializing local client, retrying...', error);
         this.errorMessage = (error as Error).toString();
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
-    this.errorMessage = null;
-
-    const archiveClientPromise = getClient(this.options.archiveRpcUrl).then(x => wrapApi(x, 'ARCHIVE_RPC'));
-    try {
-      this.archiveClient = await archiveClientPromise;
-    } catch (error) {
-      console.error('Error initializing archive client', error);
-      throw error;
-    }
 
     this.biddingRules = this.loadBiddingRules();
     this.accountset = new Accountset({
-      client: localClientPromise,
+      client: Promise.resolve(this.localClient),
       seedAccount: this.options.pair,
       sessionKeySeedOrMnemonic: this.options.sessionMiniSecret,
       subaccountRange: new Array(99).fill(0).map((_, i) => i),
     });
     this.autobidder = new AutoBidder(
       this.accountset,
+      this.mainchainClients,
       this.storage,
       this.history,
       this.biddingRules || ({} as IBiddingRules),
@@ -114,8 +113,7 @@ export default class Bot implements IBotSyncStatus {
       this,
       this.accountset,
       this.storage,
-      this.localClient,
-      this.archiveClient,
+      this.mainchainClients,
       this.options.oldestFrameIdToSync,
     );
 
@@ -174,7 +172,7 @@ export default class Bot implements IBotSyncStatus {
   public async shutdown() {
     await this.autobidder.stop();
     await this.blockSync.stop();
-    await this.accountset.client.then(x => x.disconnect());
+    await this.mainchainClients.disconnect();
     await this.history.handleShutdown();
   }
 

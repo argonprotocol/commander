@@ -3,10 +3,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
-import { getClient, JsonExt } from '@argonprotocol/mainchain';
+import { JsonExt } from '@argonprotocol/mainchain';
 import { Vaults } from '../src-vue/lib/Vaults.ts';
-import { Mainchain } from '@argonprotocol/commander-core';
-import { setMainchainClient } from '../src-vue/stores/mainchain.ts';
+import { getMainchain, setArchiveClientUrl } from '../src-vue/stores/mainchain.ts';
+import { AppConfig } from '@argonprotocol/commander-core';
 
 dayjs.extend(utc);
 
@@ -14,9 +14,8 @@ const rebuildBaseline = Boolean(JSON.parse(process.env.REBUILD_BASELINE ?? '0'))
 
 export default async function fetchVaultRevenue() {
   for (const chain of ['testnet', 'mainnet'] as const) {
-    const url = chain === 'mainnet' ? 'wss://rpc.argon.network' : 'wss://rpc.testnet.argonprotocol.org';
-    const mainchain = new Mainchain(getClient(url));
-    setMainchainClient(mainchain.clientPromise);
+    await setArchiveClientUrl(AppConfig[chain].archiveUrl);
+    const mainchain = getMainchain();
     const vaults = new Vaults(chain);
     await vaults.load();
     const data = await vaults.refreshRevenue(mainchain);
@@ -32,7 +31,7 @@ export default async function fetchVaultRevenue() {
     }
 
     if (rebuildBaseline) {
-      const client = await mainchain.clientPromise;
+      const client = await mainchain.prunedClientPromise;
       const utxos = await client.query.bitcoinLocks.locksByUtxoId.entries();
       for (const [_utxoId, utxo] of utxos) {
         const vaultId = utxo.unwrap().vaultId.toNumber();

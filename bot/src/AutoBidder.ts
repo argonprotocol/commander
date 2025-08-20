@@ -1,5 +1,5 @@
 import { type Accountset, CohortBidder, MiningBids } from '@argonprotocol/mainchain';
-import { createBidderParams, type IBiddingRules } from '@argonprotocol/commander-core';
+import { createBidderParams, type IBiddingRules, MainchainClients } from '@argonprotocol/commander-core';
 import { type Storage } from './Storage.ts';
 import { type History, SeatReductionReason } from './History.ts';
 
@@ -17,6 +17,7 @@ export class AutoBidder {
 
   constructor(
     readonly accountset: Accountset,
+    readonly mainchainClients: MainchainClients,
     readonly storage: Storage,
     readonly history: History,
     private biddingRules: IBiddingRules,
@@ -58,7 +59,7 @@ export class AutoBidder {
       (await this.storage.earningsFile(cohortActivationFrameId - 2).get())?.accruedMicrogonProfits;
     const params = await createBidderParams(
       cohortActivationFrameId,
-      await this.accountset.client,
+      this.mainchainClients,
       this.biddingRules,
       latestAccruedMicrogonProfits ?? 0n,
     );

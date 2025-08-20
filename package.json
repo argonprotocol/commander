@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "preinstall": "husky install",
+    "precommit": "tsx scripts/checkPrecommit.ts",
     "dev": "vite",
     "build": "yarn sync:version && yarn build:server && vue-tsc --noEmit && vite build",
     "build:server": "yarn workspace @argonprotocol/commander-bot run build && tsx scripts/buildServer.ts",

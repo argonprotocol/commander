@@ -4,6 +4,7 @@ import { type IBiddingRules } from './IBiddingRules.js';
 import { type IBidderParams } from './IBidderParams.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
 import { Mainchain, type MainchainClient } from './Mainchain.js';
+import { MainchainClients } from './MainchainClients.js';
 import { MiningFrames, TICKS_PER_COHORT } from './MiningFrames.js';
 import { AppConfig } from './AppConfig.js';
 
@@ -25,6 +26,7 @@ export {
   type IBiddingRules,
   type IBidderParams,
   type MainchainClient,
+  MainchainClients,
   Mainchain,
   MiningFrames,
   createBidderParams,

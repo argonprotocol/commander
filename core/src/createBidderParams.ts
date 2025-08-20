@@ -1,18 +1,17 @@
-import { type ArgonClient } from '@argonprotocol/mainchain';
 import { type IBidderParams } from './IBidderParams.js';
-import { type IBiddingRules } from './IBiddingRules.js';
-import { SeatGoalType } from './IBiddingRules.js';
+import { type IBiddingRules, SeatGoalType } from './IBiddingRules.js';
 import BiddingCalculator from './BiddingCalculator.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
 import { Mainchain } from './Mainchain.ts';
+import type { MainchainClients } from './MainchainClients.js';
 
 export default async function createBidderParams(
   _cohortId: number,
-  client: ArgonClient,
+  mainchainClients: MainchainClients,
   biddingRules: IBiddingRules,
   accruedEarnings: bigint,
 ): Promise<IBidderParams> {
-  const mainchain = new Mainchain(Promise.resolve(client));
+  const mainchain = new Mainchain(mainchainClients);
 
   const calculatorData = new BiddingCalculatorData(mainchain);
   const calculator = new BiddingCalculator(calculatorData, biddingRules);

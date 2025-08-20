@@ -16,8 +16,6 @@ export interface IWallet {
 }
 
 export class WalletBalances {
-  private clientPromise: Promise<MainchainClient>;
-  private client!: MainchainClient;
   private mainchain!: Mainchain;
   private subscriptions: VoidFunction[] = [];
   private deferredLoading = createDeferred<void>(false);
@@ -42,9 +40,8 @@ export class WalletBalances {
   public totalWalletMicrogons: bigint = 0n;
   public totalWalletMicronots: bigint = 0n;
 
-  constructor(clientPromise: Promise<MainchainClient>) {
-    this.clientPromise = clientPromise;
-    this.mainchain = new Mainchain(clientPromise);
+  constructor(mainchain: Mainchain) {
+    this.mainchain = mainchain;
   }
 
   public async load(accountData: { miningAccountAddress?: string; vaultingAccountAddress?: string }) {
@@ -57,7 +54,6 @@ export class WalletBalances {
     if (miningAccountAddress) this.miningWallet.address = miningAccountAddress;
     if (vaultingAccountAddress) this.vaultingWallet.address = vaultingAccountAddress;
 
-    this.client = await this.clientPromise;
     this.deferredLoading.resolve();
   }
 
@@ -84,11 +80,12 @@ export class WalletBalances {
     const walletsToSubscribe = [this.miningWallet, this.vaultingWallet].filter(x => x.address);
 
     for (const wallet of walletsToSubscribe) {
+      const client = await this.mainchain.getClient(true);
       const [subMicrogon, subMicronot] = await Promise.all([
-        this.client.query.system.account(wallet.address, result => {
+        client.query.system.account(wallet.address, result => {
           this.handleMicrogonBalanceChange(result, wallet);
         }),
-        this.client.query.ownership.account(wallet.address, result => {
+        client.query.ownership.account(wallet.address, result => {
           this.handleMicronotBalanceChange(result, wallet);
         }),
       ]);
@@ -102,8 +99,9 @@ export class WalletBalances {
   ): Promise<IMiningAccountPreviousHistoryRecord[]> {
     await this.deferredLoading.promise;
 
+    const liveClient = await this.mainchain.prunedClientPromise;
     const accountset = new Accountset({
-      client: this.clientPromise,
+      client: Promise.resolve(liveClient),
       seedAccount: miningAccount,
       sessionKeySeedOrMnemonic: miningSessionMiniSecret,
       subaccountRange: new Array(99).fill(0).map((_, i) => i),
@@ -111,10 +109,10 @@ export class WalletBalances {
 
     const currentFrameBids: IMiningAccountPreviousHistoryBid[] = [];
     const seatsByFrameId: Record<number, IMiningAccountPreviousHistorySeat[]> = {};
-    const latestFrameId = await this.client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
+    const latestFrameId = await liveClient.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
     const earliestPossibleFrameId = 150; // this is hard coded based on the spec version needing to be > 124. Doesn't need to be exact.
 
-    const bidsRaw = await this.client.query.miningSlot.bidsForNextSlotCohort();
+    const bidsRaw = await liveClient.query.miningSlot.bidsForNextSlotCohort();
     for (const [bidPosition, bidRaw] of bidsRaw.entries()) {
       const address = bidRaw.accountId.toHuman();
       const isOurAccount = !!accountset.subAccountsByAddress[address];
@@ -180,12 +178,14 @@ export class WalletBalances {
   }
 
   private async loadMicrogonBalance(wallet: IWallet) {
-    const result = await this.client.query.system.account(wallet.address);
+    const client = await this.mainchain.prunedClientPromise;
+    const result = await client.query.system.account(wallet.address);
     this.handleMicrogonBalanceChange(result, wallet);
   }
 
   private async loadMicronotBalance(wallet: IWallet) {
-    const result = await this.client.query.ownership.account(wallet.address);
+    const client = await this.mainchain.prunedClientPromise;
+    const result = await client.query.ownership.account(wallet.address);
     this.handleMicronotBalanceChange(result, wallet);
   }
 

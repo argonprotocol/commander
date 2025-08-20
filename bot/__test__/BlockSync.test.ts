@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import { Storage } from '../src/Storage.js';
 import type { IBotSyncStatus } from '../src/interfaces/IBotStateFile.js';
 import { Dockers } from '../src/Dockers.js';
-import { MiningFrames } from '@argonprotocol/commander-core';
+import { MainchainClients, MiningFrames } from '@argonprotocol/commander-core';
 import { startArgonTestNetwork } from '@argonprotocol/commander-core/__test__/startArgonTestNetwork.js';
 
 afterEach(teardown);
@@ -35,7 +35,9 @@ it('can backfill sync data', async () => {
     sessionKeySeedOrMnemonic: mnemonicGenerate(),
     subaccountRange: new Array(99).fill(0).map((_, i) => i),
   });
-  const blockSync = new BlockSync(botStatus, accountset, storage, client, client, 0);
+  const mainchainClients = new MainchainClients(clientAddress);
+  void mainchainClients.setPrunedClient(clientAddress);
+  const blockSync = new BlockSync(botStatus, accountset, storage, mainchainClients, 0);
   blockSync.accountMiners = new AccountMiners(accountset, []);
 
   const blockNumber = await new Promise<number>(async resolve => {
