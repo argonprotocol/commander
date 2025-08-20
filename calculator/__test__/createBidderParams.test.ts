@@ -37,11 +37,12 @@ it('can create bidder params', async () => {
     "requiredMicronots": "1000000n"
   }`);
   const cohortActivationFrameId = MiningFrames.calculateCurrentFrameIdFromSystemTime();
-  const bidderParams = await createBidderParams(cohortActivationFrameId, client, biddingRules);
+  const accruedEarnings = 10_000_253n;
+  const bidderParams = await createBidderParams(cohortActivationFrameId, client, biddingRules, accruedEarnings);
 
   expect(bidderParams.minBid).toBe(0n);
   expect(bidderParams.maxBid).toBe(215_904_808n);
-  expect(bidderParams.maxBudget).toBe(2_159_048_080n);
+  expect(bidderParams.maxBudget).toBe(10_000_000n + accruedEarnings);
   expect(bidderParams.maxSeats).toBe(10);
   expect(bidderParams.bidDelay).toBe(1);
   expect(bidderParams.bidIncrement).toBe(1_000_000n);

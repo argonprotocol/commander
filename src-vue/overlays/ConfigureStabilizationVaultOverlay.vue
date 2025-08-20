@@ -201,7 +201,7 @@
 
             <div class="flex flex-row justify-end border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
               <div class="flex flex-row space-x-4 justify-center items-center">
-                <span class="text-argon-600/70 cursor-pointer mr-10">Show Existing Network Vaults</span>
+                <ExistingNetworkVaultsOverlayButton class=" mr-10" />
                 <button @click="cancelOverlay" class="border border-argon-button text-xl font-bold text-gray-500 px-7 py-1 rounded-md cursor-pointer">
                   <span>Cancel</span>
                 </button>
@@ -232,10 +232,10 @@ import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import { hideTooltip, showTooltip } from '../lib/TooltipUtils';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForVault } from './EditBoxOverlay.vue';
-import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
+import { bigNumberToBigInt, jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
 import IVaultingRules from '../interfaces/IVaultingRules';
-import { jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
 import { MyVault } from '../lib/MyVault.ts';
+import ExistingNetworkVaultsOverlayButton from './ExistingNetworkVaultsOverlayButton.vue';
 
 const mainchain = getMainchain();
 const config = useConfig();

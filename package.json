@@ -6,8 +6,9 @@
   "scripts": {
     "preinstall": "husky install",
     "dev": "vite",
-    "build": "yarn build:server && vue-tsc --noEmit && vite build",
+    "build": "yarn sync:version && yarn build:server && vue-tsc --noEmit && vite build",
     "build:server": "yarn workspace @argonprotocol/commander-bot run build && tsx ./buildServer.ts",
+    "build:version": "tsx ./syncVersions.ts",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "sh -c 'TAURI_PORT=${COMMANDER_INSTANCE##*:}; yarn tauri dev --config=\"{\\\"build\\\":{\\\"devUrl\\\":\\\"http://localhost:${TAURI_PORT:-1420}\\\"}}\"'",

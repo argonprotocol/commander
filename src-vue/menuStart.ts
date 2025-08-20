@@ -27,6 +27,7 @@ export default async function menuStart() {
       {
         id: 'check-updates',
         text: 'Check for Updates',
+        action: () => basicEmitter.emit('openCheckForAppUpdatesOverlay'),
       },
       await PredefinedMenuItem.new({ item: 'Separator' }),
       {

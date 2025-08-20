@@ -216,7 +216,7 @@ export class BotSyncer {
       false,
     );
     console.info('INSERTING FRAME', frameId);
-    // Every frame should have a coresponding cohort, even if it has no seats
+    // Every frame should have a corresponding cohort, even if it has no seats
     await this.syncDbCohort(frameId);
     const processedCohorts: Set<number> = new Set([frameId]);
 

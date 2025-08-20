@@ -12,7 +12,7 @@ export interface IBotStateStarting {
 }
 
 export interface IBotStateError extends IBotStateStarting {
-  serverError: string;
+  serverError: string | null;
 }
 
 export interface IBotSyncStatus {

@@ -3,7 +3,7 @@ export interface IFrameBidRecord {
   confirmedAtBlockNumber: number;
   address: string;
   subAccountIndex?: number;
-  microgonsBid: bigint;
+  microgonsPerSeat: bigint;
   bidPosition: number;
   lastBidAtTick?: number;
   createdAt: string;

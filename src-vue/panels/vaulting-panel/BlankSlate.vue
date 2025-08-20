@@ -132,7 +132,6 @@ import numeral, { createNumeralHelpers } from '../../lib/numeral';
 
 import { useVaults } from '../../stores/vaults.ts';
 import { SATOSHIS_PER_BITCOIN } from '../../lib/Currency.ts';
-import { getMainchain } from '../../stores/mainchain.ts';
 
 const currency = useCurrency();
 
@@ -159,32 +158,23 @@ function openConfigureStabilizationVaultOverlay() {
   basicEmitter.emit('openConfigureStabilizationVaultOverlay');
 }
 
-const vaultsStore = useVaults();
-Vue.onMounted(async () => {
+async function updateRevenue() {
   try {
-    const mainchain = getMainchain();
-    await vaultsStore.load();
-    const frameToLoadPoolEarnings = (await mainchain.getCurrentFrameId()) - 1;
     const list = Object.values(vaultsStore.vaultsById);
     const vaultApys: number[] = [];
-    for (const entry of vaults.value) {
-      const vault = vaultsStore.vaultsById[entry.id];
-
-      const yearFeeRevenue = Number(vaultsStore.getTrailingYearVaultRevenue(entry.id));
-      const activatedSecuritization = Number(vault.activatedSecuritization());
-
-      const epochPoolCapital = Number(vaultsStore.contributedCapital(entry.id, frameToLoadPoolEarnings, 10));
-      entry.liquidityFillPct = Math.round((epochPoolCapital / activatedSecuritization) * 100);
-
-      const epochPoolEarnings = Number(vaultsStore.poolEarnings(entry.id, frameToLoadPoolEarnings, 10));
-      const epochPoolEarningsRatio = epochPoolEarnings / epochPoolCapital;
-
-      const poolApy = (1 + epochPoolEarningsRatio) ** 36.5 - 1;
-      const feeApr = yearFeeRevenue / Number(vault.securitization);
-
-      const apy = poolApy + feeApr;
+    vaults.value = [];
+    for (const vault of list) {
+      const apy = vaultsStore.calculateVaultApy(vault.vaultId);
+      const maxSpace = vault.securitization - vault.recoverySecuritization();
+      const bitcoinSpaceUsed = maxSpace - vault.availableBitcoinSpace();
+      vaults.value.push({
+        id: vault.vaultId,
+        btcFillPct: Math.round((Number(bitcoinSpaceUsed) / Number(maxSpace)) * 100),
+        liquidityFillPct: vaultsStore.getLiquidityFillPct(vault.vaultId),
+      });
       vaultApys.push(apy);
     }
+
     if (vaultApys.length > 0) {
       averageVaultAPY.value = vaultApys.reduce((a, b) => a + b, 0) / vaultApys.length;
     } else {
@@ -201,20 +191,17 @@ Vue.onMounted(async () => {
       .catch(() => {
         microgonValueInVaults.value = 0n;
       });
-    vaults.value = list.map(vault => {
-      const maxSpace = vault.securitization - vault.recoverySecuritization();
-      const bitcoinSpaceUsed = maxSpace - vault.availableBitcoinSpace();
-
-      return {
-        id: vault.vaultId,
-        btcFillPct: Math.round((Number(bitcoinSpaceUsed) / Number(maxSpace)) * 100),
-        liquidityFillPct: 0,
-      };
-    });
     isLoaded.value = true;
   } catch (error) {
     console.error('Error loading vaults:', error);
   }
+}
+
+const vaultsStore = useVaults();
+Vue.onMounted(async () => {
+  await vaultsStore.load();
+  await updateRevenue();
+  void vaultsStore.refreshRevenue().then(updateRevenue);
 });
 </script>
 

@@ -33,6 +33,7 @@
     </template>
     <TroubleshootingOverlay />
     <ImportingOverlay />
+    <AppUpdatesOverlay />
   </div>
 </template>
 
@@ -49,7 +50,6 @@ import WalletOverlay from './overlays/WalletOverlay.vue';
 import ServerRemoveOverlay from './overlays/ServerRemoveOverlay.vue';
 import ServerConfigureOverlay from './overlays/ServerConfigureOverlay.vue';
 import SecuritySettingsOverlay from './overlays/SecuritySettingsOverlay.vue';
-import ProvisioningCompleteOverlay from './overlays/ProvisioningCompleteOverlay.vue';
 import UpgradeOverlay from './overlays/UpgradeOverlay.vue';
 import SyncingOverlay from './overlays/SyncingOverlay.vue';
 import ServerBrokenOverlay from './overlays/ServerBrokenOverlay.vue';
@@ -57,7 +57,6 @@ import TopBar from './navigation/TopBar.vue';
 import { useController } from './stores/controller';
 import { useConfig } from './stores/config';
 import { useBot } from './stores/bot';
-import { checkForUpdates } from './tauri-controls/utils/checkForUpdates.ts';
 import { waitForLoad } from '@argonprotocol/mainchain';
 import TooltipOverlay from './overlays/TooltipOverlay.vue';
 import { hideTooltip } from './lib/TooltipUtils';
@@ -66,13 +65,11 @@ import ComplianceOverlay from './overlays/ComplianceOverlay.vue';
 import TroubleshootingOverlay from './overlays/Troubleshooting.vue';
 import ImportingOverlay from './overlays/ImportingOverlay.vue';
 import BootingOverlay from './overlays/BootingOverlay.vue';
-import { ENABLE_AUTO_UPDATE } from './lib/Config.ts';
+import AppUpdatesOverlay from './overlays/AppUpdatesOverlay.vue';
 
 const controller = useController();
 const config = useConfig();
 const bot = useBot();
-
-let timeout: number | undefined;
 
 const isNeedingUpgrade = Vue.computed(() => {
   return config.isWaitingForUpgradeApproval || (config.isServerInstalled && !config.isServerUpToDate);
@@ -91,18 +88,12 @@ Vue.onBeforeMount(async () => {
 });
 
 Vue.onMounted(async () => {
-  if (ENABLE_AUTO_UPDATE) {
-    timeout = setInterval(() => checkForUpdates(), 60e3) as unknown as number;
-  }
   // Use capture phase to ensure this handler runs before other handlers
   document.addEventListener('click', clickHandler, true);
   hideTooltip();
 });
 
 Vue.onBeforeUnmount(() => {
-  if (timeout) {
-    clearInterval(timeout);
-  }
   document.removeEventListener('click', clickHandler, true);
 });
 
