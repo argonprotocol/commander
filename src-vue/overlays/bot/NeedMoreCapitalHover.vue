@@ -1,24 +1,30 @@
 <template>
   <HoverCardRoot v-model:open="hoverState">
-    <HoverCardTrigger
-      class="inline-block cursor-pointer rounded-full shadow-sm outline-none focus:shadow-[0_0_0_2px] focus:shadow-green-800"
-    >
+    <HoverCardTrigger class="inline-block cursor-pointer outline-none">
       <AlertIcon class="relative -top-2 mr-2 inline-block h-10 w-10 text-yellow-700" />
     </HoverCardTrigger>
     <HoverCardPortal>
       <HoverCardContent
-        class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFade z-100 w-[300px] rounded-xl border bg-white p-5 shadow-sm data-[state=open]:transition-all"
-        :side-offset="5"
+        class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFade text-md z-100 w-[500px] rounded-md border border-gray-800/20 bg-white px-4 pt-4 pb-5 text-left leading-5.5 text-gray-600 shadow-xl select-none data-[state=open]:transition-all"
+        align="start"
+        :alignOffset="-50"
+        :sideOffset="5"
       >
         <p>
-          You need a minimum of {{ microgonToArgonNm(minimumCapitalCommitment).format('0,0.[00]') }} argons to win your
-          goal of {{ config.biddingRules.seatGoalCount }} seats.
+          You need to commit a minimum of {{ currency.symbol
+          }}{{ microgonToMoneyNm(idealCapitalCommitment).format('0,0.[00]') }} in order to have a chance at your goal of
+          winning {{ config.biddingRules.seatGoalCount }} seats.
         </p>
-        <p>
-          Ideally you would commit {{ microgonToArgonNm(idealCapitalCommitment).format('0,0.[00]') }} argons to win your
-          goal of {{ config.biddingRules.seatGoalCount }} seats.
-        </p>
-        <HoverCardArrow class="-mt-[1px] fill-white stroke-gray-300" :width="12" :height="6" />
+        <button
+          @click="increaseCapitalCommitment"
+          class="border-argon-600/30 mt-4 flex cursor-pointer flex-row items-center rounded-md border bg-slate-200 px-4 py-1.5 font-bold"
+        >
+          <IncreaseIcon class="relative -mt-0.5 mr-2 inline-block size-4" />
+          <span class="text-lg">
+            Increase to {{ currency.symbol }}{{ microgonToMoneyNm(idealCapitalCommitment).format('0,0.[00]') }}
+          </span>
+        </button>
+        <HoverCardArrow :width="24" :height="12" class="-mt-px ml-1.5 fill-white stroke-gray-400/30" />
       </HoverCardContent>
     </HoverCardPortal>
   </HoverCardRoot>
@@ -32,6 +38,7 @@ import BiddingCalculator from '@argonprotocol/commander-core';
 import { useConfig } from '../../stores/config';
 import { useCurrency } from '../../stores/currency';
 import { createNumeralHelpers } from '../../lib/numeral';
+import IncreaseIcon from '../../assets/increase.svg?component';
 
 const props = defineProps<{
   calculator: BiddingCalculator;
@@ -40,14 +47,17 @@ const props = defineProps<{
 const config = useConfig();
 const currency = useCurrency();
 
-const { microgonToArgonNm } = createNumeralHelpers(currency);
+const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
-const minimumCapitalCommitment = Vue.computed(
-  () => props.calculator.minimumBidAmount * BigInt(config.biddingRules.seatGoalCount),
-);
-const idealCapitalCommitment = Vue.computed(
-  () => props.calculator.maximumBidAmount * BigInt(config.biddingRules.seatGoalCount),
-);
+const idealCapitalCommitment = Vue.computed(() => {
+  const minimumCapitalNeeded = props.calculator.maximumBidAmount * BigInt(config.biddingRules.seatGoalCount);
+  const minimumCapitalNeededRoundedUp = Math.ceil(Number(minimumCapitalNeeded) / 1_000_000) * 1_000_000;
+  return BigInt(minimumCapitalNeededRoundedUp);
+});
+
+function increaseCapitalCommitment() {
+  config.biddingRules.baseCapitalCommitment = idealCapitalCommitment.value;
+}
 
 const hoverState = Vue.ref(false);
 </script>

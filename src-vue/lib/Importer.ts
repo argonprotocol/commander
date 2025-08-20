@@ -3,16 +3,18 @@ import { type Config } from './Config';
 import Restarter from './Restarter';
 import { Db } from './Db';
 import { invokeWithTimeout } from './tauriApi';
-import { SSH } from './SSH';
+import { ITryServerData, SSH } from './SSH';
+import { IConfigServerDetails } from '../interfaces/IConfig';
 
 export default class Importer {
-  private onFinished: () => void;
+  private onFinished?: () => void;
   private data: any = {};
   private config: Config;
   private dbPromise: Promise<Db>;
+
   public failureToReadData: boolean;
 
-  constructor(config: Config, dbPromise: Promise<Db>, onFinished: () => void) {
+  constructor(config: Config, dbPromise: Promise<Db>, onFinished?: () => void) {
     this.config = config;
     this.dbPromise = dbPromise;
     this.onFinished = onFinished;
@@ -41,7 +43,7 @@ export default class Importer {
     if (!this.data.serverDetails?.ipAddress) return;
 
     this.config.serverDetails = this.data.serverDetails;
-    const serverData = await this.fetchServerData();
+    const serverData = await this.fetchServerData(this.data.serverDetails, this.data.security.sshPrivateKey);
 
     if (serverData?.walletAddress !== this.config.miningAccount.address) {
       throw new Error('Wallet address mismatch');
@@ -53,7 +55,7 @@ export default class Importer {
     this.config.oldestFrameIdToSync = serverData.oldestFrameIdToSync ?? this.config.oldestFrameIdToSync;
     await this.config.save();
 
-    this.onFinished();
+    this.onFinished?.();
   }
 
   async importFromMnemonic(mnemonic: string) {
@@ -61,15 +63,41 @@ export default class Importer {
     await invokeWithTimeout('overwrite_mnemonic', { mnemonic }, 10_000);
     await restarter.recreateLocalDatabase();
     await restarter.restart();
-    this.onFinished();
+    this.onFinished?.();
   }
 
-  private async fetchServerData() {
-    const serverDetails = this.data.serverDetails;
-    const security = this.data.security;
-    if (!serverDetails.ipAddress || !security.sshPrivateKey) return;
+  async importFromServer(ipAddress: string) {
+    const serverDetails: IConfigServerDetails = {
+      ipAddress,
+      sshUser: this.config.serverDetails.sshUser,
+    };
 
-    const serverData = await SSH.tryConnection(serverDetails, security.sshPrivateKey);
+    const serverData = await this.fetchServerData(serverDetails, this.config.security.sshPrivateKey);
+
+    if (!serverData) {
+      throw new Error('Failed to fetch server data');
+    } else if (serverData.walletAddress !== this.config.miningAccount.address) {
+      throw new Error('Wallet address mismatch');
+    }
+
+    // TODO: We might want to return this data to the caller (BotOverlay) so they can hold it in case the user
+    // wants to click the Cancel button.
+    this.config.biddingRules = serverData.biddingRules!;
+    this.config.oldestFrameIdToSync = serverData.oldestFrameIdToSync!;
+    this.config.serverDetails = { ...this.config.serverDetails, ipAddress: ipAddress };
+    this.config.isServerInstalled = true;
+    await this.config.save();
+
+    this.onFinished?.();
+  }
+
+  private async fetchServerData(
+    serverDetails: IConfigServerDetails,
+    sshPrivateKey: string,
+  ): Promise<ITryServerData | undefined> {
+    if (!serverDetails.ipAddress || !sshPrivateKey) return;
+
+    const serverData = await SSH.tryConnection(serverDetails, sshPrivateKey);
     return serverData;
   }
 }

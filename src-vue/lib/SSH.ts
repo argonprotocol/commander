@@ -51,7 +51,8 @@ export class SSH {
     });
     await connection.connect();
     const server = new Server(connection);
-    const [walletAddress] = await server.downloadAccountAddress();
+    const walletAddress = await server.downloadAccountAddress();
+
     if (!walletAddress)
       return {
         walletAddress: undefined,
