@@ -21,8 +21,8 @@ import * as Vue from 'vue';
 import BigNumber from 'bignumber.js';
 import { useCurrency } from '../stores/currency';
 import InputNumber from './InputNumber.vue';
-import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
-import { MICROGONS_PER_ARGON } from '@argonprotocol/commander-calculator/src/Mainchain';
+import { bigNumberToBigInt } from '@argonprotocol/commander-core';
+import { MICROGONS_PER_ARGON } from '@argonprotocol/commander-core/src/Mainchain';
 
 const currency = useCurrency();
 

@@ -28,7 +28,7 @@
 import * as Vue from 'vue';
 import { HoverCardArrow, HoverCardContent, HoverCardPortal, HoverCardRoot, HoverCardTrigger } from 'reka-ui';
 import AlertIcon from '../../assets/alert.svg?component';
-import BiddingCalculator from '@argonprotocol/commander-calculator';
+import BiddingCalculator from '@argonprotocol/commander-core';
 import { useConfig } from '../../stores/config';
 import { useCurrency } from '../../stores/currency';
 import { createNumeralHelpers } from '../../lib/numeral';

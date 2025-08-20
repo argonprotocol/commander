@@ -6,8 +6,8 @@ import { convertBigIntStringToNumber, createDeferred, IDeferred } from './Utils.
 import { IAllVaultStats, IVaultFrameStats } from '../interfaces/IVaultStats.ts';
 import mainnetVaultRevenueHistory from '../data/vaultRevenue.mainnet.json';
 import testnetVaultRevenueHistory from '../data/vaultRevenue.testnet.json';
-import { NETWORK_NAME } from './Config.ts';
-import { Mainchain } from '@argonprotocol/commander-calculator';
+import { NETWORK_NAME } from './Env.ts';
+import { Mainchain } from '@argonprotocol/commander-core';
 
 const REVENUE_STATS_FILE = `${NETWORK_NAME}/vaultRevenue.json`;
 

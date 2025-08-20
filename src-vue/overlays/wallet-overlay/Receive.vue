@@ -66,7 +66,7 @@
         </div>
         <div v-else>You haven't set any bidding rules. Please do so before adding funds.</div>
       </div>
-      
+
       <div class="flex flex-col w-full max-w-44 items-end justify-end">
         <img :src="qrCode" width="100%" />
         <CopyToClipboard :content="wallet.address" class="relative mb-3 mr-5 cursor-pointer">
@@ -97,7 +97,7 @@ import { ChevronLeftIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import CopyIcon from '../../assets/copy.svg?component';
 import CopyToClipboard from '../../components/CopyToClipboard.vue';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
-import { bigIntMax } from '@argonprotocol/commander-calculator/src/utils';
+import { bigIntMax } from '@argonprotocol/commander-core/src/utils';
 
 const props = defineProps({
   walletId: {

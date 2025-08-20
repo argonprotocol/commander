@@ -36,6 +36,7 @@ it('can create bidder params', async () => {
     "baseCapitalCommitment": "10000000n",
     "requiredMicronots": "1000000n"
   }`);
+  MiningFrames.setNetwork('localnet');
   const cohortActivationFrameId = MiningFrames.calculateCurrentFrameIdFromSystemTime();
   const accruedEarnings = 10_000_253n;
   const bidderParams = await createBidderParams(cohortActivationFrameId, client, biddingRules, accruedEarnings);

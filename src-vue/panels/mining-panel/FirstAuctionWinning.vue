@@ -82,7 +82,7 @@ import BiddingCalculator, {
   type IBiddingRules,
   BiddingCalculatorData,
   BiddingParamsHelper,
-} from '@argonprotocol/commander-calculator';
+} from '@argonprotocol/commander-core';
 import { type IWinningBid } from '@argonprotocol/commander-bot';
 import CountdownClock from '../../components/CountdownClock.vue';
 import ConfettiIcon from '../../assets/confetti.svg?component';
@@ -92,7 +92,7 @@ import { getMainchain } from '../../stores/mainchain';
 import { useStats } from '../../stores/stats';
 import { createNumeralHelpers } from '../../lib/numeral';
 import { useWallets } from '../../stores/wallets';
-import { bigIntMin } from '@argonprotocol/commander-calculator/src/utils';
+import { bigIntMin } from '@argonprotocol/commander-core/src/utils';
 
 dayjs.extend(utc);
 

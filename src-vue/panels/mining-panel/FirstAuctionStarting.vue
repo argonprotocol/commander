@@ -67,7 +67,7 @@ import BiddingCalculator, {
   type IBiddingRules,
   BiddingCalculatorData,
   BiddingParamsHelper,
-} from '@argonprotocol/commander-calculator';
+} from '@argonprotocol/commander-core';
 import basicEmitter from '../../emitters/basicEmitter';
 import { getMainchain } from '../../stores/mainchain';
 import { useCurrency } from '../../stores/currency';

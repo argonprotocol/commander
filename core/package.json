@@ -1,12 +1,12 @@
 {
-  "name": "@argonprotocol/commander-calculator",
+  "name": "@argonprotocol/commander-core",
   "private": true,
   "version": "0.0.1",
   "description": "An api for integration with commander",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "test:local": "ARGON_PROJECT_ROOT=../../mainchain vitest --run"
+    "test:local": "vitest --run"
   },
   "dependencies": {
     "@argonprotocol/mainchain": "^1.3.7",

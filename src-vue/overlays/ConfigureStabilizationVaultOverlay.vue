@@ -232,7 +232,7 @@ import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import { hideTooltip, showTooltip } from '../lib/TooltipUtils';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForVault } from './EditBoxOverlay.vue';
-import { bigNumberToBigInt, jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
+import { bigNumberToBigInt, jsonParseWithBigInts } from '@argonprotocol/commander-core';
 import IVaultingRules from '../interfaces/IVaultingRules';
 import { MyVault } from '../lib/MyVault.ts';
 import ExistingNetworkVaultsOverlayButton from './ExistingNetworkVaultsOverlayButton.vue';

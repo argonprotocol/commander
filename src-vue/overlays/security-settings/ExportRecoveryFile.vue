@@ -44,7 +44,7 @@ import * as Vue from 'vue';
 import { useConfig } from '../../stores/config';
 import { save as saveFileOverlay } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
-import { jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
+import { jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
 
 const config = useConfig();
 const isSavingExport = Vue.ref(false);

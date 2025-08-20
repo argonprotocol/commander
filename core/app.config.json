@@ -1,23 +1,35 @@
 {
-  "local": {
+  "localnet": {
     "archiveUrl": "ws://localhost:9944",
     "tickMillis": 10000,
     "bitcoinBlockMillis": 100000,
     "esploraHost": "http://localhost:3002",
-    "serverEnvFile": ".env.localnet"
+    "serverEnvFile": ".env.localnet",
+    "ticksBetweenFrames": 1440,
+    "slotBiddingStartAfterTicks": 0,
+    "genesisTick": 0,
+    "biddingStartTick": 0
   },
   "testnet": {
     "archiveUrl": "wss://rpc.testnet.argonprotocol.org",
     "tickMillis": 60000,
     "bitcoinBlockMillis": 600000,
     "esploraHost": "http://bitcoin-node0.testnet.argonprotocol.org:3002",
-    "serverEnvFile": ".env.testnet"
+    "serverEnvFile": ".env.testnet",
+    "ticksBetweenFrames": 1440,
+    "slotBiddingStartAfterTicks": 17280,
+    "genesisTick": 28937955,
+    "biddingStartTick": 28955235
   },
   "mainnet": {
     "archiveUrl": "wss://rpc.argon.network",
     "tickMillis": 60000,
     "bitcoinBlockMillis": 600000,
     "esploraHost": "https://mempool.space/api",
-    "serverEnvFile": ".env.mainnet"
+    "serverEnvFile": ".env.mainnet",
+    "ticksBetweenFrames": 1440,
+    "slotBiddingStartAfterTicks": 55661,
+    "genesisTick": 28949839,
+    "biddingStartTick": 29005500
   }
 }

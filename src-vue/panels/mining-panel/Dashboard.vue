@@ -105,7 +105,7 @@
         </div>
 
         <div class="flex flex-col grow gap-y-2">
-          
+
           <section box class="flex flex-col text-center px-2 h-[15%]">
             <div class="flex flex-row pt-2 pb-1 h-full">
               <div class="flex flex-col w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
@@ -127,7 +127,7 @@
               </div>
 
               <div class="h-full w-[1px] bg-slate-400/30"></div>
-              
+
               <div class="flex flex-col w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
                 <div class="font-bold">Argon Node</div>
                 <div class="flex flex-row items-center justify-center gap-x-2 whitespace-nowrap">
@@ -189,7 +189,7 @@
             <div v-if="currentFrame.seatCountActive" class="flex flex-row h-full">
               <div class="flex flex-col w-full h-full pt-2 gap-y-2">
                 <div class="flex flex-row w-full h-1/2 gap-x-2">
-                  
+
                   <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30 pb-3">
                     <span>{{ currentFrame.seatCountActive }}</span>
                     <label>Active Mining Seat{{ currentFrame.seatCountActive === 1 ? '' : 's' }}</label>
@@ -222,7 +222,7 @@
                   </div>
 
                   <div class="h-full w-[1px] bg-slate-400/30"></div>
-                  
+
                   <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30 pb-3">
                     <span>
                       {{
@@ -238,7 +238,7 @@
                 </div>
 
                 <div class="flex flex-row w-full h-1/2 gap-x-2">
-                  
+
                   <div stat-box class="flex flex-col w-1/3 h-full">
                     <div class="relative size-28">
                       <svg class="size-full -rotate-90" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
@@ -261,9 +261,9 @@
                     </span>
                     <label>Relative Frame Cost</label>
                   </div>
-                  
+
                   <div class="h-full w-[1px] bg-slate-400/30"></div>
-                  
+
                   <div stat-box class="flex flex-col w-1/3 h-full pb-3">
                     <span>
                       {{ currency.symbol
@@ -274,9 +274,9 @@
                       <HealthIndicatorBar />
                     </label>
                   </div>
-                  
+
                   <div class="h-full w-[1px] bg-slate-400/30"></div>
-                  
+
                   <div stat-box class="flex flex-col w-1/3 h-full pb-3">
                     <span>{{ numeral(currentFrameProfit).formatIfElseCapped('< 100', '0.[00]', '0,0', 9_999) }}%</span>
                     <label class="relative block w-full">
@@ -332,7 +332,7 @@ import ActivityIcon from '../../assets/activity.svg?component';
 import BlocksIcon from '../../assets/blocks.svg?component';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
 import BotHistoryOverlayButton from '../../overlays/BotHistoryOverlayButton.vue';
-import { TICK_MILLIS } from '../../lib/Config.ts';
+import { TICK_MILLIS } from '../../lib/Env.ts';
 import { useWallets } from '../../stores/wallets';
 import MinerIcon from '../../assets/miner.svg?component';
 import HealthIndicatorBar from '../../components/HealthIndicatorBar.vue';

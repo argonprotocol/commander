@@ -1,5 +1,5 @@
 import { type Accountset, CohortBidder, MiningBids } from '@argonprotocol/mainchain';
-import { createBidderParams, type IBiddingRules } from '@argonprotocol/commander-calculator';
+import { createBidderParams, type IBiddingRules } from '@argonprotocol/commander-core';
 import { type Storage } from './Storage.ts';
 import { type History, SeatReductionReason } from './History.ts';
 

@@ -6,7 +6,7 @@ import { FramesTable } from './db/FramesTable';
 import { ArgonActivitiesTable } from './db/ArgonActivitiesTable';
 import { BitcoinActivitiesTable } from './db/BitcoinActivitiesTable';
 import { BotActivitiesTable } from './db/BotActivitiesTable';
-import { INSTANCE_NAME, NETWORK_NAME } from './Config';
+import { INSTANCE_NAME, NETWORK_NAME } from './Env';
 import { ensureOnlyOneInstance } from './Utils';
 import { FrameBidsTable } from './db/FrameBidsTable';
 import { VaultsTable } from './db/VaultsTable.ts';

@@ -1,7 +1,7 @@
 import Path from 'node:path';
 import { LRU } from 'tiny-lru';
 import * as fs from 'node:fs';
-import { MiningFrames } from '@argonprotocol/commander-calculator';
+import { MiningFrames } from '@argonprotocol/commander-core';
 import type { IBotStateFile } from './interfaces/IBotStateFile.ts';
 import type { IEarningsFile } from './interfaces/IEarningsFile.ts';
 import type { IBidsFile } from './interfaces/IBidsFile.ts';
@@ -69,7 +69,7 @@ export class Storage {
     let entry = this.lruCache.get(key) as JsonStore<IEarningsFile> | undefined;
     if (!entry) {
       entry = new JsonStore<IEarningsFile>(Path.join(this.basedir, key), () => {
-        const tickRange = MiningFrames.getTickRangeForFrameFromSystemTime(frameId);
+        const tickRange = MiningFrames.getTickRangeForFrame(frameId);
         return {
           frameId,
           frameTickRange: tickRange,
@@ -95,7 +95,7 @@ export class Storage {
     let entry = this.lruCache.get(key) as JsonStore<IBidsFile> | undefined;
     if (!entry) {
       entry = new JsonStore<IBidsFile>(Path.join(this.basedir, key), () => {
-        const tickRange = MiningFrames.getTickRangeForFrameFromSystemTime(cohortBiddingFrameId);
+        const tickRange = MiningFrames.getTickRangeForFrame(cohortBiddingFrameId);
         return {
           cohortBiddingFrameId,
           cohortActivationFrameId,

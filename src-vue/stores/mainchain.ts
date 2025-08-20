@@ -1,15 +1,11 @@
-import BiddingCalculator, {
-  BiddingCalculatorData,
-  Mainchain,
-  MainchainClient,
-} from '@argonprotocol/commander-calculator';
+import BiddingCalculator, { BiddingCalculatorData, Mainchain, MainchainClient } from '@argonprotocol/commander-core';
 import { getClient } from '@argonprotocol/mainchain';
-import { NETWORK_URL } from '../lib/Config';
+import { NETWORK_URL } from '../lib/Env.ts';
 import { useConfig } from './config';
-import { type IBiddingRules } from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
+import { type IBiddingRules } from '@argonprotocol/commander-core/src/IBiddingRules.ts';
 import { useBot } from './bot.ts';
 import { botEmitter } from '../lib/Bot.ts';
-import { wrapApi } from '@argonprotocol/commander-calculator/src/ClientWrapper.ts';
+import { wrapApi } from '@argonprotocol/commander-core/src/ClientWrapper.ts';
 import { BotStatus } from '../lib/BotSyncer.ts';
 
 let archiveClient: Promise<MainchainClient>;

@@ -1,7 +1,7 @@
 import BigNumber from 'bignumber.js';
 import { getMainchain } from '../stores/mainchain';
 import { MICROGONS_PER_ARGON, SATS_PER_BTC } from '@argonprotocol/mainchain';
-import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
+import { bigNumberToBigInt } from '@argonprotocol/commander-core';
 import IDeferred from '../interfaces/IDeferred';
 import { createDeferred } from './Utils';
 import { Config } from './Config';

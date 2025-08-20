@@ -3,9 +3,9 @@ import { defineStore } from 'pinia';
 import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { type MainchainClient } from '@argonprotocol/commander-calculator';
-import { getMainchain, getMainchainClient } from '../stores/mainchain.ts';
-import { BlockHash } from '@argonprotocol/mainchain';
+import { type MainchainClient } from '@argonprotocol/commander-core';
+import { getArchiveClient, getMainchain, getMainchainClient } from './mainchain.ts';
+import { BlockHash, getAuthorFromHeader } from '@argonprotocol/mainchain';
 
 dayjs.extend(utc);
 dayjs.extend(relativeTime);
@@ -46,8 +46,11 @@ export const useBlockchainStore = defineStore('blockchain', () => {
   ]);
 
   async function fetchBlock(client: MainchainClient, blockHash: BlockHash) {
-    const block = await client.derive.chain.getBlock(blockHash);
-    const events = await client.query.system.events.at(blockHash);
+    const header = await client.rpc.chain.getHeader(blockHash);
+    const author = getAuthorFromHeader(client, header);
+    const clientAt = await client.at(blockHash);
+    const events = await clientAt.query.system.events();
+    const extrinsics = await clientAt.query.system.extrinsicCount().then(x => (x.isSome ? x.value.toNumber() : 0));
     const blockRewards = events.map(({ event }: { event: any }) => {
       if (client.events.blockRewards.RewardCreated.is(event)) {
         return event.data.rewards.map(x => ({
@@ -60,12 +63,12 @@ export const useBlockchainStore = defineStore('blockchain', () => {
       }
     })[0];
     const { microgons, micronots } = blockRewards?.find(x => x.isMining) ?? { microgons: 0n, micronots: 0n };
-    const timestamp = (await client.query.timestamp.now.at(blockHash)).toNumber();
+    const timestamp = (await clientAt.query.timestamp.now()).toNumber();
     const newBlock: IBlock = {
-      number: block.block.header.number.toNumber(),
-      hash: block.block.header.hash.toHex(),
-      author: block.author?.toHuman() || '',
-      extrinsics: block.block.extrinsics.length,
+      number: header.number.toNumber(),
+      hash: header.hash.toHex(),
+      author: author ?? '',
+      extrinsics,
       microgons,
       micronots,
       timestamp: dayjs.utc(timestamp),
@@ -75,13 +78,12 @@ export const useBlockchainStore = defineStore('blockchain', () => {
   }
 
   async function fetchBlocks(lastBlockNumber: number | null, endingFrameId: number | null, maxBlockCount: number) {
-    const client = await getMainchainClient(true);
+    const client = await getArchiveClient();
     const blocks: IBlock[] = [];
 
-    if (!lastBlockNumber) {
-      const lastestBlockHash = await client.rpc.chain.getHeader();
-      const lastestBlock = await client.rpc.chain.getBlock(lastestBlockHash.hash);
-      lastBlockNumber = lastestBlock.block.header.number.toNumber();
+    if (lastBlockNumber === null) {
+      const latestBlock = await client.rpc.chain.getHeader();
+      lastBlockNumber = latestBlock.number.toNumber();
     }
 
     let blockNumber = lastBlockNumber;

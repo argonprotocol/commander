@@ -37,7 +37,7 @@
     </div>
     <div v-if="options.length" class="flex flex-row items-center justify-between space-x-2">
       <InputMenu v-model="config.biddingRules.minimumBidAdjustmentType" :options="[
-        { name: BidAmountAdjustmentType.Absolute, value: BidAmountAdjustmentType.Absolute }, 
+        { name: BidAmountAdjustmentType.Absolute, value: BidAmountAdjustmentType.Absolute },
         { name: BidAmountAdjustmentType.Relative, value: BidAmountAdjustmentType.Relative }
       ]" :selectFirst="true" class="w-1/3" />
       <InputArgon v-if="isAbsoluteType" v-model="config.biddingRules.minimumBidAdjustAbsolute" class="w-1/3" />
@@ -52,7 +52,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { BidAmountAdjustmentType, BidAmountFormulaType } from '@argonprotocol/commander-calculator/src/IBiddingRules';
+import { BidAmountAdjustmentType, BidAmountFormulaType } from '@argonprotocol/commander-core/src/IBiddingRules';
 import { ExclamationTriangleIcon } from '@heroicons/vue/20/solid';
 import InputMenu, { type IOption } from '../../components/InputMenu.vue';
 import InputNumber from '../../components/InputNumber.vue';

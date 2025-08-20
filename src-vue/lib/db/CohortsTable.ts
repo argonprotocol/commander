@@ -2,7 +2,7 @@ import { ICohortRecord } from '../../interfaces/db/ICohortRecord';
 import { BaseTable } from './BaseTable';
 import { convertSqliteBigInts, fromSqliteBigInt, toSqlParams } from '../Utils';
 import BigNumber from 'bignumber.js';
-import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
+import { bigNumberToBigInt } from '@argonprotocol/commander-core';
 
 export class CohortsTable extends BaseTable {
   private bigIntFields: string[] = [
