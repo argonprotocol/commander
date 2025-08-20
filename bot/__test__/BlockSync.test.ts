@@ -1,18 +1,21 @@
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
-import { runOnTeardown, sudo, teardown, startNetwork } from '@argonprotocol/testing';
+import { runOnTeardown, sudo, teardown } from '@argonprotocol/testing';
 import { AccountMiners, Accountset, getClient, mnemonicGenerate } from '@argonprotocol/mainchain';
 import { BlockSync } from '../src/BlockSync.js';
 import fs from 'node:fs';
 import { Storage } from '../src/Storage.js';
 import type { IBotSyncStatus } from '../src/interfaces/IBotStateFile.js';
 import { Dockers } from '../src/Dockers.js';
+import { MiningFrames } from '@argonprotocol/commander-core';
+import { startArgonTestNetwork } from '@argonprotocol/commander-core/__test__/startArgonTestNetwork.js';
 
 afterEach(teardown);
 afterAll(teardown);
 
 let clientAddress: string;
 beforeAll(async () => {
-  const result = await startNetwork();
+  MiningFrames.setNetwork('localnet');
+  const result = await startArgonTestNetwork('block-sync');
   clientAddress = result.archiveUrl;
 });
 

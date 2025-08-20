@@ -6,5 +6,6 @@ export default defineConfig({
     hookTimeout: 120_000,
     retry: 0,
     reporters: process.env.GITHUB_ACTIONS ? ['dot', 'github-actions'] : ['dot'],
+    maxWorkers: 1,
   },
 });

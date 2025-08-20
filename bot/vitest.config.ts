@@ -2,10 +2,11 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    testTimeout: 120_000,
+    testTimeout: 240_000,
     hookTimeout: 120_000,
     retry: 0,
     disableConsoleIntercept: true,
     reporters: process.env.GITHUB_ACTIONS ? ['dot', 'github-actions'] : ['dot'],
+    maxWorkers: 1,
   },
 });

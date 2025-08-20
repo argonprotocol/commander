@@ -1,15 +1,16 @@
 import { afterAll, afterEach, expect, it } from 'vitest';
-import { startNetwork, teardown } from '@argonprotocol/testing';
+import { teardown } from '@argonprotocol/testing';
 import createBidderParams from '../src/createBidderParams.ts';
 import { jsonParseWithBigInts } from '../src/utils.ts';
 import { getClient } from '@argonprotocol/mainchain';
 import { MiningFrames } from '../src/MiningFrames.ts';
+import { startArgonTestNetwork } from './startArgonTestNetwork.js';
 
 afterEach(teardown);
 afterAll(teardown);
 
 it('can create bidder params', async () => {
-  const network = await startNetwork();
+  const network = await startArgonTestNetwork('bidder-params');
   const client = await getClient(network.archiveUrl);
 
   const biddingRules = jsonParseWithBigInts(`{
