@@ -1,3 +1,3 @@
-import AppConfig from '../app.config.json';
+import AppConfig from '../app.config.json' with { type: 'json' };
 
 export { AppConfig };
