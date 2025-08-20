@@ -6,7 +6,8 @@ const rawVersion = process.argv[2] || packageVersion;
 const version = rawVersion.replace(/^v/, '').trim();
 
 (async () => {
-  const releaseNotes = fs.readFileSync('../RELEASE_NOTES.md', 'utf8');
+  const dirname = import.meta.dirname;
+  const releaseNotes = fs.readFileSync(`${dirname}/../RELEASE_NOTES.md`, 'utf8');
   const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   // Match "## vX.Y.Z..." or "## X.Y.Z..." with any extra text until newline

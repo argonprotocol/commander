@@ -6,7 +6,9 @@ import { pipeline } from 'stream/promises';
 import { version as packageVersion } from '../package.json';
 
 (async () => {
-  const files = fs.readdirSync('../resources');
+  const dirname = import.meta.dirname;
+  const resourcesDir = Path.join(dirname, '../resources');
+  const files = fs.readdirSync(resourcesDir);
   const serverFiles = files.filter(file => file.startsWith('server-') || file === 'SHASUM256');
   for (const file of serverFiles) {
     fs.unlinkSync(Path.join('resources', file));
@@ -32,5 +34,5 @@ import { version as packageVersion } from '../package.json';
 
   const checksum = hash.digest('hex');
   console.log(`SHA256: ${checksum}`);
-  fs.writeFileSync(`../resources/SHASUM256`, `${checksum}  ${fileName}\n`);
+  fs.writeFileSync(Path.join(resourcesDir, 'SHASUM256'), `${checksum}  ${fileName}\n`);
 })();

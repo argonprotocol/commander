@@ -8,6 +8,7 @@ import cors from 'cors';
 import type { IBlockNumbers } from './Dockers.ts';
 import { Dockers } from './Dockers.ts';
 import type { IBotStateError, IBotStateStarting } from './interfaces/IBotStateFile.ts';
+import { MiningFrames } from '@argonprotocol/commander-core';
 
 // wait for crypto wasm to be loaded
 await waitForLoad();
@@ -23,6 +24,12 @@ const pair = await keyringFromFile({
   filePath: requireEnv('KEYPAIR_PATH'),
   passphrase: process.env.KEYPAIR_PASSPHRASE,
 });
+
+let networkName = process.env.ARGON_CHAIN ?? 'mainnet';
+if (networkName === 'local') {
+  networkName = 'localnet';
+}
+MiningFrames.setNetwork(networkName as any);
 
 const bot = new Bot({
   oldestFrameIdToSync: oldestFrameIdToSync,

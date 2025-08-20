@@ -5,7 +5,7 @@ import { version as packageVersion } from '../package.json';
 (async () => {
   const dirname = Path.join(import.meta.dirname, '..');
   for (const name of ['src-tauri/tauri.conf.json', 'src-tauri/tauri.experimental.conf.json']) {
-    const filePath = Path.join(dirname, 'src-tauri', name);
+    const filePath = Path.join(dirname, name);
     const file = fs.readFileSync(filePath, 'utf-8');
     const tauriConf = JSON.parse(file);
     tauriConf.version = packageVersion;
