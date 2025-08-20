@@ -23,5 +23,5 @@
     "noUnusedParameters": true,
     "rootDir": "."
   },
-  "include": ["vitest.config.ts", "src", "__test__"]
+  "include": ["vitest.config.ts", "src", "__test__", "app.config.json"]
 }

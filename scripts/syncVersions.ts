@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as Path from 'path';
-import { version as packageVersion } from './package.json';
+import { version as packageVersion } from '../package.json';
 
 (async () => {
-  const dirname = import.meta.dirname;
+  const dirname = Path.join(import.meta.dirname, '..');
   for (const name of ['src-tauri/tauri.conf.json', 'src-tauri/tauri.experimental.conf.json']) {
     const filePath = Path.join(dirname, 'src-tauri', name);
     const file = fs.readFileSync(filePath, 'utf-8');

@@ -2,7 +2,7 @@ import { Config } from './Config';
 import { Db } from './Db';
 import { BotFetch } from './BotFetch';
 import { type IBidsFile, type IBotState, type IBotStateStarting } from '@argonprotocol/commander-bot';
-import { MiningFrames, TICKS_PER_COHORT } from '@argonprotocol/commander-calculator';
+import { MiningFrames, TICKS_PER_COHORT } from '@argonprotocol/commander-core';
 import { getMainchain } from '../stores/mainchain';
 import { BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors';
 import { IBotEmitter } from './Bot';
@@ -354,8 +354,7 @@ export class BotSyncer {
     const currentFrameProgress = await this.calculateProgress(this.botState.currentFrameTickRange);
 
     try {
-      const mainchainClient = await this.mainchain.clientPromise;
-      const [cohortStartingTick] = await MiningFrames.getTickRangeForFrame(mainchainClient, cohortActivationFrameId);
+      const [cohortStartingTick] = MiningFrames.getTickRangeForFrame(cohortActivationFrameId);
       const cohortEndingTick = cohortStartingTick + TICKS_PER_COHORT;
       const framesCompleted = Math.min(this.botState.currentFrameId - cohortActivationFrameId, 10);
       const miningSeatCount = BigInt(await this.mainchain.getMiningSeatCount());

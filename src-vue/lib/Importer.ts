@@ -1,4 +1,4 @@
-import { jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
+import { jsonParseWithBigInts } from '@argonprotocol/commander-core';
 import { type Config } from './Config';
 import Restarter from './Restarter';
 import { Db } from './Db';

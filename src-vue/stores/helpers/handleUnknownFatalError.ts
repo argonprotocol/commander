@@ -3,7 +3,7 @@ import { message as tauriMessage } from '@tauri-apps/plugin-dialog';
 let hasUnknownFatalError = false;
 
 export default async function handleUnknownFatalError(error?: Error) {
-  console.error(error);
+  console.error(`Unknown error occurred`, error);
 
   if (hasUnknownFatalError) return;
   hasUnknownFatalError = true;

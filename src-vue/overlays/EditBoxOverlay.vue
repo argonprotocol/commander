@@ -1,8 +1,8 @@
 <!-- prettier-ignore -->
 <template>
-  <div 
+  <div
     ref="modalElem"
-    class="absolute bg-white border border-slate-500/60 rounded-md shadow-lg z-100 text-base" 
+    class="absolute bg-white border border-slate-500/60 rounded-md shadow-lg z-100 text-base"
     :style="[positionStyle, { cursor: isDragging ? 'grabbing' : 'default' }]"
   >
     <div class="flex flex-col">
@@ -39,8 +39,8 @@ import CapitalAllocation from './edit-box/CapitalAllocation.vue';
 import ExpectedGrowth from './edit-box/ExpectedGrowth.vue';
 import CloudMachine from './edit-box/CloudMachine.vue';
 import { useConfig } from '../stores/config';
-import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
-import { IBiddingRules } from '@argonprotocol/commander-calculator';
+import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
+import { IBiddingRules } from '@argonprotocol/commander-core';
 
 const props = defineProps<{
   id: IEditBoxOverlayType;

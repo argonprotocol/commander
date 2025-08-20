@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import Path from 'node:path';
 import Bot from '../src/Bot.ts';
-import * as BiddingCalculator from '@argonprotocol/commander-calculator';
+import * as BiddingCalculator from '@argonprotocol/commander-core';
 import { Dockers } from '../src/Dockers.js';
 
 afterEach(teardown);

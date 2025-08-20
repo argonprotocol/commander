@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
-import { IBiddingRules, jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
+import { IBiddingRules, jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
 import { SSHConnection } from './SSHConnection';
-import { DEPLOY_ENV_FILE, NETWORK_NAME } from './Config';
+import { DEPLOY_ENV_FILE, NETWORK_NAME } from './Env.ts';
 import { KeyringPair$Json } from '@argonprotocol/mainchain';
 import { SSH } from './SSH';
 import { InstallStepKey } from '../interfaces/IConfig';

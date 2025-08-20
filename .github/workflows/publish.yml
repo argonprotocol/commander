@@ -50,7 +50,7 @@ jobs:
 
       - name: Read release notes (and ensure they exist)
         run: |
-          RELEASE_NOTES = yarn tsx getReleaseNotes.ts ${{ env.VERSION }}
+          RELEASE_NOTES = yarn tsx scripts/getReleaseNotes.ts ${{ env.VERSION }}
           if [ -z "$RELEASE_NOTES" ]; then
               echo "Release notes are empty. Please provide valid release notes."
               exit 1

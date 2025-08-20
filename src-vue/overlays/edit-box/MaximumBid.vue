@@ -12,14 +12,14 @@
       <div class="ml-3">
         <h3 class="text-sm font-medium text-yellow-800">This Formula Has Changed By -{{currency.symbol}}{{ microgonToMoneyNm(formulaChangeAmount).format('0,0.00') }}</h3>
         <div class="mt-1 text-sm text-yellow-700">
-          <p>You made changes to the Ecosystem Growth rates, which increased the value of you formula for Maximum Bid 
+          <p>You made changes to the Ecosystem Growth rates, which increased the value of you formula for Maximum Bid
             (Breakeven at Slow Growth). Applying this change will affect your APY.</p>
           <button @click="applyChanges" class="text-sm text-yellow-700 font-bold px-5 py-1 border border-red-500 cursor-pointer rounded-md bg-red-100 hover:bg-red-200 mt-3 mb-2 inner-button-shadow">Apply Changes</button>
         </div>
       </div>
     </div>
   </div>
-  
+
   <div :class="showHasOverrideAlert ? 'opacity-50 pointer-events-none' : ''" class="flex flex-col grow">
     <label class="font-bold opacity-60 mb-0.5">
       Formula Type
@@ -40,7 +40,7 @@
       </label>
       <div v-if="options.length" class="flex flex-row items-center justify-between space-x-3">
         <InputMenu v-model="config.biddingRules.maximumBidAdjustmentType" :options="[
-          { name: BidAmountAdjustmentType.Absolute, value: BidAmountAdjustmentType.Absolute }, 
+          { name: BidAmountAdjustmentType.Absolute, value: BidAmountAdjustmentType.Absolute },
           { name: BidAmountAdjustmentType.Relative, value: BidAmountAdjustmentType.Relative }
         ]" :selectFirst="true" class="w-1/2" />
         <InputArgon v-if="isAbsoluteType" v-model="config.biddingRules.maximumBidAdjustAbsolute" class="min-w-60 w-1/2" />
@@ -56,10 +56,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import {
-  BidAmountAdjustmentType,
-  BidAmountFormulaType,
-} from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
+import { BidAmountAdjustmentType, BidAmountFormulaType } from '@argonprotocol/commander-core/src/IBiddingRules.ts';
 import AlertIcon from '../../assets/alert.svg?component';
 import InputMenu, { type IOption } from '../../components/InputMenu.vue';
 import InputNumber from '../../components/InputNumber.vue';

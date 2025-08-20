@@ -1,6 +1,7 @@
 import * as Vue from 'vue';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { Config, NETWORK_NAME } from '../lib/Config';
+import { NETWORK_NAME } from '../lib/Env.ts';
+import { Config } from '../lib/Config.ts';
 import { getDbPromise } from './helpers/dbPromise';
 import handleUnknownFatalError from './helpers/handleUnknownFatalError';
 import { SSH } from '../lib/SSH';

@@ -59,9 +59,9 @@
                     micronotToArgonotNm(wallets.miningWallet.availableMicronots || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
                   }}
                 </template>.
-                
+
                 However you <strong class="opacity-80">still need</strong> another
-                
+
                 <template v-if="additionalMicrogonsNeeded">
                   {{ microgonToArgonNm(additionalMicrogonsNeeded).format('0,0.[00000000]') }} argon{{
                     microgonToArgonNm(additionalMicrogonsNeeded).format('0.00000000') === '1.00000000' ? '' : 's'
@@ -142,7 +142,7 @@ import { useCurrency } from '../../stores/currency';
 import Checkbox from '../../components/Checkbox.vue';
 import { useInstaller } from '../../stores/installer';
 import { createNumeralHelpers } from '../../lib/numeral';
-import { bigIntMax } from '@argonprotocol/commander-calculator/src/utils';
+import { bigIntMax } from '@argonprotocol/commander-core/src/utils';
 
 dayjs.extend(utc);
 

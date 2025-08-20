@@ -38,7 +38,7 @@
       </ul>
     </div>
 
-    <div v-if="controller.isLoaded" 
+    <div v-if="controller.isLoaded"
       class="flex flex-row mr-3 space-x-2 items-center justify-end w-1/2 pointer-events-none relative top-[1px]"
       :class="[wallets.isLoaded ? '' : 'opacity-20']"
     >
@@ -52,10 +52,9 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { useController } from '../stores/controller';
-import { NETWORK_NAME } from '../stores/config';
 import WindowControls from '../tauri-controls/WindowControls.vue';
 import CurrencyMenu from './CurrencyMenu.vue';
-import { INSTANCE_NAME } from '../lib/Config';
+import { INSTANCE_NAME, NETWORK_NAME } from '../lib/Env.ts';
 import StatusMenu from './StatusMenu.vue';
 import AccountMenu from './AccountMenu.vue';
 import { useWallets } from '../stores/wallets';

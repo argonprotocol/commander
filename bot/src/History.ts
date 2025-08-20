@@ -1,5 +1,5 @@
 import { ExtrinsicError, JsonExt } from '@argonprotocol/mainchain';
-import { MiningFrames } from '@argonprotocol/commander-calculator';
+import { MiningFrames } from '@argonprotocol/commander-core';
 import {
   BotActivityType,
   type IBotActivity,

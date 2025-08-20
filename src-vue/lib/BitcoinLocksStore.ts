@@ -21,7 +21,7 @@ import { Db } from './Db.ts';
 import { BitcoinLocksTable, IBitcoinLockRecord } from './db/BitcoinLocksTable.ts';
 import { useVaults } from '../stores/vaults.ts';
 import { createDeferred, IDeferred } from './Utils.ts';
-import { BITCOIN_BLOCK_MILLIS, ESPLORA_HOST } from './Config.ts';
+import { BITCOIN_BLOCK_MILLIS, ESPLORA_HOST } from './Env.ts';
 import { type AddressTxsUtxo } from '@mempool/mempool.js/lib/interfaces/bitcoin/addresses';
 import { type TxStatus } from '@mempool/mempool.js/lib/interfaces/bitcoin/transactions';
 

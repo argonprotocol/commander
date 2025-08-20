@@ -1,12 +1,12 @@
 import * as fs from 'fs';
-import { version as packageVersion } from './package.json';
+import { version as packageVersion } from '../package.json';
 
 const rawVersion = process.argv[2] || packageVersion;
 // normalize: strip leading v, but match with or without
 const version = rawVersion.replace(/^v/, '').trim();
 
 (async () => {
-  const releaseNotes = fs.readFileSync('./RELEASE_NOTES.md', 'utf8');
+  const releaseNotes = fs.readFileSync('../RELEASE_NOTES.md', 'utf8');
   const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   // Match "## vX.Y.Z..." or "## X.Y.Z..." with any extra text until newline

@@ -2,14 +2,14 @@ import packageJson from '../../package.json';
 import { Db } from './Db';
 import { IConfig, IConfigDefaults, IConfigStringified, InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
 import { Keyring, type KeyringPair, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
-import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
+import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
 import {
   BidAmountAdjustmentType,
   BidAmountFormulaType,
   MicronotPriceChangeType,
   SeatGoalInterval,
   SeatGoalType,
-} from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
+} from '@argonprotocol/commander-core/src/IBiddingRules.ts';
 import { message as tauriMessage } from '@tauri-apps/plugin-dialog';
 import { createDeferred, ensureOnlyOneInstance, miniSecretFromUri } from './Utils';
 import IDeferred from '../interfaces/IDeferred';
@@ -18,25 +18,8 @@ import { bip39 } from '@argonprotocol/bitcoin';
 import Countries from './Countries';
 import { invokeWithTimeout } from './tauriApi';
 import ISecurity from '../interfaces/ISecurity';
-import AppConfig from '../../app.config.json';
 import { getMainchainClient } from '../stores/mainchain';
 import { WalletBalances } from './WalletBalances';
-
-console.log('__ARGON_NETWORK_NAME__', __ARGON_NETWORK_NAME__);
-console.log('__COMMANDER_INSTANCE__', __COMMANDER_INSTANCE__);
-
-export const NETWORK_NAME = __ARGON_NETWORK_NAME__ || 'mainnet';
-export const ENABLE_AUTO_UPDATE = __COMMANDER_ENABLE_AUTOUPDATE__ ?? false;
-
-const networkConfig = AppConfig[NETWORK_NAME as keyof typeof AppConfig] ?? AppConfig.mainnet;
-export const NETWORK_URL = networkConfig.archiveUrl;
-export const [INSTANCE_NAME, INSTANCE_PORT] = (__COMMANDER_INSTANCE__ || 'default:1420').split(':');
-
-export const env = (import.meta as any).env ?? {};
-export const TICK_MILLIS: number = networkConfig.tickMillis;
-export const ESPLORA_HOST: string = networkConfig.esploraHost;
-export const BITCOIN_BLOCK_MILLIS: number = networkConfig.bitcoinBlockMillis;
-export const DEPLOY_ENV_FILE = networkConfig.serverEnvFile;
 
 export class Config {
   public readonly version: string = packageJson.version;

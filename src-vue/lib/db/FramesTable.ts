@@ -1,11 +1,11 @@
 import { IFrameRecord } from '../../interfaces/db/IFrameRecord';
 import { BaseTable, IFieldTypes } from './BaseTable';
 import { convertFromSqliteFields, fromSqliteBigInt, toSqlParams } from '../Utils';
-import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
+import { bigNumberToBigInt } from '@argonprotocol/commander-core';
 import BigNumber from 'bignumber.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { TICK_MILLIS } from '../Config.ts';
+import { TICK_MILLIS } from '../Env.ts';
 import { IDashboardFrameStats } from '../../interfaces/IStats.ts';
 
 dayjs.extend(utc);

@@ -3,7 +3,7 @@ import { defineStore } from 'pinia';
 import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { type MainchainClient } from '@argonprotocol/commander-calculator';
+import { type MainchainClient } from '@argonprotocol/commander-core';
 import { getMainchain, getMainchainClient } from '../stores/mainchain.ts';
 import { BlockHash } from '@argonprotocol/mainchain';
 

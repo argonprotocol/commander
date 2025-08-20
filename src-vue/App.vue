@@ -38,6 +38,7 @@
 </template>
 
 <script setup lang="ts">
+import './lib/Env.ts'; // load env first
 import * as Vue from 'vue';
 import menuStart from './menuStart.ts';
 import MiningPanel from './panels/MiningPanel.vue';

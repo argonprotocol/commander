@@ -3,13 +3,13 @@ import { type IBidsFile, type IWinningBid } from '@argonprotocol/commander-bot';
 import { IDashboardFrameStats, IDashboardGlobalStats } from '../interfaces/IStats';
 import { Db } from './Db';
 import { Config } from './Config';
-import { bigIntMax } from '@argonprotocol/commander-calculator/src/utils';
+import { bigIntMax } from '@argonprotocol/commander-core/src/utils';
 import { ICohortRecord } from '../interfaces/db/ICohortRecord';
 import { botEmitter } from './Bot';
 import { createDeferred, ensureOnlyOneInstance } from './Utils';
 import IDeferred from '../interfaces/IDeferred';
-import { MiningFrames } from '@argonprotocol/commander-calculator/src/MiningFrames';
-import { bigNumberToBigInt } from '@argonprotocol/commander-calculator';
+import { MiningFrames } from '@argonprotocol/commander-core/src/MiningFrames';
+import { bigNumberToBigInt } from '@argonprotocol/commander-core';
 
 interface IMyMiningSeats {
   seatCount: number;
@@ -133,8 +133,8 @@ export class Stats {
   }
 
   public selectFrameId(frameId: number, skipDashboardUpdate: boolean = false) {
-    const firstFrameTickRange = MiningFrames.getTickRangeForFrameFromSystemTime(frameId);
-    const lastFrameTickRange = MiningFrames.getTickRangeForFrameFromSystemTime(frameId + 9);
+    const firstFrameTickRange = MiningFrames.getTickRangeForFrame(frameId);
+    const lastFrameTickRange = MiningFrames.getTickRangeForFrame(frameId + 9);
     this.selectedFrameId = frameId;
     this.selectedCohortTickRange = [firstFrameTickRange[0], lastFrameTickRange[1]];
     if (skipDashboardUpdate) return;

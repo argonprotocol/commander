@@ -5,7 +5,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import { getClient, JsonExt } from '@argonprotocol/mainchain';
 import { Vaults } from '../src-vue/lib/Vaults.ts';
-import { Mainchain } from '@argonprotocol/commander-calculator';
+import { Mainchain } from '@argonprotocol/commander-core';
 import { setMainchainClient } from '../src-vue/stores/mainchain.ts';
 
 dayjs.extend(utc);

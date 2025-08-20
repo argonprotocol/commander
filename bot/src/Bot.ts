@@ -5,11 +5,11 @@ import { Storage } from './Storage.ts';
 import { AutoBidder } from './AutoBidder.ts';
 import { BlockSync } from './BlockSync.ts';
 import { Dockers } from './Dockers.ts';
-import { type IBiddingRules, jsonParseWithBigInts } from '@argonprotocol/commander-calculator';
+import { type IBiddingRules, jsonParseWithBigInts } from '@argonprotocol/commander-core';
 import { History } from './History.ts';
 import FatalError from './interfaces/FatalError.ts';
 import type { IBotSyncStatus } from './interfaces/IBotStateFile.js';
-import { wrapApi } from '@argonprotocol/commander-calculator/src/ClientWrapper.js';
+import { wrapApi } from '@argonprotocol/commander-core/src/ClientWrapper.js';
 
 interface IBotOptions {
   datadir: string;

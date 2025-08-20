@@ -32,7 +32,7 @@
 
             <div v-if="isLoaded" class="flex flex-col grow relative w-full">
               <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
-                Commander uses an automated bidding bot to maximize your chance of winning seats. This screen allows you to 
+                Commander uses an automated bidding bot to maximize your chance of winning seats. This screen allows you to
                 configure the rules for how your bot should make decisions and place bids. You can also  <span class="text-argon-600/80 hover:text-argon-600 cursor-pointer font-bold">import from an existing cloud machine</span>.
               </DialogDescription>
 
@@ -50,7 +50,7 @@
                   </div>
                   <div class="pt-3 text-argon-600/70 text-md">
                     <span class="cursor-pointer">
-                      View Seat Probabilities 
+                      View Seat Probabilities
                       <template v-if="probableMinSeats === probableMaxSeats">({{ probableMinSeats }} seats)</template>
                       <template v-else>(between {{ probableMinSeats }} and {{ probableMaxSeats }} seats)</template>
                     </span>
@@ -111,7 +111,7 @@
                         <template v-else>
                           <span>{{ rules.minimumBidFormulaType }}</span>
                           <span v-if="rules.minimumBidAdjustmentType === BidAmountAdjustmentType.Absolute && rules.minimumBidAdjustAbsolute">
-                            {{ rules.minimumBidAdjustAbsolute > 0 ? '+' : '-' 
+                            {{ rules.minimumBidAdjustAbsolute > 0 ? '+' : '-'
                             }}{{ currency.symbol
                             }}{{
                               microgonToMoneyNm(
@@ -120,14 +120,14 @@
                             }}
                           </span>
                           <span v-else-if="rules.minimumBidAdjustRelative">
-                            &nbsp;{{ rules.minimumBidAdjustRelative > 0 ? '+' : '-' 
+                            &nbsp;{{ rules.minimumBidAdjustRelative > 0 ? '+' : '-'
                             }}{{ numeral(Math.abs(rules.minimumBidAdjustRelative)).format('0.[00]') }}%
                           </span>
                         </template>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
@@ -144,14 +144,14 @@
                       <div class="text-gray-500/60 text-md">
                         <span v-if="rules.maximumBidFormulaType === BidAmountFormulaType.Custom">Custom Value</span>
                         <template v-else>
-                          <span>{{ rules.maximumBidFormulaType }}</span>                        
+                          <span>{{ rules.maximumBidFormulaType }}</span>
                           <span v-if="rules.maximumBidAdjustmentType === BidAmountAdjustmentType.Absolute && rules.maximumBidAdjustAbsolute">
-                            {{ rules.maximumBidAdjustAbsolute > 0 ? '+' : '-' 
+                            {{ rules.maximumBidAdjustAbsolute > 0 ? '+' : '-'
                             }}{{ currency.symbol
                             }}{{ microgonToMoneyNm(bigIntAbs(rules.maximumBidAdjustAbsolute)).format('0.00') }}
                           </span>
                           <span v-else-if="rules.maximumBidAdjustRelative">
-                            &nbsp;{{ rules.maximumBidAdjustRelative > 0 ? '+' : '-' 
+                            &nbsp;{{ rules.maximumBidAdjustRelative > 0 ? '+' : '-'
                             }}{{ numeral(Math.abs(rules.maximumBidAdjustRelative)).format('0.[00]') }}%
                           </span>
                         </template>
@@ -228,9 +228,9 @@
                       </div>
                     </div>
                   </div>
-                  
+
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
-                  
+
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
                     <div MainWrapper @mouseenter="showTooltip($event, tooltip.cloudMachine, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'cloudMachine')" class="flex flex-col w-full h-full items-center justify-center px-8">
                       <div StatHeader>Cloud Machine</div>
@@ -281,7 +281,7 @@ import { XMarkIcon } from '@heroicons/vue/24/outline';
 import AlertIcon from '../assets/alert.svg?component';
 import { showTooltip as showTooltipOriginal, hideTooltip } from '../lib/TooltipUtils';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForMining } from './EditBoxOverlay.vue';
-import { type IBiddingRules } from '@argonprotocol/commander-calculator';
+import { type IBiddingRules } from '@argonprotocol/commander-core';
 import { getCalculator, getCalculatorData } from '../stores/mainchain';
 import ActiveBidsOverlayButton from './ActiveBidsOverlayButton.vue';
 import {
@@ -289,9 +289,9 @@ import {
   BidAmountFormulaType,
   SeatGoalInterval,
   SeatGoalType,
-} from '@argonprotocol/commander-calculator/src/IBiddingRules.ts';
-import { bigIntAbs } from '@argonprotocol/commander-calculator/src/utils';
-import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-calculator';
+} from '@argonprotocol/commander-core/src/IBiddingRules.ts';
+import { bigIntAbs } from '@argonprotocol/commander-core/src/utils';
+import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
 import InputArgon from '../components/InputArgon.vue';
 import NeedMoreCapitalHover from './bot/NeedMoreCapitalHover.vue';
 

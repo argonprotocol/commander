@@ -1,4 +1,4 @@
-import { Mainchain, MainchainClient } from '@argonprotocol/commander-calculator';
+import { Mainchain, MainchainClient } from '@argonprotocol/commander-core';
 import { Accountset, FrameSystemAccountInfo, KeyringPair, PalletBalancesAccountData } from '@argonprotocol/mainchain';
 import { createDeferred } from './Utils';
 import {

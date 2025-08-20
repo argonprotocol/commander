@@ -59,7 +59,7 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { useStats } from '../stores/stats';
 import { type IBidsFile } from '@argonprotocol/commander-bot';
 import { createNumeralHelpers } from '../lib/numeral';
-import { TICK_MILLIS } from '../lib/Config.ts';
+import { TICK_MILLIS } from '../lib/Env.ts';
 
 dayjs.extend(utc);
 dayjs.extend(relativeTime);

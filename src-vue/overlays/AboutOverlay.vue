@@ -60,7 +60,7 @@ import { AnimatePresence, Motion } from 'motion-v';
 import { useConfig } from '../stores/config';
 import Draggable from './helpers/Draggable';
 import { platformName, platformVersion } from '../tauri-controls/utils/os';
-import { INSTANCE_NAME, INSTANCE_PORT, NETWORK_NAME } from '../lib/Config';
+import { INSTANCE_NAME, INSTANCE_PORT, NETWORK_NAME } from '../lib/Env.ts';
 
 const config = useConfig();
 

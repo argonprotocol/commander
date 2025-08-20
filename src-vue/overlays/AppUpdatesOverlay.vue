@@ -98,7 +98,7 @@ import BgOverlay from '../components/BgOverlay.vue';
 import Draggable from './helpers/Draggable.ts';
 import ProgressBar from '../components/ProgressBar.vue';
 import { app } from '@tauri-apps/api';
-import { ENABLE_AUTO_UPDATE } from '../lib/Config.ts';
+import { ENABLE_AUTO_UPDATE } from '../lib/Env.ts';
 import basicEmitter from '../emitters/basicEmitter.ts';
 import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
