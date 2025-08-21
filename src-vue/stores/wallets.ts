@@ -1,16 +1,15 @@
 import * as Vue from 'vue';
 import { defineStore } from 'pinia';
 import { ask as askDialog } from '@tauri-apps/plugin-dialog';
-import { exit as tauriExit } from '@tauri-apps/plugin-process';
-import { getMainchainClient } from './mainchain.ts';
+import { getMainchain } from './mainchain.ts';
 import handleUnknownFatalError from './helpers/handleUnknownFatalError.ts';
-import { useConfig, Config } from './config.ts';
+import { useConfig } from './config.ts';
 import { createDeferred } from '../lib/Utils.ts';
 import { useStats } from './stats.ts';
 import { useCurrency } from './currency.ts';
 import { botEmitter } from '../lib/Bot.ts';
 import { BotStatus } from '../lib/BotSyncer.ts';
-import { WalletBalances, IWallet as IWalletBasic } from '../lib/WalletBalances.ts';
+import { IWallet as IWalletBasic, WalletBalances } from '../lib/WalletBalances.ts';
 
 const config = useConfig();
 
@@ -84,8 +83,7 @@ export const useWallets = defineStore('wallets', () => {
 
   //////////////////////////////////////////////////////////////////////////////
 
-  const clientPromise = getMainchainClient(true);
-  const walletBalances = new WalletBalances(clientPromise);
+  const walletBalances = new WalletBalances(getMainchain());
   walletBalances.onBalanceChange = () => {
     totalWalletMicrogons.value = walletBalances.totalWalletMicrogons;
     totalWalletMicronots.value = walletBalances.totalWalletMicronots;

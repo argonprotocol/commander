@@ -504,7 +504,7 @@ export class BotSyncer {
   }
 
   private async getCurrentTick(): Promise<number> {
-    const client = await this.mainchain.clientPromise;
+    const client = await this.mainchain.prunedClientPromise;
     const currentTick = await client.query.ticks.currentTick();
     return currentTick.toNumber();
   }

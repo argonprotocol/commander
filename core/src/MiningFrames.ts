@@ -12,9 +12,9 @@ export const TICKS_PER_COHORT = 14_400;
  * miners rotates. The first frame (frame 0) was the period between bidding start and Frame 1 beginning.
  */
 export class MiningFrames {
-  private static networkName: (keyof typeof AppConfig & string) | undefined = undefined;
+  private static networkName: keyof typeof AppConfig | undefined = undefined;
 
-  public static setNetwork(networkName: keyof typeof AppConfig & string) {
+  public static setNetwork(networkName: keyof typeof AppConfig) {
     if (!(networkName in AppConfig)) {
       throw new Error(`${networkName} is not a valid AppConfig chain name`);
     }
@@ -47,7 +47,7 @@ export class MiningFrames {
     if (!config) {
       throw new Error(`Network name ${this.networkName} is not a key of the app configs`);
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
     return config;
   }
 }

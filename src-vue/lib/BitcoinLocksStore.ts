@@ -104,9 +104,9 @@ export default class BitcoinLocksStore {
       for (const lock of locks) {
         this.locksById[lock.utxoId] = lock;
       }
-      this.#bitcoinLocksApi ??= new BitcoinLocks(getMainchainClient());
+      this.#bitcoinLocksApi ??= new BitcoinLocks(getMainchainClient(true));
       this.#config ??= await this.#bitcoinLocksApi.getConfig();
-      const client = await getMainchainClient();
+      const client = await getMainchainClient(false);
       this.#ticksPerFrame = client.consts.bitcoinLocks.argonTicksPerDay.toNumber();
       this.data.bitcoinNetwork = getBitcoinNetworkFromApi(this.#config.bitcoinNetwork);
 
@@ -121,7 +121,7 @@ export default class BitcoinLocksStore {
   }
 
   async subscribe() {
-    const client = await getMainchainClient();
+    const client = await getMainchainClient(false);
     this.#subscription = await client.rpc.chain.subscribeNewHeads(h => this.check(h));
   }
 
@@ -143,7 +143,7 @@ export default class BitcoinLocksStore {
     this.data.latestBlockHeight = header.number.toNumber();
     const locks = this.data.locksById;
     const table = await this.getTable();
-    const client = await getMainchainClient();
+    const client = await getMainchainClient(false);
     this.data.bitcoinBlockHeight = await client.query.bitcoinUtxos
       .confirmedBitcoinBlockTip()
       .then(x => x.value?.blockHeight.toNumber() ?? 0);
@@ -214,7 +214,7 @@ export default class BitcoinLocksStore {
     const { ownerBitcoinPubkey, hdPath } = await this.getNextUtxoPubkey(args);
     const { vault, argonKeyring, maxMicrogonSpend, tip = 0n, addingVaultSpace = 0n } = args;
 
-    const client = await getMainchainClient();
+    const client = await getMainchainClient(false);
 
     const minimumSatoshis = await client.query.bitcoinLocks.minimumSatoshis().then(x => x.toBigInt());
     let microgonLiquidity = args.microgonLiquidity;

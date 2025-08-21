@@ -15,7 +15,7 @@ import { type Storage } from './Storage.ts';
 import type { IBotState, IBotStateFile, IBotSyncStatus } from './interfaces/IBotStateFile.ts';
 import type { IWinningBid } from './interfaces/IBidsFile.ts';
 import { JsonStore } from './JsonStore.ts';
-import { Mainchain } from '@argonprotocol/commander-core';
+import { Mainchain, MainchainClients } from '@argonprotocol/commander-core';
 import { Dockers } from './Dockers.ts';
 import type { IEarningsFile } from './interfaces/IEarningsFile.ts';
 import type { IBlock, IBlockSyncFile } from './interfaces/IBlockSyncFile.ts';
@@ -39,8 +39,7 @@ export class BlockSync {
 
   oldestTick: number = 0;
   latestTick: number = 0;
-  earliestQueuedTick: number = 0;
-  currentTick: number = 0;
+  lastSynchedTick: number = 0;
 
   didProcessFinalizedBlock?: (lastProcessed: ILastProcessed) => void;
 
@@ -61,32 +60,45 @@ export class BlockSync {
     tickMillis: number;
     biddingStartTick: number;
   };
+  private localClient!: ArgonClient;
+  private archiveClient!: ArgonClient;
 
   constructor(
     public bot: IBotSyncStatus,
     public accountset: Accountset,
     public storage: Storage,
-    public localClient: ArgonClient,
-    public archiveClient: ArgonClient,
+    public mainchainClients: MainchainClients,
     private oldestFrameIdToSync?: number,
   ) {
     this.scheduleNext = this.scheduleNext.bind(this);
     this.botStateFile = this.storage.botStateFile();
     this.blockSyncFile = this.storage.botBlockSyncFile();
-    this.mainchain = new Mainchain(this.accountset.client);
+    this.mainchain = new Mainchain(this.mainchainClients);
   }
 
   async load() {
     this.isStopping = false;
-    this.localClient = await this.accountset.client;
+    const localClient = await this.mainchainClients.prunedClientPromise;
+    if (!localClient) {
+      throw new Error('Pruned client is not available');
+    }
+    this.localClient = localClient;
+    this.archiveClient = await this.mainchainClients.archiveClientPromise;
     this.frameConfig ??= await this.frameCalculator.load(this.archiveClient);
 
+    const archiveFinalizedHash = await this.archiveClient.rpc.chain.getFinalizedHead();
+    const archiveFinalizedHeader = await this.archiveClient.rpc.chain.getHeader(archiveFinalizedHash);
+    const archiveFinalizedNumber = archiveFinalizedHeader.number.toNumber();
+    // get latest finalized from archive client
     const finalizedHash = await this.localClient.rpc.chain.getFinalizedHead();
     const finalizedHeader = await this.localClient.rpc.chain.getHeader(finalizedHash);
-    this.latestFinalizedBlockNumber = finalizedHeader.number.toNumber();
-
-    this.latestTick = await this.localClient.query.ticks.currentTick().then(x => x.toNumber());
-    this.earliestQueuedTick = this.latestTick;
+    const localFinalizedNumber = finalizedHeader.number.toNumber();
+    if (localFinalizedNumber < archiveFinalizedNumber - 10) {
+      throw new Error(
+        `Local client has not synched within range of the archive client (10 blocks). Archive Client=${archiveFinalizedNumber} vs Local=${localFinalizedNumber}`,
+      );
+    }
+    this.latestFinalizedBlockNumber = localFinalizedNumber;
 
     await this.botStateFile.mutate(async x => {
       if (!x.oldestFrameIdToSync) {
@@ -95,7 +107,6 @@ export class BlockSync {
       this.oldestFrameIdToSync = x.oldestFrameIdToSync;
       const oldestTickRange = await this.frameCalculator.getTickRangeForFrame(this.localClient, x.oldestFrameIdToSync);
       this.oldestTick = oldestTickRange[0];
-      x.syncProgress = this.calculateProgress(this.currentTick, [this.oldestTick, this.latestTick]);
 
       console.log('Sync starting', {
         ...x,
@@ -115,6 +126,7 @@ export class BlockSync {
     const data = (await this.blockSyncFile.get())!;
     console.log('After initial sync state', {
       ...data,
+      blocksByNumber: Object.keys(data.blocksByNumber).length,
     });
 
     // catchup now
@@ -125,6 +137,7 @@ export class BlockSync {
     if (this.isStopping) return;
     // plug any gaps in the sync state
     let final: IBlockSyncFile | undefined;
+    this.latestTick = getTickFromHeader(this.localClient, header)!;
     await this.blockSyncFile.mutate(async x => {
       x.finalizedBlockNumber = this.latestFinalizedBlockNumber;
       x.bestBlockNumber = header.number.toNumber();
@@ -138,6 +151,11 @@ export class BlockSync {
         const headerFrameId = await this.getFrameIdFromHeader(header);
 
         if (x.blocksByNumber[blockNumber]?.hash === blockHash || headerFrameId < this.oldestFrameIdToSync!) {
+          console.info('Found oldest block to backfill', {
+            blockNumber,
+            headerFrameId,
+            oldestToKeep: this.oldestFrameIdToSync,
+          });
           break;
         }
         console.log(`Queuing block to sync. Block: ${blockNumber}, Frame ID: ${headerFrameId}, Hash: ${blockHash}`);
@@ -154,7 +172,6 @@ export class BlockSync {
           number: blockNumber,
           author,
         };
-        this.earliestQueuedTick = Math.min(tick, this.earliestQueuedTick);
         // don't go back to genesis
         if (blockNumber === 1) {
           break;
@@ -243,15 +260,8 @@ export class BlockSync {
   }
 
   async calculateSyncProgress(): Promise<number> {
-    const processingProgress = this.calculateProgress(this.currentTick, [this.oldestTick, this.latestTick]);
+    const progress = this.calculateProgress(this.lastSynchedTick, [this.oldestTick, this.latestTick]);
 
-    let queueProgress = 100;
-    if (processingProgress === 0) {
-      const ticksQueued = this.latestTick - this.earliestQueuedTick;
-      queueProgress = this.calculateProgress(this.oldestTick + ticksQueued, [this.oldestTick, this.latestTick]);
-    }
-
-    const progress = (queueProgress + processingProgress) / 2;
     return Math.round(progress * 100) / 100;
   }
 
@@ -367,9 +377,9 @@ export class BlockSync {
       x.previousFrameAccruedMicrogonProfits = calculatedProfits.previousFrameAccruedMicrogonProfits;
     });
 
-    this.currentTick = tick ?? 0;
-    if (this.latestTick < this.currentTick) {
-      this.latestTick = this.currentTick;
+    this.lastSynchedTick = tick ?? 0;
+    if (this.latestTick < this.lastSynchedTick) {
+      this.latestTick = this.lastSynchedTick;
     }
     this.lastProcessed = {
       date: new Date(),
@@ -387,7 +397,7 @@ export class BlockSync {
       x.earningsLastModifiedAt = new Date();
       x.currentFrameId = currentFrameId;
       x.currentFrameTickRange = this.currentFrameTickRange;
-      x.syncProgress = this.calculateProgress(this.currentTick, [this.oldestTick, this.latestTick]);
+      x.syncProgress = this.calculateProgress(this.lastSynchedTick, [this.oldestTick, this.latestTick]);
       x.lastBlockNumberByFrameId[currentFrameId] = blockNumber;
     });
 

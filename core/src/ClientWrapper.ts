@@ -6,7 +6,7 @@ type AnyFn = (...args: unknown[]) => unknown;
 const cbCache = new WeakMap<AnyFn, AnyFn>();
 const fnCache = new WeakMap<AnyFn, AnyFn>();
 const reverseObj = new WeakMap<object, object>();
-const methodCache = new WeakMap<AnyFn, AnyFn>();
+const boundMethodCache = new WeakMap<object, WeakMap<AnyFn, AnyFn>>();
 
 function captureCallerStack(skip = 2) {
   const s = new Error().stack ?? '';
@@ -88,18 +88,23 @@ function wrapFunction<T extends AnyFn>(fn: T, name: string): T {
 function deepProxy<T extends object>(obj: T, name: string, seen = new WeakMap<object, unknown>()): T {
   if (seen.has(obj)) return seen.get(obj) as T;
   const prox = new Proxy(obj as unknown as Record<PropertyKey, unknown>, {
-    get(target, prop, _receiver) {
-      const value = Reflect.get(target, prop, target);
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
 
       if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return value;
 
       if (typeof value === 'function') {
         if (prop === 'then' || prop === 'catch' || prop === 'finally') {
-          const key = value as AnyFn;
-          let bound = methodCache.get(key);
+          const fn = value as AnyFn;
+          let byMethod = boundMethodCache.get(target as object);
+          if (!byMethod) {
+            byMethod = new WeakMap<AnyFn, AnyFn>();
+            boundMethodCache.set(target as object, byMethod);
+          }
+          let bound = byMethod.get(fn);
           if (!bound) {
-            bound = key.bind(target);
-            methodCache.set(key, bound);
+            bound = fn.bind(target);
+            byMethod.set(fn, bound);
           }
           return bound;
         }

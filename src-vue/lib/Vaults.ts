@@ -26,7 +26,7 @@ export class Vaults {
 
     this.waitForLoad ??= createDeferred();
     try {
-      const client = await getMainchainClient();
+      const client = await getMainchainClient(false);
       this.tickDuration ??= await client.query.ticks.genesisTicker().then(x => x.tickDurationMillis.toNumber());
       const vaults = await client.query.vaults.vaultsById.entries();
       for (const [vaultIdRaw, vaultRaw] of vaults) {
@@ -97,7 +97,7 @@ export class Vaults {
   public async refreshRevenue(mainchain?: Mainchain): Promise<IAllVaultStats> {
     await this.load();
     mainchain ??= getMainchain();
-    const client = await mainchain.clientPromise;
+    const client = await mainchain.prunedClientPromise;
 
     const revenue = this.stats ?? { synchedToFrame: 0, vaultsById: {} };
     const oldestFrameToGet = revenue.synchedToFrame;
@@ -203,7 +203,7 @@ export class Vaults {
   ): Promise<{ burnAmount: bigint; ratchetingFee: bigint; marketRate: bigint }> {
     const vault = this.vaultsById[lock.vaultId];
     if (!vault) throw new Error('Vault not found');
-    const ratchetPrice = await new BitcoinLocks(getMainchainClient()).getRatchetPrice(lock.lockDetails, vault);
+    const ratchetPrice = await new BitcoinLocks(getMainchainClient(false)).getRatchetPrice(lock.lockDetails, vault);
 
     return {
       ...ratchetPrice,
@@ -211,11 +211,11 @@ export class Vaults {
   }
 
   public async getRedemptionRate(satoshis: bigint): Promise<bigint> {
-    return await new BitcoinLocks(getMainchainClient()).getRedemptionRate(satoshis);
+    return await new BitcoinLocks(getMainchainClient(false)).getRedemptionRate(satoshis);
   }
 
   public async getMarketRate(satoshis: bigint): Promise<bigint> {
-    return await new BitcoinLocks(getMainchainClient()).getMarketRate(satoshis);
+    return await new BitcoinLocks(getMainchainClient(false)).getMarketRate(satoshis);
   }
 
   public async calculateReleasePrice(satoshis: bigint, lockPrice: bigint): Promise<bigint> {

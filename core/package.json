@@ -6,7 +6,7 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "test:local": "vitest --run"
+    "test": "vitest --run"
   },
   "dependencies": {
     "@argonprotocol/mainchain": "^1.3.7",
@@ -16,6 +16,7 @@
   "devDependencies": {
     "@argonprotocol/testing": "^1.3.7",
     "bignumber.js": "^9.3.1",
+    "docker-compose": "^1.2.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   }

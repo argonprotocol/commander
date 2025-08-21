@@ -4,7 +4,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { type MainchainClient } from '@argonprotocol/commander-core';
-import { getArchiveClient, getMainchain, getMainchainClient } from './mainchain.ts';
+import { getMainchain, getMainchainClient } from './mainchain.ts';
 import { BlockHash, getAuthorFromHeader } from '@argonprotocol/mainchain';
 
 dayjs.extend(utc);
@@ -78,7 +78,7 @@ export const useBlockchainStore = defineStore('blockchain', () => {
   }
 
   async function fetchBlocks(lastBlockNumber: number | null, endingFrameId: number | null, maxBlockCount: number) {
-    const client = await getArchiveClient();
+    const client = await getMainchainClient(true);
     const blocks: IBlock[] = [];
 
     if (lastBlockNumber === null) {
@@ -99,7 +99,7 @@ export const useBlockchainStore = defineStore('blockchain', () => {
   }
 
   async function subscribeToBlocks(onBlock: (block: IBlock) => void) {
-    const client = await getMainchainClient(true);
+    const client = await getMainchainClient(false);
 
     // Subscribe to new blocks
     return await client.rpc.chain.subscribeNewHeads(async header => {

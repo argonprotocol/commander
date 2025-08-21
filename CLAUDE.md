@@ -49,7 +49,7 @@ yarn update-data
 cd bot && yarn start
 
 # Run bot tests (requires ARGON_PROJECT_ROOT=../../mainchain)
-cd bot && yarn test:local
+cd bot && yarn test
 ```
 
 ### Tauri Commands

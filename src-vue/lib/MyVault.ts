@@ -14,7 +14,7 @@ import {
 } from '@argonprotocol/mainchain';
 import { BitcoinNetwork, CosignScript, getBitcoinNetworkFromApi, getChildXpriv, HDKey } from '@argonprotocol/bitcoin';
 import { Db } from './Db.ts';
-import { getMainchain, getMainchainClient } from '../stores/mainchain.ts';
+import { getMainchain, getMainchainClient, getMainchainClients } from '../stores/mainchain.ts';
 import { createDeferred, IDeferred } from './Utils.ts';
 import { IVaultRecord, VaultsTable } from './db/VaultsTable.ts';
 import IVaultingRules from '../interfaces/IVaultingRules.ts';
@@ -83,7 +83,7 @@ export class MyVault {
     if (this.#bitcoinNetwork) {
       return this.#bitcoinNetwork;
     }
-    const client = await getMainchainClient();
+    const client = await getMainchainClient(false);
     const bitcoinNetwork = await client.query.bitcoinUtxos.bitcoinNetwork();
     this.#bitcoinNetwork = getBitcoinNetworkFromApi(bitcoinNetwork);
     return this.#bitcoinNetwork;
@@ -113,7 +113,7 @@ export class MyVault {
         }
       });
       const table = await this.getTable();
-      const client = await getMainchainClient();
+      const client = await getMainchainClient(true);
       this.#bitcoinLocks ??= new BitcoinLocks(Promise.resolve(client));
       this.data.metadata = (await table.get()) ?? null;
       this.#frameCalculator = new FrameCalculator();
@@ -144,7 +144,7 @@ export class MyVault {
       throw new Error('No vault created to subscribe to');
     }
     const vaultId = this.createdVault.vaultId;
-    const client = await getMainchainClient();
+    const client = await getMainchainClient(false);
     const sub = await client.query.vaults.vaultsById(vaultId, async vault => {
       if (vault.isNone) return;
       this.createdVault?.load(vault.unwrap());
@@ -232,7 +232,7 @@ export class MyVault {
     txResult.txProgressCallback = progressCallback;
     const blockHash = await txResult.inBlockPromise;
     txResult.txProgressCallback = undefined;
-    const client = await getMainchainClient();
+    const client = await getMainchainClient(false);
     const api = await client.at(blockHash);
     const txResultBlockNumber = await api.query.system.number();
 
@@ -256,7 +256,7 @@ export class MyVault {
     const steps = toCollect.size + 1; // +1 for the final collect transaction
     const vaultXpriv = await this.getVaultXpub(xprivSeed, this.metadata.hdPath);
     let completed = 0;
-    const client = await getMainchainClient();
+    const client = await getMainchainClient(false);
     for (const utxoId of toCollect) {
       const pendingReleaseRaw = await client.query.bitcoinLocks.lockReleaseRequestsByUtxoId(utxoId);
       if (pendingReleaseRaw.isNone) {
@@ -316,7 +316,7 @@ export class MyVault {
 
       const vaultXpriv = await this.getVaultXpub(xprivSeed, masterXpubPath);
       const masterXpub = vaultXpriv.publicExtendedKey;
-      const client = await getMainchainClient();
+      const client = await getMainchainClient(false);
 
       const { vault, txResult } = await Vault.create(
         client,
@@ -356,7 +356,7 @@ export class MyVault {
     if (!this.createdVault) {
       throw new Error('No vault created to update revenue');
     }
-    const client = await getMainchainClient();
+    const client = await getMainchainClient(false);
     const vaultId = this.createdVault.vaultId;
     frameRevenues ??= await client.query.vaults.revenuePerFrameByVault(vaultId);
     this.vaults.vaultsById[vaultId] = this.createdVault;
@@ -385,7 +385,7 @@ export class MyVault {
     if (!this.createdVault) {
       throw new Error('No vault created to get active liquidity funds');
     }
-    const client = await getMainchainClient();
+    const client = await getMainchainClient(false);
     const vaultId = this.createdVault.vaultId;
     const prebondedLiquidity = await client.query.liquidityPools.prebondedByVaultId(vaultId);
     const activeLiquidity =
@@ -413,7 +413,7 @@ export class MyVault {
     }
     const vault = this.createdVault;
     const { bip39Seed, bitcoinLocksStore, argonKeyring, rules, tip = 0n, txProgressCallback } = args;
-    const client = await getMainchainClient();
+    const client = await getMainchainClient(false);
 
     // need to leave enough for the BTC fees
     const { microgonsForLiquidity, microgonsForSecuritization } = MyVault.getMicrogoonSplit(

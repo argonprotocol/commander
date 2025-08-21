@@ -1,6 +1,4 @@
 import express from 'express';
-import { ApiPromise, WsProvider } from '@polkadot/api';
-import type { ArgonClient } from '@argonprotocol/mainchain';
 
 export function onExit(fn: () => void | Promise<void>) {
   const handler = async () => {
@@ -38,9 +36,4 @@ export function jsonExt(data: any, response: express.Response) {
     2,
   );
   response.status(200).type('application/json').send(json);
-}
-
-export async function getClient(host: string): Promise<ArgonClient> {
-  const provider = new WsProvider(host);
-  return (await ApiPromise.create({ provider, noInitWarn: true, throwOnConnect: true })) as unknown as ArgonClient;
 }
