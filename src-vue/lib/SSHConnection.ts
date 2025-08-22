@@ -82,7 +82,7 @@ export class SSHConnection {
     progressCallback: (progress: number) => void,
     timeout: number,
   ): Promise<void> {
-    const eventProgressKey = localRelativePath.replace(/[^a-zA-Z0-9]/g, '_') + '_progress';
+    const eventProgressKey = localRelativePath.replace(/[^a-zA-Z0-9]/g, '_') + '_up_progress';
     const unsub = await listen(eventProgressKey, event => {
       progressCallback(event.payload as number);
       if (event.payload === 100) {
@@ -92,6 +92,28 @@ export class SSHConnection {
     try {
       const payload = { address: this.address, localRelativePath, remotePath, eventProgressKey };
       await invokeWithTimeout('ssh_upload_embedded_file', payload, timeout);
+    } catch (e) {
+      unsub();
+      throw e;
+    }
+  }
+
+  public async downloadFileWithTimeout(
+    remotePath: string,
+    downloadPath: string,
+    progressCallback: (progress: number) => void,
+    timeout: number,
+  ): Promise<void> {
+    const eventProgressKey = remotePath.replace(/[^a-zA-Z0-9]/g, '_') + '_dl_progress';
+    const unsub = await listen(eventProgressKey, event => {
+      progressCallback(event.payload as number);
+      if (event.payload === 100) {
+        unsub(); // Unsubscribe when upload is complete
+      }
+    });
+    try {
+      const payload = { address: this.address, downloadPath, remotePath, eventProgressKey };
+      await invokeWithTimeout('ssh_download_file', payload, timeout);
     } catch (e) {
       unsub();
       throw e;

@@ -98,6 +98,22 @@ export class SSH {
     }
   }
 
+  public static async downloadFile(args: {
+    remotePath: string;
+    downloadPath: string;
+    progressCallback: (progress: number) => void;
+  }): Promise<void> {
+    const connection = await this.getConnection();
+    try {
+      await connection.downloadFileWithTimeout(args.remotePath, args.downloadPath, args.progressCallback, 60 * 1e3);
+    } catch (e) {
+      if (e instanceof InvokeTimeout) {
+        return this.reconnect().then(() => this.downloadFile(args));
+      }
+      throw e;
+    }
+  }
+
   public static async uploadEmbeddedFile(
     localRelativePath: string,
     remotePath: string,

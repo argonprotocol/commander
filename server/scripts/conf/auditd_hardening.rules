@@ -1,0 +1,21 @@
+# Identity and auth
+-w /etc/passwd -p wa -k identity
+-w /etc/group -p wa -k identity
+-w /etc/gshadow -p wa -k identity
+-w /var/log/auth.log -p wa -k authlog
+
+# SSH and sudo changes
+-w /etc/ssh/sshd_config -p wa -k sshd_config
+-w /etc/sudoers -p wa -k scope
+-w /etc/sudoers.d/ -p wa -k scope
+
+# Priv-escalation attempts (both arches)
+-a always,exit -F arch=b64 -S execve -F euid=0 -k priv_esc
+-a always,exit -F arch=b32 -S execve -F euid=0 -k priv_esc
+
+# Sensitive binaries
+-w /usr/bin/sudo -p x -k sudo
+-w /usr/bin/docker -p x -k docker
+
+# Immutable rules at end (requires reboot to change when set to 2)
+-e 1
