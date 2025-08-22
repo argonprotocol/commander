@@ -18,7 +18,7 @@ import { bip39 } from '@argonprotocol/bitcoin';
 import Countries from './Countries';
 import { invokeWithTimeout } from './tauriApi';
 import ISecurity from '../interfaces/ISecurity';
-import { getMainchain, getMainchainClient } from '../stores/mainchain';
+import { getMainchain } from '../stores/mainchain';
 import { WalletBalances } from './WalletBalances';
 
 export class Config {
