@@ -88,8 +88,9 @@ function wrapFunction<T extends AnyFn>(fn: T, name: string): T {
 function deepProxy<T extends object>(obj: T, name: string, seen = new WeakMap<object, unknown>()): T {
   if (seen.has(obj)) return seen.get(obj) as T;
   const prox = new Proxy(obj as unknown as Record<PropertyKey, unknown>, {
-    get(target, prop, receiver) {
-      const value = Reflect.get(target, prop, receiver);
+    get(target, prop, _receiver) {
+      // ✅ use the real instance as `this` for accessors
+      const value = Reflect.get(target, prop, target);
 
       if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return value;
 

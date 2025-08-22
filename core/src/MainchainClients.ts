@@ -15,21 +15,28 @@ export class MainchainClients {
     this.archiveClientPromise = getMainchainClientOrThrow(archiveUrl).then(x => wrapApi(x, 'ARCHIVE_RPC'));
   }
 
-  setArchiveClient(url: string) {
+  async setArchiveClient(url: string) {
     if (this.archiveUrl === url) {
-      return; // No change, do nothing
+      try {
+        await this.archiveClientPromise;
+        return; // No change, do nothing
+      } catch {
+        // Previous connection failed, try to reconnect
+      }
     }
+    const client = getMainchainClientOrThrow(url).then(x => wrapApi(x, 'ARCHIVE_RPC'));
     this.archiveUrl = url;
-    this.archiveClientPromise = getMainchainClientOrThrow(url).then(x => wrapApi(x, 'ARCHIVE_RPC'));
+    this.archiveClientPromise = client;
     return this.archiveClientPromise;
   }
 
-  setPrunedClient(url: string): Promise<ArgonClient> {
+  async setPrunedClient(url: string): Promise<ArgonClient> {
     if (this.prunedUrl === url && this.prunedClientPromise) {
       return this.prunedClientPromise;
     }
+    const client = await getMainchainClientOrThrow(url).then(client => wrapApi(client, 'PRUNED_RPC'));
+    this.prunedClientPromise = Promise.resolve(client);
     this.prunedUrl = url;
-    this.prunedClientPromise ??= getMainchainClientOrThrow(url).then(client => wrapApi(client, 'PRUNED_RPC'));
     return this.prunedClientPromise;
   }
 

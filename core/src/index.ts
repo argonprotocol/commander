@@ -6,7 +6,7 @@ import BiddingCalculatorData from './BiddingCalculatorData.js';
 import { Mainchain, type MainchainClient } from './Mainchain.js';
 import { MainchainClients } from './MainchainClients.js';
 import { MiningFrames, TICKS_PER_COHORT } from './MiningFrames.js';
-import { AppConfig } from './AppConfig.js';
+import { NetworkConfig } from './NetworkConfig.js';
 
 export {
   jsonStringifyWithBigInts,
@@ -19,7 +19,7 @@ export {
 
 export default BiddingCalculator;
 export {
-  AppConfig,
+  NetworkConfig,
   TICKS_PER_COHORT,
   BiddingParamsHelper,
   BiddingCalculatorData,

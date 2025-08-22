@@ -10,6 +10,7 @@ import {
 import { BotServerError, BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors.ts';
 import { SSH } from './SSH.ts';
 import { JsonExt } from '@argonprotocol/mainchain';
+import { fetch } from '@tauri-apps/plugin-http';
 
 export class BotFetch {
   private static async botFetch<T>(botPath: string): Promise<{ data: T; status: number }> {
@@ -19,7 +20,10 @@ export class BotFetch {
     const ipAddress = await SSH.getIpAddress();
     const url = `http://${ipAddress}:3000/${botPath}`;
     console.log(`Fetching: ${url}`);
-    const result = await fetch(url);
+    const result = await fetch(url).catch(e => {
+      console.error('Failed to fetch bot data:', e);
+      throw e;
+    });
     if (!result.ok) {
       throw new Error(`HTTP GET command failed with status ${result.status}`);
     }

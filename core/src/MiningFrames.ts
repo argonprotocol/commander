@@ -1,7 +1,7 @@
 import { FrameCalculator } from '@argonprotocol/mainchain';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
-import { AppConfig } from './AppConfig.js';
+import { NetworkConfig } from './NetworkConfig.js';
 
 dayjs.extend(utc);
 
@@ -12,11 +12,11 @@ export const TICKS_PER_COHORT = 14_400;
  * miners rotates. The first frame (frame 0) was the period between bidding start and Frame 1 beginning.
  */
 export class MiningFrames {
-  private static networkName: keyof typeof AppConfig | undefined = undefined;
+  private static networkName: keyof typeof NetworkConfig | undefined = undefined;
 
-  public static setNetwork(networkName: keyof typeof AppConfig) {
-    if (!(networkName in AppConfig)) {
-      throw new Error(`${networkName} is not a valid AppConfig chain name`);
+  public static setNetwork(networkName: keyof typeof NetworkConfig) {
+    if (!(networkName in NetworkConfig)) {
+      throw new Error(`${networkName} is not a valid Network chain name`);
     }
     this.networkName = networkName as any;
   }
@@ -43,7 +43,7 @@ export class MiningFrames {
     if (!this.networkName) {
       throw new Error(`Network name must be defined prior to loading configs`);
     }
-    const config = AppConfig[this.networkName];
+    const config = NetworkConfig[this.networkName];
     if (!config) {
       throw new Error(`Network name ${this.networkName} is not a key of the app configs`);
     }

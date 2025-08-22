@@ -10,7 +10,7 @@
     "build": "yarn sync:version && yarn build:server && vue-tsc --noEmit && vite build",
     "build:server": "yarn workspace @argonprotocol/commander-bot run build && tsx scripts/buildServer.ts",
     "build:version": "tsx scripts/syncVersions.ts",
-    "build:config": "tsx scripts/updateAppConfigs.ts",
+    "build:config": "tsx scripts/updateNetworkConfigs.ts",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "sh -c 'TAURI_PORT=${COMMANDER_INSTANCE##*:}; yarn tauri dev --config=\"{\\\"build\\\":{\\\"devUrl\\\":\\\"http://localhost:${TAURI_PORT:-1420}\\\"}}\"'",
