@@ -1,11 +1,11 @@
 import * as fs from 'fs';
 import * as Path from 'path';
-import AppConfig from '../core/app.config.json';
+import NetworkConfig from '../core/network.config.json';
 import { ArgonClient, FrameCalculator, getClient } from '@argonprotocol/mainchain';
 
 (async () => {
   const dirname = Path.join(import.meta.dirname, '..', 'core');
-  for (const [name, config] of Object.entries(AppConfig)) {
+  for (const [name, config] of Object.entries(NetworkConfig)) {
     try {
       console.log(`Updating ${name}: ${config.archiveUrl}`);
       const client = (await Promise.race([
@@ -19,7 +19,7 @@ import { ArgonClient, FrameCalculator, getClient } from '@argonprotocol/mainchai
       console.warn(`[${name}]: ${e}`);
     }
   }
-  fs.writeFileSync(Path.join(dirname, 'app.config.json'), JSON.stringify(AppConfig, null, 2), 'utf-8');
-  console.log('Updated app.config.json with latest mining configuration');
+  fs.writeFileSync(Path.join(dirname, 'network.config.json'), JSON.stringify(NetworkConfig, null, 2), 'utf-8');
+  console.log('Updated network.config.json with latest mining configuration');
   process.exit(0);
 })();
