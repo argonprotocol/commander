@@ -37,9 +37,10 @@ export class BlockSync {
 
   currentFrameTickRange: [number, number] = [0, 0];
 
-  oldestTick: number = 0;
+  oldestTickToSync: number = 0;
   latestTick: number = 0;
   lastSynchedTick: number = 0;
+  earliestQueuedTick?: number;
 
   didProcessFinalizedBlock?: (lastProcessed: ILastProcessed) => void;
 
@@ -82,9 +83,15 @@ export class BlockSync {
     if (!localClient) {
       throw new Error('Pruned client is not available');
     }
+    await localClient.query.system.number().catch(x => {
+      console.error('Error getting system number from local client', x);
+      throw new Error('Local client is not ready');
+    });
+
     this.localClient = localClient;
     this.archiveClient = await this.mainchainClients.archiveClientPromise;
     this.frameConfig ??= await this.frameCalculator.load(this.archiveClient);
+    // ensure local client has state
 
     const archiveFinalizedHash = await this.archiveClient.rpc.chain.getFinalizedHead();
     const archiveFinalizedHeader = await this.archiveClient.rpc.chain.getHeader(archiveFinalizedHash);
@@ -106,7 +113,7 @@ export class BlockSync {
       }
       this.oldestFrameIdToSync = x.oldestFrameIdToSync;
       const oldestTickRange = await this.frameCalculator.getTickRangeForFrame(this.localClient, x.oldestFrameIdToSync);
-      this.oldestTick = oldestTickRange[0];
+      this.oldestTickToSync = oldestTickRange[0];
 
       console.log('Sync starting', {
         ...x,
@@ -122,7 +129,7 @@ export class BlockSync {
       }));
 
     this.accountMiners = new AccountMiners(this.accountset, registeredMiners as any);
-    await this.backfillBestBlockHeader(await this.localClient.rpc.chain.getHeader());
+    await this.backfillBestBlockHeader(await this.localClient.rpc.chain.getHeader(), true);
     const data = (await this.blockSyncFile.get())!;
     console.log('After initial sync state', {
       ...data,
@@ -133,11 +140,12 @@ export class BlockSync {
     await this.syncToLatest();
   }
 
-  async backfillBestBlockHeader(header: Header): Promise<IBlockSyncFile | undefined> {
+  async backfillBestBlockHeader(header: Header, isFirstLoad = false): Promise<IBlockSyncFile | undefined> {
     if (this.isStopping) return;
     // plug any gaps in the sync state
     let final: IBlockSyncFile | undefined;
     this.latestTick = getTickFromHeader(this.localClient, header)!;
+
     await this.blockSyncFile.mutate(async x => {
       x.finalizedBlockNumber = this.latestFinalizedBlockNumber;
       x.bestBlockNumber = header.number.toNumber();
@@ -145,7 +153,8 @@ export class BlockSync {
       while (header != null) {
         const blockHash = header.hash.toHex();
         const blockNumber = header.number.toNumber();
-        if (blockNumber == 0) {
+        if (blockNumber === 0) {
+          console.info('Block sync backfill reached genesis block, stopping');
           break;
         }
         const headerFrameId = await this.getFrameIdFromHeader(header);
@@ -172,14 +181,25 @@ export class BlockSync {
           number: blockNumber,
           author,
         };
+        if (isFirstLoad) {
+          this.earliestQueuedTick ??= tick;
+          this.earliestQueuedTick = Math.min(tick, this.earliestQueuedTick);
+        }
         // don't go back to genesis
         if (blockNumber === 1) {
+          console.log('Reached genesis block, stopping backfill');
           break;
         }
         try {
-          header = await this.getRpcClient(header).rpc.chain.getHeader(header.parentHash);
+          // get an rpc client that can get the parent header
+          header = await this.getRpcClient(blockNumber - 1).rpc.chain.getHeader(header.parentHash);
         } catch (e) {
           console.error(`Error getting parent header for ${blockNumber}`, e);
+          if (isFirstLoad) {
+            x.blocksByNumber = {};
+            x.syncedToBlockNumber = 0;
+            throw e;
+          }
           break; // stop if we can't get the parent header
         }
       }
@@ -260,7 +280,18 @@ export class BlockSync {
   }
 
   async calculateSyncProgress(): Promise<number> {
-    const progress = this.calculateProgress(this.lastSynchedTick, [this.oldestTick, this.latestTick]);
+    const processingProgress = this.calculateProgress(this.lastSynchedTick, [this.oldestTickToSync, this.latestTick]);
+
+    let queueProgress = 100;
+    if (processingProgress === 0) {
+      const ticksQueued = this.latestTick - (this.earliestQueuedTick ?? this.latestTick);
+      queueProgress = this.calculateProgress(this.oldestTickToSync + ticksQueued, [
+        this.oldestTickToSync,
+        this.latestTick,
+      ]);
+    }
+
+    const progress = (queueProgress + processingProgress) / 2;
 
     return Math.round(progress * 100) / 100;
   }
@@ -377,10 +408,9 @@ export class BlockSync {
       x.previousFrameAccruedMicrogonProfits = calculatedProfits.previousFrameAccruedMicrogonProfits;
     });
 
-    this.lastSynchedTick = tick ?? 0;
-    if (this.latestTick < this.lastSynchedTick) {
-      this.latestTick = this.lastSynchedTick;
-    }
+    this.lastSynchedTick = tick;
+    this.latestTick = Math.max(this.latestTick, tick);
+
     this.lastProcessed = {
       date: new Date(),
       frameId: currentFrameId,
@@ -397,14 +427,14 @@ export class BlockSync {
       x.earningsLastModifiedAt = new Date();
       x.currentFrameId = currentFrameId;
       x.currentFrameTickRange = this.currentFrameTickRange;
-      x.syncProgress = this.calculateProgress(this.lastSynchedTick, [this.oldestTick, this.latestTick]);
+      x.syncProgress = this.calculateProgress(this.lastSynchedTick, [this.oldestTickToSync, this.latestTick]);
       x.lastBlockNumberByFrameId[currentFrameId] = blockNumber;
     });
 
     this.didProcessFinalizedBlock?.(this.lastProcessed);
     const remaining = bestBlockNumber - blockNumber;
     console.log(
-      `Processed block ${blockNumber} at tick ${tick}. Progress: ${((blockNumber * 100) / bestBlockNumber).toFixed(1)}%`,
+      `Processed block ${blockNumber} at tick ${tick}. (synced ${((blockNumber * 100) / bestBlockNumber).toFixed(1)}%)`,
     );
     return {
       processed: blockMeta,
