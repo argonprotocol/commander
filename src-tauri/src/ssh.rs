@@ -13,7 +13,7 @@ use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 use std::time::Duration;
 use tokio::fs::File;
-use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
 use tokio::runtime::Handle;
 use tokio::sync::Mutex;
 use tokio::time::timeout;
@@ -202,7 +202,7 @@ impl SSH {
 
         let file_size = file.metadata().await?.len();
         let mut reader = BufReader::new(file);
-        let mut buffer = [0u8; 8192];
+        let mut buffer = [0u8; 64 * 1024]; // 60KB buffer
         let mut total = 0;
 
         let mut last_percent = -1;
@@ -226,6 +226,74 @@ impl SSH {
         channel.eof().await?;
         while channel.wait().await.is_some() {}
 
+        Ok(())
+    }
+
+
+
+    pub async fn download_remote_file(
+        &self,
+        app: &AppHandle,
+        remote_path: &str,
+        local_download_path: &str,
+        event_progress_key: String,
+    ) -> Result<()> {
+        // Escape the remote path safely for single-quoted shell
+        let escaped_remote = format!(
+            "'{}'",
+            remote_path.replace('\'', "'\\''")
+        );
+
+        // Best-effort: get remote file size for progress (may fail; then size=0)
+        let mut remote_size: u64 = 0;
+        if let Ok((out, _code)) = self.run_command(format!("stat -c %s {}", escaped_remote)).await {
+            if let Ok(sz) = out.trim().parse::<u64>() {
+                remote_size = sz;
+            }
+        }
+
+        // Ensure local directory exists and create/truncate the file
+        if let Some(parent) = std::path::Path::new(local_download_path).parent() {
+            tokio::fs::create_dir_all(parent).await.ok();
+        }
+        let file = File::create(local_download_path).await?;
+        let mut writer = BufWriter::new(file);
+
+        // Open a channel and stream the remote file via `cat`
+        let mut channel = self.open_channel().await?;
+        channel
+            .exec(true, format!("cat {}", escaped_remote))
+            .await?;
+        {
+            let mut reader = channel.make_reader();
+
+            // Stream copy with progress
+            let mut buf = [0u8; 64 * 1024]; // 64KB buffer
+            let mut total: u64 = 0;
+            let mut last_percent: i32 = -1;
+            loop {
+                let n = reader.read(&mut buf).await?;
+                if n == 0 {
+                    break;
+                }
+                writer.write_all(&buf[..n]).await?;
+                total += n as u64;
+
+                if remote_size > 0 {
+                    let percent = ((total.saturating_mul(100)) / remote_size) as i32;
+                    if percent != last_percent {
+                        last_percent = percent;
+                        app.emit(&event_progress_key, percent)?;
+                    }
+                }
+            }
+            writer.flush().await?;
+        }
+        channel.eof().await?;
+        while channel.wait().await.is_some() {}
+
+        // If size was unknown, emit 100% at the end so the UI completes
+        app.emit(&event_progress_key, 100)?;
         Ok(())
     }
 

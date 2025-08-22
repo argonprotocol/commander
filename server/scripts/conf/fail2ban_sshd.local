@@ -1,0 +1,24 @@
+[sshd]
+enabled = true
+port = ssh
+mode = aggressive
+backend = systemd
+
+# brute-force window and penalty
+maxretry = 4
+findtime = 10m
+bantime = 1h
+
+# exponential backoff for persistent offenders
+bantime.increment = true
+bantime.factor = 2
+bantime.formula = ban.Time * (1 + ban.Count ** 1.2)
+bantime.rndtime = 15m
+
+# reduce noise
+ignoreip = 127.0.0.1/8 ::1
+
+# log source and action
+logpath = %(sshd_log)s
+filter = sshd
+action = ufw[blocktype=reject]

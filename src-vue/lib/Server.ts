@@ -5,6 +5,7 @@ import { DEPLOY_ENV_FILE, NETWORK_NAME } from './Env.ts';
 import { KeyringPair$Json } from '@argonprotocol/mainchain';
 import { SSH } from './SSH';
 import { InstallStepKey } from '../interfaces/IConfig';
+import { join, tempDir } from '@tauri-apps/api/path';
 
 export enum InstallStepStatusType {
   Pending = 'Pending',
@@ -64,6 +65,33 @@ export class Server {
     await this.connection.uploadFileWithTimeout(address, '~/account', 10e3);
   }
 
+  public async downloadTroubleshootingPackage(onProgress: (progress: number) => void): Promise<string> {
+    let totalProgress = 5;
+    onProgress(totalProgress);
+    const [output] = await this.connection.runCommandWithTimeout('~/server/scripts/create_troubleshooting_gz.sh', 20e3);
+    const file = output.match(/Bundle ready: (.+\.tar\.gz)/);
+    if (!file || !file[1]) {
+      console.error('Failed to create troubleshooting package:', output);
+      throw new Error('Failed to create troubleshooting package');
+    }
+    totalProgress += 20;
+    onProgress(totalProgress);
+    const filename = file[1].trim();
+    const tmp = await tempDir();
+    const downloadPath = await join(tmp, filename);
+    console.info(`Downloading troubleshooting package: ${filename} to ${tmp}`);
+    await this.connection.downloadFileWithTimeout(
+      file[1],
+      downloadPath,
+      x => {
+        const downloadPercent = Math.min(75, x * 0.75);
+        onProgress(25 + downloadPercent); // 25% for creation, 75% for download
+      },
+      60e3,
+    );
+    return downloadPath;
+  }
+
   public async downloadAccountAddress(): Promise<string> {
     const [address] = await this.connection.runCommandWithTimeout('cat ~/account 2>/dev/null || true', 10e3);
     return address.trim();
@@ -98,11 +126,70 @@ export class Server {
     };
   }
 
-  public async stopMiningDockers(): Promise<void> {
-    await this.connection.runCommandWithTimeout(
-      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} --profile miners down`,
+  public async getDataDir(service: string): Promise<string> {
+    const [dataDir] = await this.connection.runCommandWithTimeout(
+      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} config ${service} --format json | jq -r '.services.["${service}"].volumes[0].source'`,
       10e3,
     );
+    return dataDir.trim();
+  }
+
+  public async cleanDirectory(directory: string): Promise<void> {
+    if (!directory || directory === '/') {
+      throw new Error('Invalid directory to clean');
+    }
+    console.info(`Cleaning directory: ${directory}`);
+    await this.connection.runCommandWithTimeout(`set -euo pipefail && rm -rf -- "${directory}"/*`, 10e3);
+  }
+
+  public async stopMiningDockers(): Promise<void> {
+    await this.connection.runCommandWithTimeout(
+      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} --profile argon-miner down`,
+      60e3,
+    );
+  }
+
+  public async startMiningDockers(): Promise<void> {
+    await this.connection.runCommandWithTimeout(
+      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} --profile argon-miner up -d`,
+      60e3,
+    );
+  }
+
+  public async resyncMiner(): Promise<void> {
+    const dataDir = await this.getDataDir('argon-miner').catch(() => null);
+    if (dataDir) {
+      await this.stopMiningDockers();
+      console.info(`Wiping Argon Miner data directory: ${dataDir}`);
+      await this.cleanDirectory(dataDir);
+    }
+    await this.removeLogStep(InstallStepKey.ArgonInstall);
+    await this.startMiningDockers();
+  }
+
+  public async stopBitcoinDocker(): Promise<void> {
+    await this.connection.runCommandWithTimeout(
+      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} down bitcoin`,
+      60e3,
+    );
+  }
+
+  public async startBitcoinDocker(): Promise<void> {
+    await this.connection.runCommandWithTimeout(
+      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} up bitcoin -d`,
+      60e3,
+    );
+  }
+
+  public async resyncBitcoin(): Promise<void> {
+    const dataDir = await this.getDataDir('bitcoin').catch(() => null);
+    if (dataDir) {
+      await this.stopBitcoinDocker();
+      console.info(`Wiping Bitcoin data directory: ${dataDir}`);
+      await this.cleanDirectory(dataDir);
+    }
+    await this.removeLogStep(InstallStepKey.BitcoinInstall);
+    await this.startBitcoinDocker();
   }
 
   public async stopBotDocker(): Promise<void> {
@@ -115,6 +202,13 @@ export class Server {
   public async startBotDocker(): Promise<void> {
     await this.connection.runCommandWithTimeout(
       `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} up bot -d`,
+      10e3,
+    );
+  }
+
+  public async restartDocker(): Promise<void> {
+    await this.connection.runCommandWithTimeout(
+      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} restart argon-miner bitcoin bot`,
       10e3,
     );
   }

@@ -64,6 +64,9 @@ tauri-plugin-clipboard-manager = "2.3.0"
 tauri-plugin-shell = "2"
 tauri-plugin-fs = "2"
 bip39 = "2.2.0"
+zip = { version="4.4.0",features= ["time"] }
+time = { version = "0.3", default-features = false }
+walkdir = "2.5.0"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"

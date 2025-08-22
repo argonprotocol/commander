@@ -4,3 +4,4 @@ tars
 /.idea
 data
 /bot/src/
+!scripts/conf/*

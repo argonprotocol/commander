@@ -1,0 +1,7 @@
+[recidive]
+enabled = true
+logpath = /var/log/fail2ban.log
+findtime = 1d
+maxretry = 5
+bantime = 1w
+action = ufw[blocktype=reject]

@@ -32,14 +32,33 @@
         </div>
       </div>
     </li>
-    <li>
-      <header>Remote Logs</header>
-      <p>Remote logs from your server accrue in the following directory on your cloud machine:</p>
-      <input
-        v-model="remoteLogDir"
-        disabled
-        class="text-md mt-2 w-full overflow-x-scroll rounded-md border border-black/20 p-1 font-mono whitespace-nowrap"
+    <li class="flex flex-col">
+      <header>Troubleshoot Server</header>
+      <p>Download a troubleshooting package from your cloud machine:</p>
+      <ProgressBar
+        :progress="troubleshootingProgress"
+        class="my-2"
+        v-if="isCreatingTroubleshootingPackage || troubleshootingProgress > 0"
       />
+      <span v-if="troubleshootingError" class="text-sm text-red-500">
+        {{ troubleshootingError }}
+      </span>
+      <div class="flex flex-row gap-2">
+        <div class="pointer-events-none mt-2 flex w-1/2 cursor-pointer flex-row items-center space-x-2 text-gray-800">
+          <Checkbox :isChecked="true" :size="5" class="opacity-50" />
+          <span class="text-sm font-bold">Include Wallet Mnemonic and Keys</span>
+        </div>
+        <button
+          @click="downloadTroubleshooting"
+          :disabled="isCreatingTroubleshootingPackage"
+          :class="{
+            'opacity-50': isCreatingTroubleshootingPackage,
+          }"
+          class="bg-argon-button border-argon-600 right align-end mt-5 w-1/2 cursor-pointer rounded-md border px-3 py-1 text-lg text-white"
+        >
+          Download
+        </button>
+      </div>
     </li>
   </ul>
   <!-- <div class="flex my-3 mx-4 border-t border-black/20 pt-3">
@@ -50,12 +69,22 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { Db } from '../../lib/Db';
-import { appLogDir, appDataDir } from '@tauri-apps/api/path';
-import { openPath } from '@tauri-apps/plugin-opener';
+import { appDataDir, appLogDir } from '@tauri-apps/api/path';
+import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
+import Checkbox from '../../components/Checkbox.vue';
+import { Config, useConfig } from '../../stores/config.ts';
+import { Diagnostics } from '../../lib/Diagnostics.ts';
+import ProgressBar from '../../components/ProgressBar.vue';
+import { invokeWithTimeout } from '../../lib/tauriApi.ts';
+import { remove } from '@tauri-apps/plugin-fs';
 
+const config = useConfig();
+const diagnostics = new Diagnostics(config as Config);
 const localDataDir = Vue.ref('');
 const localLogDir = Vue.ref('');
-const remoteLogDir = Vue.ref('~/logs');
+const troubleshootingProgress = Vue.ref(0);
+const isCreatingTroubleshootingPackage = Vue.ref(false);
+const troubleshootingError = Vue.ref('');
 
 async function openLogDir() {
   await openPath(localLogDir.value);
@@ -67,6 +96,40 @@ async function openDataDir() {
 
 async function createZipFile() {
   // TODO: Create zip file
+}
+
+async function downloadTroubleshooting() {
+  isCreatingTroubleshootingPackage.value = true;
+  troubleshootingProgress.value = 0;
+  try {
+    await diagnostics.load();
+    const downloadPath = await diagnostics.downloadTroubleshootingPackage(x => {
+      troubleshootingProgress.value = x;
+    });
+    const zipPath = downloadPath.replace('.tar.gz', '.zip');
+    const appData = await appDataDir();
+    const logDir = await appLogDir();
+    await invokeWithTimeout(
+      'create_zip',
+      {
+        zipName: zipPath,
+        pathsWithPrefixes: [
+          ['logs', logDir],
+          ['data', appData],
+          ['server', downloadPath],
+        ],
+      },
+      10000,
+    );
+    await remove(downloadPath);
+    await revealItemInDir(zipPath);
+  } catch (err) {
+    console.error('Error downloading troubleshooting package:', err);
+    troubleshootingError.value = `Error downloading troubleshooting package: ${err}`;
+  } finally {
+    isCreatingTroubleshootingPackage.value = false;
+    troubleshootingProgress.value = 0;
+  }
 }
 
 Vue.onMounted(async () => {

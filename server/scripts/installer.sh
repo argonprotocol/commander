@@ -129,11 +129,39 @@ if ! (already_ran "UbuntuCheck"); then
     command_output=$(run_command "sudo ufw app list | grep -q '^OpenSSH$' && echo 'OpenSSH found' || echo 'OpenSSH not found'")
     if echo "$command_output" | grep -q 'OpenSSH found'; then
         echo "OpenSSH is already installed, allowing OpenSSH through UFW"
-        run_command "sudo ufw allow OpenSSH"
+        # delete existing OpenSSH rule if it exists
+        run_command "sudo ufw delete allow OpenSSH >/dev/null 2>&1 || true"
+        run_command "sudo ufw limit OpenSSH"
     else
-        run_command "sudo ufw allow 22/tcp"
+        # delete existing SSH rule if it exists
+        run_command "sudo ufw delete allow 22/tcp >/dev/null 2>&1 || true"
+        run_command "sudo ufw limit 22/tcp"
     fi
+
     run_command "sudo ufw --force enable"
+
+    echo "-----------------------------------------------------------------"
+    echo "INSTALLING auditd and fail2ban"
+    run_command "sudo apt install -y auditd fail2ban"
+
+    run_command "cp $SCRIPTS_DIR/conf/auditd_hardening.rules /etc/audit/rules.d/hardening.rules"
+    run_command "sudo augenrules --load"
+
+    run_command "sed -i 's/^max_log_file *=.*/max_log_file = 200/' /etc/audit/auditd.conf"
+    run_command "sed -i 's/^max_log_file_action *=.*/max_log_file_action = rotate/' /etc/audit/auditd.conf"
+    run_command "sed -i 's/^space_left_action *=.*/space_left_action = email/' /etc/audit/auditd.conf"
+    run_command "sed -i 's/^admin_space_left_action *=.*/admin_space_left_action = single/' /etc/audit/auditd.conf"
+    run_command "sed -i 's/^disk_full_action *=.*/disk_full_action = ignore/' /etc/audit/auditd.conf"
+    run_command "sed -i 's/^disk_error_action *=.*/disk_error_action = ignore/' /etc/audit/auditd.conf"
+    run_command "sed -i 's/^num_logs *=.*/num_logs = 10/' /etc/audit/auditd.conf"
+
+    run_command "sudo systemctl restart auditd"
+
+    run_command "mkdir -p /etc/fail2ban/jail.d || true"
+    run_command "cp $SCRIPTS_DIR/conf/fail2ban_sshd.local /etc/fail2ban/jail.d/sshd.local"
+    run_command "cp $SCRIPTS_DIR/conf/fail2ban_recidive.local /etc/fail2ban/jail.d/recidive.local"
+    run_command "sudo systemctl enable fail2ban --now"
+    run_command "sudo systemctl restart fail2ban"
 
     finish "UbuntuCheck"
 fi
@@ -173,6 +201,8 @@ if ! (already_ran "DockerInstall"); then
     run_command "sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
 
     run_command "sudo systemctl status docker"
+
+    run_command "sudo docker system prune -af --volumes >/dev/null 2>&1 || true"
     command_output=$(run_command "docker --version")
 
     # Extract version numbers from the output - handle both 2 and 3 number versions
@@ -186,7 +216,7 @@ if ! (already_ran "DockerInstall"); then
 
     # Compare major version
     if [ "$major_version" -lt 27 ]; then
-        failed "Docker version $version is less than required major version 28"
+        failed "Docker version $version is less than required major version 27"
     fi
 
     finish "DockerInstall" "$command_output"

@@ -1,6 +1,7 @@
 import { Config } from './Config';
-import { InstallStepStatusType, Server } from './Server';
+import { Server } from './Server';
 import { SSH } from './SSH';
+import { appDataDir, appLogDir } from '@tauri-apps/api/path';
 
 export class Diagnostics {
   private server!: Server;
@@ -11,9 +12,15 @@ export class Diagnostics {
   }
 
   public async load() {
+    if (this.server) return;
     const connection = await SSH.getConnection();
     this.server = new Server(connection);
     console.log('Diagnostics IS LOADED');
+  }
+
+  public async downloadTroubleshootingPackage(progressCallback: (progress: number) => void): Promise<string> {
+    const server = this.server;
+    return await server.downloadTroubleshootingPackage(progressCallback);
   }
 
   public async isConnected() {

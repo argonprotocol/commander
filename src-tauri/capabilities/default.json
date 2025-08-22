@@ -53,6 +53,9 @@
         },
         {
           "path": "$APPDATA/**"
+        },
+        {
+          "path": "$TEMP/**"
         }
       ]
     },
@@ -61,6 +64,9 @@
       "allow": [
         {
           "path": "$APPDATA/**"
+        },
+        {
+          "path": "$TEMP/**"
         }
       ]
     }

@@ -171,22 +171,22 @@ const options = Vue.ref({
   },
   [AdvancedRestartOption.RestartDockers]: {
     isChecked: false,
-    isDisabled: !config.isServerInstalled,
+    isDisabled: !config.isServerInstalled && !installer.isRunning,
     checkedBy: '',
   },
   [AdvancedRestartOption.ResyncBiddingDataOnCloudMachine]: {
     isChecked: false,
-    isDisabled: !config.isServerInstalled,
+    isDisabled: !config.isServerInstalled && !installer.isRunning,
     checkedBy: '',
   },
   [AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine]: {
     isChecked: false,
-    isDisabled: !config.isServerInstalled,
+    isDisabled: !config.isServerInstalled && !installer.isRunning,
     checkedBy: '',
   },
   [AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine]: {
     isChecked: false,
-    isDisabled: !config.isServerInstalled,
+    isDisabled: !config.isServerInstalled && !installer.isRunning,
     checkedBy: '',
   },
   [AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine]: {
@@ -285,8 +285,16 @@ async function runSelectedOptions() {
       toRestart.add(key as AdvancedRestartOption);
     }
   }
-  await restarter.run(toRestart);
-  isRestarting.value = false;
+
+  try {
+    await restarter.run(toRestart);
+    for (const key of Object.keys(options.value)) {
+      options.value[key as AdvancedRestartOption].isChecked = false;
+      options.value[key as AdvancedRestartOption].checkedBy = '';
+    }
+  } finally {
+    isRestarting.value = false;
+  }
 }
 
 function updateDisabledOptions() {

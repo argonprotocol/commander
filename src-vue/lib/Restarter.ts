@@ -4,6 +4,7 @@ import { remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { AdvancedRestartOption } from '../interfaces/IAdvancedRestartOption';
 import { SSH } from './SSH';
 import { Server } from './Server';
+import { InstallStepKey } from '../interfaces/IConfig.ts';
 
 export default class Restarter {
   private dbPromise: Promise<Db>;
@@ -26,6 +27,28 @@ export default class Restarter {
     if (toRestart.has(AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine)) {
       const server = await this.getServer();
       await server.completelyWipeEverything();
+    } else {
+      if (toRestart.has(AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine)) {
+        const server = await this.getServer();
+        await server.resyncBitcoin();
+      }
+
+      if (toRestart.has(AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine)) {
+        const server = await this.getServer();
+        await server.resyncMiner();
+      }
+
+      if (toRestart.has(AdvancedRestartOption.ResyncBiddingDataOnCloudMachine)) {
+        const server = await this.getServer();
+        await server.stopBotDocker();
+        await server.deleteBotStorageFiles();
+        await server.startBotDocker();
+      }
+    }
+
+    if (toRestart.has(AdvancedRestartOption.RestartDockers)) {
+      const server = await this.getServer();
+      await server.restartDocker();
     }
 
     if (toRestart.has(AdvancedRestartOption.RecreateLocalDatabase)) {
