@@ -12,27 +12,33 @@ export function abreviateAddress(address: string, length = 4) {
   return address.slice(0, 6) + '...' + address.slice(-length);
 }
 
-export function calculateAPR(costs: bigint, rewards: bigint): number {
-  if (costs === 0n && rewards > 0n) return 10_000;
+export function calculateProfitPct(costs: bigint, rewards: bigint): number {
+  if (costs === 0n && rewards > 0n) return 100_000_000;
   if (costs === 0n) return 0;
 
-  const tenDayRate = Number(((rewards - costs) * 100_000n) / costs) / 100_000;
+  return Number(((rewards - costs) * 100_000n) / costs) / 100_000;
+}
+
+export function compoundTenDayRateToAnnual(tenDayRate: number): number {
+  // Compound over 36.5 cycles (10-day periods in a year)
+  const apy = (Math.pow(1 + tenDayRate, 36.5) - 1) * 100;
+  if (apy > 100_000_000) {
+    return 100_000_000;
+  }
+  return apy;
+}
+
+export function calculateAPR(costs: bigint, rewards: bigint): number {
+  const tenDayRate = calculateProfitPct(costs, rewards);
+
   // Compound APR over 36.5 cycles (10-day periods in a year)
   const apr = tenDayRate * 36.5 * 100;
   return Math.max(apr, -100);
 }
 
 export function calculateAPY(costs: bigint, rewards: bigint): number {
-  if (costs === 0n && rewards > 0n) return 10_000;
-  if (costs === 0n) return 0;
-
-  const tenDayRate = Number(((rewards - costs) * 100_000n) / costs) / 100_000;
-  // Compound APR over 36.5 cycles (10-day periods in a year)
-  const apy = (Math.pow(1 + tenDayRate, 36.5) - 1) * 100;
-  if (apy > 10_000) {
-    return 10_000;
-  }
-  return apy;
+  const tenDayRate = calculateProfitPct(costs, rewards);
+  return compoundTenDayRateToAnnual(tenDayRate);
 }
 
 export function convertBigIntStringToNumber(bigIntStr: string | undefined): bigint | undefined {

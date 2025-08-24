@@ -162,7 +162,7 @@
             </div>
           </template>
         </div>
-        <div v-else-if="!vaultingRules.personalBtcValue" class="text-2xl font-bold text-center">
+        <div v-else-if="!vaultingRules.personalBtcInMicrogons" class="text-2xl font-bold text-center">
           Configure a personal bitcoin amount to capture your Vault's liquidity
         </div>
         <div v-else class="text-md font-bold text-gray-400 text-center">

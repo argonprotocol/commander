@@ -7,7 +7,7 @@ type IBasicEmitter = {
   openBotOverlay: void;
   openServerRemoveOverlay: void;
   openSecuritySettingsOverlay: void;
-  openConfigureStabilizationVaultOverlay: void;
+  openVaultOverlay: void;
   showTooltip: {
     parentLeft: number;
     parentTop: number;

@@ -613,9 +613,17 @@ const defaults: IConfigDefaults = {
       securitizationRatio: 1,
       profitSharingPct: 10,
       btcFlatFee: 2n * BigInt(MICROGONS_PER_ARGON),
-      btcPctFee: 10,
-      personalBtcValue: 50n * BigInt(MICROGONS_PER_ARGON),
-      requiredMicrogons: 100n * BigInt(MICROGONS_PER_ARGON),
+      btcPctFee: 5,
+
+      btcUtilizationPctMin: 50,
+      btcUtilizationPctMax: 100,
+
+      poolUtilizationPctMin: 50,
+      poolUtilizationPctMax: 100,
+
+      personalBtcInMicrogons: 1_000n * BigInt(MICROGONS_PER_ARGON),
+
+      baseCapitalCommitment: 2_000n * BigInt(MICROGONS_PER_ARGON),
       requiredMicronots: 0n,
     };
   },

@@ -129,7 +129,7 @@ const baseCapitalCommitment = Vue.computed(() => {
   if (props.walletId === 'mining') {
     return config.biddingRules?.baseCapitalCommitment || 0n;
   } else if (props.walletId === 'vaulting') {
-    return config.vaultingRules?.requiredMicrogons || 0n;
+    return config.vaultingRules?.baseCapitalCommitment || 0n;
   }
   return 0n;
 });

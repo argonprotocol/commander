@@ -14,7 +14,7 @@
           </p>
 
           <section
-            @click="openConfigureStabilizationVaultOverlay"
+            @click="openVaultOverlay"
             class="flex flex-row cursor-pointer mt-8 border-t border-[#CCCEDA] py-6 hover:bg-argon-menu-hover"
           >
             <Checkbox :isChecked="true" />
@@ -39,8 +39,8 @@
               </h2>
               <p>
                 Your account needs a minimum of
-                {{ microgonToArgonNm(config.vaultingRules?.requiredMicrogons || 0n).format('0,0.[00000000]') }} argon{{
-                  microgonToArgonNm(config.vaultingRules?.requiredMicrogons || 0n).format('0') === '1' ? '' : 's'
+                {{ microgonToArgonNm(config.vaultingRules?.baseCapitalCommitment || 0n).format('0,0.[00000000]') }} argon{{
+                  microgonToArgonNm(config.vaultingRules?.baseCapitalCommitment || 0n).format('0') === '1' ? '' : 's'
                 }}
                 <template v-if="config.vaultingRules?.requiredMicronots">
                   and
@@ -102,7 +102,7 @@ const walletIsFullyFunded = Vue.computed(() => {
     return false;
   }
 
-  if (wallets.vaultingWallet.availableMicrogons < (config.vaultingRules?.requiredMicrogons || 0n)) {
+  if (wallets.vaultingWallet.availableMicrogons < (config.vaultingRules?.baseCapitalCommitment || 0n)) {
     return false;
   }
 
@@ -113,8 +113,8 @@ const walletIsFullyFunded = Vue.computed(() => {
   return true;
 });
 
-function openConfigureStabilizationVaultOverlay() {
-  basicEmitter.emit('openConfigureStabilizationVaultOverlay');
+function openVaultOverlay() {
+  basicEmitter.emit('openVaultOverlay');
 }
 
 function openFundMiningAccountOverlay() {

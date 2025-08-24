@@ -661,7 +661,9 @@ function incrementValue() {
     incrementBy = props.dragByMin || props.dragBy;
   }
   const newValue = BigNumber(startValue).plus(incrementBy).toNumber();
-  updateInputValue(newValue, true);
+  const boundedValue = calculateBoundedInputValue(newValue);
+
+  updateInputValue(boundedValue, true);
 }
 
 function decrementValue() {
@@ -674,7 +676,9 @@ function decrementValue() {
     decrementBy = props.dragByMin || props.dragBy;
   }
   const newValue = BigNumber(startValue).minus(decrementBy).toNumber();
-  updateInputValue(newValue, true);
+  const boundedValue = calculateBoundedInputValue(newValue);
+
+  updateInputValue(boundedValue, true);
 }
 
 function startContinuousIncrement() {
