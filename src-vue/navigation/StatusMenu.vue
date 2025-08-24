@@ -1,6 +1,6 @@
 <template>
   <HoverCardRoot :openDelay="0" :closeDelay="0" class="pointer-events-auto relative" v-model:open="isOpen">
-    <HoverCardTrigger class="cursor-pointer">
+    <HoverCardTrigger Trigger class="cursor-pointer">
       <div
         v-if="!wallets.isLoaded"
         class="text-argon-700 flex h-[30px] flex-row items-center gap-x-2 rounded-md border border-slate-400/50 px-4 py-0.5 hover:border-slate-400/50 hover:bg-slate-400/10 focus:outline-none"
@@ -87,6 +87,7 @@
 
     <HoverCardPortal>
       <HoverCardContent
+        @pointerDownOutside="clickOutside"
         :align="'end'"
         :alignOffset="0"
         :sideOffset="-3"
@@ -321,7 +322,14 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { HoverCardArrow, HoverCardContent, HoverCardPortal, HoverCardRoot, HoverCardTrigger } from 'reka-ui';
+import {
+  HoverCardArrow,
+  HoverCardContent,
+  HoverCardPortal,
+  HoverCardRoot,
+  HoverCardTrigger,
+  PointerDownOutsideEvent,
+} from 'reka-ui';
 import { useWallets } from '../stores/wallets';
 import { useConfig } from '../stores/config';
 import { useCurrency } from '../stores/currency';
@@ -430,7 +438,7 @@ function openBotOverlay() {
 }
 
 function createStabilizationVault() {
-  basicEmitter.emit('openConfigureStabilizationVaultOverlay');
+  basicEmitter.emit('openVaultOverlay');
 }
 
 const eyeballXPosition = Vue.ref(50);
@@ -465,6 +473,21 @@ const handleMouseMove = (event: MouseEvent) => {
   eyeballXPosition.value = Math.max(0, Math.min(100, xPercent));
   eyeballYPosition.value = Math.max(0, Math.min(100, yPercent));
 };
+
+function clickOutside(e: PointerDownOutsideEvent) {
+  const isChildOfTrigger = !!(e.target as HTMLElement)?.closest('[Trigger]');
+  if (!isChildOfTrigger) return;
+
+  isOpen.value = true;
+  setTimeout(() => {
+    isOpen.value = true;
+  }, 200);
+  e.detail.originalEvent.stopPropagation();
+  e.detail.originalEvent.preventDefault();
+  e.stopPropagation();
+  e.preventDefault();
+  return false;
+}
 
 // Lifecycle hooks
 Vue.onMounted(() => {

@@ -25,7 +25,7 @@
       <ServerConfigureOverlay />
       <SecuritySettingsOverlay />
       <BotOverlay />
-      <ConfigureStabilizationVaultOverlay />
+      <VaultOverlay />
       <!-- <ProvisioningCompleteOverlay /> -->
       <TooltipOverlay />
       <AboutOverlay />
@@ -46,7 +46,7 @@ import VaultingPanel from './panels/VaultingPanel.vue';
 import LiquidLockingPanel from './panels/LiquidLockingPanel.vue';
 import ServerConnectOverlay from './overlays/ServerConnectOverlay.vue';
 import BotOverlay from './overlays/BotOverlay.vue';
-import ConfigureStabilizationVaultOverlay from './overlays/ConfigureStabilizationVaultOverlay.vue';
+import VaultOverlay from './overlays/VaultOverlay.vue';
 import WalletOverlay from './overlays/WalletOverlay.vue';
 import ServerRemoveOverlay from './overlays/ServerRemoveOverlay.vue';
 import ServerConfigureOverlay from './overlays/ServerConfigureOverlay.vue';

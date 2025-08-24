@@ -443,7 +443,7 @@ export class MyVault {
       txs.push(tx);
     }
     let bitcoinArgs: { satoshis: bigint; hdPath: string; securityFee: bigint } | undefined;
-    if (!this.metadata?.personalUtxoId && rules.personalBtcValue > 0n) {
+    if (!this.metadata?.personalUtxoId && rules.personalBtcInMicrogons > 0n) {
       const { tx, satoshis, hdPath, securityFee } = await bitcoinLocksStore.createInitializeTx({
         argonKeyring,
         bip39Seed,
@@ -494,7 +494,7 @@ export class MyVault {
 
   public static getMicrogoonSplit(rules: IVaultingRules, existingFees: bigint = 0n) {
     const estimatedOperationalFees = existingFees + 75_000n;
-    const microgonsForVaulting = rules.requiredMicrogons - estimatedOperationalFees;
+    const microgonsForVaulting = rules.baseCapitalCommitment - estimatedOperationalFees;
     const microgonsForSecuritization = BigInt(
       BigNumber(rules.capitalForSecuritizationPct).div(100).times(microgonsForVaulting).toFixed(),
     );

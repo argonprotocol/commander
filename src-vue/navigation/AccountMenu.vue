@@ -2,7 +2,7 @@
   <div @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
     <DropdownMenuRoot :openDelay="0" :closeDelay="0" class="pointer-events-auto relative" v-model:open="isOpen">
       <DropdownMenuTrigger
-        @click="onToggle"
+        Trigger
         class="text-argon-600/60 flex h-[30px] w-[38px] cursor-pointer flex-row items-center justify-center rounded-md border text-sm/6 font-semibold hover:border-slate-400/50 hover:bg-slate-400/10 focus:outline-none"
         :class="[isOpen ? 'border-slate-400/60 bg-slate-400/10' : 'border-slate-400/50']"
       >
@@ -13,6 +13,7 @@
         <DropdownMenuContent
           @mouseenter="onMouseEnter"
           @mouseleave="onMouseLeave"
+          @pointerDownOutside="clickOutside"
           :align="'end'"
           :alignOffset="0"
           :sideOffset="-3"
@@ -36,7 +37,7 @@
               </p>
             </DropdownMenuItem>
             <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
-            <DropdownMenuItem @click="() => openConfigureStabilizationVaultOverlay()" class="pt-2 pb-3">
+            <DropdownMenuItem @click="() => openVaultOverlay()" class="pt-2 pb-3">
               <header v-if="!config.hasSavedVaultingRules">Create Stabilization Vault</header>
               <header v-else>Configure Stabilization Vault Settings</header>
               <p>
@@ -101,6 +102,8 @@ import {
   DropdownMenuPortal,
   DropdownMenuRoot,
   DropdownMenuTrigger,
+  PointerDownOutsideEvent,
+  FocusOutsideEvent,
 } from 'reka-ui';
 import ConfigIcon from '../assets/config.svg?component';
 import basicEmitter from '../emitters/basicEmitter';
@@ -132,12 +135,23 @@ function onMouseLeave() {
   }, 100);
 }
 
-function onToggle() {
-  console.log('onToggle');
+function clickOutside(e: PointerDownOutsideEvent) {
+  const isChildOfTrigger = !!(e.target as HTMLElement)?.closest('[Trigger]');
+  if (!isChildOfTrigger) return;
+
+  isOpen.value = true;
+  setTimeout(() => {
+    isOpen.value = true;
+  }, 200);
+  e.detail.originalEvent.stopPropagation();
+  e.detail.originalEvent.preventDefault();
+  e.stopPropagation();
+  e.preventDefault();
+  return false;
 }
 
-function openConfigureStabilizationVaultOverlay() {
-  basicEmitter.emit('openConfigureStabilizationVaultOverlay');
+function openVaultOverlay() {
+  basicEmitter.emit('openVaultOverlay');
   isOpen.value = false;
 }
 

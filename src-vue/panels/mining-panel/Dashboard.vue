@@ -149,7 +149,7 @@
               <div class="flex flex-col w-4/12 items-center justify-center gap-x-2 pb-1 pt-3">
                 <div class="font-bold">Mining Bot</div>
                 <div class="flex flex-row items-center justify-center gap-x-2 whitespace-nowrap">
-                  <div>Last Activity</div>
+                  <div>Last Active</div>
                   <CountupClock as="span" :time="lastBotActivityAt" v-slot="{ hours, minutes, seconds, isNull }" class="font-mono">
                     <template v-if="hours">{{ hours }}h, </template>
                     <template v-if="minutes || hours">{{ minutes }}m{{ !isNull && !hours ? ', ' : '' }}</template>

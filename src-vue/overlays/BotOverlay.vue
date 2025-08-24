@@ -8,12 +8,12 @@
 
       <DialogContent @escapeKeyDown="cancelOverlay" :aria-describedby="undefined">
         <EditBoxOverlay
-            :id="editBoxOverlayId"
-            :position="editBoxOverlayPosition"
-            v-if="editBoxOverlayId"
-            @close="editBoxOverlayId = null"
-            @update:data="updateAPYs"
-          />
+          :id="editBoxOverlayId"
+          :position="editBoxOverlayPosition"
+          v-if="editBoxOverlayId"
+          @close="editBoxOverlayId = null"
+          @update:data="updateAPYs"
+        />
         <div
           ref="dialogPanel"
           class="BotOverlay absolute top-[40px] left-3 right-3 bottom-3 flex flex-col rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left z-20 transition-all focus:outline-none"
@@ -39,14 +39,13 @@
                 </template>
               </DialogDescription>
 
-              <section class="flex flex-row border-t border-b border-slate-300 text-center pt-8 pb-8 px-5 mx-5 justify-stretch">
+              <section class="flex flex-row border-t border-b border-slate-300 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
                 <div class="w-1/2 flex flex-col grow">
-                  <!-- @mouseenter="showTooltip($event, tooltip.capitalToCommit, { width: 'parent' })" @mouseleave="hideTooltip"  -->
-                  <div class="flex flex-col grow group">
-                    <header StatHeader class="bg-[#FAF9FA] border border-[#DDDCDD] rounded-t-lg group-hover:text-argon-600/70 relative z-10">
+                  <div PrimaryStat class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                    <header StatHeader class="mx-4 relative z-10">
                       Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
                     </header>
-                    <div PrimaryStat class="grow relative border border-slate-500/30 rounded-lg mt-2 pb-12 pt-10 text-5xl font-bold font-mono text-argon-600 shadow-sm">
+                    <div class="grow relative mt-2 pb-12 pt-10 text-5xl font-bold font-mono text-argon-600">
                       <NeedMoreCapitalHover v-if="probableMinSeats < rules.seatGoalCount" :calculator="calculator" />
                       <InputArgon v-model="rules.baseCapitalCommitment" :min="10_000_000n" :minDecimals="0" />
                     </div>
@@ -66,9 +65,9 @@
                 </div>
                 <div class="w-1/2 flex flex-col grow">
                   <!-- @mouseenter="showTooltip($event, tooltip.estimatedAPYRange, { width: 'parent' })" @mouseleave="hideTooltip"  -->
-                  <div class="flex flex-col grow group">
-                    <header StatHeader class="bg-[#FAF9FA] border border-[#DDDCDD] rounded-t-lg relative z-10">Annual Percentage Yields (APY)</header>
-                    <div PrimaryStat class="grow flex flex-col border border-slate-500/30 rounded-lg mt-2 shadow-sm w-full px-4">
+                  <div PrimaryStat class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                    <header StatHeader class="mx-4 relative z-10">Annual Percentage Yields</header>
+                    <div class="grow flex flex-col mt-3 w-full px-4">
                       <table class="w-full h-full table-fixed relative z-50 whitespace-nowrap -mt-1">
                         <tbody>
                           <tr class="text-argon-600 h-1/3">
@@ -588,8 +587,21 @@ basicEmitter.on('openBotOverlay', async () => {
 
   [PrimaryStat] {
     @apply relative;
+
+    [StatHeader] {
+      @apply group-hover:text-[#a08fb7];
+      background: linear-gradient(
+        to right,
+        transparent 0%,
+        oklch(0.88 0.09 320 / 0.2) 10%,
+        oklch(0.88 0.09 320 / 0.2) 90%,
+        transparent 100%
+      );
+      text-shadow: 1px 1px 0 white;
+    }
+
     &::before {
-      @apply from-argon-menu-bg bg-gradient-to-b from-[5px] to-transparent;
+      @apply from-argon-menu-bg bg-gradient-to-b from-[0px] to-transparent;
       content: '';
       display: block;
       width: calc(100% + 10px);
@@ -653,7 +665,7 @@ basicEmitter.on('openBotOverlay', async () => {
       @apply inline-block;
     }
     div[InputFieldWrapper] {
-      @apply text-argon-600 border-none font-mono text-6xl font-bold outline-none hover:bg-transparent;
+      @apply text-argon-600 border-none font-mono text-6xl font-bold !outline-none hover:bg-transparent focus:!outline-none;
       box-shadow: none;
     }
     div[NumArrows] {

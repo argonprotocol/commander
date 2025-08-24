@@ -50,17 +50,17 @@
 </template>
 
 <script setup lang="ts">
-import { Accountset, Keyring } from '@argonprotocol/mainchain';
-import { useConfig } from '../stores/config';
-import { useBot } from '../stores/bot';
-import { useBlockchainStore } from '../stores/blockchain';
-import { getMainchainClient } from '../stores/mainchain';
+// import { Accountset, Keyring } from '@argonprotocol/mainchain';
+// import { useConfig } from '../stores/config';
+// import { useBot } from '../stores/bot';
+// import { useBlockchainStore } from '../stores/blockchain';
+// import { getMainchainClient } from '../stores/mainchain';
 
-const bot = useBot();
-const config = useConfig();
+// const bot = useBot();
+// const config = useConfig();
 
-const clientPromise = getMainchainClient();
-const blockchainStore = useBlockchainStore();
+// const clientPromise = getMainchainClient();
+// const blockchainStore = useBlockchainStore();
 
 // const accountset = new Accountset({
 //   client: clientPromise,

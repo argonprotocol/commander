@@ -1,7 +1,7 @@
 <!-- prettier-ignore -->
 <template>
   <HoverCardRoot :openDelay="0" :closeDelay="0" class="relative pointer-events-auto" v-model:open="isOpen">
-    <HoverCardTrigger as="div"
+    <HoverCardTrigger as="div" Trigger
       class="flex flex-row items-center justify-center text-sm/6 font-semibold text-argon-600/70 cursor-pointer border rounded-md hover:bg-slate-400/10 px-3 h-[30px] focus:outline-none hover:border-slate-400/50"
       :class="[isOpen ? 'border-slate-400/60 bg-slate-400/10' : 'border-slate-400/50']"
     >
@@ -14,7 +14,13 @@
     </HoverCardTrigger>
 
     <HoverCardPortal>
-      <HoverCardContent :align="'end'" :alignOffset="-6" :sideOffset="-3" class="z-50 data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad data-[state=open]:transition-all">
+      <HoverCardContent 
+        @pointerDownOutside="clickOutside"
+        :align="'end'" 
+        :alignOffset="-6" 
+        :sideOffset="-3" 
+        class="z-50 data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad data-[state=open]:transition-all"
+      >
         <div class="flex flex-col p-1 shrink rounded bg-white text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20">
           <a
             v-for="(record, key) of currency?.records as Record<ICurrencyKey, ICurrencyRecord>"
@@ -40,7 +46,14 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { HoverCardArrow, HoverCardContent, HoverCardPortal, HoverCardRoot, HoverCardTrigger } from 'reka-ui';
+import {
+  HoverCardArrow,
+  HoverCardContent,
+  HoverCardPortal,
+  HoverCardRoot,
+  HoverCardTrigger,
+  PointerDownOutsideEvent,
+} from 'reka-ui';
 import { useCurrency } from '../stores/currency';
 import { CurrencyKey, ICurrencyRecord, type ICurrencyKey } from '../lib/Currency';
 import ArgonSign from '../assets/currencies/argon.svg?component';
@@ -62,5 +75,20 @@ function setCurrencyKey(key: ICurrencyKey) {
   } else {
     basicEmitter.emit('openComplianceOverlay');
   }
+}
+
+function clickOutside(e: PointerDownOutsideEvent) {
+  const isChildOfTrigger = !!(e.target as HTMLElement)?.closest('[Trigger]');
+  if (!isChildOfTrigger) return;
+
+  isOpen.value = true;
+  setTimeout(() => {
+    isOpen.value = true;
+  }, 200);
+  e.detail.originalEvent.stopPropagation();
+  e.detail.originalEvent.preventDefault();
+  e.stopPropagation();
+  e.preventDefault();
+  return false;
 }
 </script>

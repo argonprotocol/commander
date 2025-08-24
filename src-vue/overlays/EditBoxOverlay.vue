@@ -11,12 +11,19 @@
       </div>
 
       <div class="flex flex-col grow text-md px-5 mt-4">
-        <StartingBid v-if="id === 'minimumBid'" @update:data="updateData" ref="editorInstance" />
-        <MaximumBid v-else-if="id === 'maximumBid'" @update:data="updateData" ref="editorInstance" />
-        <RebiddingStrategy v-else-if="id === 'rebiddingStrategy'" @update:data="updateData" ref="editorInstance" />
-        <CapitalAllocation v-else-if="id === 'capitalAllocation'" @update:data="updateData" ref="editorInstance" />
-        <ExpectedGrowth v-else-if="id === 'expectedGrowth'" @update:data="updateData" ref="editorInstance" />
-        <CloudMachine v-else-if="id === 'cloudMachine'" @update:data="updateData" ref="editorInstance" />
+        <BotStartingBid v-if="id === 'minimumBid'" @update:data="updateData" ref="editorInstance" />
+        <BotMaximumBid v-else-if="id === 'maximumBid'" @update:data="updateData" ref="editorInstance" />
+        <BotRebiddingStrategy v-else-if="id === 'rebiddingStrategy'" @update:data="updateData" ref="editorInstance" />
+        <BotCapitalAllocation v-else-if="id === 'capitalAllocation'" @update:data="updateData" ref="editorInstance" />
+        <BotExpectedGrowth v-else-if="id === 'expectedGrowth'" @update:data="updateData" ref="editorInstance" />
+        <BotCloudMachine v-else-if="id === 'cloudMachine'" @update:data="updateData" ref="editorInstance" />
+
+        <VaultProjectedUtilization v-else-if="id === 'projectedUtilization'" @update:data="updateData" ref="editorInstance" />
+        <VaultBtcLockingFees v-else-if="id === 'btcLockingFees'" @update:data="updateData" ref="editorInstance" />
+        <VaultPoolRevenueShare v-else-if="id === 'poolRevenueShare'" @update:data="updateData" ref="editorInstance" />
+        <VaultCapitalDistribution v-else-if="id === 'capitalDistribution'" @update:data="updateData" ref="editorInstance" />
+        <VaultSecuritizationRatio v-else-if="id === 'securitizationRatio'" @update:data="updateData" ref="editorInstance" />
+        <VaultPersonalBtc v-else-if="id === 'personalBtc'" @update:data="updateData" ref="editorInstance" />
       </div>
 
       <div v-if="hideSaveButton" class="flex flex-row justify-end pb-3 pr-3 space-x-3 mt-5 mx-2 border-t border-slate-400/50 pt-3">
@@ -32,12 +39,18 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import StartingBid from './edit-box/StartingBid.vue';
-import MaximumBid from './edit-box/MaximumBid.vue';
-import RebiddingStrategy from './edit-box/RebiddingStrategy.vue';
-import CapitalAllocation from './edit-box/CapitalAllocation.vue';
-import ExpectedGrowth from './edit-box/ExpectedGrowth.vue';
-import CloudMachine from './edit-box/CloudMachine.vue';
+import BotStartingBid from './edit-box/BotStartingBid.vue';
+import BotMaximumBid from './edit-box/BotMaximumBid.vue';
+import BotRebiddingStrategy from './edit-box/BotRebiddingStrategy.vue';
+import BotCapitalAllocation from './edit-box/BotCapitalAllocation.vue';
+import BotExpectedGrowth from './edit-box/BotExpectedGrowth.vue';
+import BotCloudMachine from './edit-box/BotCloudMachine.vue';
+import VaultProjectedUtilization from './edit-box/VaultProjectedUtilization.vue';
+import VaultBtcLockingFees from './edit-box/VaultBtcLockingFees.vue';
+import VaultPoolRevenueShare from './edit-box/VaultPoolRevenueShare.vue';
+import VaultCapitalDistribution from './edit-box/VaultCapitalDistribution.vue';
+import VaultSecuritizationRatio from './edit-box/VaultSecuritizationRatio.vue';
+import VaultPersonalBtc from './edit-box/VaultPersonalBtc.vue';
 import { useConfig } from '../stores/config';
 import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
 import { IBiddingRules } from '@argonprotocol/commander-core';
@@ -54,30 +67,29 @@ const emit = defineEmits<{
 }>();
 
 const editorInstance = Vue.ref<InstanceType<
-  | typeof MaximumBid
-  | typeof StartingBid
-  | typeof RebiddingStrategy
-  | typeof CapitalAllocation
-  | typeof ExpectedGrowth
-  | typeof CloudMachine
+  | typeof BotMaximumBid
+  | typeof BotStartingBid
+  | typeof BotRebiddingStrategy
+  | typeof BotCapitalAllocation
+  | typeof BotExpectedGrowth
+  | typeof BotCloudMachine
 > | null>(null);
 
 export type IEditBoxOverlayTypeForMining =
-  | 'capitalToCommit'
   | 'maximumBid'
   | 'minimumBid'
   | 'rebiddingStrategy'
   | 'capitalAllocation'
   | 'expectedGrowth'
   | 'cloudMachine';
-export type IEditBoxOverlayTypeForVault =
+export type IEditBoxOverlayTypeForVaulting =
   | 'capitalDistribution'
   | 'securitizationRatio'
-  | 'externalProfitSharing'
-  | 'btcFlatFee'
-  | 'btcVariableFee'
+  | 'poolRevenueShare'
+  | 'btcLockingFees'
+  | 'projectedUtilization'
   | 'personalBtc';
-export type IEditBoxOverlayType = IEditBoxOverlayTypeForMining | IEditBoxOverlayTypeForVault;
+export type IEditBoxOverlayType = IEditBoxOverlayTypeForMining | IEditBoxOverlayTypeForVaulting;
 
 const config = useConfig();
 
@@ -85,13 +97,19 @@ let previousBiddingRules = jsonStringifyWithBigInts(config.biddingRules);
 let lastBoundingClientRect: DOMRect | null = null;
 
 const titles = {
-  capitalToCommit: 'Capital to Commit',
   maximumBid: 'Maximum Bid',
   minimumBid: 'Starting Bid',
   rebiddingStrategy: 'Rebidding Strategy',
   capitalAllocation: 'Capital Allocation',
   expectedGrowth: 'Expected Growth',
   cloudMachine: 'Cloud Machine',
+
+  projectedUtilization: 'Projected Utilization',
+  btcLockingFees: 'Bitcoin Locking Fees',
+  poolRevenueShare: 'Pool Revenue Share',
+  capitalDistribution: 'Capital Distribution',
+  securitizationRatio: 'Securitization Ratio',
+  personalBtc: 'Personal BTC to Lock',
 };
 
 // --- Draggable Modal Logic ---

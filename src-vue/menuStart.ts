@@ -103,7 +103,7 @@ export default async function menuStart() {
       {
         id: 'configure-vault-settings',
         text: 'Configure Vault Settings',
-        action: () => basicEmitter.emit('openConfigureStabilizationVaultOverlay'),
+        action: () => basicEmitter.emit('openVaultOverlay'),
       },
     ],
   });

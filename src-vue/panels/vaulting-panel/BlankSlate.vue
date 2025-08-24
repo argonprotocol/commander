@@ -15,7 +15,7 @@
     </div>
     <div class="flex flex-row items-center text-2xl mt-10 w-full justify-center">
       <button
-        @click="openConfigureStabilizationVaultOverlay"
+        @click="openVaultOverlay"
         class="bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow font-bold text-white px-14 py-2 rounded-lg cursor-pointer"
       >
         Create Stabilization Vault
@@ -154,8 +154,8 @@ const microgonValueInVaults = Vue.ref(0n);
  */
 const averageVaultAPY = Vue.ref(0);
 
-function openConfigureStabilizationVaultOverlay() {
-  basicEmitter.emit('openConfigureStabilizationVaultOverlay');
+function openVaultOverlay() {
+  basicEmitter.emit('openVaultOverlay');
 }
 
 async function updateRevenue() {

@@ -74,6 +74,9 @@ export function createNumeralHelpers(currency: Currency | Vue.Reactive<Currency>
     micronotToMoneyNm(micronots: bigint): Numeral {
       return numeral(currency.micronotTo(micronots));
     },
+    microgonToBtcNm(microgons: bigint): Numeral {
+      return numeral(currency.microgonToBtc(microgons));
+    },
   };
 }
 
