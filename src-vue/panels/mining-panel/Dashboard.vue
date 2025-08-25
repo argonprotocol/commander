@@ -309,58 +309,15 @@
 <script lang="ts">
 import type { IBlock } from '../../stores/blockchain';
 import { IDashboardFrameStats } from '../../interfaces/IStats.ts';
-
-const blocks = Vue.ref<IBlock[]>([]);
-</script>
-
-<script setup lang="ts">
 import * as Vue from 'vue';
+import Chart from '../../components/Chart.vue';
+import NibSlider from '../../components/NibSlider.vue';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import utc from 'dayjs/plugin/utc';
-import { BigNumber } from 'bignumber.js';
-import { calculateAPR, calculateAPY } from '../../lib/Utils';
-import { useStats } from '../../stores/stats';
-import { useCurrency } from '../../stores/currency';
-import basicEmitter from '../../emitters/basicEmitter';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
-import CountupClock from '../../components/CountupClock.vue';
-import AlertBars from '../../components/AlertBars.vue';
-import numeral, { createNumeralHelpers } from '../../lib/numeral';
-import AuctionIcon from '../../assets/auction.svg?component';
-import ActivityIcon from '../../assets/activity.svg?component';
-import BlocksIcon from '../../assets/blocks.svg?component';
-import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
-import BotHistoryOverlayButton from '../../overlays/BotHistoryOverlayButton.vue';
-import { TICK_MILLIS } from '../../lib/Env.ts';
-import { useWallets } from '../../stores/wallets';
-import MinerIcon from '../../assets/miner.svg?component';
-import HealthIndicatorBar from '../../components/HealthIndicatorBar.vue';
-import Chart from '../../components/Chart.vue';
-import NibSlider from '../../components/NibSlider.vue';
-import ArgonIcon from '../../assets/resources/argon.svg?component';
-import ArgonotIcon from '../../assets/resources/argonot.svg?component';
-import ArgonotLockedIcon from '../../assets/resources/argonot-locked.svg?component';
-import MiningBidIcon from '../../assets/resources/mining-bid.svg?component';
-import MiningSeatIcon from '../../assets/resources/mining-seat.svg?component';
 
-dayjs.extend(relativeTime);
-dayjs.extend(utc);
-
-const stats = useStats();
-const currency = useCurrency();
-
-const wallets = useWallets();
-
-const { microgonToMoneyNm, micronotToMoneyNm } = createNumeralHelpers(currency);
-
-const isDragging = Vue.ref(false);
-
-let dragMeta: any = {};
-
-const chartRef = Vue.ref<InstanceType<typeof Chart> | null>(null);
-const nibSliderRef = Vue.ref<InstanceType<typeof NibSlider> | null>(null);
-
+// storing refs outside of setup to avoid re-creation on each setup call and speed ui load
+const blocks = Vue.ref<IBlock[]>([]);
 const currentFrame = Vue.ref<IDashboardFrameStats>({
   id: 0,
   date: '',
@@ -383,6 +340,49 @@ const currentFrame = Vue.ref<IDashboardFrameStats>({
   profitPct: 0,
   score: 0,
 });
+const sliderFrameIndex = Vue.ref(0);
+const sliderLeftPosX = Vue.ref(0);
+const isDragging = Vue.ref(false);
+
+let dragMeta: any = {};
+
+const chartRef = Vue.ref<InstanceType<typeof Chart> | null>(null);
+const nibSliderRef = Vue.ref<InstanceType<typeof NibSlider> | null>(null);
+dayjs.extend(relativeTime);
+dayjs.extend(utc);
+</script>
+
+<script setup lang="ts">
+import { BigNumber } from 'bignumber.js';
+import { calculateAPY } from '../../lib/Utils';
+import { useStats } from '../../stores/stats';
+import { useCurrency } from '../../stores/currency';
+import basicEmitter from '../../emitters/basicEmitter';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
+import CountupClock from '../../components/CountupClock.vue';
+import AlertBars from '../../components/AlertBars.vue';
+import numeral, { createNumeralHelpers } from '../../lib/numeral';
+import AuctionIcon from '../../assets/auction.svg?component';
+import ActivityIcon from '../../assets/activity.svg?component';
+import BlocksIcon from '../../assets/blocks.svg?component';
+import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
+import BotHistoryOverlayButton from '../../overlays/BotHistoryOverlayButton.vue';
+import { TICK_MILLIS } from '../../lib/Env.ts';
+import { useWallets } from '../../stores/wallets';
+import MinerIcon from '../../assets/miner.svg?component';
+import HealthIndicatorBar from '../../components/HealthIndicatorBar.vue';
+import ArgonIcon from '../../assets/resources/argon.svg?component';
+import ArgonotIcon from '../../assets/resources/argonot.svg?component';
+import ArgonotLockedIcon from '../../assets/resources/argonot-locked.svg?component';
+import MiningBidIcon from '../../assets/resources/mining-bid.svg?component';
+import MiningSeatIcon from '../../assets/resources/mining-seat.svg?component';
+
+const stats = useStats();
+const currency = useCurrency();
+
+const wallets = useWallets();
+
+const { microgonToMoneyNm, micronotToMoneyNm } = createNumeralHelpers(currency);
 
 const globalMicrogonsEarned = Vue.computed(() => {
   const {
@@ -501,9 +501,6 @@ function loadChartData() {
   updateFrameSliderPos(items.length - 1);
 }
 
-const sliderFrameIndex = Vue.ref(0);
-const sliderLeftPosX = Vue.ref(0);
-
 function startDrag(event: PointerEvent) {
   const elementLeftPos = sliderLeftPosX.value; // TODO: This is not correct
   const cursor = window.getComputedStyle(event.target as Element).cursor;
@@ -582,6 +579,7 @@ Vue.onMounted(() => {
   Vue.onUnmounted(() => {
     window.removeEventListener('keydown', handleKeyDown);
   });
+  loadChartData();
 });
 
 Vue.onUnmounted(() => {

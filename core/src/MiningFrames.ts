@@ -76,6 +76,11 @@ export class MiningFrames {
     return config;
   }
 
+  /**
+   * Function used to retrieve configs that will update the stored config values
+   * in the NetworkConfig object.
+   * @param client
+   */
   public static async loadConfigs(client: ArgonClient): Promise<IMiningFrameConfig> {
     const config = await client.query.miningSlot.miningConfig().then(x => ({
       ticksBetweenSlots: x.ticksBetweenSlots.toNumber(),

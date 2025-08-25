@@ -1,6 +1,5 @@
 import 'source-map-support/register';
-import { waitForLoad } from '@argonprotocol/mainchain';
-import { keyringFromFile } from '@argonprotocol/cli';
+import { Keyring, type KeyringPair, waitForLoad } from '@argonprotocol/mainchain';
 import { jsonExt, onExit, requireAll, requireEnv } from './utils.ts';
 import Bot from './Bot.ts';
 import express from 'express';
@@ -9,6 +8,8 @@ import type { IBlockNumbers } from './Dockers.ts';
 import { Dockers } from './Dockers.ts';
 import type { IBotStateError, IBotStateStarting } from './interfaces/IBotStateFile.ts';
 import { MiningFrames } from '@argonprotocol/commander-core';
+import os from 'node:os';
+import { promises as Fs } from 'node:fs';
 
 // wait for crypto wasm to be loaded
 await waitForLoad();
@@ -20,10 +21,13 @@ if (process.env.OLDEST_FRAME_ID_TO_SYNC) {
   oldestFrameIdToSync = parseInt(process.env.OLDEST_FRAME_ID_TO_SYNC, 10);
 }
 
-const pair = await keyringFromFile({
-  filePath: requireEnv('KEYPAIR_PATH'),
-  passphrase: process.env.KEYPAIR_PASSPHRASE,
-});
+let pair: KeyringPair;
+{
+  const path = requireEnv('KEYPAIR_PATH').replace('~', os.homedir());
+  const json = JSON.parse(await Fs.readFile(path, 'utf-8'));
+  pair = new Keyring().createFromJson(json);
+  pair.decodePkcs8(process.env.KEYPAIR_PASSPHRASE);
+}
 
 let networkName = process.env.ARGON_CHAIN ?? 'mainnet';
 if (networkName === 'local') {
