@@ -1,14 +1,30 @@
-import { afterAll, afterEach, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
+import { Config } from '../lib/Config';
+import { createMockedDbPromise } from './helpers/db';
+import { mnemonicGenerate } from '@argonprotocol/mainchain';
 
 vi.mock('../lib/SSH', async () => {
   const { sshMockFn } = await import('./helpers/ssh');
   return sshMockFn();
 });
 
-import { Config } from '../lib/Config';
-import { createMockedDbPromise } from './helpers/db';
+vi.mock('../lib/tauriApi', async () => {
+  return {
+    invokeWithTimeout: vi.fn((command: string, args: any) => {
+      console.log('invokeWithTimeout', command, args);
+      if (command === 'fetch_security') {
+        return {
+          masterMnemonic: mnemonicGenerate(),
+          sshPublicKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7',
+          sshPrivateKey: ``,
+        };
+      }
+      return Promise.resolve();
+    }),
+  };
+});
 
-it.only('can load config defaults', async () => {
+it('can load config defaults', async () => {
   const dbPromise = createMockedDbPromise();
   const config = new Config(dbPromise);
   await config.load();

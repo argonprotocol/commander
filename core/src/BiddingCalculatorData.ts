@@ -3,11 +3,11 @@ import {
   BLOCK_REWARD_INCREASE_PER_INTERVAL,
   BLOCK_REWARD_INTERVAL,
   BLOCK_REWARD_MAX,
-  MICROGONS_PER_ARGON,
   Mainchain,
-} from './Mainchain.ts';
-import { TICKS_PER_COHORT } from './MiningFrames.ts';
-import { bigIntMax, bigIntMin, bigNumberToBigInt } from './utils.ts';
+  MICROGONS_PER_ARGON,
+} from './Mainchain.js';
+import { TICKS_PER_COHORT } from './MiningFrames.js';
+import { bigIntMax, bigIntMin, bigNumberToBigInt } from './utils.js';
 
 export default class BiddingCalculatorData {
   public isInitializedPromise: Promise<void>;

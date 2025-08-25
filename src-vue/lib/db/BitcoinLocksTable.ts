@@ -1,5 +1,6 @@
 import { BaseTable, IFieldTypes } from './BaseTable';
-import { IBitcoinLock, JsonExt } from '@argonprotocol/mainchain';
+import { IBitcoinLock } from '@argonprotocol/mainchain';
+import { JsonExt } from '@argonprotocol/commander-core';
 import { convertFromSqliteFields, toSqlParams } from '../Utils.ts';
 
 export interface IRatchet {

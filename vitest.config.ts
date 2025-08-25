@@ -2,12 +2,34 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    testTimeout: 120_000,
-    hookTimeout: 120_000,
     retry: 0,
     reporters: process.env.GITHUB_ACTIONS ? ['dot', 'github-actions'] : ['dot'],
-    include: ['src-vue/__test__/**/*.test.ts'],
-    setupFiles: './vitest.setup.ts',
-    // silent: false
+    maxWorkers: 1,
+    disableConsoleIntercept: true,
+    projects: [
+      {
+        test: {
+          testTimeout: 30_000,
+          hookTimeout: 30_000,
+          include: ['src-vue/__test__/**/*.test.ts'],
+          setupFiles: './vitest.setup.ts',
+          // silent: false
+        },
+      },
+      {
+        test: {
+          testTimeout: 240_000,
+          hookTimeout: 120_000,
+          include: ['core/__test__/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
+          testTimeout: 240_000,
+          hookTimeout: 120_000,
+          include: ['bot/__test__/**/*.test.ts'],
+        },
+      },
+    ],
   },
 });

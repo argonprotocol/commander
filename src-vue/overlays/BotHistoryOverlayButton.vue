@@ -56,7 +56,7 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { createNumeralHelpers } from '../lib/numeral';
 import { useStats } from '../stores/stats';
 import { useConfig } from '../stores/config';
-import { Accountset } from '@argonprotocol/mainchain';
+import { Accountset } from '@argonprotocol/commander-core';
 import ActivityArrowIcon from '../assets/activity-arrow.svg?component';
 import ActivityFailureIcon from '../assets/activity-failure.svg?component';
 import ActivitySuccessIcon from '../assets/activity-success.svg?component';

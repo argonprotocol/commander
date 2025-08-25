@@ -1,4 +1,4 @@
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 import { IBiddingRules, jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
 import { SSHConnection } from './SSHConnection';
 import { DEPLOY_ENV_FILE, NETWORK_NAME } from './Env.ts';

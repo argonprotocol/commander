@@ -1,6 +1,5 @@
 import {
   BitcoinLocks,
-  FrameCalculator,
   ITxProgressCallback,
   KeyringPair,
   PalletVaultsVaultFrameRevenue,
@@ -14,15 +13,17 @@ import {
 } from '@argonprotocol/mainchain';
 import { BitcoinNetwork, CosignScript, getBitcoinNetworkFromApi, getChildXpriv, HDKey } from '@argonprotocol/bitcoin';
 import { Db } from './Db.ts';
-import { getMainchain, getMainchainClient, getMainchainClients } from '../stores/mainchain.ts';
+import { getMainchain, getMainchainClient } from '../stores/mainchain.ts';
 import { createDeferred, IDeferred } from './Utils.ts';
 import { IVaultRecord, VaultsTable } from './db/VaultsTable.ts';
-import IVaultingRules from '../interfaces/IVaultingRules.ts';
+import { IVaultingRules } from '../interfaces/IVaultingRules.ts';
+
 import BigNumber from 'bignumber.js';
 import { Vaults } from './Vaults.ts';
 import { IVaultStats } from '../interfaces/IVaultStats.ts';
 import { toRaw } from 'vue';
 import BitcoinLocksStore from './BitcoinLocksStore.ts';
+import { MiningFrames } from '@argonprotocol/commander-core';
 
 export class MyVault {
   public data: {
@@ -53,13 +54,7 @@ export class MyVault {
   #table?: VaultsTable;
   #subscriptions: VoidFunction[] = [];
   #bitcoinLocks?: BitcoinLocks;
-  #frameCalculator?: FrameCalculator;
   #configs?: {
-    tickMillis: number;
-    ticksBetweenFrames: number;
-    slotBiddingStartAfterTicks: number;
-    genesisTick: number;
-    biddingStartTick: number;
     timeToCollectFrames: number;
   };
 
@@ -116,12 +111,9 @@ export class MyVault {
       const client = await getMainchainClient(true);
       this.#bitcoinLocks ??= new BitcoinLocks(Promise.resolve(client));
       this.data.metadata = (await table.get()) ?? null;
-      this.#frameCalculator = new FrameCalculator();
       // prefetch the config
-      const miningConfig = await this.#frameCalculator.load(client);
       const timeToCollectFrames = client.consts.vaults.revenueCollectionExpirationFrames.toNumber();
       this.#configs = {
-        ...miningConfig,
         timeToCollectFrames,
       };
       const vaultId = this.data.metadata?.id;
@@ -169,11 +161,7 @@ export class MyVault {
     lastCollectFrameId ??= await getMainchain().getCurrentFrameId();
 
     const nextCollectDue = lastCollectFrameId + this.#configs!.timeToCollectFrames;
-    this.data.nextCollectDueDate = this.frameToDateRange(nextCollectDue)[0].getTime();
-  }
-
-  private frameToDateRange(frameId: number): [Date, Date] {
-    return FrameCalculator.frameToDateRange(frameId, this.#configs!);
+    this.data.nextCollectDueDate = MiningFrames.frameToDateRange(nextCollectDue)[0].getTime();
   }
 
   private async recordPendingCosignUtxos(rawUtxoIds: Iterable<u64>) {

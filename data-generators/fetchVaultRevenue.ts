@@ -1,5 +1,5 @@
 import './_globals.js';
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 import * as path from 'path';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';

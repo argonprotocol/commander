@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 import { version as packageVersion } from '../package.json';
 
 const rawVersion = process.argv[2] || packageVersion;

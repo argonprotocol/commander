@@ -1,5 +1,11 @@
-import { type Accountset, CohortBidder, MiningBids } from '@argonprotocol/mainchain';
-import { createBidderParams, type IBiddingRules, MainchainClients } from '@argonprotocol/commander-core';
+import {
+  type Accountset,
+  CohortBidder,
+  createBidderParams,
+  type IBiddingRules,
+  MainchainClients,
+  MiningBids,
+} from '@argonprotocol/commander-core';
 import { type Storage } from './Storage.ts';
 import { type History, SeatReductionReason } from './History.ts';
 
@@ -74,7 +80,7 @@ export class AutoBidder {
 
     const subaccounts: { index: number; isRebid: boolean; address: string }[] = [];
     if (bidsFileData && bidsFileData.winningBids.length) {
-      const miningAccounts = await this.accountset.loadRegisteredMiners(await this.accountset.client);
+      const miningAccounts = await this.accountset.loadRegisteredMiners(this.accountset.client);
       for (const winningBid of bidsFileData.winningBids) {
         if (typeof winningBid.subAccountIndex !== 'number') continue;
         const account = miningAccounts.find(x => x.address === winningBid.address);

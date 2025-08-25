@@ -1,5 +1,5 @@
 import { runOnTeardown, sudo, teardown } from '@argonprotocol/testing';
-import { FrameCalculator, getClient, mnemonicGenerate } from '@argonprotocol/mainchain';
+import { getClient, getTickFromHeader, mnemonicGenerate } from '@argonprotocol/mainchain';
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import Path from 'node:path';
@@ -98,7 +98,8 @@ it('can autobid and store stats', async () => {
       lastFinalizedBlockNumber = x.number.toNumber();
       if (isVoteBlock) {
         console.log(`Block ${x.number.toNumber()} is vote block`);
-        const frameId = await new FrameCalculator().getForHeader(client, x);
+        const tick = getTickFromHeader(client, x);
+        const frameId = MiningFrames.getForTick(tick!);
         if (frameId !== undefined) cohortActivationFrameIdsWithEarnings.add(frameId);
         voteBlocks++;
         if (voteBlocks > 5) {
@@ -197,4 +198,4 @@ it('can autobid and store stats', async () => {
     expect(bidsFile2).toBeTruthy();
     expect(bidsFile1!).toEqual(bidsFile2!);
   }
-}, 180e3);
+});

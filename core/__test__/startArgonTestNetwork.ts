@@ -6,12 +6,20 @@ import { MiningFrames } from '../src/index.js';
 export async function startArgonTestNetwork(
   uniqueTestName: string,
   options?: {
-    shouldLog: boolean;
+    shouldLog?: boolean;
     dockerEnv?: Record<string, string>;
+    profiles: ('miners' | 'bob' | 'dave' | 'all' | 'price-oracle')[];
   },
-): Promise<{ archiveUrl: string; notaryUrl: string }> {
+): Promise<{
+  archiveUrl: string;
+  notaryUrl: string;
+  getPort: (service: 'miner-1' | 'miner-2' | 'bitcoin', internalPort: number) => Promise<number>;
+}> {
   MiningFrames.setNetwork('localnet');
-  const config = Path.join(Path.dirname(require.resolve('@argonprotocol/testing')), 'docker-compose.yml');
+  const config = [
+    Path.join(Path.dirname(require.resolve('@argonprotocol/testing')), 'docker-compose.yml'),
+    Path.resolve(__dirname, '..', '..', 'docker-compose.yml'),
+  ];
   const env = {
     VERSION: 'dev',
     ARGON_CHAIN: 'dev-docker',
@@ -24,7 +32,8 @@ export async function startArgonTestNetwork(
   runOnTeardown(async () => {
     await docker.downAll({
       log: options?.shouldLog ?? false,
-      commandOptions: [`--volumes`],
+      commandOptions: [`--volumes`, '--timeout=0'],
+      composeOptions: options?.profiles ? options.profiles.map(p => `--profile=${p}`) : [],
       config,
       env,
     });
@@ -32,6 +41,7 @@ export async function startArgonTestNetwork(
   await docker.upAll({
     log: options?.shouldLog ?? false,
     commandOptions: [`--force-recreate`, `--remove-orphans`, '--pull=always'],
+    composeOptions: options?.profiles ? options.profiles.map(p => `--profile=${p}`) : [],
     config,
     env,
   });
@@ -41,5 +51,8 @@ export async function startArgonTestNetwork(
   return {
     archiveUrl: `ws://localhost:${port}`,
     notaryUrl: `ws://localhost:${notaryPortResult.data.port}`,
+    getPort(service, internalPort) {
+      return docker.port(service, internalPort, { config, env }).then(res => res.data.port);
+    },
   };
 }

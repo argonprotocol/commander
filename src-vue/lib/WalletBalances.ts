@@ -1,8 +1,7 @@
-import { Mainchain, MainchainClient } from '@argonprotocol/commander-core';
-import { Accountset, FrameSystemAccountInfo, KeyringPair, PalletBalancesAccountData } from '@argonprotocol/mainchain';
+import { Mainchain, MainchainClient, Accountset } from '@argonprotocol/commander-core';
+import { FrameSystemAccountInfo, KeyringPair, PalletBalancesAccountData } from '@argonprotocol/mainchain';
 import { createDeferred } from './Utils';
 import {
-  IConfig,
   IMiningAccountPreviousHistoryBid,
   IMiningAccountPreviousHistoryRecord,
   IMiningAccountPreviousHistorySeat,
@@ -101,7 +100,7 @@ export class WalletBalances {
 
     const liveClient = await this.mainchain.prunedClientPromise;
     const accountset = new Accountset({
-      client: Promise.resolve(liveClient),
+      client: liveClient,
       seedAccount: miningAccount,
       sessionKeySeedOrMnemonic: miningSessionMiniSecret,
       subaccountRange: new Array(99).fill(0).map((_, i) => i),

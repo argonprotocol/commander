@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 import * as Path from 'path';
 import { version as packageVersion } from '../package.json';
 

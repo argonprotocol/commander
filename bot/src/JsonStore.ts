@@ -1,5 +1,5 @@
 import * as fs from 'node:fs';
-import { JsonExt } from '@argonprotocol/mainchain';
+import { JsonExt } from '@argonprotocol/commander-core';
 import type { ILastModifiedAt } from './interfaces/ILastModified.ts';
 import Queue from 'p-queue';
 
@@ -42,6 +42,10 @@ export class JsonStore<T extends Record<string, any> & ILastModifiedAt> {
   public async get(): Promise<T | undefined> {
     await this.load();
     return structuredClone(this.data || (this.defaults as T));
+  }
+
+  public async close(): Promise<void> {
+    await this.saveQueue.onIdle();
   }
 
   private async load(): Promise<void> {

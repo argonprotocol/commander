@@ -1,10 +1,10 @@
 import * as Fs from 'node:fs';
-import { Accountset, type ArgonClient, type KeyringPair } from '@argonprotocol/mainchain';
+import { type ArgonClient, type KeyringPair } from '@argonprotocol/mainchain';
 import { Storage } from './Storage.ts';
 import { AutoBidder } from './AutoBidder.ts';
 import { BlockSync } from './BlockSync.ts';
 import { Dockers } from './Dockers.ts';
-import { type IBiddingRules, jsonParseWithBigInts, MainchainClients } from '@argonprotocol/commander-core';
+import { Accountset, type IBiddingRules, jsonParseWithBigInts, MainchainClients } from '@argonprotocol/commander-core';
 import { History } from './History.ts';
 import FatalError from './interfaces/FatalError.ts';
 import type { IBotSyncStatus } from './interfaces/IBotStateFile.js';
@@ -97,7 +97,7 @@ export default class Bot implements IBotSyncStatus {
 
     this.biddingRules = this.loadBiddingRules();
     this.accountset = new Accountset({
-      client: Promise.resolve(this.localClient),
+      client: this.localClient,
       seedAccount: this.options.pair,
       sessionKeySeedOrMnemonic: this.options.sessionMiniSecret,
       subaccountRange: new Array(99).fill(0).map((_, i) => i),

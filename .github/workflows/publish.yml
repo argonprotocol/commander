@@ -49,8 +49,19 @@ jobs:
         run: yarn install
 
       - name: Read release notes (and ensure they exist)
+        shell: pwsh
+        if: ${{ matrix.platform == 'windows-latest' }}
         run: |
-          RELEASE_NOTES = yarn tsx scripts/getReleaseNotes.ts ${{ env.VERSION }}
+          $RELEASE_NOTES = yarn tsx scripts/getReleaseNotes.ts $env:VERSION
+          if ([string]::IsNullOrWhiteSpace($RELEASE_NOTES)) {
+              Write-Error "Release notes are empty. Please provide valid release notes."
+              exit 1
+          }
+          "RELEASE_NOTES=$RELEASE_NOTES" >> $env:GITHUB_ENV
+      - name: Read release notes (and ensure they exist)
+        if: ${{ matrix.platform == 'macos-latest' }}
+        run: |
+          RELEASE_NOTES=$(yarn tsx scripts/getReleaseNotes.ts $VERSION)
           if [ -z "$RELEASE_NOTES" ]; then
               echo "Release notes are empty. Please provide valid release notes."
               exit 1

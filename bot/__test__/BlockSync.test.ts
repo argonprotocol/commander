@@ -1,12 +1,12 @@
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { runOnTeardown, sudo, teardown } from '@argonprotocol/testing';
-import { AccountMiners, Accountset, getClient, mnemonicGenerate } from '@argonprotocol/mainchain';
+import { getClient, mnemonicGenerate } from '@argonprotocol/mainchain';
+import { AccountMiners, Accountset, MainchainClients, MiningFrames } from '@argonprotocol/commander-core';
 import { BlockSync } from '../src/BlockSync.js';
 import fs from 'node:fs';
 import { Storage } from '../src/Storage.js';
 import type { IBotSyncStatus } from '../src/interfaces/IBotStateFile.js';
 import { Dockers } from '../src/Dockers.js';
-import { MainchainClients, MiningFrames } from '@argonprotocol/commander-core';
 import { startArgonTestNetwork } from '@argonprotocol/commander-core/__test__/startArgonTestNetwork.js';
 
 afterEach(teardown);
@@ -30,7 +30,7 @@ it('can backfill sync data', async () => {
   } as IBotSyncStatus;
   const storage = new Storage(botDataDir);
   const accountset = new Accountset({
-    client: Promise.resolve(client),
+    client,
     seedAccount: sudo(),
     sessionKeySeedOrMnemonic: mnemonicGenerate(),
     subaccountRange: new Array(99).fill(0).map((_, i) => i),
@@ -38,6 +38,10 @@ it('can backfill sync data', async () => {
   const mainchainClients = new MainchainClients(clientAddress);
   void mainchainClients.setPrunedClient(clientAddress);
   const blockSync = new BlockSync(botStatus, accountset, storage, mainchainClients, 0);
+  // @ts-expect-error - it's private
+  blockSync.localClient = await mainchainClients.archiveClientPromise;
+  // @ts-expect-error - it's private
+  blockSync.archiveClient = await mainchainClients.archiveClientPromise;
   blockSync.accountMiners = new AccountMiners(accountset, []);
 
   const blockNumber = await new Promise<number>(async resolve => {

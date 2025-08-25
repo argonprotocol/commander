@@ -2,7 +2,7 @@ import { type IBidderParams } from './IBidderParams.js';
 import { type IBiddingRules, SeatGoalType } from './IBiddingRules.js';
 import BiddingCalculator from './BiddingCalculator.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
-import { Mainchain } from './Mainchain.ts';
+import { Mainchain } from './Mainchain.js';
 import type { MainchainClients } from './MainchainClients.js';
 
 export default async function createBidderParams(

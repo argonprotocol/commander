@@ -31,7 +31,7 @@ bot/.env
 tsconfig.*.tsbuildinfo
 *.pem
 .yarn/install-state.gz
-docker-compose.yml
 resources/server-*
 resources/SHASUM256
 /.eslintcache
+/cli/lib/

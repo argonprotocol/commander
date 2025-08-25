@@ -1,7 +1,8 @@
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 import * as Path from 'path';
 import NetworkConfig from '../core/network.config.json';
-import { ArgonClient, FrameCalculator, getClient } from '@argonprotocol/mainchain';
+import { ArgonClient, getClient } from '@argonprotocol/mainchain';
+import { MiningFrames } from '@argonprotocol/commander-core';
 
 (async () => {
   const dirname = Path.join(import.meta.dirname, '..', 'core');
@@ -12,7 +13,7 @@ import { ArgonClient, FrameCalculator, getClient } from '@argonprotocol/mainchai
         getClient(config.archiveUrl),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 1e3)),
       ])) as ArgonClient;
-      const miningConfig = await new FrameCalculator().load(client);
+      const miningConfig = await MiningFrames.loadConfigs(client);
       Object.assign(config, miningConfig);
       await client.disconnect();
     } catch (e) {

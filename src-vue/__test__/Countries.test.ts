@@ -1,6 +1,15 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import Countries from '../lib/Countries';
 
+vi.mock('../lib/tauriApi', async () => {
+  return {
+    invokeWithTimeout: vi.fn((command: string, args: any) => {
+      console.log('invokeWithTimeout', command, args);
+
+      return Promise.resolve();
+    }),
+  };
+});
 it('should return US for United States', async () => {
   const correctCountry = Countries.byISOCode('US');
   const foundCountry = Countries.closestMatch('United States');

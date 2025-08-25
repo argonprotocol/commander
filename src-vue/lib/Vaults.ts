@@ -1,4 +1,5 @@
-import { BitcoinLocks, JsonExt, type PalletVaultsVaultFrameRevenue, Vault } from '@argonprotocol/mainchain';
+import { BitcoinLocks, type PalletVaultsVaultFrameRevenue, Vault } from '@argonprotocol/mainchain';
+import { JsonExt, Mainchain } from '@argonprotocol/commander-core';
 import { BaseDirectory, readTextFile, rename, writeTextFile } from '@tauri-apps/plugin-fs';
 import { getMainchain, getMainchainClient } from '../stores/mainchain.ts';
 import { IBitcoinLockRecord } from './db/BitcoinLocksTable.ts';
@@ -7,7 +8,6 @@ import { IAllVaultStats, IVaultFrameStats } from '../interfaces/IVaultStats.ts';
 import mainnetVaultRevenueHistory from '../data/vaultRevenue.mainnet.json';
 import testnetVaultRevenueHistory from '../data/vaultRevenue.testnet.json';
 import { NETWORK_NAME } from './Env.ts';
-import { Mainchain } from '@argonprotocol/commander-core';
 
 const REVENUE_STATS_FILE = `${NETWORK_NAME}/vaultRevenue.json`;
 

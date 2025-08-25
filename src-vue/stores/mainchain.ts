@@ -1,4 +1,5 @@
-import BiddingCalculator, {
+import {
+  BiddingCalculator,
   BiddingCalculatorData,
   Mainchain,
   MainchainClient,
@@ -8,12 +9,21 @@ import { NETWORK_URL } from '../lib/Env.ts';
 import { useConfig } from './config';
 import { type IBiddingRules } from '@argonprotocol/commander-core/src/IBiddingRules.ts';
 import { useBot } from './bot.ts';
+import { ApiDecoration } from '@polkadot/api/types';
 
 let mainchainClients: MainchainClients;
 let mainchain: Mainchain;
 let calculator: BiddingCalculator;
 let calculatorData: BiddingCalculatorData;
 
+export async function getMainchainClientAt(
+  height: number,
+  isPriorToFinalizedHeight: boolean = true,
+): Promise<ApiDecoration<'promise'>> {
+  const client = await getMainchainClients().get(isPriorToFinalizedHeight);
+  const blockHash = await client.rpc.chain.getBlockHash(height);
+  return client.at(blockHash);
+}
 export function getMainchainClient(needsHistoricalAccess: boolean): Promise<MainchainClient> {
   return getMainchainClients().get(needsHistoricalAccess);
 }
