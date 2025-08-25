@@ -18,8 +18,8 @@ concurrency:
 
 env:
   VERSION: ${{ github.event.inputs.version || github.ref_name }}
-  TAURI_CONFIG: ./src-tauri/tauri.conf.json
-  ARGON_EXPERIMENTAL: ${{ github.event.inputs.version && contains(github.event.inputs.version, '-rc') || false }}
+  TAURI_CONFIG: ${{ github.workspace }}/src-tauri/tauri.conf.json
+  ARGON_EXPERIMENTAL: ${{ contains(github.event.inputs.version || github.ref_name, '-rc') }}
   RELEASE_NOTES: ''
 
 jobs:
@@ -49,24 +49,18 @@ jobs:
         run: yarn install
 
       - name: Read release notes (and ensure they exist)
-        shell: pwsh
-        if: ${{ matrix.platform == 'windows-latest' }}
+        shell: bash
         run: |
-          $RELEASE_NOTES = yarn tsx scripts/getReleaseNotes.ts $env:VERSION
-          if ([string]::IsNullOrWhiteSpace($RELEASE_NOTES)) {
-              Write-Error "Release notes are empty. Please provide valid release notes."
-              exit 1
-          }
-          "RELEASE_NOTES=$RELEASE_NOTES" >> $env:GITHUB_ENV
-      - name: Read release notes (and ensure they exist)
-        if: ${{ matrix.platform == 'macos-latest' }}
-        run: |
-          RELEASE_NOTES=$(yarn tsx scripts/getReleaseNotes.ts $VERSION)
+          RELEASE_NOTES=$(yarn tsx scripts/getReleaseNotes.ts "$VERSION")
           if [ -z "$RELEASE_NOTES" ]; then
               echo "Release notes are empty. Please provide valid release notes."
               exit 1
           fi
-          echo "RELEASE_NOTES=$RELEASE_NOTES" >> $GITHUB_ENV
+          {
+            echo 'RELEASE_NOTES<<__EOF__'
+            echo "$RELEASE_NOTES"
+            echo '__EOF__'
+          } >> "$GITHUB_ENV"
 
       - name: install Rust stable (macOS)
         uses: dtolnay/rust-toolchain@stable
@@ -81,8 +75,8 @@ jobs:
           rustup target list --installed
 
       - if: runner.os == 'Windows'
-        shell: pwsh
-        run: echo "AWS_LC_SYS_PREBUILT_NASM=1" >> $env:GITHUB_ENV
+        shell: bash
+        run: echo "AWS_LC_SYS_PREBUILT_NASM=1" >> "$GITHUB_ENV"
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -93,15 +87,10 @@ jobs:
         run: yarn build:server
 
       - name: Override vars
-        if: ${{ matrix.platform == 'macos-latest' && github.event.inputs.version && contains(github.event.inputs.version, '-rc') || false }}
+        if: ${{ env.ARGON_EXPERIMENTAL == 'true' }}
+        shell: bash
         run: |
-          echo "TAURI_CONFIG=./src-tauri/tauri.experimental.conf.json" >> $GITHUB_ENV
-
-      - name: Override vars
-        if: ${{ matrix.platform == 'windows-latest' && github.event.inputs.version && contains(github.event.inputs.version, '-rc') || false }}
-        shell: pwsh
-        run: |
-          echo "TAURI_CONFIG=./src-tauri/tauri.experimental.conf.json" >> $env:GITHUB_ENV
+          echo "TAURI_CONFIG=$GITHUB_WORKSPACE/src-tauri/tauri.experimental.conf.json" >> "$GITHUB_ENV"
 
       - name: build and publish
         uses: tauri-apps/tauri-action@v0
@@ -140,7 +129,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Publish to channel release
-        if: ${{ github.event.inputs.version && contains(github.event.inputs.version, '-rc') || false }}
+        if: ${{ env.ARGON_EXPERIMENTAL == 'true'}}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

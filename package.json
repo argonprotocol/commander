@@ -8,7 +8,7 @@
     "precommit": "tsx scripts/checkPrecommit.ts",
     "dev": "vite",
     "tsc": "tsc && yarn workspaces foreach --all run tsc",
-    "build": "yarn sync:version && yarn build:server && vue-tsc --noEmit && vite build",
+    "build": "yarn build:version && yarn build:server && vue-tsc --noEmit && vite build",
     "build:server": "yarn workspace @argonprotocol/commander-bot run build && tsx scripts/buildServer.ts",
     "build:version": "tsx scripts/syncVersions.ts",
     "build:config": "tsx scripts/updateNetworkConfigs.ts",
