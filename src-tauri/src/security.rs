@@ -7,6 +7,8 @@ use tauri::{AppHandle};
 
 use crate::{ssh::SSH, utils::Utils};
 
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Security {
   pub master_mnemonic: String,
   pub ssh_public_key: String,

@@ -15,13 +15,7 @@ vi.mock('../lib/tauriApi', async () => {
   return {
     invokeWithTimeout: vi.fn((command: string, args: any) => {
       console.log('invokeWithTimeout', command, args);
-      if (command === 'fetch_security') {
-        return {
-          masterMnemonic: mnemonicGenerate(),
-          sshPublicKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7',
-          sshPrivateKey: ``,
-        };
-      }
+
       return Promise.resolve();
     }),
   };

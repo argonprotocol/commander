@@ -20,6 +20,7 @@ import { invokeWithTimeout } from './tauriApi';
 import ISecurity from '../interfaces/ISecurity';
 import { getMainchain } from '../stores/mainchain';
 import { WalletBalances } from './WalletBalances';
+import { SECURITY } from './Env.ts';
 
 export class Config {
   public readonly version: string = packageJson.version;
@@ -97,12 +98,9 @@ export class Config {
     const loadedData: any = {};
     const rawData = {} as IConfigStringified & { miningAccountAddress: string };
 
-    const [dbRawData, security] = await Promise.all([
-      db.configTable.fetchAllAsObject(),
-      invokeWithTimeout('fetch_security', {}, 5e3),
-    ]);
+    const dbRawData = await db.configTable.fetchAllAsObject();
 
-    this._security = security as ISecurity;
+    this._security = SECURITY;
 
     for (const [key, value] of Object.entries(defaults)) {
       const rawValue = dbRawData[key as keyof typeof dbRawData];

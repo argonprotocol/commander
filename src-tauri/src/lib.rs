@@ -1,30 +1,22 @@
 use log;
 use log::trace;
-use serde;
 use std;
 use std::fs;
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use tauri::Emitter;
+use tauri::{AppHandle, Listener, Manager};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use time::OffsetDateTime;
 use utils::Utils;
 #[cfg(target_os = "macos")]
 use window_vibrancy::*;
 use zip::DateTime;
-
 mod migrations;
 mod security;
 mod ssh;
 mod ssh_pool;
 mod utils;
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct ISecurity {
-    master_mnemonic: String,
-    ssh_public_key: String,
-    ssh_private_key: String,
-}
 
 #[tauri::command]
 async fn open_ssh_connection(
@@ -139,17 +131,6 @@ async fn read_embedded_file(app: AppHandle, local_relative_path: String) -> Resu
     Ok(content)
 }
 
-#[tauri::command]
-async fn fetch_security(app: AppHandle) -> Result<ISecurity, String> {
-    log::info!("fetch_security");
-    let security = security::Security::load(&app).map_err(|e| e.to_string())?;
-
-    Ok(ISecurity {
-        master_mnemonic: security.master_mnemonic,
-        ssh_public_key: security.ssh_public_key,
-        ssh_private_key: security.ssh_private_key,
-    })
-}
 
 #[tauri::command]
 async fn overwrite_security(
@@ -310,13 +291,13 @@ pub fn run() {
     let instance_name_clone = instance_name.clone();
 
     tauri::Builder::default()
-        .on_page_load(move |app, _| {
+          .on_page_load(move |window, _payload| {
             log::info!("Page loaded for instance '{}'", instance_name_clone);
-            let window = app.get_webview_window("main").unwrap();
+            window.emit("tauri://page-loaded", {  }).unwrap();
             window.eval(format!("window.__COMMANDER_INSTANCE__ = '{}'", instance_name_clone)).expect("Failed to set instance name in window");
             window.eval(format!("window.__ARGON_NETWORK_NAME__ = '{}'", network_name_clone)).expect("Failed to set network name in window");
             window.eval(format!("window.__COMMANDER_ENABLE_AUTOUPDATE__ = {}", enable_auto_update)).expect("Failed to set experimental flag in window");
-        })
+          })
         .setup(move |app| {
             log::info!(
                 "Starting instance '{}' on network '{}'",
@@ -324,7 +305,15 @@ pub fn run() {
                 network_name
             );
             log::info!("Database URL = {}", db_relative_path.display());
+            let handle = app.handle();
+            let security = security::Security::load(&handle).map_err(|e| e.to_string())?;
+            let security_json = serde_json::to_string(&security).map_err(|e| e.to_string())?;
 
+            let window = app.get_webview_window("main").unwrap();
+
+            app.listen("tauri://page-loaded", move |_event| {
+                window.eval(format!("window.__COMMANDER_SECURITY__ = {}", security_json)).expect("Failed to set security in window");
+            });
             let app_id = &app.config().identifier;
 
             if app_id.to_lowercase().contains("experimental") {
@@ -335,7 +324,6 @@ pub fn run() {
 
             let window = app.get_webview_window("main").unwrap();
 
-            let handle = app.handle();
 
             init_config_instance_dir(&handle, &relative_config_dir)?;
 
@@ -368,7 +356,6 @@ pub fn run() {
             ssh_download_file,
             ssh_upload_embedded_file,
             read_embedded_file,
-            fetch_security,
             overwrite_security,
             overwrite_mnemonic,
             run_db_migrations,
