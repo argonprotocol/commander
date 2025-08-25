@@ -76,6 +76,7 @@ export class BlockSync {
     if (!localClient) {
       throw new Error('Pruned client is not available');
     }
+    // ensure local client has state
     await localClient.query.system.number().catch(x => {
       console.error('Error getting system number from local client', x);
       throw new Error('Local client is not ready');
@@ -83,7 +84,6 @@ export class BlockSync {
 
     this.localClient = localClient;
     this.archiveClient = await this.mainchainClients.archiveClientPromise;
-    // ensure local client has state
 
     const archiveFinalizedHash = await this.archiveClient.rpc.chain.getFinalizedHead();
     const archiveFinalizedHeader = await this.archiveClient.rpc.chain.getHeader(archiveFinalizedHash);

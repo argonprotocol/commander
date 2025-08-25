@@ -90,7 +90,7 @@ services:
       - '9615:9615'
     environment:
       - ARGON_CHAIN=${ARGON_CHAIN}
-      - ARGON_ARCHIVE_NODE=${ARGON_ARCHIVE_NODE}
+      - ARGON_ARCHIVE_NODE=${ARGON_ARCHIVE_NODE} # needed by latestblocks script
     volumes:
       - $ARGON_DATA_FOLDER:/data
     profiles:
@@ -117,6 +117,7 @@ services:
       - KEYPAIR_PATH=/tmp/walletMining.json
       - LOCAL_RPC_URL=ws://argon-miner:9944
       - ARCHIVE_NODE_URL=${ARGON_ARCHIVE_NODE}
+      - ARGON_CHAIN=${ARGON_CHAIN}
       - DATADIR=/data
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
