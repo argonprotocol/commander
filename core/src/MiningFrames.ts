@@ -1,7 +1,7 @@
-import { FrameCalculator } from '@argonprotocol/mainchain';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import { NetworkConfig } from './NetworkConfig.js';
+import { type ArgonClient, getTickFromHeader, type Header } from '@argonprotocol/mainchain';
 
 dayjs.extend(utc);
 
@@ -14,6 +14,27 @@ export const TICKS_PER_COHORT = 14_400;
 export class MiningFrames {
   private static networkName: keyof typeof NetworkConfig | undefined = undefined;
 
+  public static getForTick(tick: number) {
+    const { ticksBetweenFrames, biddingStartTick } = this.getConfig();
+
+    const ticksSinceMiningStart = tick - biddingStartTick;
+
+    return Math.floor(ticksSinceMiningStart / ticksBetweenFrames);
+  }
+
+  public static frameToDateRange(frameId: number): [Date, Date] {
+    const { tickMillis } = this.getConfig();
+    const [start, end] = this.getTickRangeForFrame(frameId);
+    return [new Date(start * tickMillis), new Date(end * tickMillis)];
+  }
+
+  public static getForHeader(client: ArgonClient, header: Header) {
+    if (header.number.toNumber() === 0) return 0;
+    const tick = getTickFromHeader(client, header);
+    if (tick === undefined) return undefined;
+    return this.getForTick(tick);
+  }
+
   public static setNetwork(networkName: keyof typeof NetworkConfig) {
     if (!(networkName in NetworkConfig)) {
       throw new Error(`${networkName} is not a valid Network chain name`);
@@ -22,8 +43,12 @@ export class MiningFrames {
   }
 
   public static getTickRangeForFrame(frameId: number): [number, number] {
-    const config = this.getConfig();
-    return FrameCalculator.calculateTickRangeForFrame(frameId, config);
+    const { ticksBetweenFrames, biddingStartTick } = this.getConfig();
+
+    const startingTick = biddingStartTick + Math.floor(frameId * ticksBetweenFrames);
+    const endingTick = startingTick + ticksBetweenFrames - 1;
+
+    return [startingTick, endingTick];
   }
 
   public static calculateCurrentTickFromSystemTime(): number {
@@ -39,7 +64,7 @@ export class MiningFrames {
     return Math.floor(ticksSinceSlotOne / ticksBetweenFrames);
   }
 
-  private static getConfig(): Awaited<ReturnType<FrameCalculator['load']>> {
+  private static getConfig(): IMiningFrameConfig {
     if (!this.networkName) {
       throw new Error(`Network name must be defined prior to loading configs`);
     }
@@ -50,4 +75,28 @@ export class MiningFrames {
 
     return config;
   }
+
+  public static async loadConfigs(client: ArgonClient): Promise<IMiningFrameConfig> {
+    const config = await client.query.miningSlot.miningConfig().then(x => ({
+      ticksBetweenSlots: x.ticksBetweenSlots.toNumber(),
+      slotBiddingStartAfterTicks: x.slotBiddingStartAfterTicks.toNumber(),
+    }));
+    const genesisTick = await client.query.ticks.genesisTick().then((x: { toNumber: () => number }) => x.toNumber());
+
+    return {
+      ticksBetweenFrames: config.ticksBetweenSlots,
+      slotBiddingStartAfterTicks: config.slotBiddingStartAfterTicks,
+      genesisTick,
+      tickMillis: await client.query.ticks.genesisTicker().then(x => x.tickDurationMillis.toNumber()),
+      biddingStartTick: genesisTick + config.slotBiddingStartAfterTicks,
+    };
+  }
+}
+
+export interface IMiningFrameConfig {
+  ticksBetweenFrames: number;
+  slotBiddingStartAfterTicks: number;
+  genesisTick: number;
+  tickMillis: number;
+  biddingStartTick: number;
 }

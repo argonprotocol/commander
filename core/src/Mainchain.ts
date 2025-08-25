@@ -1,8 +1,8 @@
 import BigNumber from 'bignumber.js';
 import { type ArgonClient, convertFixedU128ToBigNumber, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
-import { bigIntMin, bigNumberToBigInt } from './utils.ts';
+import { bigIntMin, bigNumberToBigInt } from './utils.js';
 import { type IWinningBid } from '@argonprotocol/commander-bot';
-import { MiningFrames } from './MiningFrames.ts';
+import { MiningFrames } from './MiningFrames.js';
 import type { ApiDecoration } from '@polkadot/api/types';
 import type { MainchainClients } from './MainchainClients.js';
 

@@ -5,19 +5,16 @@
   "description": "An api for integration with commander",
   "type": "module",
   "main": "src/index.ts",
-  "scripts": {
-    "test": "vitest --run"
-  },
   "dependencies": {
     "@argonprotocol/mainchain": "^1.3.7",
+    "bignumber.js": "^9.3.1",
+    "console-table-printer": "^2.14.6",
     "dayjs": "^1.11.13",
     "zod": "^3.25.55"
   },
   "devDependencies": {
     "@argonprotocol/testing": "^1.3.7",
-    "bignumber.js": "^9.3.1",
     "docker-compose": "^1.2.0",
-    "typescript": "^5.8.3",
-    "vitest": "^3.2.4"
+    "typescript": "^5.9.2"
   }
 }

@@ -8,6 +8,26 @@ vi.mock('../lib/SSH', async () => {
   const { sshMockFn } = await import('./helpers/ssh');
   return sshMockFn();
 });
+vi.mock('@tauri-apps/plugin-dialog', async () => {
+  return {
+    message: vi.fn(),
+  };
+});
+vi.mock('../lib/tauriApi', async () => {
+  return {
+    invokeWithTimeout: vi.fn((command: string, args: any) => {
+      console.log('invokeWithTimeout', command, args);
+      if (command === 'fetch_security') {
+        return {
+          masterMnemonic: mnemonicGenerate(),
+          sshPublicKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7',
+          sshPrivateKey: ``,
+        };
+      }
+      return Promise.resolve();
+    }),
+  };
+});
 
 import { InstallerCheck } from '../lib/InstallerCheck';
 import { Config } from '../lib/Config';
@@ -15,6 +35,7 @@ import { createMockedDbPromise } from './helpers/db';
 import { InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
 import Installer from '../lib/Installer';
 import { IInstallStepStatuses, InstallStepStatusType } from '../lib/Server';
+import { mnemonicGenerate } from '@argonprotocol/mainchain';
 
 it.only('jump through the install steps rapidly when time has expired', async () => {
   const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'false' });

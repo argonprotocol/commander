@@ -1,5 +1,4 @@
-import { NetworkConfig } from '@argonprotocol/commander-core';
-import { MiningFrames } from '@argonprotocol/commander-core';
+import { NetworkConfig, MiningFrames } from '@argonprotocol/commander-core';
 
 console.log('__ARGON_NETWORK_NAME__', __ARGON_NETWORK_NAME__);
 console.log('__COMMANDER_INSTANCE__', __COMMANDER_INSTANCE__);

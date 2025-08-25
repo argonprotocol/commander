@@ -1,4 +1,4 @@
-import { getMainchainClient } from '../stores/mainchain.ts';
+import { getMainchainClient, getMainchainClientAt } from '../stores/mainchain.ts';
 import {
   addressBytesHex,
   BitcoinNetwork,
@@ -104,7 +104,7 @@ export default class BitcoinLocksStore {
       for (const lock of locks) {
         this.locksById[lock.utxoId] = lock;
       }
-      this.#bitcoinLocksApi ??= new BitcoinLocks(getMainchainClient(true));
+      this.#bitcoinLocksApi ??= new BitcoinLocks(Promise.resolve(await getMainchainClient(true)));
       this.#config ??= await this.#bitcoinLocksApi.getConfig();
       const client = await getMainchainClient(false);
       this.#ticksPerFrame = client.consts.bitcoinLocks.argonTicksPerDay.toNumber();
@@ -408,6 +408,7 @@ export default class BitcoinLocksStore {
     }
 
     if (!lock.releaseToDestinationAddress) {
+      // const clientAt = await getMainchainClientAt(cosignature.blockHeight, true);
       const signatureDetails = await this.#bitcoinLocksApi.getReleaseRequest(lock.utxoId, cosignature.blockHeight);
       if (!signatureDetails) {
         throw new Error(`Release request for lock with ID ${lock.utxoId} not found.`);

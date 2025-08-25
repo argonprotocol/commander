@@ -1,4 +1,4 @@
-import { CohortBidder } from '@argonprotocol/mainchain';
+import { CohortBidder } from './CohortBidder.js';
 
 export type IBidderParams = CohortBidder['options'] & {
   maxSeats: number;

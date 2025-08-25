@@ -1,12 +1,21 @@
 import BiddingCalculator from './BiddingCalculator.js';
 import createBidderParams, { Helper as BiddingParamsHelper } from './createBidderParams.js';
-import { type IBiddingRules } from './IBiddingRules.js';
-import { type IBidderParams } from './IBidderParams.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
-import { Mainchain, type MainchainClient } from './Mainchain.js';
-import { MainchainClients } from './MainchainClients.js';
-import { MiningFrames, TICKS_PER_COHORT } from './MiningFrames.js';
-import { NetworkConfig } from './NetworkConfig.js';
+
+export { type IBiddingRules } from './IBiddingRules.js';
+export { type IBidderParams } from './IBidderParams.js';
+export { Mainchain, type MainchainClient } from './Mainchain.js';
+export * from './MainchainClients.js';
+export * from './MiningFrames.js';
+export * from './NetworkConfig.js';
+export * from './Accountset.js';
+export * from './AccountMiners.js';
+export * from './AccountRegistry.js';
+export * from './BidPool.js';
+export * from './BlockWatch.js';
+export * from './CohortBidder.js';
+export * from './MiningBids.js';
+export * from './VaultMonitor.js';
 
 export {
   jsonStringifyWithBigInts,
@@ -15,19 +24,10 @@ export {
   jsonParseWithBigIntsEnhanced,
   convertBigIntStringToNumber,
   bigNumberToBigInt,
+  JsonExt,
+  filterUndefined,
+  createNanoEvents,
 } from './utils.js';
 
 export default BiddingCalculator;
-export {
-  NetworkConfig,
-  TICKS_PER_COHORT,
-  BiddingParamsHelper,
-  BiddingCalculatorData,
-  type IBiddingRules,
-  type IBidderParams,
-  type MainchainClient,
-  MainchainClients,
-  Mainchain,
-  MiningFrames,
-  createBidderParams,
-};
+export { BiddingParamsHelper, createBidderParams, BiddingCalculatorData, BiddingCalculator };

@@ -6,11 +6,32 @@ vi.mock('../lib/SSH', async () => {
   return sshMockFn();
 });
 
+vi.mock('@tauri-apps/plugin-dialog', async () => {
+  return {
+    message: vi.fn(),
+  };
+});
+vi.mock('../lib/tauriApi', async () => {
+  return {
+    invokeWithTimeout: vi.fn((command: string, args: any) => {
+      console.log('invokeWithTimeout', command, args);
+      if (command === 'fetch_security') {
+        return {
+          masterMnemonic: mnemonicGenerate(),
+          sshPublicKey: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC7',
+          sshPrivateKey: ``,
+        };
+      }
+      return Promise.resolve();
+    }),
+  };
+});
 import Installer, { resetInstaller } from '../lib/Installer';
 import { Config } from '../lib/Config';
 import { createMockedDbPromise } from './helpers/db';
 import { IInstallStepStatuses, InstallStepStatusType } from '../lib/Server';
 import { InstallStepKey } from '../interfaces/IConfig';
+import { mnemonicGenerate } from '@argonprotocol/mainchain';
 
 beforeEach(() => {
   resetInstaller();

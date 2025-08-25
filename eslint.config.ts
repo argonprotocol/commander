@@ -1,10 +1,16 @@
 import prettierConfig from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
+import { importX } from 'eslint-plugin-import-x';
 
 export default tseslint.config(
   tseslint.configs.recommendedTypeChecked,
+  importX.flatConfigs.recommended,
+  importX.flatConfigs.typescript,
+  { ignores: ['**/node_modules/**', '**/lib/**/*.js', '**/target'] },
   {
     rules: {
+      'import-x/no-named-as-default-member': 'off',
+      'import-x/no-named-as-default': 'off',
       '@typescript-eslint/prefer-promise-reject-errors': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
@@ -33,7 +39,10 @@ export default tseslint.config(
       'no-use-before-define': 'off',
     },
     languageOptions: {
-      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
   },
   // Looser in tests and scripts

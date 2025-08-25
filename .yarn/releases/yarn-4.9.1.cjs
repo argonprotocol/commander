@@ -617,7 +617,7 @@ Tree is too large, part of the tree has been dunped
 `,`  return hydrateRuntimeState(JSON.parse(RAW_RUNTIME_STATE), {basePath: basePath || __dirname});
 `,`}
 `].join("")}function _Tt(){return[`function $$SETUP_STATE(hydrateRuntimeState, basePath) {
-`,`  const fs = require('fs');
+`,`  const fs = require('node:fs');
 `,`  const path = require('path');
 `,`  const pnpDataFilepath = path.resolve(__dirname, ${JSON.stringify(Er.pnpData)});
 `,`  return hydrateRuntimeState(JSON.parse(fs.readFileSync(pnpDataFilepath, 'utf8')), {basePath: basePath || __dirname});

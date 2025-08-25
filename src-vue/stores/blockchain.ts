@@ -1,20 +1,20 @@
 import * as Vue from 'vue';
 import { defineStore } from 'pinia';
-import dayjs, { Dayjs } from 'dayjs';
+import dayjs, { extend as dayJsExtend, Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { type MainchainClient } from '@argonprotocol/commander-core';
 import { getMainchain, getMainchainClient } from './mainchain.ts';
 import { BlockHash, getAuthorFromHeader } from '@argonprotocol/mainchain';
 
-dayjs.extend(utc);
-dayjs.extend(relativeTime);
+dayJsExtend(utc);
+dayJsExtend(relativeTime);
 
 export type IActiveBid = {
   cohortId: number;
   accountId: string;
   amount: number;
-  submittedAt: dayjs.Dayjs;
+  submittedAt: Dayjs;
   isMine?: boolean;
 };
 

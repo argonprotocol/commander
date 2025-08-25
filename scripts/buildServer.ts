@@ -1,5 +1,5 @@
 import * as tar from 'tar';
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 import * as Path from 'path';
 import { createHash } from 'crypto';
 import { pipeline } from 'stream/promises';

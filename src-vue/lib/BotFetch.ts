@@ -9,7 +9,7 @@ import {
 } from '@argonprotocol/commander-bot';
 import { BotServerError, BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors.ts';
 import { SSH } from './SSH.ts';
-import { JsonExt } from '@argonprotocol/mainchain';
+import { JsonExt } from '@argonprotocol/commander-core';
 import { fetch } from '@tauri-apps/plugin-http';
 
 export class BotFetch {

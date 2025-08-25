@@ -1,11 +1,11 @@
 import { afterAll, afterEach, expect, it } from 'vitest';
 import { runOnTeardown, teardown } from '@argonprotocol/testing';
-import createBidderParams from '../src/createBidderParams.ts';
-import { jsonParseWithBigInts } from '../src/utils.ts';
-import { MiningFrames } from '../src/MiningFrames.ts';
+import createBidderParams from '../src/createBidderParams.js';
+import { jsonParseWithBigInts } from '../src/utils.js';
+import { MiningFrames } from '../src/MiningFrames.js';
 import { startArgonTestNetwork } from './startArgonTestNetwork.js';
 import { type IBiddingRules, MainchainClients } from '../src/index.js';
-import { JsonExt } from '@argonprotocol/mainchain';
+import { JsonExt } from '@argonprotocol/commander-core';
 
 afterEach(teardown);
 afterAll(teardown);
@@ -53,7 +53,8 @@ it('can create bidder params', async () => {
   );
 
   expect(bidderParams.minBid).toBe(0n);
-  expect(bidderParams.maxBid).toBe(215_904_808n);
+  // BAB: this is based on a breakeven at slow growth calc with the above rules and the test network state at time of writing
+  expect(bidderParams.maxBid).toBe(66_532_221n);
   expect(bidderParams.maxBudget).toBe(10_000_000n + accruedEarnings);
   expect(bidderParams.maxSeats).toBe(10);
   expect(bidderParams.bidDelay).toBe(1);
