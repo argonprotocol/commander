@@ -18,7 +18,7 @@ concurrency:
 
 env:
   VERSION: ${{ github.event.inputs.version || github.ref_name }}
-  TAURI_CONFIG: src-tauri/tauri.conf.json
+  TAURI_CONFIG: ./src-tauri/tauri.conf.json
   ARGON_EXPERIMENTAL: ${{ github.event.inputs.version && contains(github.event.inputs.version, '-rc') || false }}
   RELEASE_NOTES: ''
 
@@ -93,9 +93,15 @@ jobs:
         run: yarn build:server
 
       - name: Override vars
-        if: ${{ github.event.inputs.version && contains(github.event.inputs.version, '-rc') || false }}
+        if: ${{ matrix.platform == 'macos-latest' && github.event.inputs.version && contains(github.event.inputs.version, '-rc') || false }}
         run: |
-          echo "TAURI_CONFIG=src-tauri/tauri.experimental.conf.json" >> $GITHUB_ENV
+          echo "TAURI_CONFIG=./src-tauri/tauri.experimental.conf.json" >> $GITHUB_ENV
+
+      - name: Override vars
+        if: ${{ matrix.platform == 'windows-latest' && github.event.inputs.version && contains(github.event.inputs.version, '-rc') || false }}
+        shell: pwsh
+        run: |
+          echo "TAURI_CONFIG=./src-tauri/tauri.experimental.conf.json" >> $env:GITHUB_ENV
 
       - name: build and publish
         uses: tauri-apps/tauri-action@v0
@@ -115,7 +121,7 @@ jobs:
           prerelease: true
           updaterJsonKeepUniversal: true
           includeUpdaterJson: true
-          args: ${{ matrix.args }} --config ${{ env.TAURI_CONFIG }}
+          args: ${{ matrix.args }} --config "${{ env.TAURI_CONFIG }}"
 
       - name: Upload server artifacts
         if: ${{ matrix.platform == 'macos-latest' }}
