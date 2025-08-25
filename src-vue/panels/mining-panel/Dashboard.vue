@@ -552,6 +552,7 @@ function updateFrameSliderPos(index: number) {
   sliderFrameIndex.value = index;
 
   const item = stats.frames[index];
+  if (!item) return;
   const pointPosition = chartRef.value?.getPointPosition(index);
 
   currentFrame.value = item;
