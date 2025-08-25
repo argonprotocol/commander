@@ -102,7 +102,7 @@ export class WalletBalances {
     const accountset = new Accountset({
       client: liveClient,
       seedAccount: miningAccount,
-      sessionKeySeedOrMnemonic: miningSessionMiniSecret,
+      sessionMiniSecretOrMnemonic: miningSessionMiniSecret,
       subaccountRange: new Array(99).fill(0).map((_, i) => i),
     });
 

@@ -24,7 +24,7 @@ describeIntegration('Cohort Bidder tests', () => {
       client: aliceClient,
       seedAccount: sudo(),
       subaccountRange: parseSubaccountRange('0-49'),
-      sessionKeySeedOrMnemonic: mnemonicGenerate(),
+      sessionMiniSecretOrMnemonic: mnemonicGenerate(),
       name: 'alice',
     });
     await alice.registerKeys(network.archiveUrl);
@@ -49,7 +49,7 @@ describeIntegration('Cohort Bidder tests', () => {
       client: await getClient(bobAddress),
       seedAccount: bobRing,
       subaccountRange: parseSubaccountRange('0-49'),
-      sessionKeySeedOrMnemonic: mnemonicGenerate(),
+      sessionMiniSecretOrMnemonic: mnemonicGenerate(),
       name: 'bob',
     });
     console.log('registering bob keys on', bobAddress);

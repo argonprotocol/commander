@@ -32,7 +32,7 @@ it('can backfill sync data', async () => {
   const accountset = new Accountset({
     client,
     seedAccount: sudo(),
-    sessionKeySeedOrMnemonic: mnemonicGenerate(),
+    sessionMiniSecretOrMnemonic: mnemonicGenerate(),
     subaccountRange: new Array(99).fill(0).map((_, i) => i),
   });
   const mainchainClients = new MainchainClients(clientAddress);

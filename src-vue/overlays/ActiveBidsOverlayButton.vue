@@ -54,12 +54,14 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useCurrency } from '../stores/currency';
-import { getMainchain } from '../stores/mainchain';
+import { getMainchain, getMainchainClient } from '../stores/mainchain';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { useStats } from '../stores/stats';
 import { type IBidsFile } from '@argonprotocol/commander-bot';
 import { createNumeralHelpers } from '../lib/numeral';
 import { TICK_MILLIS } from '../lib/Env.ts';
+import { Accountset } from '@argonprotocol/commander-core';
+import { useConfig } from '../stores/config.ts';
 
 dayjs.extend(utc);
 dayjs.extend(relativeTime);
@@ -78,6 +80,7 @@ const props = withDefaults(
 const stats = useStats();
 const currency = useCurrency();
 const mainchain = getMainchain();
+const config = useConfig();
 
 const panelPositioningClasses = Vue.computed(() => {
   if (props.position === 'left') {
@@ -116,7 +119,21 @@ function lastBidAtTickFromNow(lastBidAtTick: number | undefined): string {
 
 Vue.onMounted(async () => {
   if (props.loadFromMainchain) {
+    const client = await getMainchainClient(false);
+
+    const accountset = new Accountset({
+      client,
+      seedAccount: config.miningAccount,
+      sessionMiniSecretOrMnemonic: config.miningSessionMiniSecret,
+      subaccountRange: new Array(99).fill(0).map((_, i) => i),
+    });
     const allWinningBids = await mainchain.fetchWinningBids();
+    for (const bid of allWinningBids) {
+      const accountInfo = accountset.subAccountsByAddress[bid.address];
+      if (accountInfo) {
+        bid.subAccountIndex = accountInfo.index;
+      }
+    }
     stats.allWinningBids = allWinningBids;
   }
 });

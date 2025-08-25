@@ -15,7 +15,7 @@ afterAll(teardown);
 describeIntegration('Accountset tests', () => {
   let client: ArgonClient;
   let mainchainUrl: string;
-  const sessionKeySeedOrMnemonic = mnemonicGenerate();
+  const sessionMiniSecretOrMnemonic = mnemonicGenerate();
   beforeAll(async () => {
     const network = await startArgonTestNetwork('accountset', { profiles: ['bob'] });
 
@@ -29,7 +29,7 @@ describeIntegration('Accountset tests', () => {
       client,
       seedAccount,
       subaccountRange: parseSubaccountRange('0-49'),
-      sessionKeySeedOrMnemonic,
+      sessionMiniSecretOrMnemonic: sessionMiniSecretOrMnemonic,
     });
 
     expect(Object.keys(accountset.subAccountsByAddress).length).toBe(50);
@@ -45,7 +45,7 @@ describeIntegration('Accountset tests', () => {
       client,
       seedAccount,
       subaccountRange: parseSubaccountRange('0-49'),
-      sessionKeySeedOrMnemonic,
+      sessionMiniSecretOrMnemonic: sessionMiniSecretOrMnemonic,
     });
 
     await expect(accountset.registerKeys(mainchainUrl)).resolves.toBeUndefined();
@@ -57,7 +57,7 @@ describeIntegration('Accountset tests', () => {
       client,
       seedAccount,
       subaccountRange: parseSubaccountRange('0-49'),
-      sessionKeySeedOrMnemonic,
+      sessionMiniSecretOrMnemonic: sessionMiniSecretOrMnemonic,
     });
     const txSubmitter = new TxSubmitter(
       client,
@@ -125,7 +125,7 @@ describeIntegration('Accountset tests', () => {
       client,
       seedAccount: alice,
       subaccountRange: parseSubaccountRange('0-49'),
-      sessionKeySeedOrMnemonic: mnemonicGenerate(),
+      sessionMiniSecretOrMnemonic: mnemonicGenerate(),
     });
     const subaccounts = await account.getAvailableMinerAccounts(7);
     const alice_result = await account.createMiningBids({
@@ -139,7 +139,7 @@ describeIntegration('Accountset tests', () => {
       client,
       seedAccount: secondAccount,
       subaccountRange: parseSubaccountRange('0-49'),
-      sessionKeySeedOrMnemonic: mnemonicGenerate(),
+      sessionMiniSecretOrMnemonic: mnemonicGenerate(),
     }).createMiningBids({
       bidAmount: 500_000n,
       subaccountRange: [0, 1, 2, 3, 4],

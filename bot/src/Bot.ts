@@ -99,7 +99,7 @@ export default class Bot implements IBotSyncStatus {
     this.accountset = new Accountset({
       client: this.localClient,
       seedAccount: this.options.pair,
-      sessionKeySeedOrMnemonic: this.options.sessionMiniSecret,
+      sessionMiniSecretOrMnemonic: this.options.sessionMiniSecret,
       subaccountRange: new Array(99).fill(0).map((_, i) => i),
     });
     this.autobidder = new AutoBidder(
