@@ -40,7 +40,7 @@
               </template>
               <template v-else>---</template>
             </div>
-            <div>Activing Seat Costs</div>
+            <div>Active Seat Costs</div>
           </li>
           <li style="width: 1px" class="bg-slate-300"></li>
           <li class="w-1/4">
