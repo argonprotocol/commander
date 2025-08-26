@@ -1,14 +1,14 @@
 {
   "name": "argon-commander",
   "private": true,
-  "version": "0.1.0-rc1",
+  "version": "0.1.0-rc2",
   "type": "module",
   "scripts": {
     "preinstall": "husky install",
     "precommit": "tsx scripts/checkPrecommit.ts",
     "dev": "vite",
     "tsc": "tsc && yarn workspaces foreach --all run tsc",
-    "build": "yarn sync:version && yarn build:server && vue-tsc --noEmit && vite build",
+    "build": "yarn build:version && yarn build:server && vue-tsc --noEmit && vite build",
     "build:server": "yarn workspace @argonprotocol/commander-bot run build && tsx scripts/buildServer.ts",
     "build:version": "tsx scripts/syncVersions.ts",
     "build:config": "tsx scripts/updateNetworkConfigs.ts",

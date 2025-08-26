@@ -111,7 +111,7 @@ const arrowPositioningClasses = Vue.computed(() => {
 });
 
 const accountset = new Accountset({
-  client: clientPromise,
+  client: clientPromise as any,
   seedAccount: config.miningAccount,
   sessionKeySeedOrMnemonic: config.miningSessionMiniSecret,
   subaccountRange: new Array(99).fill(0).map((_, i) => i),
