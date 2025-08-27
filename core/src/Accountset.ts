@@ -87,6 +87,20 @@ export class Accountset {
     }
   }
 
+  public static getSubaccounts(
+    seedAccount: KeyringPair,
+    range: SubaccountRange,
+  ): { [address: string]: { index: number; pair: KeyringPair } } {
+    const subAccountsByAddress: {
+      [address: string]: { index: number; pair: KeyringPair };
+    } = {};
+    for (const i of range) {
+      const pair = seedAccount.derive(`//${i}`);
+      subAccountsByAddress[pair.address] = { pair, index: i };
+    }
+    return subAccountsByAddress;
+  }
+
   public async submitterBalance(blockHash?: Uint8Array): Promise<bigint> {
     const client = this.client;
     const api = blockHash ? await client.at(blockHash) : client;

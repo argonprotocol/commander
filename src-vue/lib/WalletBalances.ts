@@ -1,4 +1,4 @@
-import { Mainchain, MainchainClient, Accountset } from '@argonprotocol/commander-core';
+import { Mainchain, MainchainClient, Accountset, parseSubaccountRange } from '@argonprotocol/commander-core';
 import { FrameSystemAccountInfo, KeyringPair, PalletBalancesAccountData } from '@argonprotocol/mainchain';
 import { createDeferred } from './Utils';
 import {
@@ -92,19 +92,11 @@ export class WalletBalances {
     }
   }
 
-  public async loadHistory(
-    miningAccount: KeyringPair,
-    miningSessionMiniSecret: string,
-  ): Promise<IMiningAccountPreviousHistoryRecord[]> {
+  public async loadHistory(miningAccount: KeyringPair): Promise<IMiningAccountPreviousHistoryRecord[]> {
     await this.deferredLoading.promise;
 
-    const liveClient = await this.mainchain.prunedClientPromise;
-    const accountset = new Accountset({
-      client: liveClient,
-      seedAccount: miningAccount,
-      sessionMiniSecretOrMnemonic: miningSessionMiniSecret,
-      subaccountRange: new Array(99).fill(0).map((_, i) => i),
-    });
+    const liveClient = await this.mainchain.prunedClientOrArchivePromise;
+    const accountSubaccounts = Accountset.getSubaccounts(miningAccount, parseSubaccountRange('0-99')!);
 
     const currentFrameBids: IMiningAccountPreviousHistoryBid[] = [];
     const seatsByFrameId: Record<number, IMiningAccountPreviousHistorySeat[]> = {};
@@ -114,7 +106,7 @@ export class WalletBalances {
     const bidsRaw = await liveClient.query.miningSlot.bidsForNextSlotCohort();
     for (const [bidPosition, bidRaw] of bidsRaw.entries()) {
       const address = bidRaw.accountId.toHuman();
-      const isOurAccount = !!accountset.subAccountsByAddress[address];
+      const isOurAccount = !!accountSubaccounts[address];
       if (!isOurAccount) continue;
 
       currentFrameBids.push({
@@ -125,7 +117,7 @@ export class WalletBalances {
     }
 
     await this.mainchain.forEachFrame(true, async (frameId, api, _meta, _abortController) => {
-      Object.assign(seatsByFrameId, await this.fetchSeatData(api, accountset));
+      Object.assign(seatsByFrameId, await this.fetchSeatData(api, accountSubaccounts));
       const framesProcessed = latestFrameId - frameId;
       const framesToProcess = latestFrameId - earliestPossibleFrameId;
       this.onLoadHistoryProgress?.(Math.max((100 * framesProcessed) / framesToProcess, 0));
@@ -151,7 +143,7 @@ export class WalletBalances {
 
   private async fetchSeatData(
     api: MainchainClient,
-    accountset: Accountset,
+    accountSubaccounts: Record<string, any>,
   ): Promise<Record<number, IMiningAccountPreviousHistorySeat[]>> {
     const minersByCohort = await api.query.miningSlot.minersByCohort.entries();
     const seatsByFrameId: Record<number, IMiningAccountPreviousHistorySeat[]> = {};
@@ -161,7 +153,7 @@ export class WalletBalances {
       const seats: IMiningAccountPreviousHistorySeat[] = [];
       for (const [seatPosition, seatRaw] of seatsInFrame.entries()) {
         const address = seatRaw.accountId.toHuman();
-        const isOurAccount = !!accountset.subAccountsByAddress[address];
+        const isOurAccount = !!accountSubaccounts[address];
         if (!isOurAccount) continue;
 
         seats.push({

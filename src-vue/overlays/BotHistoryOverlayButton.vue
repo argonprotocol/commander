@@ -56,13 +56,11 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { createNumeralHelpers } from '../lib/numeral';
 import { useStats } from '../stores/stats';
 import { useConfig } from '../stores/config';
-import { Accountset } from '@argonprotocol/commander-core';
+import { Accountset, parseSubaccountRange } from '@argonprotocol/commander-core';
 import ActivityArrowIcon from '../assets/activity-arrow.svg?component';
 import ActivityFailureIcon from '../assets/activity-failure.svg?component';
 import ActivitySuccessIcon from '../assets/activity-success.svg?component';
-import { getMainchainClient } from '../stores/mainchain';
-import { BotActivityType } from '@argonprotocol/commander-bot';
-import { IBotActivityRecord } from '../interfaces/db/IBotActivityRecord';
+import { BotActivityType, IBotActivity } from '@argonprotocol/commander-bot';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -88,7 +86,6 @@ const props = withDefaults(
 const stats = useStats();
 const config = useConfig();
 const currency = useCurrency();
-const clientPromise = getMainchainClient(true);
 
 const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
@@ -110,33 +107,34 @@ const arrowPositioningClasses = Vue.computed(() => {
   }
 });
 
-const accountset = new Accountset({
-  client: clientPromise,
-  seedAccount: config.miningAccount,
-  sessionMiniSecretOrMnemonic: config.miningSessionMiniSecret,
-  subaccountRange: new Array(99).fill(0).map((_, i) => i),
-});
+const subaccounts = Accountset.getSubaccounts(config.miningAccount, parseSubaccountRange('0-99')!);
 
 const activities = Vue.computed(() => {
-  return stats.biddingActivity.map(activity => {
-    const id = activity.id;
-    const type = extractBidType(activity);
-    const bidderAddress = activity.data.bidderAddress;
-    const isMine = !!accountset.subAccountsByAddress[bidderAddress];
-    const timestamp = activity.tick * 60 * 1000;
-    const message = extractMessage(activity);
-    return {
-      id,
-      type,
-      bidderAddress,
-      isMine,
-      timestamp: dayjs.utc(timestamp),
-      message,
-    };
-  });
+  return stats.biddingActivity
+    .map(activity => {
+      const id = activity.id;
+      const type = extractBidType(activity);
+      let bidderAddress: string | undefined = undefined;
+      let isMine = false;
+      if (activity.type === BotActivityType.BidReceived) {
+        bidderAddress = activity.data.bidderAddress;
+        isMine = !!subaccounts[bidderAddress];
+      }
+      const timestamp = activity.tick * 60 * 1000;
+      const message = extractMessage(activity);
+      return {
+        id,
+        type,
+        bidderAddress,
+        isMine,
+        timestamp: dayjs.utc(timestamp),
+        message,
+      };
+    })
+    .slice(0, 10);
 });
 
-function extractMessage(activity: IBotActivityRecord): string {
+function extractMessage(activity: IBotActivity): string {
   if (activity.type === BotActivityType.BidReceived) {
     const {
       bidPosition,
