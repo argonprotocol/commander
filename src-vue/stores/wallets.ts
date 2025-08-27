@@ -10,6 +10,8 @@ import { useCurrency } from './currency.ts';
 import { botEmitter } from '../lib/Bot.ts';
 import { BotStatus } from '../lib/BotSyncer.ts';
 import { IWallet as IWalletBasic, WalletBalances } from '../lib/WalletBalances.ts';
+import { MiningFrames } from '@argonprotocol/commander-core';
+import BigNumber from 'bignumber.js';
 
 const config = useConfig();
 
@@ -41,7 +43,17 @@ export const useWallets = defineStore('wallets', () => {
   });
 
   const miningSeatValue = Vue.computed(() => {
-    return stats.myMiningSeats.microgonsBidTotal;
+    let previousHistoryValue = 0n;
+
+    for (const item of config.miningAccountPreviousHistory || []) {
+      previousHistoryValue += item.seats.reduce((acc, seat) => {
+        const { microgonsBid } = seat;
+        const remainingPercent = new BigNumber(1).minus(MiningFrames.calculateCohortProgress(item.frameId));
+        const remainingValue = Math.floor(remainingPercent.times(microgonsBid.toString()).toNumber());
+        return acc + BigInt(remainingValue);
+      }, 0n);
+    }
+    return stats.myMiningSeats.microgonValueRemaining + previousHistoryValue;
   });
 
   const miningBidValue = Vue.computed(() => {

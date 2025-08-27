@@ -32,7 +32,8 @@
             <thead>
               <tr>
                 <td>Required</td>
-                <td>You Have</td>
+                <td>Wallet Balance</td>
+                <td>Locked Value</td>
                 <td>You Need</td>
                 <td class="text-right">Status</td>
               </tr>
@@ -41,9 +42,10 @@
               <tr>
                 <td>{{ microgonToArgonNm(baseCapitalCommitment).format('0,0.[00000000]') }} ARGN</td>
                 <td>{{ microgonToArgonNm(wallet.availableMicrogons).format('0,0.[00000000]') }}</td>
-                <td>{{ microgonToArgonNm(bigIntMax(0n, baseCapitalCommitment - wallet.availableMicrogons)).format('0,0.[00000000]') }}</td>
+                <td>{{ microgonToArgonNm(wallets.totalMiningMicrogons - wallet.availableMicrogons).format('0,0.[00000000]') }}</td>
+                <td>{{ microgonToArgonNm(bigIntMax(0n, baseCapitalCommitment - wallets.totalMiningMicrogons)).format('0,0.[00000000]') }}</td>
                 <td v-if="!baseCapitalCommitment" class="text-right">--</td>
-                <td v-else-if="wallet.availableMicrogons >= baseCapitalCommitment" class="text-right text-green-700 font-bold">success</td>
+                <td v-else-if="wallets.totalMiningMicrogons >= baseCapitalCommitment" class="text-right text-green-700 font-bold">success</td>
                 <td v-else class="fade-in-out text-right text-red-700 font-bold">
                   <template v-if="wallet.availableMicrogons > 0n">partially funded</template>
                   <template v-else>waiting</template>
@@ -52,6 +54,7 @@
               <tr>
                 <td>{{ micronotToArgonotNm(requiredMicronots).format('0,0.[00000000]') }} ARGNOT</td>
                 <td>{{ micronotToArgonotNm(wallet.availableMicronots).format('0,0.[00000000]') }}</td>
+                <td>{{ micronotToArgonotNm(wallet.reservedMicronots).format('0,0.[00000000]') }}</td>
                 <td>{{ micronotToArgonotNm(bigIntMax(0n, requiredMicronots - wallet.availableMicronots)).format('0,0.[00000000]') }}</td>
                 <td v-if="!requiredMicronots" class="text-right">--</td>
                 <td v-else-if="wallet.availableMicronots >= requiredMicronots" class="text-right text-green-700 font-bold">success</td>
@@ -154,14 +157,8 @@ const walletName = Vue.computed(() => {
 const wallet = Vue.computed(() => {
   if (props.walletId === 'mining') {
     return wallets.miningWallet;
-  } else if (props.walletId === 'vaulting') {
-    return wallets.vaultingWallet;
   } else {
-    return {
-      address: '',
-      availableMicrogons: 0n,
-      availableMicronots: 0n,
-    };
+    return wallets.vaultingWallet;
   }
 });
 

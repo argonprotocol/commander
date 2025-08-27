@@ -12,6 +12,10 @@ export const TICKS_PER_COHORT = 14_400;
  * miners rotates. The first frame (frame 0) was the period between bidding start and Frame 1 beginning.
  */
 export class MiningFrames {
+  public static get tickMillis() {
+    return this.getConfig().tickMillis;
+  }
+
   private static networkName: keyof typeof NetworkConfig | undefined = undefined;
 
   public static getForTick(tick: number) {
@@ -40,6 +44,17 @@ export class MiningFrames {
       throw new Error(`${networkName} is not a valid Network chain name`);
     }
     this.networkName = networkName as any;
+  }
+
+  public static calculateCohortProgress(cohortActivationFrameId: number): number {
+    const endingTick = this.getTickRangeForFrame(cohortActivationFrameId + 9)[1];
+    const currentTick = this.calculateCurrentTickFromSystemTime();
+    if (currentTick > endingTick) {
+      return 1;
+    }
+    const startingTick = this.getTickRangeForFrame(cohortActivationFrameId)[0];
+    const progress = (currentTick - startingTick) / (endingTick - startingTick);
+    return Math.min(Math.max(progress, 0), 1);
   }
 
   public static getTickRangeForFrame(frameId: number): [number, number] {

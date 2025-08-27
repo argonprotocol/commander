@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js';
-import { type IBidsFile, type IWinningBid } from '@argonprotocol/commander-bot';
+import { type IBidsFile, IBotActivity, type IWinningBid } from '@argonprotocol/commander-bot';
 import { IDashboardFrameStats, IDashboardGlobalStats } from '../interfaces/IStats';
 import { Db } from './Db';
 import { Config } from './Config';
@@ -10,6 +10,7 @@ import { createDeferred, ensureOnlyOneInstance } from './Utils';
 import IDeferred from '../interfaces/IDeferred';
 import { MiningFrames } from '@argonprotocol/commander-core/src/MiningFrames';
 import { bigNumberToBigInt } from '@argonprotocol/commander-core';
+import { IServerStateRecord } from '../interfaces/db/IServerStateRecord.ts';
 
 interface IMyMiningSeats {
   seatCount: number;
@@ -22,6 +23,7 @@ interface IMyMiningSeats {
   microgonsToBeMined: bigint;
   microgonsToBeMinted: bigint;
   micronotsToBeMined: bigint;
+  microgonValueRemaining: bigint;
 }
 
 interface IMyMiningBids {
@@ -85,6 +87,7 @@ export class Stats {
       microgonsToBeMined: 0n,
       microgonsToBeMinted: 0n,
       micronotsToBeMined: 0n,
+      microgonValueRemaining: 0n,
     };
 
     this.myMiningBids = {
@@ -285,6 +288,7 @@ export class Stats {
     let microgonsToBeMined = 0n;
     let microgonsToBeMinted = 0n;
     let micronotsToBeMined = 0n;
+    let microgonValueRemaining = 0n;
 
     const activeCohorts = await this.db.cohortsTable.fetchActiveCohorts(this.latestFrameId);
 
@@ -293,12 +297,21 @@ export class Stats {
       // factor = (100 - progress) / 100, scaled by 100000 for 3 decimal precision
       const remainingRewardsPerSeat = this.calculateRemainingRewardsExpectedPerSeat(cohort);
       seatCount += cohort.seatCountWon;
-      microgonsBidTotal += cohort.microgonsBidPerSeat * BigInt(cohort.seatCountWon);
+      const seatCost = cohort.microgonsBidPerSeat * BigInt(cohort.seatCountWon);
+      microgonsBidTotal += seatCost;
       transactionFeesTotal += cohort.transactionFeesTotal * BigInt(cohort.seatCountWon);
       micronotsStakedTotal += cohort.micronotsStakedPerSeat * BigInt(cohort.seatCountWon);
       microgonsToBeMined += remainingRewardsPerSeat.microgonsToBeMined * BigInt(cohort.seatCountWon);
       microgonsToBeMinted += remainingRewardsPerSeat.microgonsToBeMinted * BigInt(cohort.seatCountWon);
       micronotsToBeMined += remainingRewardsPerSeat.micronotsToBeMined * BigInt(cohort.seatCountWon);
+
+      // Value of remaining rewards, simply based on the seat cost and progress
+      microgonValueRemaining += BigInt(
+        BigNumber(100 - cohort.progress)
+          .dividedBy(100)
+          .multipliedBy(seatCost)
+          .toFixed(0),
+      );
     }
 
     const activeCohortFrames = await this.db.cohortFramesTable.fetchActiveCohortFrames(this.latestFrameId);
@@ -320,6 +333,7 @@ export class Stats {
       microgonsToBeMined,
       microgonsToBeMinted,
       micronotsToBeMined,
+      microgonValueRemaining,
     };
   }
 
