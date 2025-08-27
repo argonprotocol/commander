@@ -177,13 +177,13 @@ export class WalletBalances {
   }
 
   private async loadMicrogonBalance(wallet: IWallet) {
-    const client = await this.mainchain.prunedClientPromise;
+    const client = await this.mainchain.prunedClientOrArchivePromise;
     const result = await client.query.system.account(wallet.address);
     this.handleMicrogonBalanceChange(result, wallet);
   }
 
   private async loadMicronotBalance(wallet: IWallet) {
-    const client = await this.mainchain.prunedClientPromise;
+    const client = await this.mainchain.prunedClientOrArchivePromise;
     const result = await client.query.ownership.account(wallet.address);
     this.handleMicronotBalanceChange(result, wallet);
   }

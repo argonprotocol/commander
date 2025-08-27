@@ -503,8 +503,16 @@ export class BotSyncer {
     return (Math.min(dbFramesProcessed, dbCohortsProcessed) / dbFramesExpected) * 100;
   }
 
+  private async getArgonTimestamp(atBlock: number): Promise<Date> {
+    const client = await this.mainchain.prunedClientOrArchivePromise;
+    const hash = await client.rpc.chain.getBlockHash(atBlock);
+    const clientAt = await client.at(hash);
+    const timestamp = (await clientAt.query.timestamp.now()).toNumber();
+    return new Date(timestamp);
+  }
+
   private async getCurrentTick(): Promise<number> {
-    const client = await this.mainchain.prunedClientPromise;
+    const client = await this.mainchain.prunedClientOrArchivePromise;
     const currentTick = await client.query.ticks.currentTick();
     return currentTick.toNumber();
   }

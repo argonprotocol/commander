@@ -199,11 +199,11 @@ export default class Bot implements IBotSyncStatus {
   private async areDockersSynced() {
     const bitcoinBlockNumbers = await Dockers.getBitcoinBlockNumbers();
     if (!bitcoinBlockNumbers.mainNode) return false;
-    if (bitcoinBlockNumbers.localNode < bitcoinBlockNumbers.mainNode - 1) return false;
+    if (bitcoinBlockNumbers.localNode < bitcoinBlockNumbers.mainNode) return false;
 
     const argonBlockNumbers = await Dockers.getArgonBlockNumbers();
     if (!argonBlockNumbers.mainNode) return false;
-    if (argonBlockNumbers.localNode < argonBlockNumbers.mainNode - 10) return false;
+    if (argonBlockNumbers.localNode < argonBlockNumbers.mainNode) return false;
 
     const isArgonMinerReady = await Dockers.isArgonMinerReady();
     if (!isArgonMinerReady) return false;
