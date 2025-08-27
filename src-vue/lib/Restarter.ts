@@ -5,6 +5,8 @@ import { AdvancedRestartOption } from '../interfaces/IAdvancedRestartOption';
 import { SSH } from './SSH';
 import { Server } from './Server';
 import { InstallStepKey } from '../interfaces/IConfig.ts';
+import { useConfig } from '../stores/config.ts';
+import { toRaw } from 'vue';
 
 export default class Restarter {
   private dbPromise: Promise<Db>;
@@ -62,12 +64,15 @@ export default class Restarter {
 
   public async recreateLocalDatabase() {
     const db = await this.dbPromise;
+    const config = useConfig();
+    const serverDetails = toRaw(config.serverDetails);
     await db.close();
 
     const dbPath = Db.relativePath;
     await remove(dbPath, { baseDir: BaseDirectory.AppLocalData });
     await invoke('run_db_migrations');
     await db.reconnect();
+    localStorage.setItem('ConfigRestore', JSON.stringify({ serverDetails: JSON.stringify(serverDetails) }));
   }
 
   public async restart() {

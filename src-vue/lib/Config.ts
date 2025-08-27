@@ -305,7 +305,11 @@ export class Config {
   set isServerInstalled(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._loadedData.isServerInstalled = value;
+    this._loadedData.miningAccountPreviousHistory = null;
+    this._loadedData.miningAccountHadPreviousLife = false;
     this._tryFieldsToSave(dbFields.isServerInstalled, value);
+    this._tryFieldsToSave(dbFields.miningAccountPreviousHistory, null);
+    this._tryFieldsToSave(dbFields.miningAccountHadPreviousLife, false);
   }
 
   get isWaitingForUpgradeApproval(): boolean {
