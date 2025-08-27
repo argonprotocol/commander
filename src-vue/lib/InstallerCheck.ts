@@ -36,7 +36,7 @@ export class InstallerCheck {
       this.server = new Server(connection);
 
       while (true) {
-        await this.updateInstallStatus();
+        await this.updateInstallStatus().catch(() => null);
         if (this.hasError) {
           console.log('InstallerCheck has error', this.config.installDetails.errorMessage);
           resolve();

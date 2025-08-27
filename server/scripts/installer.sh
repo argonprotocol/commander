@@ -129,13 +129,9 @@ if ! (already_ran "UbuntuCheck"); then
     command_output=$(run_command "sudo ufw app list | grep -q '^OpenSSH$' && echo 'OpenSSH found' || echo 'OpenSSH not found'")
     if echo "$command_output" | grep -q 'OpenSSH found'; then
         echo "OpenSSH is already installed, allowing OpenSSH through UFW"
-        # delete existing OpenSSH rule if it exists
-        run_command "sudo ufw delete allow OpenSSH >/dev/null 2>&1 || true"
-        run_command "sudo ufw limit OpenSSH"
+        run_command "sudo ufw allow OpenSSH"
     else
-        # delete existing SSH rule if it exists
-        run_command "sudo ufw delete allow 22/tcp >/dev/null 2>&1 || true"
-        run_command "sudo ufw limit 22/tcp"
+        run_command "sudo ufw allow 22/tcp"
     fi
 
     run_command "sudo ufw --force enable"
