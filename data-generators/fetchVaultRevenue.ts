@@ -31,7 +31,7 @@ export default async function fetchVaultRevenue() {
     }
 
     if (rebuildBaseline) {
-      const client = await mainchain.prunedClientPromise;
+      const client = await mainchain.prunedClientOrArchivePromise;
       const utxos = await client.query.bitcoinLocks.locksByUtxoId.entries();
       for (const [_utxoId, utxo] of utxos) {
         const vaultId = utxo.unwrap().vaultId.toNumber();

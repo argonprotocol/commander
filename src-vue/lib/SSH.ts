@@ -12,7 +12,7 @@ export interface ITryServerData {
 }
 
 export class SSH {
-  private static connection?: SSHConnection;
+  public static connection?: SSHConnection;
   private static config: Config;
 
   public static setConfig(config: Config): void {
@@ -27,7 +27,7 @@ export class SSH {
     return this.config.serverDetails.ipAddress;
   }
 
-  public static async getConnection(): Promise<SSHConnection> {
+  public static async getOrCreateConnection(): Promise<SSHConnection> {
     if (!this.connection) {
       await this.config.isLoadedPromise;
       this.connection = new SSHConnection({
@@ -52,6 +52,7 @@ export class SSH {
     await connection.connect();
     const server = new Server(connection);
     const walletAddress = await server.downloadAccountAddress();
+    this.connection = connection; // save the working connection
 
     if (!walletAddress)
       return {
@@ -71,7 +72,7 @@ export class SSH {
   }
 
   public static async runCommand(command: string, retries = 0): Promise<[string, number]> {
-    const connection = await this.getConnection();
+    const connection = await this.getOrCreateConnection();
     try {
       const response = await connection.runCommandWithTimeout(command, 60 * 1e3);
       return response;
@@ -86,7 +87,7 @@ export class SSH {
   }
 
   public static async uploadFile(contents: string, remotePath: string): Promise<void> {
-    const connection = await this.getConnection();
+    const connection = await this.getOrCreateConnection();
     try {
       await connection.uploadFileWithTimeout(contents, remotePath, 60 * 1e3);
     } catch (e) {
@@ -103,7 +104,7 @@ export class SSH {
     downloadPath: string;
     progressCallback: (progress: number) => void;
   }): Promise<void> {
-    const connection = await this.getConnection();
+    const connection = await this.getOrCreateConnection();
     try {
       await connection.downloadFileWithTimeout(args.remotePath, args.downloadPath, args.progressCallback, 60 * 1e3);
     } catch (e) {
@@ -119,7 +120,7 @@ export class SSH {
     remotePath: string,
     progressCallback: (progress: number) => void,
   ): Promise<void> {
-    const connection = await this.getConnection();
+    const connection = await this.getOrCreateConnection();
     await connection.uploadEmbeddedFileWithTimeout(localRelativePath, remotePath, progressCallback, 120 * 1e3);
   }
 

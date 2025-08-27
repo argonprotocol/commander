@@ -118,11 +118,11 @@
                     <template v-if="!isNull && !hours">{{ seconds }}s ago</template>
                     <template v-else-if="isNull">-- ----</template>
                   </CountupClock>
-                  <BotHistoryOverlayButton :position="'left'">
+                  <BitcoinBlocksOverlay :position="'right'">
                     <span class="flex items-center justify-center group border border-transparent hover:border-argon-200 rounded cursor-pointer w-7 h-7 relative top-0.5">
                       <BlocksIcon class="w-4.5 h-4.5 group-hover:text-argon-600" />
                     </span>
-                  </BotHistoryOverlayButton>
+                  </BitcoinBlocksOverlay>
                 </div>
               </div>
 
@@ -138,11 +138,11 @@
                     <template v-if="!isNull && !hours">{{ seconds }}s ago</template>
                     <template v-else-if="isNull">-- ----</template>
                   </CountupClock>
-                  <BotHistoryOverlayButton :position="'left'">
+                  <ArgonBlocksOverlay :position="'left'">
                     <span class="flex items-center justify-center group border border-transparent hover:border-argon-200 rounded cursor-pointer w-7 h-7 relative top-0.5">
                       <BlocksIcon class="w-4.5 h-4.5 group-hover:text-argon-600" />
                     </span>
-                  </BotHistoryOverlayButton>
+                  </ArgonBlocksOverlay>
                 </div>
               </div>
               <div class="h-full w-[1px] bg-slate-400/30"></div>
@@ -150,7 +150,7 @@
                 <div class="font-bold">Mining Bot</div>
                 <div class="flex flex-row items-center justify-center gap-x-2 whitespace-nowrap">
                   <div>Last Active</div>
-                  <CountupClock as="span" :time="lastBotActivityAt" v-slot="{ hours, minutes, seconds, isNull }" class="font-mono">
+                  <CountupClock as="span" :time="botActivityLastUpdatedAt" v-slot="{ hours, minutes, seconds, isNull }" class="font-mono">
                     <template v-if="hours">{{ hours }}h, </template>
                     <template v-if="minutes || hours">{{ minutes }}m{{ !isNull && !hours ? ', ' : '' }}</template>
                     <template v-if="!isNull && !hours">{{ seconds }}s ago</template>
@@ -376,6 +376,9 @@ import ArgonotIcon from '../../assets/resources/argonot.svg?component';
 import ArgonotLockedIcon from '../../assets/resources/argonot-locked.svg?component';
 import MiningBidIcon from '../../assets/resources/mining-bid.svg?component';
 import MiningSeatIcon from '../../assets/resources/mining-seat.svg?component';
+import { toRaw } from 'vue';
+import ArgonBlocksOverlay from '../../overlays/ArgonBlocksOverlay.vue';
+import BitcoinBlocksOverlay from '../../overlays/BitcoinBlocksOverlay.vue';
 
 const stats = useStats();
 const currency = useCurrency();
@@ -438,18 +441,18 @@ const currentFrameEndDate = Vue.computed(() => {
 });
 
 const lastBitcoinActivityAt = Vue.computed(() => {
-  const lastActivity = stats.bitcoinActivity[0];
-  return lastActivity ? dayjs.utc(lastActivity.insertedAt).local() : null;
+  const lastActivity = stats.serverState.bitcoinBlocksLastUpdatedAt;
+  return lastActivity ? dayjs.utc(lastActivity).local() : null;
 });
 
 const lastArgonActivityAt = Vue.computed(() => {
-  const lastActivity = stats.argonActivity[0];
-  return lastActivity ? dayjs.utc(lastActivity.insertedAt).local() : null;
+  const lastActivity = stats.serverState.argonBlocksLastUpdatedAt;
+  return lastActivity ? dayjs.utc(lastActivity).local() : null;
 });
 
-const lastBotActivityAt = Vue.computed(() => {
-  const lastActivity = stats.biddingActivity[0];
-  return lastActivity ? dayjs.utc(lastActivity.insertedAt).local() : null;
+const botActivityLastUpdatedAt = Vue.computed(() => {
+  const lastActivity = stats.serverState.botActivityLastUpdatedAt;
+  return lastActivity ? dayjs.utc(lastActivity).local() : null;
 });
 
 const hasNextFrame = Vue.computed(() => {
@@ -552,6 +555,7 @@ function updateFrameSliderPos(index: number) {
   sliderFrameIndex.value = index;
 
   const item = stats.frames[index];
+  if (!item) return;
   const pointPosition = chartRef.value?.getPointPosition(index);
 
   currentFrame.value = item;

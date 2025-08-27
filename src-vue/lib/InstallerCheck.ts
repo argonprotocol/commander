@@ -32,11 +32,11 @@ export class InstallerCheck {
 
   public start(): void {
     this.isCompletedPromise = new Promise(async (resolve, reject) => {
-      const connection = await SSH.getConnection();
+      const connection = await SSH.getOrCreateConnection();
       this.server = new Server(connection);
 
       while (true) {
-        await this.updateInstallStatus();
+        await this.updateInstallStatus().catch(() => null);
         if (this.hasError) {
           console.log('InstallerCheck has error', this.config.installDetails.errorMessage);
           resolve();

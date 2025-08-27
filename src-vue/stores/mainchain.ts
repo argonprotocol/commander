@@ -8,8 +8,10 @@ import {
 import { NETWORK_URL } from '../lib/Env.ts';
 import { useConfig } from './config';
 import { type IBiddingRules } from '@argonprotocol/commander-core/src/IBiddingRules.ts';
-import { useBot } from './bot.ts';
 import { ApiDecoration } from '@polkadot/api/types';
+import { botEmitter } from '../lib/Bot.ts';
+import { BotStatus } from '../lib/BotSyncer.ts';
+import { useBot } from './bot.ts';
 
 let mainchainClients: MainchainClients;
 let mainchain: Mainchain;
@@ -33,22 +35,30 @@ export function setArchiveClientUrl(url: string) {
   return clients.setArchiveClient(url);
 }
 
+function setPrunedClientToLocal() {
+  if (!mainchainClients) {
+    return;
+  }
+  const config = useConfig();
+  if (config.isLoaded) {
+    void mainchainClients.setPrunedClient(`ws://${config.serverDetails.ipAddress}:9944`);
+  }
+}
+
 export function getMainchainClients(): MainchainClients {
   if (!mainchainClients) {
     mainchainClients = new MainchainClients(NETWORK_URL);
+
     const bot = useBot();
     if (bot.isReady) {
-      try {
-        const config = useConfig();
-        if (!config.isLoaded) {
-          throw new Error('Config must be loaded before miner node client can be initialized');
-        }
-        void mainchainClients.setPrunedClient(`ws://${config.serverDetails.ipAddress}:9944`);
-      } catch (err) {
-        console.error('Failed to get mainchain client to own client:', err);
-        // Fallback to archive client if miner node client fails
-      }
+      setPrunedClientToLocal();
     }
+
+    botEmitter.on('status-changed', status => {
+      if (status === BotStatus.Ready && !mainchainClients.prunedClientPromise) {
+        setPrunedClientToLocal();
+      }
+    });
   }
 
   return mainchainClients;

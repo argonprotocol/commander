@@ -14,7 +14,7 @@ if [ -f "$OUTPUT_FILE" ]; then
         file_time=${file_time%.*}  # Remove decimal part
     fi
     time_diff=$((current_time - file_time))
-    
+
     if [ $time_diff -lt 2 ]; then
         cat "$OUTPUT_FILE"
         exit 0
@@ -24,12 +24,14 @@ fi
 ########################################################
 # Get Bitcoin block numbers
 
-local_node_block_number=$(bitcoin-cli --conf="$BITCOIN_CONFIG" getblockchaininfo | jq -r '.blocks')
+local_blockinfo=$(bitcoin-cli --conf="$BITCOIN_CONFIG" getblockchaininfo)
+local_node_block_number=$(echo "$local_blockinfo" | jq -r '.blocks')
+local_block_timestamp=$(echo "$local_blockinfo" | jq -r '.time')
 
 if [ "$BITCOIN_CHAIN" = "signet" ]; then
   main_node_block_number=$(bitcoin-cli --conf="$BITCOIN_CONFIG" getpeerinfo | jq 'map(.startingheight) | max')
 else
-  main_node_block_number=$(curl -s -m 10 -H "Content-Type: application/json" "https://blockchain.info/latestblock" | jq -r '.block_index')  
+  main_node_block_number=$(curl -s -m 10 -H "Content-Type: application/json" "https://blockchain.info/latestblock" | jq -r '.block_index')
 fi
 
 # Check if values were retrieved successfully
@@ -38,7 +40,7 @@ if [[ -z "$main_node_block_number" || -z "$local_node_block_number" ]]; then
   exit 1
 fi
 
-output="$local_node_block_number-$main_node_block_number"
+output="$local_node_block_number-$main_node_block_number-$local_block_timestamp"
 
 ########################################################
 # Save output to file and display it

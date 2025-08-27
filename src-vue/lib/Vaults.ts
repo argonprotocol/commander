@@ -97,7 +97,7 @@ export class Vaults {
   public async refreshRevenue(mainchain?: Mainchain): Promise<IAllVaultStats> {
     await this.load();
     mainchain ??= getMainchain();
-    const client = await mainchain.prunedClientPromise;
+    const client = await mainchain.prunedClientOrArchivePromise;
 
     const revenue = this.stats ?? { synchedToFrame: 0, vaultsById: {} };
     const oldestFrameToGet = revenue.synchedToFrame;

@@ -4,7 +4,7 @@ import { Storage } from './Storage.ts';
 import { AutoBidder } from './AutoBidder.ts';
 import { BlockSync } from './BlockSync.ts';
 import { Dockers } from './Dockers.ts';
-import { Accountset, type IBiddingRules, jsonParseWithBigInts, MainchainClients } from '@argonprotocol/commander-core';
+import { Accountset, type IBiddingRules, JsonExt, MainchainClients } from '@argonprotocol/commander-core';
 import { History } from './History.ts';
 import FatalError from './interfaces/FatalError.ts';
 import type { IBotSyncStatus } from './interfaces/IBotStateFile.js';
@@ -65,8 +65,18 @@ export default class Bot implements IBotSyncStatus {
     this.isStarting = true;
     console.log('STARTING BOT');
 
+    let currentFrameId = await this.currentFrameId.catch(() => 0);
+    try {
+      this.mainchainClients = new MainchainClients(this.options.archiveRpcUrl);
+      const client = await this.mainchainClients.archiveClientPromise;
+      currentFrameId = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
+    } catch (error) {
+      console.error('Error initializing archive client', error);
+      throw error;
+    }
+
     this.storage = new Storage(this.options.datadir);
-    this.history = new History(this.storage);
+    this.history = new History(this.storage, currentFrameId);
     this.history.handleStarting();
 
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
@@ -76,14 +86,6 @@ export default class Bot implements IBotSyncStatus {
 
     console.log('CONNECTING TO LOCAL RPC');
     this.errorMessage = null;
-
-    try {
-      this.mainchainClients = new MainchainClients(this.options.archiveRpcUrl);
-      await this.mainchainClients.archiveClientPromise;
-    } catch (error) {
-      console.error('Error initializing archive client', error);
-      throw error;
-    }
 
     while (!this.localClient) {
       try {
@@ -99,7 +101,7 @@ export default class Bot implements IBotSyncStatus {
     this.accountset = new Accountset({
       client: this.localClient,
       seedAccount: this.options.pair,
-      sessionKeySeedOrMnemonic: this.options.sessionMiniSecret,
+      sessionMiniSecretOrMnemonic: this.options.sessionMiniSecret,
       subaccountRange: new Array(99).fill(0).map((_, i) => i),
     });
     this.autobidder = new AutoBidder(
@@ -178,7 +180,7 @@ export default class Bot implements IBotSyncStatus {
 
   private loadBiddingRules(): IBiddingRules {
     const rawJsonString = Fs.readFileSync(this.options.biddingRulesPath, 'utf8');
-    return jsonParseWithBigInts(rawJsonString);
+    return JsonExt.parse(rawJsonString);
   }
 
   private async waitForDockerConfirmation() {
@@ -197,11 +199,11 @@ export default class Bot implements IBotSyncStatus {
   private async areDockersSynced() {
     const bitcoinBlockNumbers = await Dockers.getBitcoinBlockNumbers();
     if (!bitcoinBlockNumbers.mainNode) return false;
-    if (bitcoinBlockNumbers.localNode < bitcoinBlockNumbers.mainNode - 1) return false;
+    if (bitcoinBlockNumbers.localNode < bitcoinBlockNumbers.mainNode) return false;
 
     const argonBlockNumbers = await Dockers.getArgonBlockNumbers();
     if (!argonBlockNumbers.mainNode) return false;
-    if (argonBlockNumbers.localNode < argonBlockNumbers.mainNode - 10) return false;
+    if (argonBlockNumbers.localNode < argonBlockNumbers.mainNode) return false;
 
     const isArgonMinerReady = await Dockers.isArgonMinerReady();
     if (!isArgonMinerReady) return false;

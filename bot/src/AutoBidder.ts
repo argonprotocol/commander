@@ -111,27 +111,45 @@ export class AutoBidder {
               ? SeatReductionReason.MaxBudgetTooLow
               : SeatReductionReason.InsufficientFunds;
 
-        this.history.handleSeatFluctuation(tick, blockNumber, seatsInPlay, translatedReason, availableBalanceForBids);
+        this.history.handleSeatFluctuation({
+          tick,
+          blockNumber,
+          newMaxSeats: seatsInPlay,
+          reason: translatedReason,
+          availableMicrogons: availableBalanceForBids,
+          frameId: cohortActivationFrameId,
+        });
       },
       onBidsUpdated: args => {
         const { tick, bids, atBlockNumber } = args;
-        this.history.handleIncomingBids(tick, atBlockNumber, bids);
+        this.history.handleIncomingBids({
+          tick,
+          blockNumber: atBlockNumber,
+          nextEntrants: bids,
+          frameId: cohortActivationFrameId,
+        });
       },
       onBidsSubmitted: args => {
         const { tick, blockNumber, microgonsPerSeat, submittedCount, txFeePlusTip } = args;
-        this.history.handleBidsSubmitted(tick, blockNumber, {
+        this.history.handleBidsSubmitted({
+          tick,
+          blockNumber,
           microgonsPerSeat,
           submittedCount,
           txFeePlusTip,
+          frameId: cohortActivationFrameId,
         });
       },
       onBidsRejected: args => {
         const { tick, blockNumber, bidError, microgonsPerSeat, rejectedCount, submittedCount } = args;
-        this.history.handleBidsRejected(tick, blockNumber, {
+        this.history.handleBidsRejected({
+          tick,
+          blockNumber,
           bidError,
           microgonsPerSeat,
           rejectedCount,
           submittedCount,
+          frameId: cohortActivationFrameId,
         });
       },
     });

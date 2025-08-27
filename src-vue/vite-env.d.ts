@@ -11,3 +11,4 @@ declare module '*.vue' {
 declare const __ARGON_NETWORK_NAME__: string;
 declare const __COMMANDER_INSTANCE__: string;
 declare const __COMMANDER_ENABLE_AUTOUPDATE__: boolean;
+declare const __COMMANDER_SECURITY__: any;

@@ -2,7 +2,7 @@ import packageJson from '../../package.json';
 import { Db } from './Db';
 import { IConfig, IConfigDefaults, IConfigStringified, InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
 import { Keyring, type KeyringPair, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
-import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
+import { JsonExt } from '@argonprotocol/commander-core';
 import {
   BidAmountAdjustmentType,
   BidAmountFormulaType,
@@ -16,10 +16,10 @@ import IDeferred from '../interfaces/IDeferred';
 import { CurrencyKey } from './Currency';
 import { bip39 } from '@argonprotocol/bitcoin';
 import Countries from './Countries';
-import { invokeWithTimeout } from './tauriApi';
 import ISecurity from '../interfaces/ISecurity';
 import { getMainchain } from '../stores/mainchain';
 import { WalletBalances } from './WalletBalances';
+import { SECURITY } from './Env.ts';
 
 export class Config {
   public readonly version: string = packageJson.version;
@@ -97,12 +97,9 @@ export class Config {
     const loadedData: any = {};
     const rawData = {} as IConfigStringified & { miningAccountAddress: string };
 
-    const [dbRawData, security] = await Promise.all([
-      db.configTable.fetchAllAsObject(),
-      invokeWithTimeout('fetch_security', {}, 5e3),
-    ]);
+    const dbRawData = await db.configTable.fetchAllAsObject();
 
-    this._security = security as ISecurity;
+    this._security = SECURITY;
 
     for (const [key, value] of Object.entries(defaults)) {
       const rawValue = dbRawData[key as keyof typeof dbRawData];
@@ -112,12 +109,12 @@ export class Config {
         loadedData[key] = defaultValue;
         if (key !== dbFields.biddingRules && key !== dbFields.vaultingRules) {
           fieldsToSave.add(key);
-          rawData[key as keyof typeof rawData] = jsonStringifyWithBigInts(defaultValue, null, 2);
+          rawData[key as keyof typeof rawData] = JsonExt.stringify(defaultValue, 2);
         }
         continue;
       }
 
-      loadedData[key] = jsonParseWithBigInts(rawValue as string);
+      loadedData[key] = JsonExt.parse(rawValue as string);
       rawData[key as keyof typeof rawData] = rawValue as string;
     }
 
@@ -308,7 +305,11 @@ export class Config {
   set isServerInstalled(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._loadedData.isServerInstalled = value;
+    this._loadedData.miningAccountPreviousHistory = null;
+    this._loadedData.miningAccountHadPreviousLife = false;
     this._tryFieldsToSave(dbFields.isServerInstalled, value);
+    this._tryFieldsToSave(dbFields.miningAccountPreviousHistory, null);
+    this._tryFieldsToSave(dbFields.miningAccountHadPreviousLife, false);
   }
 
   get isWaitingForUpgradeApproval(): boolean {
@@ -433,7 +434,7 @@ export class Config {
   }
 
   private _tryFieldsToSave(field: keyof typeof dbFields, value: any) {
-    const stringifiedValue = jsonStringifyWithBigInts(value, null, 2);
+    const stringifiedValue = JsonExt.stringify(value, 2);
     if (this._rawData[field] === stringifiedValue) return;
 
     this._rawData[field] = stringifiedValue;
@@ -450,7 +451,7 @@ export class Config {
 
     const miningAccountAddress = this.miningAccount.address;
     loadedData.miningAccountAddress = miningAccountAddress;
-    stringifiedData[dbFields.miningAccountAddress] = jsonStringifyWithBigInts(miningAccountAddress, null, 2);
+    stringifiedData[dbFields.miningAccountAddress] = JsonExt.stringify(miningAccountAddress, 2);
     fieldsToSave.add(dbFields.miningAccountAddress);
 
     const walletBalances = new WalletBalances(getMainchain());
@@ -462,11 +463,7 @@ export class Config {
     const miningAccountHadPreviousLife = miningHasValue || vaultingHasValue;
 
     loadedData.miningAccountHadPreviousLife = miningAccountHadPreviousLife;
-    stringifiedData[dbFields.miningAccountHadPreviousLife] = jsonStringifyWithBigInts(
-      miningAccountHadPreviousLife,
-      null,
-      2,
-    );
+    stringifiedData[dbFields.miningAccountHadPreviousLife] = JsonExt.stringify(miningAccountHadPreviousLife, 2);
     fieldsToSave.add(dbFields.miningAccountHadPreviousLife);
   }
 
@@ -476,7 +473,7 @@ export class Config {
     walletBalances.onLoadHistoryProgress = (loadPct: number) => {
       this._miningAccountPreviousHistoryLoadPct = loadPct;
     };
-    const historyItems = await walletBalances.loadHistory(this.miningAccount, this.miningSessionMiniSecret);
+    const historyItems = await walletBalances.loadHistory(this.miningAccount);
     const frameIdsProcessed = historyItems?.map(x => x.frameId) || [];
     const oldestFrameIdProcessed = frameIdsProcessed.length ? Math.min(...frameIdsProcessed) : 0;
     if (historyItems.length === 1 && !historyItems[0].seats.length) {

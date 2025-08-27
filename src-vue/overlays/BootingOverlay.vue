@@ -32,8 +32,8 @@
           }"
           class="absolute flex flex-col w-6/12 bg-white border border-black/40 px-7 pb-8 rounded-lg pointer-events-auto shadow-xl overflow-scroll"
         >
-          <h2 
-            @mousedown="draggable.onMouseDown($event)" 
+          <h2
+            @mousedown="draggable.onMouseDown($event)"
             :style="{ cursor: draggable.isDragging ? 'grabbing' : 'grab' }"
             class="text-2xl font-bold text-slate-800/70 border-b border-slate-300 pt-6 pb-3 mb-3"
           >
@@ -67,6 +67,9 @@ import ProgressBar from '../components/ProgressBar.vue';
 import AlertIcon from '../assets/alert.svg?component';
 import { useConfig } from '../stores/config';
 import Draggable from './helpers/Draggable.ts';
+import { ConfigServerDetailsSchema, IConfig } from '../interfaces/IConfig.ts';
+import { SSH } from '../lib/SSH.ts';
+import { JsonExt } from '@argonprotocol/commander-core';
 
 const isOpen = Vue.ref(true);
 const isRetrying = Vue.ref(false);
@@ -75,7 +78,31 @@ const config = useConfig();
 const draggable = Vue.reactive(new Draggable());
 
 const syncErrorType = Vue.ref<string | null>(null);
+const toRestore = localStorage.getItem('ConfigRestore');
+localStorage.removeItem('ConfigRestore');
 
+async function applyRestoredServer(details: string) {
+  try {
+    const restoreData = JSON.parse(details) as Record<keyof IConfig, string>;
+    if (restoreData.serverDetails) {
+      const parseResult = ConfigServerDetailsSchema.safeParse(JsonExt.parse(restoreData.serverDetails));
+      console.log(parseResult);
+      if (!parseResult.success) return;
+
+      const serverDetails = parseResult.data;
+      await SSH.tryConnection(serverDetails, config.security.sshPrivateKey);
+      config.isServerUpToDate = false;
+      config.serverDetails = serverDetails;
+      await config.save();
+    }
+  } catch (err) {
+    console.error('Error restoring config from localStorage:', err);
+  }
+}
+
+if (toRestore) {
+  void applyRestoredServer(toRestore);
+}
 async function retry() {
   isRetrying.value = true;
   // stats.retrySync();

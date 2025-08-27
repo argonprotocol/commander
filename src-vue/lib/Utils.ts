@@ -1,5 +1,5 @@
 import { u8aToHex } from '@argonprotocol/mainchain';
-import { JsonExt, jsonParseWithBigIntsEnhanced, jsonStringifyWithBigIntsEnhanced } from '@argonprotocol/commander-core';
+import { JsonExt } from '@argonprotocol/commander-core';
 import { ed25519DeriveHard, keyExtractSuri, mnemonicToMiniSecret } from '@polkadot/util-crypto';
 import { IFieldTypes } from './db/BaseTable.ts';
 
@@ -8,7 +8,7 @@ export function isInt(n: any) {
   return n % 1 === 0;
 }
 
-export function abreviateAddress(address: string, length = 4) {
+export function abbreviateAddress(address: string, length = 4) {
   return address.slice(0, 6) + '...' + address.slice(-length);
 }
 
@@ -48,13 +48,9 @@ export function convertBigIntStringToNumber(bigIntStr: string | undefined): bigi
   return BigInt(bigIntStr.slice(0, -1));
 }
 
-export function isBigIntString(value: any): boolean {
-  return typeof value === 'string' && /^\d+n$/.test(value);
-}
-
 export function toSqlParams(
-  params: (bigint | number | string | Uint8Array | boolean | object | undefined)[],
-): (string | number | Uint8Array | null)[] {
+  params: (bigint | number | string | Uint8Array | Date | boolean | object | undefined)[],
+): (string | number | Uint8Array | null | Date)[] {
   return params.map(param => {
     if (param === undefined || param === null) {
       return null; // SQLite uses null for undefined values
@@ -63,8 +59,8 @@ export function toSqlParams(
       return toSqliteBoolean(param);
     } else if (typeof param === 'bigint') {
       return param.toString();
-    } else if (typeof param === 'object') {
-      return jsonStringifyWithBigIntsEnhanced(param);
+    } else if (typeof param === 'object' && !(param instanceof Uint8Array) && !(param instanceof Date)) {
+      return JsonExt.stringify(param);
     }
     return param;
   });
@@ -143,9 +139,7 @@ export function convertFromSqliteFields<T = any>(obj: any, fields: Partial<Recor
         obj[fieldName] = fromSqliteBigInt(value);
       } else if (type === 'boolean') {
         obj[fieldName] = fromSqliteBoolean(value);
-      } else if (type === 'bigintJson') {
-        obj[fieldName] = jsonParseWithBigIntsEnhanced(value);
-      } else if (type === 'json') {
+      } else if (type === 'bigintJson' || type === 'json') {
         obj[fieldName] = JsonExt.parse(value);
       } else if (type === 'date') {
         obj[fieldName] = new Date(value);

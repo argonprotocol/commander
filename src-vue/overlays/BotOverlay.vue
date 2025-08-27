@@ -33,7 +33,7 @@
             <div v-if="isLoaded && !wantsToImportExisting" class="flex flex-col grow relative w-full">
               <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
                 Commander uses an automated bidding bot to maximize your chance of winning seats. This screen allows you to
-                configure the rules for how your bot should make decisions and place bids. 
+                configure the rules for how your bot should make decisions and place bids.
                 <template v-if="!config.isServerReadyToInstall && !config.isServerInstalled">
                   You can also  <span @click="wantsToImportExisting = true" class="text-argon-600/80 hover:text-argon-600 cursor-pointer font-bold">import from an existing cloud machine</span>.
                 </template>
@@ -274,7 +274,7 @@
                 <div class="text-md text-gray-600/80">
                   <div class="mb-4">
                     This will overwrite your current settings with configuration data from the server located at the IP address you
-                    enter below. This server will also be used to run your bot, and it must be accessible through the same 
+                    enter below. This server will also be used to run your bot, and it must be accessible through the same
                     SSH creditionals connected to this app.
                   </div>
                   <div class="pr-5">
@@ -339,7 +339,7 @@ import {
   SeatGoalType,
 } from '@argonprotocol/commander-core/src/IBiddingRules.ts';
 import { bigIntAbs } from '@argonprotocol/commander-core/src/utils';
-import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
+import { JsonExt } from '@argonprotocol/commander-core';
 import InputArgon from '../components/InputArgon.vue';
 import NeedMoreCapitalHover from './bot/NeedMoreCapitalHover.vue';
 import Importer from '../lib/Importer';
@@ -426,7 +426,7 @@ function cancelOverlay() {
   hideTooltip();
 
   if (previousBiddingRules) {
-    config.biddingRules = jsonParseWithBigInts(previousBiddingRules) as IBiddingRules;
+    config.biddingRules = JsonExt.parse<IBiddingRules>(previousBiddingRules);
   }
 }
 
@@ -539,7 +539,7 @@ basicEmitter.on('openBotOverlay', async () => {
 
   isBrandNew.value = !config.hasSavedBiddingRules;
   calculatorData.isInitializedPromise.then(() => {
-    previousBiddingRules = jsonStringifyWithBigInts(config.biddingRules);
+    previousBiddingRules = JsonExt.stringify(config.biddingRules);
     if (isBrandNew.value) {
       const minimumCapitalNeeded = calculator.maximumBidAmount * BigInt(rules.value.seatGoalCount);
       const minimumCapitalNeededRoundedUp = Math.ceil(Number(minimumCapitalNeeded) / 1_000_000) * 1_000_000;

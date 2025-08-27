@@ -32,7 +32,7 @@ it('can backfill sync data', async () => {
   const accountset = new Accountset({
     client,
     seedAccount: sudo(),
-    sessionKeySeedOrMnemonic: mnemonicGenerate(),
+    sessionMiniSecretOrMnemonic: mnemonicGenerate(),
     subaccountRange: new Array(99).fill(0).map((_, i) => i),
   });
   const mainchainClients = new MainchainClients(clientAddress);
@@ -63,6 +63,7 @@ it('can backfill sync data', async () => {
     return {
       localNode: 0,
       mainNode: 0,
+      localNodeBlockTime: 0,
     };
   });
   const finalized = await client.rpc.chain.getFinalizedHead();

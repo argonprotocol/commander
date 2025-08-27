@@ -58,5 +58,8 @@ RUN chmod +x /usr/local/bin/latestblocks.sh
 COPY syncstatus.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/syncstatus.sh
 
+COPY recentblocks.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/recentblocks.sh
+
 ENTRYPOINT [ "./entrypoint.sh" ]
 CMD [ "/usr/local/bin/bitcoind", "-conf=/etc/bitcoin/bitcoin.conf" ]

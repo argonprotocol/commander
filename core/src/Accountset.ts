@@ -48,14 +48,14 @@ export class Accountset {
     return this.accountRegistry.namedAccounts;
   }
 
-  private readonly sessionKeySeedOrMnemonic: string | undefined;
+  private readonly sessionMiniSecretOrMnemonic: string | undefined;
 
   constructor(
     options: {
       client: ArgonClient;
       accountRegistry?: AccountRegistry;
       subaccountRange?: SubaccountRange;
-      sessionKeySeedOrMnemonic?: string;
+      sessionMiniSecretOrMnemonic?: string;
       name?: string;
     } & (
       | { seedAccount: KeyringPair }
@@ -75,7 +75,7 @@ export class Accountset {
       this.txSubmitterPair = options.txSubmitter;
       this.seedAddress = options.seedAddress;
     }
-    this.sessionKeySeedOrMnemonic = options.sessionKeySeedOrMnemonic;
+    this.sessionMiniSecretOrMnemonic = options.sessionMiniSecretOrMnemonic;
     this.accountRegistry = options.accountRegistry ?? AccountRegistry.factory(options.name);
     this.client = options.client;
     const defaultRange = options.subaccountRange ?? getDefaultSubaccountRange();
@@ -85,6 +85,20 @@ export class Accountset {
       this.subAccountsByAddress[pair.address] = { pair, index: i };
       this.accountRegistry.register(pair.address, `${this.accountRegistry.me}//${i}`);
     }
+  }
+
+  public static getSubaccounts(
+    seedAccount: KeyringPair,
+    range: SubaccountRange,
+  ): { [address: string]: { index: number; pair: KeyringPair } } {
+    const subAccountsByAddress: {
+      [address: string]: { index: number; pair: KeyringPair };
+    } = {};
+    for (const i of range) {
+      const pair = seedAccount.derive(`//${i}`);
+      subAccountsByAddress[pair.address] = { pair, index: i };
+    }
+    return subAccountsByAddress;
   }
 
   public async submitterBalance(blockHash?: Uint8Array): Promise<bigint> {
@@ -354,7 +368,7 @@ export class Accountset {
     seal: { privateKey: string; publicKey: string; rawPublicKey: Uint8Array };
   } {
     const version = keysVersion ?? 0;
-    const seed = this.sessionKeySeedOrMnemonic;
+    const seed = this.sessionMiniSecretOrMnemonic;
     if (!seed) {
       throw new Error('Keys Mnemonic must be set to register keys.');
     }

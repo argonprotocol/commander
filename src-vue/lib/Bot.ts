@@ -11,9 +11,7 @@ import { Server } from './Server';
 export type IBotEmitter = {
   'updated-cohort-data': number;
   'updated-bids-data': IBidsFile['winningBids'];
-  'updated-bitcoin-activity': void;
-  'updated-argon-activity': void;
-  'updated-bidding-activity': void;
+  'updated-server-state': void;
   'status-changed': BotStatus;
 };
 
@@ -58,7 +56,7 @@ export class Bot {
   }
 
   public async restart(): Promise<void> {
-    const server = new Server(await SSH.getConnection());
+    const server = new Server(await SSH.getOrCreateConnection());
     this.botSyncer.isPaused = true;
     await server.stopBotDocker();
     await server.startBotDocker();

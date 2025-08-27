@@ -224,7 +224,7 @@ export class CohortBidder {
     }
 
     console.log(
-      `Checking bids for cohort ${this.cohortStartingFrameId} at block ${this.latestBlockNumber}, Still trying for seats: ${this.subaccounts.length}`,
+      `Checking bids for cohort ${this.cohortStartingFrameId} at block ${this.latestBlockNumber}, Still trying for seats: ${this.subaccounts.length}. Currently winning ${winningBids.length} bids.`,
     );
 
     const winningAddresses = new Set(winningBids.map(x => x.address));
@@ -308,6 +308,9 @@ export class CohortBidder {
     const accountsToUse = [...this.subaccounts];
     // 3. if we have more seats than we can afford, we need to remove some
     if (accountsToUse.length > seatsInBudget) {
+      console.log(
+        `Can only afford ${seatsInBudget} seats with next bid of ${formatArgons(nextBid)} at block #${blockNumber}`,
+      );
       this.safeRecordParamsAdjusted({
         tick: bidsAtTick,
         blockNumber,
@@ -333,6 +336,9 @@ export class CohortBidder {
       // only keep the number of accounts we can afford
       accountsToUse.length = seatsInBudget;
     }
+    console.log(
+      `Accounts still in play for bids ${accountsToUse.map(x => x.index).join()} vs winning ${winningBids.length}`,
+    );
     if (accountsToUse.length > winningBids.length) {
       this.pendingRequest = this.submitBids(nextBid, accountsToUse);
     }

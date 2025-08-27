@@ -276,7 +276,7 @@ const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
 
-const ipAddress = Vue.ref('');
+const ipAddress = Vue.ref(config.serverDetails.ipAddress ?? '');
 const hasIpAddressError = Vue.ref(false);
 const hasServerDetailsError = Vue.ref(false);
 

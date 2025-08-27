@@ -122,12 +122,12 @@
               <BitcoinQrCode class="mb-3 h-44 w-44" :size="200" :bytes="releasedTxBytes" v-if="releasedTxBytes" />
               <CopyToClipboard :content="releasedTxHex" class="relative mr-5 mb-3 cursor-pointer">
                 <span class="opacity-80">
-                  {{ abreviateAddress(releasedTxHex, 10) }}
+                  {{ abbreviateAddress(releasedTxHex, 10) }}
                   <CopyIcon class="ml-1 inline-block h-4 w-4" />
                 </span>
                 <template #copied>
                   <div class="pointer-events-none absolute top-0 left-0 h-full w-full">
-                    {{ abreviateAddress(releasedTxHex, 10) }}
+                    {{ abbreviateAddress(releasedTxHex, 10) }}
                     <CopyIcon class="ml-1 inline-block h-4 w-4" />
                   </div>
                 </template>
@@ -144,7 +144,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, onUnmounted } from 'vue';
-import { abreviateAddress } from '../lib/Utils';
+import { abbreviateAddress } from '../lib/Utils';
 import { IBitcoinLockRecord } from '../lib/db/BitcoinLocksTable.ts';
 import { useBitcoinLocks } from '../stores/bitcoin.ts';
 import { useMyVault, useVaults } from '../stores/vaults.ts';

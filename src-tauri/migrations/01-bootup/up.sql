@@ -10,34 +10,21 @@ BEGIN
   UPDATE Config SET updatedAt = CURRENT_TIMESTAMP WHERE key = NEW.key;
 END;
 
-CREATE TABLE ArgonActivities (
-  frameId INTEGER NOT NULL,
-  localNodeBlockNumber INTEGER NOT NULL,
-  mainNodeBlockNumber INTEGER NOT NULL,
-  insertedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (localNodeBlockNumber, mainNodeBlockNumber)
-  -- FOREIGN KEY (frameId) REFERENCES frames(id)
-);
-
-CREATE TABLE BitcoinActivities (
-  frameId INTEGER NOT NULL,
-  localNodeBlockNumber INTEGER NOT NULL,
-  mainNodeBlockNumber INTEGER NOT NULL,
-  insertedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (localNodeBlockNumber, mainNodeBlockNumber)
-  -- FOREIGN KEY (frameId) REFERENCES frames(id)
-);
-
-CREATE TABLE BotActivities (
-  id INTEGER NOT NULL,
-  tick INTEGER NOT NULL,
-  blockNumber INTEGER,
-  frameId INTEGER,
-  type TEXT NOT NULL,
-  data TEXT NOT NULL,
-  insertedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
-  -- FOREIGN KEY (frameId) REFERENCES frames(id)
+CREATE TABLE ServerState (
+  id INTEGER NOT NULL PRIMARY KEY,
+  latestFrameId INTEGER NOT NULL,
+  argonBlocksLastUpdatedAt DATETIME,
+  argonLocalNodeBlockNumber INTEGER NOT NULL,
+  argonMainNodeBlockNumber INTEGER NOT NULL,
+  bitcoinBlocksLastUpdatedAt DATETIME,
+  bitcoinLocalNodeBlockNumber INTEGER NOT NULL,
+  bitcoinMainNodeBlockNumber INTEGER NOT NULL,
+  botActivities JSON,
+  botActivityLastUpdatedAt DATETIME,
+  botActivityLastBlockNumber INTEGER,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+  -- FOREIGN KEY (latestFrameId) REFERENCES frames(id)
 );
 
 CREATE TABLE CohortFrames (

@@ -9,7 +9,7 @@ import {
 } from '@argonprotocol/commander-bot';
 import { BotServerError, BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors.ts';
 import { SSH } from './SSH.ts';
-import { JsonExt } from '@argonprotocol/commander-core';
+import { type IBitcoinBlockMeta, JsonExt } from '@argonprotocol/commander-core';
 import { fetch } from '@tauri-apps/plugin-http';
 
 export class BotFetch {
@@ -105,6 +105,11 @@ export class BotFetch {
   public static async fetchBitcoinBlockchainStatus(): Promise<IBlockNumbers> {
     const { data } = await this.botFetch<IBlockNumbers>(`/bitcoin-blockchain-status`);
     return { localNode: data.localNode, mainNode: data.mainNode };
+  }
+
+  public static async fetchLatestBitcoinBlocks(): Promise<IBitcoinBlockMeta[]> {
+    const { data } = await this.botFetch<IBitcoinBlockMeta[]>(`/bitcoin-recent-blocks`);
+    return data;
   }
 
   public static async fetchHistory(): Promise<IHistoryFile> {

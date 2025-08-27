@@ -368,7 +368,7 @@ export class BlockSync {
       if (!checkedExchangeRateThisFrame || !checkedExchangeRateThisHour) {
         this.lastExchangeRateDate = new Date();
         this.lastExchangeRateFrameId = currentFrameId;
-        const microgonExchangeRateTo = await this.mainchain.fetchMicrogonExchangeRatesTo(blockMeta.hash);
+        const microgonExchangeRateTo = await this.mainchain.fetchMicrogonExchangeRatesTo(api);
         x.microgonToUsd.push(microgonExchangeRateTo.USD);
         x.microgonToBtc.push(microgonExchangeRateTo.BTC);
         x.microgonToArgonot.push(microgonExchangeRateTo.ARGNOT);

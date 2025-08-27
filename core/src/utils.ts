@@ -1,4 +1,5 @@
 import BigNumber from 'bignumber.js';
+
 export { formatArgons } from '@argonprotocol/mainchain';
 
 export function formatArgonots(x: bigint | number): number {
@@ -39,76 +40,6 @@ export function convertBigIntStringToNumber(bigIntStr: string | undefined): bigi
   if (!bigIntStr) return 0n;
   // The string is formatted as "1234567890n"
   return BigInt(bigIntStr.slice(0, -1));
-}
-
-export function isBigIntString(value: any): boolean {
-  return typeof value === 'string' && /^\d+n$/.test(value);
-}
-
-export function jsonStringifyWithBigInts(
-  data: any,
-  replacerFn: null | ((key: string, value: any) => any) = null,
-  space: number | string | undefined = undefined,
-): string {
-  return JSON.stringify(
-    data,
-    (_key, value) => {
-      if (typeof value === 'bigint') {
-        value = value.toString() + 'n';
-      }
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return replacerFn ? replacerFn(_key, value) : value;
-    },
-    space,
-  );
-}
-
-export function jsonStringifyWithBigIntsEnhanced(
-  data: any,
-  replacerFn: null | ((key: string, value: any) => any) = null,
-  space: number | string | undefined = undefined,
-): string {
-  return JSON.stringify(
-    data,
-    (_key, value) => {
-      if (typeof value === 'bigint') {
-        value = value.toString() + 'n';
-      }
-      if (value instanceof Uint8Array) {
-        return {
-          type: 'Buffer',
-          data: Array.from(value), // Convert Uint8Array to an array of numbers
-        };
-      }
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return replacerFn ? replacerFn(_key, value) : value;
-    },
-    space,
-  );
-}
-
-export function jsonParseWithBigInts<T = any>(data: string): T {
-  return JSON.parse(data, (_key, value) => {
-    if (isBigIntString(value)) {
-      return convertBigIntStringToNumber(value);
-    }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return value;
-  }) as T;
-}
-
-export function jsonParseWithBigIntsEnhanced(data: string): any {
-  return JSON.parse(data, (_key, value) => {
-    if (isBigIntString(value)) {
-      return convertBigIntStringToNumber(value);
-    }
-
-    if (value && typeof value === 'object' && value.type === 'Buffer' && Array.isArray(value.data)) {
-      return Uint8Array.from(value.data); // Convert array of numbers back to Uint8Array
-    }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return value;
-  });
 }
 
 /**
