@@ -26,6 +26,7 @@ export class Config {
 
   public isLoaded: boolean;
   public isLoadedPromise: Promise<void>;
+  public hasDbMigrationError: boolean;
 
   private _loadedDeferred!: IDeferred<void>;
 
@@ -33,7 +34,6 @@ export class Config {
   private _fieldsToSave: Set<string> = new Set();
   private _dbPromise: Promise<Db>;
   private _security!: ISecurity;
-  private _dbData!: IConfigStringified;
   private _loadedData!: IConfig;
   private _rawData = {} as IConfigStringified;
   private _masterAccount!: KeyringPair;
@@ -47,6 +47,7 @@ export class Config {
     this._loadedDeferred = createDeferred<void>();
     this.isLoadedPromise = this._loadedDeferred.promise;
     this.isLoaded = false;
+    this.hasDbMigrationError = false;
 
     this._dbPromise = dbPromise;
     this._security = {
@@ -98,6 +99,10 @@ export class Config {
     const rawData = {} as IConfigStringified & { miningAccountAddress: string };
 
     const dbRawData = await db.configTable.fetchAllAsObject();
+
+    if (db.hasMigrationError) {
+      this.hasDbMigrationError = true;
+    }
 
     this._security = SECURITY;
 

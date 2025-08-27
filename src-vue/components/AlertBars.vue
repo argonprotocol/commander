@@ -1,8 +1,23 @@
 <!-- prettier-ignore -->
 <template>
+  <div
+    DbMigrationError
+    v-if="config.hasDbMigrationError"
+    class="group flex flex-row items-center gap-x-3 bg-argon-error hover:bg-argon-error-darker text-white px-3.5 py-2 border-b border-argon-error-darkest"
+    style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
+  >
+    <AlertIcon class="w-4 h-4 text-white relative left-1 inline-block" />
+    <div class="font-bold grow">DATABASE CORRUPTION. Your database has become corrupted, and requires a hard reset.</div>
+    <span
+      @click="restartDatabase"
+      class="cursor-pointer font-bold inline-block rounded-full bg-argon-error-darkest/60 group-hover:bg-argon-error-darkest hover:bg-black/80 px-3"
+    >
+      Hard Reset
+    </span>
+  </div>
   <!-- <div
     InsufficientFunds
-    v-if="hasInsufficientFunds"
+    v-else-if="hasInsufficientFunds"
     @click="openFundMiningWalletOverlay"
     class="group flex flex-row items-center gap-x-3 cursor-pointer bg-argon-error hover:bg-argon-error-darker text-white px-3.5 py-2 border-b border-argon-error-darkest"
     style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
@@ -70,11 +85,14 @@ import AlertIcon from '../assets/alert.svg?component';
 import basicEmitter from '../emitters/basicEmitter';
 import { useStats } from '../stores/stats';
 import { useBot } from '../stores/bot';
+import Restarter from '../lib/Restarter';
+import { getDbPromise } from '../stores/helpers/dbPromise';
 
 const stats = useStats();
 const config = useConfig();
 const bot = useBot();
 const wallets = useWallets();
+const dbPromise = getDbPromise();
 
 const hasLowFunds = Vue.computed(() => {
   if (!wallets.isLoaded) return false;
@@ -117,5 +135,11 @@ function openFundMiningWalletOverlay() {
 
 function openBotOverlay() {
   basicEmitter.emit('openBotOverlay');
+}
+
+async function restartDatabase() {
+  const restarter = new Restarter(dbPromise);
+  await restarter.recreateLocalDatabase();
+  await restarter.restart();
 }
 </script>
