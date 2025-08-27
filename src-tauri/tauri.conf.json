@@ -15,8 +15,8 @@
       {
         "title": "Argon Commander",
         "hiddenTitle": true,
-        "width": 1250,
-        "height": 850,
+        "width": 1400,
+        "height": 1000,
         "decorations": false,
         "resizable": true,
         "alwaysOnTop": false,

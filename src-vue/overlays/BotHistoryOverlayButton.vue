@@ -168,7 +168,7 @@ function extractMessage(activity: IBotActivityRecord): string {
   return activity.type;
 }
 
-function extractBidType(activity: IBotActivityRecord): 'bidUp' | 'bidDown' | 'failure' | 'success' | 'unknown' {
+function extractBidType(activity: IBotActivity): 'bidUp' | 'bidDown' | 'failure' | 'success' | 'unknown' {
   const successTypes = [
     BotActivityType.Starting,
     BotActivityType.DockersConfirmed,

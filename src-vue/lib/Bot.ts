@@ -11,9 +11,7 @@ import { Server } from './Server';
 export type IBotEmitter = {
   'updated-cohort-data': number;
   'updated-bids-data': IBidsFile['winningBids'];
-  'updated-bitcoin-activity': void;
-  'updated-argon-activity': void;
-  'updated-bidding-activity': void;
+  'updated-server-state': void;
   'status-changed': BotStatus;
 };
 

@@ -85,6 +85,12 @@ app.get('/bitcoin-blockchain-status', async (_req, res) => {
   jsonExt(status, res);
 });
 
+app.get('/bitcoin-recent-blocks', async (_req, res) => {
+  if (await hasError(res)) return;
+  const status = await Dockers.getBitcoinLatestBlocks();
+  jsonExt(status, res);
+});
+
 app.get('/bids', async (_req, res) => {
   if (await hasError(res)) return;
   if (await isStarting(res)) return;

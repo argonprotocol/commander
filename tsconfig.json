@@ -21,7 +21,7 @@
     "noFallthroughCasesInSwitch": true,
 
     "paths": {
-      "@argonprotocol/core": ["./core/src/index.ts"],
+      "@argonprotocol/commander-core": ["./core/src/index.ts"],
       "@argonprotocol/cli": ["./cli/src/index.ts"],
       "@argonprotocol/bot": ["./bot/src/index.ts"]
     }

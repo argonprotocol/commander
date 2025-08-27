@@ -51,9 +51,11 @@ export class BotSyncer {
   }
 
   public async load(): Promise<void> {
+    console.log('BotSyncer: Loading...');
     await this.config.isLoadedPromise;
     await this.installer.isLoadedPromise;
 
+    console.log('BotSyncer: Running...');
     void this.runContinuously();
   }
 
@@ -77,9 +79,7 @@ export class BotSyncer {
     try {
       console.log('BotSyncer: Running sync...');
       await this.updateBotState();
-      await this.syncArgonActivity();
-      await this.syncBitcoinActivity();
-      await this.syncBotActivity();
+      await this.syncServerState();
       await this.syncCurrentBids();
 
       if (!this.isSyncingThePast) {
@@ -178,6 +178,13 @@ export class BotSyncer {
     const yesterdaysFrameId = currentFrameId - 1;
     const framesToSync = currentFrameId - oldestFrameIdToSync + 1;
 
+    console.log('Syncing the past frames...', {
+      oldestFrameIdToSync,
+      latestFrameIdProcessed,
+      currentFrameId,
+      framesToSync,
+    });
+
     const promise = new Promise<void>(async resolve => {
       for (let frameId = latestFrameIdProcessed; frameId <= currentFrameId; frameId++) {
         await this.syncDbFrame(frameId);
@@ -256,21 +263,22 @@ export class BotSyncer {
     let microgonsMintedTotal = 0n;
     let microgonFeesCollectedTotal = 0n;
 
-    console.log('cohortEarningsEntries', cohortEarningsEntries);
-    for (const [cohortActivationFrameIdStr, cohortEarningsDuringFrame] of cohortEarningsEntries) {
-      const cohortActivationFrameId = parseInt(cohortActivationFrameIdStr, 10);
-      if (cohortActivationFrameId < this.config.oldestFrameIdToSync) continue;
-      if (!processedCohorts.has(cohortActivationFrameId)) {
-        await this.syncDbCohort(cohortActivationFrameId);
-        processedCohorts.add(cohortActivationFrameId);
-      }
-      await this.syncDbCohortFrame(cohortActivationFrameId, frameId, cohortEarningsDuringFrame);
-      blocksMinedTotal += cohortEarningsDuringFrame.blocksMinedTotal;
-      micronotsMinedTotal += cohortEarningsDuringFrame.micronotsMinedTotal;
-      microgonsMinedTotal += cohortEarningsDuringFrame.microgonsMinedTotal;
-      microgonsMintedTotal += cohortEarningsDuringFrame.microgonsMintedTotal;
-      microgonFeesCollectedTotal += cohortEarningsDuringFrame.microgonFeesCollectedTotal;
-    }
+    await Promise.all(
+      cohortEarningsEntries.map(async ([cohortActivationFrameIdStr, cohortEarningsDuringFrame]) => {
+        const cohortActivationFrameId = parseInt(cohortActivationFrameIdStr, 10);
+        if (cohortActivationFrameId < this.config.oldestFrameIdToSync) return;
+        if (!processedCohorts.has(cohortActivationFrameId)) {
+          await this.syncDbCohort(cohortActivationFrameId);
+          processedCohorts.add(cohortActivationFrameId);
+        }
+        await this.syncDbCohortFrame(cohortActivationFrameId, frameId, cohortEarningsDuringFrame);
+        blocksMinedTotal += cohortEarningsDuringFrame.blocksMinedTotal;
+        micronotsMinedTotal += cohortEarningsDuringFrame.micronotsMinedTotal;
+        microgonsMinedTotal += cohortEarningsDuringFrame.microgonsMinedTotal;
+        microgonsMintedTotal += cohortEarningsDuringFrame.microgonsMintedTotal;
+        microgonFeesCollectedTotal += cohortEarningsDuringFrame.microgonFeesCollectedTotal;
+      }),
+    );
 
     const { seatCountActive, seatCostTotalFramed } = await this.db.cohortsTable.fetchActiveSeatData(
       frameId,
@@ -425,57 +433,59 @@ export class BotSyncer {
     return bidsFile;
   }
 
-  private async syncArgonActivity(): Promise<void> {
-    const latestBlockNumbers = this.botState.argonBlockNumbers;
-    const lastArgonActivity = await this.db.argonActivitiesTable.latest();
+  private async syncServerState(): Promise<void> {
+    const latestBitcoinBlockNumbers = this.botState.bitcoinBlockNumbers;
+    const latestArgonBlockNumbers = this.botState.argonBlockNumbers;
+    const savedState = await this.db.serverStateTable.get();
+    const history = await BotFetch.fetchHistory().then(x => {
+      x.activities.sort((a, b) => b.id - a.id);
+      return x;
+    });
 
-    const localhostMatches = lastArgonActivity?.localNodeBlockNumber === latestBlockNumbers.localNode;
-    const mainchainMatches = lastArgonActivity?.mainNodeBlockNumber === latestBlockNumbers.mainNode;
+    const hasBitcoinChanges =
+      savedState?.bitcoinLocalNodeBlockNumber !== latestBitcoinBlockNumbers.localNode ||
+      savedState?.bitcoinMainNodeBlockNumber !== latestBitcoinBlockNumbers.mainNode;
+    const hasArgonChanges =
+      savedState?.argonLocalNodeBlockNumber !== latestArgonBlockNumbers.localNode ||
+      savedState?.argonMainNodeBlockNumber !== latestArgonBlockNumbers.mainNode;
+    const lastActivityTick = history.activities.at(0)?.tick;
+    const lastActivityDate = lastActivityTick ? new Date(MiningFrames.tickMillis * lastActivityTick) : null;
+    const hasBotActivityChanges =
+      savedState?.botActivities?.length !== history.activities.length ||
+      lastActivityDate !== savedState?.botActivityLastUpdatedAt;
 
-    if (!localhostMatches || !mainchainMatches) {
-      await this.db.argonActivitiesTable.insert(
-        this.botState.currentFrameId,
-        latestBlockNumbers.localNode,
-        latestBlockNumbers.mainNode,
-      );
+    if (!hasBotActivityChanges && !hasBitcoinChanges && !hasArgonChanges) {
+      return;
+    }
+    let bitcoinLastUpdatedAt = savedState?.bitcoinBlocksLastUpdatedAt;
+    if (hasBitcoinChanges) {
+      bitcoinLastUpdatedAt = new Date(this.botState.bitcoinBlockNumbers.localNodeBlockTime * 1000);
+    }
+    let argonBlocksLastUpdatedAt = savedState?.botActivityLastUpdatedAt;
+    if (hasArgonChanges) {
+      try {
+        argonBlocksLastUpdatedAt = await this.getArgonTimestamp(latestArgonBlockNumbers.localNode);
+      } catch (e) {
+        console.error('Error fetching argon block timestamp:', e);
+        argonBlocksLastUpdatedAt = new Date();
+      }
     }
 
-    this.botFns.onEvent('updated-argon-activity');
-  }
+    await this.db.serverStateTable.insertOrUpdateBlocks({
+      latestFrameId: this.botState.currentFrameId,
+      argonBlocksLastUpdatedAt,
+      argonLocalNodeBlockNumber: this.botState.argonBlockNumbers.localNode,
+      argonMainNodeBlockNumber: this.botState.argonBlockNumbers.mainNode,
+      bitcoinLocalNodeBlockNumber: latestBitcoinBlockNumbers.localNode,
+      bitcoinMainNodeBlockNumber: latestBitcoinBlockNumbers.mainNode,
+      bitcoinBlocksLastUpdatedAt: bitcoinLastUpdatedAt,
+      botActivities: history.activities,
+      botActivityLastUpdatedAt: lastActivityDate || savedState?.botActivityLastUpdatedAt || new Date(),
+      botActivityLastBlockNumber:
+        (history.activities.at(-1)?.blockNumber || savedState?.botActivityLastBlockNumber) ?? 0,
+    });
 
-  private async syncBitcoinActivity(): Promise<void> {
-    const latestBlockNumbers = this.botState.bitcoinBlockNumbers;
-    const savedActivity = await this.db.bitcoinActivitiesTable.latest();
-
-    const localhostMatches = savedActivity?.localNodeBlockNumber === latestBlockNumbers.localNode;
-    const mainchainMatches = savedActivity?.mainNodeBlockNumber === latestBlockNumbers.mainNode;
-
-    if (!localhostMatches || !mainchainMatches) {
-      await this.db.bitcoinActivitiesTable.insert(
-        this.botState.currentFrameId,
-        latestBlockNumbers.localNode,
-        latestBlockNumbers.mainNode,
-      );
-    }
-
-    this.botFns.onEvent('updated-bitcoin-activity');
-  }
-
-  private async syncBotActivity(): Promise<void> {
-    const history = await BotFetch.fetchHistory();
-
-    for (const [index, activity] of history.activities.entries()) {
-      await this.db.botActivitiesTable.insertOrUpdate(
-        activity.id,
-        activity.tick,
-        activity.blockNumber,
-        activity.frameId,
-        activity.type,
-        activity.data,
-      );
-    }
-
-    this.botFns.onEvent('updated-bidding-activity');
+    this.botFns.onEvent('updated-server-state');
   }
 
   private async calculateDbSyncProgress(botState: IBotState | IBotStateStarting): Promise<number> {

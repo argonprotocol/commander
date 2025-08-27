@@ -26,7 +26,7 @@ export interface IBotSyncStatus {
 
 export interface IBotState extends ILastModifiedAt, IBotSyncStatus, IBotStateFile {
   argonBlockNumbers: IBlockNumbers;
-  bitcoinBlockNumbers: IBlockNumbers;
+  bitcoinBlockNumbers: IBlockNumbers & { localNodeBlockTime: number };
   lastBlockNumber: number;
   syncedToBlockNumber: number;
   lastFinalizedBlockNumber: number;

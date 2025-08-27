@@ -3,9 +3,7 @@ import { CohortFramesTable } from './db/CohortFramesTable';
 import { CohortsTable } from './db/CohortsTable';
 import { ConfigTable } from './db/ConfigTable';
 import { FramesTable } from './db/FramesTable';
-import { ArgonActivitiesTable } from './db/ArgonActivitiesTable';
-import { BitcoinActivitiesTable } from './db/BitcoinActivitiesTable';
-import { BotActivitiesTable } from './db/BotActivitiesTable';
+import { ServerStateTable } from './db/ServerStateTable.ts';
 import { INSTANCE_NAME, NETWORK_NAME } from './Env';
 import { ensureOnlyOneInstance } from './Utils';
 import { FrameBidsTable } from './db/FrameBidsTable';
@@ -14,9 +12,7 @@ import { BitcoinLocksTable } from './db/BitcoinLocksTable.ts';
 
 export class Db {
   public sql: PluginSql;
-  public argonActivitiesTable: ArgonActivitiesTable;
-  public bitcoinActivitiesTable: BitcoinActivitiesTable;
-  public botActivitiesTable: BotActivitiesTable;
+  public serverStateTable: ServerStateTable;
   public cohortFramesTable: CohortFramesTable;
   public cohortsTable: CohortsTable;
   public configTable: ConfigTable;
@@ -29,9 +25,7 @@ export class Db {
     ensureOnlyOneInstance(this.constructor);
 
     this.sql = sql;
-    this.argonActivitiesTable = new ArgonActivitiesTable(this);
-    this.bitcoinActivitiesTable = new BitcoinActivitiesTable(this);
-    this.botActivitiesTable = new BotActivitiesTable(this);
+    this.serverStateTable = new ServerStateTable(this);
     this.cohortFramesTable = new CohortFramesTable(this);
     this.cohortsTable = new CohortsTable(this);
     this.configTable = new ConfigTable(this);

@@ -42,9 +42,8 @@ export class Stats {
   public global: IDashboardGlobalStats;
   public frames: IDashboardFrameStats[];
 
-  public argonActivity: any[];
-  public bitcoinActivity: any[];
-  public biddingActivity: any[];
+  public serverState: IServerStateRecord;
+  public biddingActivity: IBotActivity[];
 
   public accruedMicrogonProfits: bigint;
 
@@ -106,9 +105,8 @@ export class Stats {
     };
 
     this.frames = [];
+    this.serverState = {} as IServerStateRecord;
 
-    this.argonActivity = [];
-    this.bitcoinActivity = [];
     this.biddingActivity = [];
 
     this.accruedMicrogonProfits = 0n;
@@ -167,9 +165,7 @@ export class Stats {
       }
 
       if (this.isSubscribedToActivity) {
-        await this.updateBitcoinActivities();
-        await this.updateArgonActivities();
-        await this.updateBotActivities();
+        await this.updateServerState();
         this.activityHasUpdates = false;
       } else {
         this.activityHasUpdates = true;
@@ -180,27 +176,9 @@ export class Stats {
       void this.updateMiningBids();
     });
 
-    botEmitter.on('updated-bitcoin-activity', async () => {
+    botEmitter.on('updated-server-state', async () => {
       if (this.isSubscribedToActivity) {
-        await this.updateBitcoinActivities();
-        this.activityHasUpdates = false;
-      } else {
-        this.activityHasUpdates = true;
-      }
-    });
-
-    botEmitter.on('updated-argon-activity', async () => {
-      if (this.isSubscribedToActivity) {
-        await this.updateArgonActivities();
-        this.activityHasUpdates = false;
-      } else {
-        this.activityHasUpdates = true;
-      }
-    });
-
-    botEmitter.on('updated-bidding-activity', async () => {
-      if (this.isSubscribedToActivity) {
-        await this.updateBotActivities();
+        await this.updateServerState();
         this.activityHasUpdates = false;
       } else {
         this.activityHasUpdates = true;
@@ -236,7 +214,7 @@ export class Stats {
 
     if (this.activityHasUpdates) {
       this.activityHasUpdates = false;
-      await Promise.all([this.updateBitcoinActivities(), this.updateArgonActivities(), this.updateBotActivities()]);
+      await Promise.all([this.updateServerState()]);
     }
   }
 
@@ -271,16 +249,12 @@ export class Stats {
     this.myMiningSeats = await this.fetchActiveMiningSeatsFromDb();
   }
 
-  private async updateBitcoinActivities(): Promise<void> {
-    this.bitcoinActivity = await this.db.bitcoinActivitiesTable.fetchLastFiveRecords();
-  }
-
-  private async updateArgonActivities(): Promise<void> {
-    this.argonActivity = await this.db.argonActivitiesTable.fetchLastFiveRecords();
-  }
-
-  private async updateBotActivities(): Promise<void> {
-    this.biddingActivity = await this.db.botActivitiesTable.fetchRecentRecords(15);
+  private async updateServerState(): Promise<void> {
+    const state = await this.db.serverStateTable.get();
+    if (state) {
+      this.serverState = state;
+      this.biddingActivity = state.botActivities;
+    }
   }
 
   private async updateMiningBids(): Promise<void> {

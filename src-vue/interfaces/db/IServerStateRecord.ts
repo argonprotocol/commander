@@ -1,0 +1,16 @@
+import { IBotActivity } from '@argonprotocol/bot';
+
+export interface IServerStateRecord {
+  latestFrameId: number;
+  argonLocalNodeBlockNumber: number;
+  argonMainNodeBlockNumber: number;
+  argonBlocksLastUpdatedAt?: Date;
+  bitcoinLocalNodeBlockNumber: number;
+  bitcoinMainNodeBlockNumber: number;
+  bitcoinBlocksLastUpdatedAt?: Date;
+  botActivities: IBotActivity[];
+  botActivityLastUpdatedAt: Date;
+  botActivityLastBlockNumber: number;
+  createdAt: Date;
+  insertedAt: Date;
+}

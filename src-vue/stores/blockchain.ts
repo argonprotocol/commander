@@ -51,18 +51,19 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     const clientAt = await client.at(blockHash);
     const events = await clientAt.query.system.events();
     const extrinsics = await clientAt.query.system.extrinsicCount().then(x => (x.isSome ? x.value.toNumber() : 0));
-    const blockRewards = events.map(({ event }: { event: any }) => {
+    let microgons = 0n;
+    let micronots = 0n;
+    events.find(({ event }: { event: any }) => {
       if (client.events.blockRewards.RewardCreated.is(event)) {
-        return event.data.rewards.map(x => ({
-          micronots: x.ownership.toBigInt(),
-          microgons: x.argons.toBigInt(),
-          accountId: x.accountId.toHuman(),
-          isMining: x.rewardType.isMiner,
-          isVote: x.rewardType.isVoter,
-        }));
+        for (const x of event.data.rewards) {
+          if (x.rewardType.isMiner) {
+            microgons += x.argons.toBigInt();
+            micronots += x.ownership.toBigInt();
+          }
+        }
+        return true;
       }
-    })[0];
-    const { microgons, micronots } = blockRewards?.find(x => x.isMining) ?? { microgons: 0n, micronots: 0n };
+    });
     const timestamp = (await clientAt.query.timestamp.now()).toNumber();
     const newBlock: IBlock = {
       number: header.number.toNumber(),
