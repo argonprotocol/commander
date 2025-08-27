@@ -7,7 +7,6 @@ name = "Commander"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "bip39",
  "color-backtrace",
  "dotenvy",
@@ -20,7 +19,6 @@ dependencies = [
  "russh",
  "serde",
  "serde_json",
- "sha2",
  "sqlx",
  "tauri",
  "tauri-build",

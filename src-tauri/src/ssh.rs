@@ -1,6 +1,5 @@
 use crate::utils::Utils;
 use anyhow::Result;
-use async_trait::async_trait;
 use log::{error, info};
 use rand::rngs::OsRng;
 use russh::client::{AuthResult, Msg};
@@ -8,10 +7,9 @@ use russh::keys::ssh_key::LineEnding;
 use russh::keys::*;
 use russh::*;
 use std::fmt::Display;
-use std::future::Future;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter};
 use std::time::Duration;
+use tauri::{AppHandle, Emitter};
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
 use tokio::runtime::Handle;
@@ -19,6 +17,7 @@ use tokio::sync::Mutex;
 use tokio::time::timeout;
 
 #[derive(Clone)]
+#[allow(clippy::upper_case_acronyms)]
 pub struct SSH {
     client: Arc<Mutex<client::Handle<ClientHandler>>>,
     pub config: SSHConfig,
@@ -71,8 +70,11 @@ impl Drop for SSH {
 
 impl SSH {
     pub async fn connect(config: &SSHConfig, timeout_duration: Duration) -> Result<Self> {
-        let client = timeout(timeout_duration, Self::authenticate(config)).await
-            .map_err(|_| anyhow::anyhow!("SSH connection timed out after {:?}", timeout_duration))??;
+        let client = timeout(timeout_duration, Self::authenticate(config))
+            .await
+            .map_err(|_| {
+                anyhow::anyhow!("SSH connection timed out after {:?}", timeout_duration)
+            })??;
         let ssh = SSH {
             client: Arc::new(Mutex::new(client)),
             config: config.clone(),
@@ -229,8 +231,6 @@ impl SSH {
         Ok(())
     }
 
-
-
     pub async fn download_remote_file(
         &self,
         app: &AppHandle,
@@ -239,14 +239,14 @@ impl SSH {
         event_progress_key: String,
     ) -> Result<()> {
         // Escape the remote path safely for single-quoted shell
-        let escaped_remote = format!(
-            "'{}'",
-            remote_path.replace('\'', "'\\''")
-        );
+        let escaped_remote = format!("'{}'", remote_path.replace('\'', "'\\''"));
 
         // Best-effort: get remote file size for progress (may fail; then size=0)
         let mut remote_size: u64 = 0;
-        if let Ok((out, _code)) = self.run_command(format!("stat -c %s {}", escaped_remote)).await {
+        if let Ok((out, _code)) = self
+            .run_command(format!("stat -c %s {}", escaped_remote))
+            .await
+        {
             if let Ok(sz) = out.trim().parse::<u64>() {
                 remote_size = sz;
             }
@@ -332,14 +332,13 @@ struct ClientHandler {}
 // Explicitly implement Send for ClientHandler
 unsafe impl Send for ClientHandler {}
 
-#[async_trait]
 impl client::Handler for ClientHandler {
     type Error = russh::Error;
 
-    fn check_server_key(
+    async fn check_server_key(
         &mut self,
         _server_public_key: &keys::PublicKey,
-    ) -> impl Future<Output = std::result::Result<bool, Self::Error>> + Send {
-        async { Ok(true) }
+    ) -> std::result::Result<bool, Self::Error> {
+        Ok(true)
     }
 }
