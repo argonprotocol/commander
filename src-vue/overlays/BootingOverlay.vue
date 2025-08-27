@@ -94,7 +94,6 @@ async function applyRestoredServer(details: string) {
       config.isServerUpToDate = false;
       config.serverDetails = serverDetails;
       await config.save();
-      await SSH.closeConnection();
     }
   } catch (err) {
     console.error('Error restoring config from localStorage:', err);

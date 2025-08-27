@@ -202,7 +202,6 @@ async function updateServer() {
     config.isServerUpToDate = false;
     config.serverDetails = newServerDetails;
     await config.save();
-    await SSH.closeConnection();
   } catch (error) {
     console.log('error', error);
     hasServerDetailsError.value = true;

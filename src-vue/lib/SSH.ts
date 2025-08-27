@@ -52,6 +52,7 @@ export class SSH {
     await connection.connect();
     const server = new Server(connection);
     const walletAddress = await server.downloadAccountAddress();
+    this.connection = connection; // save the working connection
 
     if (!walletAddress)
       return {
