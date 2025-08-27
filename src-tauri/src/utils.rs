@@ -1,7 +1,6 @@
 use anyhow::Result;
 use rand::RngCore;
 use std::path::{Path, PathBuf};
-use tauri;
 use tauri::{AppHandle, Manager};
 
 pub struct Utils;
@@ -24,19 +23,21 @@ impl Utils {
     }
 
     pub fn get_network_name() -> String {
-        std::env::var("ARGON_NETWORK_NAME")
-            .unwrap_or(if Self::is_experimental() {
+        std::env::var("ARGON_NETWORK_NAME").unwrap_or(
+            if Self::is_experimental() {
                 "testnet"
             } else {
-                 #[cfg(debug_assertions)]
-                 {
+                #[cfg(debug_assertions)]
+                {
                     "testnet"
-                 }
-                 #[cfg(not(debug_assertions))]
-                 {
+                }
+                #[cfg(not(debug_assertions))]
+                {
                     "mainnet"
-                 }
-            }.to_string())
+                }
+            }
+            .to_string(),
+        )
     }
 
     pub fn get_relative_config_instance_dir() -> PathBuf {
@@ -46,10 +47,12 @@ impl Utils {
     }
 
     pub fn get_absolute_config_instance_dir(app: &AppHandle) -> PathBuf {
-        app.path().resolve(
-            Self::get_relative_config_instance_dir(),
-            tauri::path::BaseDirectory::AppConfig,
-        ).expect("Failed to resolve config instance directory")
+        app.path()
+            .resolve(
+                Self::get_relative_config_instance_dir(),
+                tauri::path::BaseDirectory::AppConfig,
+            )
+            .expect("Failed to resolve config instance directory")
     }
 
     pub fn get_embedded_path(app: &AppHandle, path: impl AsRef<Path>) -> anyhow::Result<PathBuf> {
@@ -68,7 +71,7 @@ impl Utils {
             Err(_) => {
                 let mut key = [0u8; 32]; // 256-bit key
                 rand::thread_rng().fill_bytes(&mut key);
-                let new_key = hex::encode(&key);
+                let new_key = hex::encode(key);
 
                 key_entry.set_password(&new_key)?;
                 new_key

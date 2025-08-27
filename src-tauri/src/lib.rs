@@ -1,6 +1,4 @@
-use log;
 use log::trace;
-use std;
 use std::fs;
 use std::path::PathBuf;
 use tauri::Emitter;
@@ -17,7 +15,6 @@ mod ssh;
 mod ssh_pool;
 mod utils;
 
-
 #[tauri::command]
 async fn open_ssh_connection(
     address: &str,
@@ -27,7 +24,7 @@ async fn open_ssh_connection(
     private_key: String,
 ) -> Result<String, String> {
     log::info!("ensure_ssh_connection");
-    ssh_pool::open_connection(&address, &host, port, username, private_key)
+    ssh_pool::open_connection(address, host, port, username, private_key)
         .await
         .map_err(|e| {
             log::error!("Error connecting to SSH: {:#}", e);
@@ -40,7 +37,7 @@ async fn open_ssh_connection(
 #[tauri::command]
 async fn close_ssh_connection(address: &str) -> Result<String, String> {
     log::info!("close_ssh_connection");
-    ssh_pool::close_connection(&address)
+    ssh_pool::close_connection(address)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -49,7 +46,7 @@ async fn close_ssh_connection(address: &str) -> Result<String, String> {
 
 #[tauri::command]
 async fn ssh_run_command(address: &str, command: String) -> Result<(String, u32), String> {
-    let ssh: ssh::SSH = ssh_pool::get_connection(&address)
+    let ssh: ssh::SSH = ssh_pool::get_connection(address)
         .await
         .map_err(|e| e.to_string())?
         .ok_or("No SSH connection")?;
@@ -64,11 +61,11 @@ async fn ssh_upload_file(
     remote_path: String,
 ) -> Result<String, String> {
     log::info!("ssh_upload_file: {}, {}", contents, remote_path);
-    let ssh: ssh::SSH = ssh_pool::get_connection(&address)
+    let ssh: ssh::SSH = ssh_pool::get_connection(address)
         .await
         .map_err(|e| e.to_string())?
         .ok_or("No SSH connection")?;
-    ssh.upload_file(&contents.as_bytes(), &remote_path)
+    ssh.upload_file(contents.as_bytes(), &remote_path)
         .await
         .map_err(|e| e.to_string())?;
     Ok("success".to_string())
@@ -83,7 +80,7 @@ async fn ssh_download_file(
     event_progress_key: String,
 ) -> Result<String, String> {
     log::info!("ssh_download_file: {}, {}", remote_path, download_path);
-    let ssh: ssh::SSH = ssh_pool::get_connection(&address)
+    let ssh: ssh::SSH = ssh_pool::get_connection(address)
         .await
         .map_err(|e| e.to_string())?
         .ok_or("No SSH connection")?;
@@ -106,7 +103,7 @@ async fn ssh_upload_embedded_file(
         local_relative_path,
         remote_path
     );
-    let ssh: ssh::SSH = ssh_pool::get_connection(&address)
+    let ssh: ssh::SSH = ssh_pool::get_connection(address)
         .await
         .map_err(|e| e.to_string())?
         .ok_or("No SSH connection")?;
@@ -131,7 +128,6 @@ async fn read_embedded_file(app: AppHandle, local_relative_path: String) -> Resu
     Ok(content)
 }
 
-
 #[tauri::command]
 async fn overwrite_security(
     app: AppHandle,
@@ -141,9 +137,9 @@ async fn overwrite_security(
 ) -> Result<String, String> {
     log::info!("overwrite_security");
     let new_security = security::Security {
-        master_mnemonic: master_mnemonic,
-        ssh_public_key: ssh_public_key,
-        ssh_private_key: ssh_private_key,
+        master_mnemonic,
+        ssh_public_key,
+        ssh_private_key,
     };
     new_security.save(&app).map_err(|e| e.to_string())?;
 
@@ -204,7 +200,7 @@ async fn create_zip(
             }
 
             let name = prefix.join(rel).to_string_lossy().replace("\\", "/");
-            let mut file_opts = opts.clone();
+            let mut file_opts = opts;
             if let Ok(mtime) = entry.metadata().map_err(|e| e.to_string())?.modified() {
                 if let Ok(zdt) = DateTime::try_from(OffsetDateTime::from(mtime)) {
                     file_opts = file_opts.last_modified_time(zdt);
@@ -293,7 +289,7 @@ pub fn run() {
     tauri::Builder::default()
           .on_page_load(move |window, _payload| {
             log::info!("Page loaded for instance '{}'", instance_name_clone);
-            window.emit("tauri://page-loaded", {  }).unwrap();
+            window.emit("tauri://page-loaded", ()).unwrap();
             window.eval(format!("window.__COMMANDER_INSTANCE__ = '{}'", instance_name_clone)).expect("Failed to set instance name in window");
             window.eval(format!("window.__ARGON_NETWORK_NAME__ = '{}'", network_name_clone)).expect("Failed to set network name in window");
             window.eval(format!("window.__COMMANDER_ENABLE_AUTOUPDATE__ = {}", enable_auto_update)).expect("Failed to set experimental flag in window");
@@ -306,7 +302,7 @@ pub fn run() {
             );
             log::info!("Database URL = {}", db_relative_path.display());
             let handle = app.handle();
-            let security = security::Security::load(&handle).map_err(|e| e.to_string())?;
+            let security = security::Security::load(handle).map_err(|e| e.to_string())?;
             let security_json = serde_json::to_string(&security).map_err(|e| e.to_string())?;
 
             let window = app.get_webview_window("main").unwrap();
@@ -316,20 +312,18 @@ pub fn run() {
             });
             let app_id = &app.config().identifier;
 
-            if app_id.to_lowercase().contains("experimental") {
-              if option_env!("ARGON_EXPERIMENTAL").is_none()  {
+            if app_id.to_lowercase().contains("experimental")  && option_env!("ARGON_EXPERIMENTAL").is_none()  {
                 panic!("Experimental app built without the ARGON_EXPERIMENTAL environment variable set. Please set it to 'true' to enable experimental features.");
-              }
             }
 
-            let window = app.get_webview_window("main").unwrap();
+            init_config_instance_dir(handle, &relative_config_dir)?;
 
+            #[cfg(target_os = "macos")]{
+                let window = app.get_webview_window("main").unwrap();
 
-            init_config_instance_dir(&handle, &relative_config_dir)?;
-
-            #[cfg(target_os = "macos")]
-            apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(16.0))
-                .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+                apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(16.0))
+                    .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+            }
 
             Ok(())
         })

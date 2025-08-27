@@ -1,12 +1,12 @@
 use include_dir::{Dir, include_dir};
-use tauri_plugin_sql::{Migration, MigrationKind};
-use std::path::PathBuf;
 use sqlx::{
     error::BoxDynError,
     migrate::{Migration as SqlxMigration, MigrationSource, Migrator},
 };
-use std::pin::Pin;
 use std::future::Future;
+use std::path::PathBuf;
+use std::pin::Pin;
+use tauri_plugin_sql::{Migration, MigrationKind};
 
 static MIGRATIONS_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/migrations");
 
@@ -14,7 +14,15 @@ static MIGRATIONS_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/migrations");
 struct MigrationList(Vec<Migration>);
 
 impl MigrationSource<'static> for MigrationList {
-    fn resolve(self) -> Pin<Box<dyn Future<Output = std::result::Result<Vec<SqlxMigration>, BoxDynError>> + Send + 'static>> {
+    fn resolve(
+        self,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = std::result::Result<Vec<SqlxMigration>, BoxDynError>>
+                + Send
+                + 'static,
+        >,
+    > {
         Box::pin(async move {
             let mut migrations = Vec::new();
             for migration in self.0 {
@@ -40,10 +48,7 @@ pub fn get_migrations() -> Vec<Migration> {
             let dir_name = dir.path().file_stem()?.to_str()?;
             let up_path = dir.path().join("up.sql");
             let file = dir.get_file(up_path)?;
-            println!(
-                "Processing migration dir: {}",
-                dir_name,
-            );
+            println!("Processing migration dir: {}", dir_name,);
             let mut parts = dir_name.splitn(2, '-');
             let version = parts.next()?.parse::<i64>().ok()?;
             let description = parts.next()?;
@@ -74,7 +79,8 @@ pub async fn run_db_migrations(absolute_db_path: PathBuf) -> Result<(), String> 
     let migrator = Migrator::new(migrations)
         .await
         .map_err(|e| format!("Failed to create migrator: {}", e))?;
-    migrator.run(&pool)
+    migrator
+        .run(&pool)
         .await
         .map_err(|e| format!("Failed to run migrations: {}", e))?;
 

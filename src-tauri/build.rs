@@ -1,4 +1,3 @@
-use dotenvy;
 use std::env;
 
 fn main() {
