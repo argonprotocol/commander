@@ -103,11 +103,15 @@ export class BlockSync {
       .then(x => x.tickDurationMillis.toNumber());
 
     await this.botStateFile.mutate(async x => {
+      if (!x.oldestFrameIdToSync) {
+        // use || to avoid 0
+        x.oldestFrameIdToSync =
+          this.oldestFrameIdToSync ||
+          MiningFrames.getForHeader(this.archiveClient, finalizedHeader) ||
+          MiningFrames.calculateCurrentFrameIdFromSystemTime();
+      }
       const oldestTickRange = MiningFrames.getTickRangeForFrame(x.oldestFrameIdToSync);
       this.oldestTickToSync = oldestTickRange[0];
-      if (!x.oldestFrameIdToSync) {
-        x.oldestFrameIdToSync = this.oldestFrameIdToSync ?? MiningFrames.getForTick(oldestTickRange[0]);
-      }
       this.oldestFrameIdToSync = x.oldestFrameIdToSync;
 
       console.log('Sync starting', {
@@ -200,9 +204,12 @@ export class BlockSync {
       }
 
       const blockKeys = Object.keys(x.blocksByNumber).map(Number);
+      let minBlock = blockKeys[0] ?? 0;
+      for (const key of blockKeys) {
+        if (key < minBlock) minBlock = key;
+      }
       let oldestToKeep = Math.min(x.syncedToBlockNumber, x.finalizedBlockNumber);
       oldestToKeep -= 5; // keep some overflow
-      const minBlock = Math.min(...blockKeys);
       for (const key of blockKeys) {
         if (key < oldestToKeep) {
           delete x.blocksByNumber[key];
