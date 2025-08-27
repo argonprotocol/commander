@@ -21,11 +21,11 @@
             <div class="px-4">
               <h2 class="text-2xl text-[#A600D4] font-bold">Configure Mining Bot</h2>
               <p v-if="config.hasSavedBiddingRules">
-                You've already set up your starting bid threshhold, the maximum price you're willing to
+                You've already set up your starting bid threshold, the maximum price you're willing to
                 invest, and other basic settings that are required.
               </p>
               <p v-else>
-                You need to confirm your starting bid threshhold, the maximum price you're willing to
+                You need to confirm your starting bid threshold, the maximum price you're willing to
                 invest, and other basic settings in order for your bot to submit bids on your behalf.
               </p>
             </div>
@@ -93,7 +93,7 @@
                 some tokens.
               </p>
               <p v-else>
-                Yoru account needs both argons and argonots to submit auction bids. A secure wallet is already attached to your account. All you need to do is move
+                Your account needs both argons and argonots to submit auction bids. A secure wallet is already attached to your account. All you need to do is move
                 some tokens.
               </p>
             </div>

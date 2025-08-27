@@ -44,7 +44,7 @@ import * as Vue from 'vue';
 import { useConfig } from '../../stores/config';
 import { save as saveFileOverlay } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
-import { jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
+import { JsonExt, jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
 
 const config = useConfig();
 const isSavingExport = Vue.ref(false);
@@ -70,7 +70,7 @@ async function exportAccount() {
     serverDetails: config.serverDetails,
     userJurisdiction: config.userJurisdiction,
   };
-  const pretty = jsonStringifyWithBigInts(data, null, 2);
+  const pretty = JsonExt.stringify(data, 2);
   await writeTextFile(filePath, pretty);
   isSavingExport.value = false;
   hasSavedExport.value = true;

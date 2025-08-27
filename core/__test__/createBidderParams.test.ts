@@ -1,11 +1,9 @@
 import { afterAll, afterEach, expect, it } from 'vitest';
 import { runOnTeardown, teardown } from '@argonprotocol/testing';
 import createBidderParams from '../src/createBidderParams.js';
-import { jsonParseWithBigInts } from '../src/utils.js';
-import { MiningFrames } from '../src/MiningFrames.js';
+import { type IBiddingRules, MainchainClients, MiningFrames } from '../src/index.js';
 import { startArgonTestNetwork } from './startArgonTestNetwork.js';
-import { type IBiddingRules, MainchainClients } from '../src/index.js';
-import { JsonExt } from '@argonprotocol/commander-core';
+import { JsonExt } from '../src/utils.ts';
 
 afterEach(teardown);
 afterAll(teardown);
@@ -16,7 +14,7 @@ it('can create bidder params', async () => {
   await mainchainClients.setPrunedClient(network.archiveUrl);
   runOnTeardown(() => mainchainClients.disconnect());
 
-  const biddingRules = jsonParseWithBigInts(
+  const biddingRules = JsonExt.parse(
     JsonExt.stringify({
       argonCirculationGrowthPctMin: 91,
       argonCirculationGrowthPctMax: 92,

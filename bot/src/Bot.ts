@@ -4,7 +4,7 @@ import { Storage } from './Storage.ts';
 import { AutoBidder } from './AutoBidder.ts';
 import { BlockSync } from './BlockSync.ts';
 import { Dockers } from './Dockers.ts';
-import { Accountset, type IBiddingRules, jsonParseWithBigInts, MainchainClients } from '@argonprotocol/commander-core';
+import { Accountset, type IBiddingRules, JsonExt, MainchainClients } from '@argonprotocol/commander-core';
 import { History } from './History.ts';
 import FatalError from './interfaces/FatalError.ts';
 import type { IBotSyncStatus } from './interfaces/IBotStateFile.js';
@@ -180,7 +180,7 @@ export default class Bot implements IBotSyncStatus {
 
   private loadBiddingRules(): IBiddingRules {
     const rawJsonString = Fs.readFileSync(this.options.biddingRulesPath, 'utf8');
-    return jsonParseWithBigInts(rawJsonString);
+    return JsonExt.parse(rawJsonString);
   }
 
   private async waitForDockerConfirmation() {

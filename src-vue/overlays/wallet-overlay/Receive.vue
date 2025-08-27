@@ -71,12 +71,12 @@
         <img :src="qrCode" width="100%" />
         <CopyToClipboard :content="wallet.address" class="relative mb-3 mr-5 cursor-pointer">
           <span class="opacity-80">
-            {{ abreviateAddress(wallet.address) }}
+            {{ abbreviateAddress(wallet.address) }}
             <CopyIcon class="w-4 h-4 ml-1 inline-block" />
           </span>
           <template #copied>
             <div class="absolute top-0 left-0 w-full h-full pointer-events-none">
-              {{ abreviateAddress(wallet.address) }}
+              {{ abbreviateAddress(wallet.address) }}
               <CopyIcon class="w-4 h-4 ml-1 inline-block" />
             </div>
           </template>
@@ -92,7 +92,7 @@ import QRCode from 'qrcode';
 import { useConfig } from '../../stores/config';
 import { useWallets } from '../../stores/wallets';
 import { useCurrency } from '../../stores/currency';
-import { abreviateAddress } from '../../lib/Utils';
+import { abbreviateAddress } from '../../lib/Utils';
 import { ChevronLeftIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 import CopyIcon from '../../assets/copy.svg?component';
 import CopyToClipboard from '../../components/CopyToClipboard.vue';

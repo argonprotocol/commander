@@ -52,7 +52,7 @@ import VaultCapitalDistribution from './edit-box/VaultCapitalDistribution.vue';
 import VaultSecuritizationRatio from './edit-box/VaultSecuritizationRatio.vue';
 import VaultPersonalBtc from './edit-box/VaultPersonalBtc.vue';
 import { useConfig } from '../stores/config';
-import { jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
+import { JsonExt } from '@argonprotocol/commander-core';
 import { IBiddingRules } from '@argonprotocol/commander-core';
 
 const props = defineProps<{
@@ -93,7 +93,7 @@ export type IEditBoxOverlayType = IEditBoxOverlayTypeForMining | IEditBoxOverlay
 
 const config = useConfig();
 
-let previousBiddingRules = jsonStringifyWithBigInts(config.biddingRules);
+let previousBiddingRules = JsonExt.stringify(config.biddingRules);
 let lastBoundingClientRect: DOMRect | null = null;
 
 const titles = {
@@ -153,7 +153,7 @@ function cancelOverlay(e?: MouseEvent) {
   if (editorInstance.value && 'beforeCancel' in editorInstance.value) {
     editorInstance.value.beforeCancel();
   }
-  config.biddingRules = jsonParseWithBigInts(previousBiddingRules) as IBiddingRules;
+  config.biddingRules = JsonExt.parse<IBiddingRules>(previousBiddingRules);
   emit('close', props.id);
   e?.preventDefault();
   e?.stopPropagation();

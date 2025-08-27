@@ -8,22 +8,22 @@
             <BgOverlay @close="closeOverlay" />
           </Motion>
         </DialogOverlay>
-        
+
         <DialogContent asChild @escapeKeyDown="handleEscapeKeyDown" :aria-describedby="undefined">
           <Motion asChild :initial="{ opacity: 0, top: '40%' }" :animate="{ opacity: 1, top: '50%' }" :exit="{ opacity: 0, top: '0' }">
             <div class="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 z-50 bg-white border border-black/40 p-2 rounded-lg pointer-events-auto shadow-xl w-9/12 overflow-scroll focus:outline-none">
-              <Receive v-if="activeScreen === 'receive'" @navigate="navigate" :walletId="walletId" />               
+              <Receive v-if="activeScreen === 'receive'" @navigate="navigate" :walletId="walletId" />
               <div v-else>
                 <div class="flex flex-row justify-between items-center w-full px-3 py-3 space-x-4 text-5xl font-bold border-b border-black/20">
                   <DialogTitle class="text-2xl font-bold">{{ walletName }} Resources</DialogTitle>
                   <CopyToClipboard :content="wallet.address" class="relative text-2xl font-normal grow cursor-pointer">
                     <span class="opacity-50">
-                      {{ abreviateAddress(wallet.address) }}
+                      {{ abbreviateAddress(wallet.address) }}
                       <CopyIcon class="w-5 h-5 ml-1 inline-block" />
                     </span>
                     <template #copied>
                       <div class="absolute top-0 left-0 w-full h-full pointer-events-none">
-                        {{ abreviateAddress(wallet.address) }}
+                        {{ abbreviateAddress(wallet.address) }}
                         <CopyIcon class="w-5 h-5 ml-1 inline-block" />
                       </div>
                     </template>
@@ -70,7 +70,7 @@ import { AnimatePresence, Motion } from 'motion-v';
 import basicEmitter from '../emitters/basicEmitter';
 import { useCurrency } from '../stores/currency';
 import { useWallets } from '../stores/wallets';
-import { abreviateAddress } from '../lib/Utils';
+import { abbreviateAddress } from '../lib/Utils';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import Resources from './wallet-overlay/Resources.vue';
 import Activity from './wallet-overlay/Activity.vue';

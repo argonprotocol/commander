@@ -51,13 +51,13 @@
                     <span class="cursor-pointer text-argon-600/50 hover:text-argon-600/80">View Bitcoin Space ({{ numeral(btcSpaceAvailable).format('0,0.[00000000]') }} BTC)</span>
                   </div>
                 </div>
-                
+
                 <div class="flex flex-col items-center justify-center text-3xl mx-2 text-center">
                   <span class="relative -top-1 opacity-50">
                     =
                   </span>
                 </div>
-                
+
                 <div class="w-1/2 flex flex-col grow">
                   <!-- @mouseenter="showTooltip($event, tooltip.estimatedAPYRange, { width: 'parent' })" @mouseleave="hideTooltip"  -->
                   <div PrimaryStat class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
@@ -247,7 +247,7 @@
                 </button>
               </div>
             </div>
-          
+
           </div>
         </div>
       </DialogContent>
@@ -259,7 +259,7 @@
 import * as Vue from 'vue';
 import BigNumber from 'bignumber.js';
 import basicEmitter from '../emitters/basicEmitter';
-import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogDescription } from 'reka-ui';
+import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui';
 import Tooltip from '../components/Tooltip.vue';
 import { useConfig } from '../stores/config';
 import { getMainchain } from '../stores/mainchain';
@@ -269,13 +269,12 @@ import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import { hideTooltip, showTooltip } from '../lib/TooltipUtils';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForVaulting } from './EditBoxOverlay.vue';
-import { jsonParseWithBigInts } from '@argonprotocol/commander-core';
+import { JsonExt } from '@argonprotocol/commander-core';
 import IVaultingRules from '../interfaces/IVaultingRules';
 import { MyVault } from '../lib/MyVault.ts';
 import InputArgon from '../components/InputArgon.vue';
 import ExistingNetworkVaultsOverlayButton from './ExistingNetworkVaultsOverlayButton.vue';
 import { VaultCalculator } from '../lib/VaultCalculator.ts';
-import { jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
 
 const mainchain = getMainchain();
 const config = useConfig();
@@ -344,7 +343,7 @@ function cancelOverlay() {
   hideTooltip();
 
   if (previousVaultingRules) {
-    config.vaultingRules = jsonParseWithBigInts(previousVaultingRules) as IVaultingRules;
+    config.vaultingRules = JsonExt.parse<IVaultingRules>(previousVaultingRules);
   }
 }
 
@@ -405,7 +404,7 @@ basicEmitter.on('openVaultOverlay', async () => {
   isBrandNew.value = !config.hasSavedVaultingRules;
 
   await calculator.load(rules.value);
-  previousVaultingRules = jsonStringifyWithBigInts(config.vaultingRules);
+  previousVaultingRules = JsonExt.stringify(config.vaultingRules);
   updateAPYs();
 
   isLoaded.value = true;

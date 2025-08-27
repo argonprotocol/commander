@@ -1,5 +1,5 @@
 import * as dotenv from 'dotenv';
-import { IBiddingRules, jsonParseWithBigInts, jsonStringifyWithBigInts } from '@argonprotocol/commander-core';
+import { IBiddingRules, JsonExt } from '@argonprotocol/commander-core';
 import { SSHConnection } from './SSHConnection';
 import { DEPLOY_ENV_FILE, NETWORK_NAME } from './Env.ts';
 import { KeyringPair$Json } from '@argonprotocol/mainchain';
@@ -98,7 +98,7 @@ export class Server {
   }
 
   public async uploadBiddingRules(biddingRules: IBiddingRules): Promise<void> {
-    const biddingRulesStr = jsonStringifyWithBigInts(biddingRules, null, 2);
+    const biddingRulesStr = JsonExt.stringify(biddingRules, 2);
     await this.connection.uploadFileWithTimeout(biddingRulesStr, '~/config/biddingRules.json', 20e3);
   }
 
@@ -107,7 +107,7 @@ export class Server {
       'cat ~/config/biddingRules.json 2>/dev/null || true',
       20e3,
     );
-    return biddingRulesRaw ? jsonParseWithBigInts(biddingRulesRaw) : undefined;
+    return biddingRulesRaw ? JsonExt.parse(biddingRulesRaw) : undefined;
   }
 
   public async uploadEnvState(envState: { oldestFrameIdToSync: number }): Promise<void> {
@@ -221,7 +221,7 @@ export class Server {
   }
 
   public async uploadMiningWallet(miningWalletJson: KeyringPair$Json): Promise<void> {
-    const walletMiningJson = jsonStringifyWithBigInts(miningWalletJson, null, 2);
+    const walletMiningJson = JsonExt.stringify(miningWalletJson, 2);
     await this.connection.uploadFileWithTimeout(walletMiningJson, '~/config/walletMining.json', 10e3);
   }
 

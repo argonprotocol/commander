@@ -16,18 +16,9 @@ export * from './BlockWatch.js';
 export * from './CohortBidder.js';
 export * from './MiningBids.js';
 export * from './VaultMonitor.js';
+export * from './IBitcoinBlockMeta.ts';
 
-export {
-  jsonStringifyWithBigInts,
-  jsonStringifyWithBigIntsEnhanced,
-  jsonParseWithBigInts,
-  jsonParseWithBigIntsEnhanced,
-  convertBigIntStringToNumber,
-  bigNumberToBigInt,
-  JsonExt,
-  filterUndefined,
-  createNanoEvents,
-} from './utils.js';
+export { convertBigIntStringToNumber, bigNumberToBigInt, JsonExt, filterUndefined, createNanoEvents } from './utils.js';
 
 export default BiddingCalculator;
 export { BiddingParamsHelper, createBidderParams, BiddingCalculatorData, BiddingCalculator };

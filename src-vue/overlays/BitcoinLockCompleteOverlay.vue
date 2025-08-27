@@ -30,12 +30,12 @@
           <div class="mb-4 rounded-lg bg-gray-100 p-4">
             <CopyToClipboard :content="scriptPaytoAddress" class="relative mr-5 mb-3 cursor-pointer">
               <span class="opacity-80">
-                {{ abreviateAddress(scriptPaytoAddress, 10) }}
+                {{ abbreviateAddress(scriptPaytoAddress, 10) }}
                 <CopyIcon class="ml-1 inline-block h-4 w-4" />
               </span>
               <template #copied>
                 <div class="pointer-events-none absolute top-0 left-0 h-full w-full">
-                  {{ abreviateAddress(scriptPaytoAddress, 10) }}
+                  {{ abbreviateAddress(scriptPaytoAddress, 10) }}
                   <CopyIcon class="ml-1 inline-block h-4 w-4" />
                 </div>
               </template>
@@ -47,12 +47,12 @@
             <BitcoinQrCode class="mb-3 h-44 w-44 text-center" :bip21="fundingBip21" v-if="fundingBip21" />
             <CopyToClipboard :content="fundingBip21" class="relative mr-5 mb-3 cursor-pointer">
               <span class="opacity-80">
-                {{ abreviateAddress(fundingBip21, 10) }}
+                {{ abbreviateAddress(fundingBip21, 10) }}
                 <CopyIcon class="ml-1 inline-block h-4 w-4" />
               </span>
               <template #copied>
                 <div class="pointer-events-none absolute top-0 left-0 h-full w-full">
-                  {{ abreviateAddress(fundingBip21, 10) }}
+                  {{ abbreviateAddress(fundingBip21, 10) }}
                   <CopyIcon class="ml-1 inline-block h-4 w-4" />
                 </div>
               </template>
@@ -68,7 +68,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { abreviateAddress } from '../lib/Utils';
+import { abbreviateAddress } from '../lib/Utils';
 import { useCurrency } from '../stores/currency.ts';
 import { SATS_PER_BTC } from '@argonprotocol/mainchain';
 import { useBitcoinLocks } from '../stores/bitcoin.ts';
