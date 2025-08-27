@@ -16,7 +16,7 @@ export * from './BlockWatch.js';
 export * from './CohortBidder.js';
 export * from './MiningBids.js';
 export * from './VaultMonitor.js';
-export * from './IBitcoinBlockMeta.ts';
+export * from './IBitcoinBlockMeta.js';
 
 export { convertBigIntStringToNumber, bigNumberToBigInt, JsonExt, filterUndefined, createNanoEvents } from './utils.js';
 

@@ -10,7 +10,7 @@
     "lib"
   ],
   "scripts": {
-    "tsc": "tsup"
+    "tsup": "tsup"
   },
   "dependencies": {
     "@argonprotocol/commander-core": "workspace:*",

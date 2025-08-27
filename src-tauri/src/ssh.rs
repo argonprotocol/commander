@@ -1,6 +1,6 @@
 use crate::utils::Utils;
 use anyhow::Result;
-use log::{error, info};
+use log::info;
 use rand::rngs::OsRng;
 use russh::client::{AuthResult, Msg};
 use russh::keys::ssh_key::LineEnding;
@@ -12,7 +12,6 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
-use tokio::runtime::Handle;
 use tokio::sync::Mutex;
 use tokio::time::timeout;
 
@@ -27,44 +26,46 @@ pub struct SSH {
 pub struct SSHConfig {
     addrs: (String, u16),
     username: String,
-    private_key: Arc<PrivateKey>,
+    private_key_path: String,
+    private_key_last_modified: std::time::SystemTime,
 }
 
 impl SSHConfig {
-    pub fn new(host: &str, port: u16, username: String, private_key_str: String) -> Result<Self> {
-        let private_key = decode_secret_key(&private_key_str, None)?;
+    pub fn new(host: &str, port: u16, username: String, private_key_path: String) -> Result<Self> {
         let addrs = (host.to_string(), port);
+
+        let last_modified = std::fs::metadata(&private_key_path)
+            .and_then(|meta| meta.modified())
+            .map_err(|e| {
+                anyhow::anyhow!(
+                    "Failed to get metadata for private key {}: {}",
+                    private_key_path,
+                    e
+                )
+            })?;
+
         Ok(SSHConfig {
             addrs,
             username: username.to_string(),
-            private_key: Arc::new(private_key),
+            private_key_path,
+            private_key_last_modified: last_modified,
         })
+    }
+
+    pub fn get_private_key(&self) -> Result<PrivateKey> {
+        let private_key_str = std::fs::read_to_string(&self.private_key_path).map_err(|e| {
+            anyhow::anyhow!(
+                "Failed to read private key from {}: {}",
+                self.private_key_path,
+                e
+            )
+        })?;
+        let private_key = decode_secret_key(&private_key_str, None)?;
+        Ok(private_key)
     }
 
     pub fn host(&self) -> String {
         format!("{}:{}", self.addrs.0, self.addrs.1)
-    }
-}
-
-unsafe impl Send for SSH {}
-
-impl Drop for SSH {
-    fn drop(&mut self) {
-        if let Ok(handle) = Handle::try_current() {
-            let ssh_clone = self.client.clone();
-            handle.spawn(async move {
-                if let Ok(client) = ssh_clone.try_lock() {
-                    if let Err(e) = client
-                        .disconnect(Disconnect::ByApplication, "", "English")
-                        .await
-                    {
-                        error!("Error disconnecting SSH client: {}", e);
-                    }
-                }
-            });
-        } else {
-            info!("Warning: Could not close SSH connection during cleanup - no runtime available");
-        }
     }
 }
 
@@ -91,11 +92,13 @@ impl SSH {
         let handler = ClientHandler {};
 
         let mut client = client::connect(config, ssh_config.addrs.clone(), handler).await?;
+        let private_key = ssh_config.get_private_key()?;
+        let private_key = Arc::new(private_key);
         // use publickey authentication, with or without certificate
         let auth_res = client
             .authenticate_publickey(
                 &ssh_config.username,
-                PrivateKeyWithHashAlg::new(ssh_config.private_key.clone(), None),
+                PrivateKeyWithHashAlg::new(private_key, None),
             )
             .await?;
 
@@ -297,13 +300,29 @@ impl SSH {
         Ok(())
     }
 
-    pub async fn close(&self) -> Result<()> {
-        if let Ok(client) = self.client.try_lock() {
-            client
+    pub async fn close(&self) {
+        if let Ok(handle) = self.client.try_lock() {
+            if handle.is_closed() {
+                return;
+            }
+
+            log::info!("Closing existing SSH connection to {}", self.config.host());
+            let _ = handle
                 .disconnect(Disconnect::ByApplication, "", "English")
-                .await?;
+                .await
+                .map_err(|e| {
+                    let msg = e.to_string();
+                    let is_benign = matches!(e,
+                        russh::Error::SendError
+                    ) || msg.contains("Channel send error")   // covers variant/name differences
+                        || msg.contains("send error")
+                        || msg.contains("connection closed");
+
+                    if !is_benign {
+                        log::error!("Error closing existing SSH connection: {:#}", e);
+                    }
+                });
         }
-        Ok(())
     }
 
     pub fn generate_keys() -> Result<(String, String), String> {
@@ -337,8 +356,8 @@ impl client::Handler for ClientHandler {
 
     async fn check_server_key(
         &mut self,
-        _server_public_key: &keys::PublicKey,
-    ) -> std::result::Result<bool, Self::Error> {
+        _server_public_key: &ssh_key::PublicKey,
+    ) -> Result<bool, Self::Error> {
         Ok(true)
     }
 }

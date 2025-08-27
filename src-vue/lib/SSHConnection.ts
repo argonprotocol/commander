@@ -4,7 +4,7 @@ import { listen } from '@tauri-apps/api/event';
 export interface ISSHConfig {
   address: string;
   username: string;
-  privateKey?: string;
+  privateKeyPath?: string;
 }
 
 export class SSHConnection {
@@ -15,7 +15,7 @@ export class SSHConnection {
   public host: string;
   public port: number;
   public username: string;
-  public privateKey?: string;
+  public privateKeyPath?: string;
 
   constructor(sshConfig: ISSHConfig) {
     const { host, port } = this.extractHostPort(sshConfig.address);
@@ -23,7 +23,7 @@ export class SSHConnection {
     this.host = host;
     this.port = port;
     this.username = sshConfig.username;
-    this.privateKey = sshConfig.privateKey;
+    this.privateKeyPath = sshConfig.privateKeyPath;
   }
 
   public async connect(): Promise<void> {
@@ -37,7 +37,7 @@ export class SSHConnection {
         host: this.host,
         port: this.port,
         username: this.username,
-        privateKey: this.privateKey,
+        privateKeyPath: this.privateKeyPath,
       };
       if (!sshConfig.host) {
         reject(new Error('No SSH host config provided'));

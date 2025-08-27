@@ -19,6 +19,6 @@ COPY cli/ ./cli/
 COPY bot/ ./bot/
 COPY core/ ./core/
 
-RUN yarn tsc
+RUN yarn build:workspace
 
 CMD ["node", "cli/lib/cli.js"]

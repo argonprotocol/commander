@@ -44,6 +44,6 @@ async function importAccount() {
 
   const dataRaw = await readTextFile(filePath);
   emit('close');
-  controller.importFromFile(dataRaw);
+  await controller.importFromFile(dataRaw);
 }
 </script>
