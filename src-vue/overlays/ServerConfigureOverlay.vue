@@ -196,12 +196,16 @@ async function updateServer() {
       ...config.serverDetails,
       ipAddress: ipAddress.value,
     };
+    const existing = SSH.connection;
     await SSH.tryConnection(newServerDetails, config.security.sshPrivateKey);
 
     config.isServerReadyToInstall = true;
     config.isServerUpToDate = false;
     config.serverDetails = newServerDetails;
     await config.save();
+    if (existing) {
+      await existing.close();
+    }
   } catch (error) {
     console.log('error', error);
     hasServerDetailsError.value = true;

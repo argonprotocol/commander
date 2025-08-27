@@ -32,7 +32,7 @@ export class InstallerCheck {
 
   public start(): void {
     this.isCompletedPromise = new Promise(async (resolve, reject) => {
-      const connection = await SSH.getConnection();
+      const connection = await SSH.getOrCreateConnection();
       this.server = new Server(connection);
 
       while (true) {

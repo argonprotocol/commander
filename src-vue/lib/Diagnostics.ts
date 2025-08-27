@@ -13,7 +13,7 @@ export class Diagnostics {
 
   public async load() {
     if (this.server) return;
-    const connection = await SSH.getConnection();
+    const connection = await SSH.getOrCreateConnection();
     this.server = new Server(connection);
     console.log('Diagnostics IS LOADED');
   }

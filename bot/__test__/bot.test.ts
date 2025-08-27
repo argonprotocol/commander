@@ -52,6 +52,7 @@ it('can autobid and store stats', async () => {
     return {
       localNode: 0,
       mainNode: 0,
+      localNodeBlockTime: 0,
     };
   });
 

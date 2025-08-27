@@ -63,6 +63,7 @@ it('can backfill sync data', async () => {
     return {
       localNode: 0,
       mainNode: 0,
+      localNodeBlockTime: 0,
     };
   });
   const finalized = await client.rpc.chain.getFinalizedHead();

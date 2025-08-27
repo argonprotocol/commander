@@ -291,7 +291,7 @@ export default class Installer {
     // We were getting into issues where server hadn't been created yet. I decided to just force
     // getting it in every function that needs it.
     if (!this._server) {
-      const connection = await SSH.getConnection();
+      const connection = await SSH.getOrCreateConnection();
       this._server = new Server(connection);
     }
     return this._server;

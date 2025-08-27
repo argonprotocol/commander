@@ -19,7 +19,7 @@ export default class Restarter {
 
   public async getServer() {
     if (!this._server) {
-      const connection = await SSH.getConnection();
+      const connection = await SSH.getOrCreateConnection();
       this._server = new Server(connection);
     }
     return this._server;

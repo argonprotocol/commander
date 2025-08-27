@@ -67,7 +67,7 @@ import ProgressBar from '../components/ProgressBar.vue';
 import AlertIcon from '../assets/alert.svg?component';
 import { useConfig } from '../stores/config';
 import Draggable from './helpers/Draggable.ts';
-import { ConfigServerDetailsSchema, IConfig, IConfigServerDetails } from '../interfaces/IConfig.ts';
+import { ConfigServerDetailsSchema, IConfig } from '../interfaces/IConfig.ts';
 import { SSH } from '../lib/SSH.ts';
 import { JsonExt } from '@argonprotocol/commander-core';
 
