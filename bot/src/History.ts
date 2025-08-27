@@ -8,6 +8,7 @@ import {
 } from './interfaces/IHistoryFile.ts';
 import type { Storage } from './Storage.ts';
 import Queue from 'p-queue';
+import { LRU } from 'tiny-lru';
 
 export enum SeatReductionReason {
   InsufficientFunds = 'InsufficientFunds',
@@ -23,15 +24,15 @@ export class History {
   private storage: Storage;
   private lastBids: { address: string; bidMicrogons: bigint }[] = [];
 
-  private cohortStartingFrameId!: number;
+  private loggedAtTimestamp = new LRU<number>();
   private myAddresses: Set<string> = new Set();
-  private unsavedActivities: IBotActivity[] = [];
 
-  private lastIdTick: number = 0;
-  private lastIdCounter: number = 0;
   private queue = new Queue({ concurrency: 1, autoStart: true });
 
-  constructor(storage: Storage) {
+  constructor(
+    storage: Storage,
+    private cohortStartingFrameId: number,
+  ) {
     this.storage = storage;
   }
 
@@ -40,13 +41,9 @@ export class History {
       const activities: IBotActivity[] = [];
       let lastModifiedAt: Date | undefined;
       try {
-        if (this.cohortStartingFrameId) {
-          const historyFile = (await this.storage.historyFile(this.cohortStartingFrameId).get())!;
-          lastModifiedAt = historyFile.lastModifiedAt;
-          activities.push(...historyFile.activities.slice(-20));
-        } else {
-          activities.push(...this.unsavedActivities);
-        }
+        const historyFile = (await this.storage.historyFile(this.cohortStartingFrameId).get())!;
+        lastModifiedAt = historyFile.lastModifiedAt;
+        activities.push(...historyFile.activities.slice(-20));
         resolve({
           lastModifiedAt,
           activities,
@@ -61,15 +58,6 @@ export class History {
     this.cohortStartingFrameId = cohortStartingFrameId;
     this.myAddresses = myAddresses;
     this.maxSeatsInPlay = this.myAddresses.size;
-    const activitiesToSave = this.unsavedActivities;
-    this.unsavedActivities = [];
-
-    console.log('SAVING ACTIVITIES TO HISTORY FILE', activitiesToSave);
-    void this.queue.add(() =>
-      this.storage.historyFile(cohortStartingFrameId).mutate((history: IHistoryFile) => {
-        history.activities.push(...activitiesToSave);
-      }),
-    );
   }
 
   public handleStarting() {
@@ -136,54 +124,59 @@ export class History {
     await this.queue.onIdle();
   }
 
-  public handleBidsSubmitted(
-    tick: number,
-    blockNumber: number,
-    param: {
-      microgonsPerSeat: bigint;
-      txFeePlusTip: bigint;
-      submittedCount: number;
-    },
-  ) {
+  public handleBidsSubmitted(args: {
+    tick: number;
+    blockNumber: number;
+    frameId: number;
+    microgonsPerSeat: bigint;
+    txFeePlusTip: bigint;
+    submittedCount: number;
+  }) {
+    const { tick, blockNumber, frameId, ...param } = args;
     console.log('BIDS SUBMITTED', { tick, blockNumber, param });
     this.appendActivities({
       tick,
       blockNumber,
+      frameId,
       type: BotActivityType.BidsSubmitted,
       data: param,
     });
   }
 
-  public handleBidsRejected(
-    tick: number,
-    blockNumber: number,
-    param: {
-      microgonsPerSeat: bigint;
-      rejectedCount: number;
-      submittedCount: number;
-      bidError?: ExtrinsicError;
-    },
-  ) {
+  public handleBidsRejected(args: {
+    tick: number;
+    blockNumber: number;
+    frameId: number;
+    microgonsPerSeat: bigint;
+    rejectedCount: number;
+    submittedCount: number;
+    bidError?: ExtrinsicError;
+  }) {
+    const { tick, blockNumber, frameId, ...param } = args;
     console.log('BIDS REJECTED', { tick, blockNumber, param });
     this.appendActivities({
       tick,
       blockNumber,
+      frameId,
       type: BotActivityType.BidsRejected,
       data: param,
     });
   }
 
-  public handleSeatFluctuation(
-    tick: number,
-    blockNumber: number,
-    newMaxSeats: number,
-    reason: SeatReductionReason,
-    availableMicrogons: bigint,
-  ) {
+  public handleSeatFluctuation(args: {
+    tick: number;
+    blockNumber: number;
+    newMaxSeats: number;
+    reason: SeatReductionReason;
+    availableMicrogons: bigint;
+    frameId: number;
+  }) {
+    const { tick, blockNumber, newMaxSeats, reason, availableMicrogons, frameId } = args;
     if (newMaxSeats < this.maxSeatsInPlay) {
       this.appendActivities({
         tick,
         blockNumber,
+        frameId,
         type: BotActivityType.SeatReduction,
         data: {
           reason,
@@ -195,6 +188,7 @@ export class History {
     } else if (newMaxSeats > this.maxSeatsInPlay) {
       this.appendActivities({
         tick,
+        frameId,
         blockNumber,
         type: BotActivityType.SeatExpansion,
         data: {
@@ -209,11 +203,13 @@ export class History {
     this.maxSeatsInPlay = newMaxSeats;
   }
 
-  public handleIncomingBids(
-    tick: number,
-    blockNumber: number,
-    nextEntrants: { address: string; bidMicrogons: bigint }[],
-  ) {
+  public handleIncomingBids(args: {
+    tick: number;
+    blockNumber: number;
+    frameId: number;
+    nextEntrants: { address: string; bidMicrogons: bigint }[];
+  }) {
+    const { tick, blockNumber, nextEntrants, frameId } = args;
     console.log('INCOMING BIDS', { tick, blockNumber, bids: nextEntrants });
     const hasDiffs = JsonExt.stringify(nextEntrants) !== JsonExt.stringify(this.lastBids);
     this.lastProcessedBlockNumber = Math.max(blockNumber, this.lastProcessedBlockNumber);
@@ -236,6 +232,7 @@ export class History {
         this.appendActivities({
           tick,
           blockNumber,
+          frameId,
           type: BotActivityType.BidReceived,
           data: entry,
         });
@@ -247,6 +244,7 @@ export class History {
           this.appendActivities({
             tick,
             blockNumber,
+            frameId,
             type: BotActivityType.BidReceived,
             data: {
               bidderAddress: address,
@@ -262,33 +260,29 @@ export class History {
   }
 
   private createId(tick: number): number {
-    if (tick !== this.lastIdTick) {
-      this.lastIdTick = tick;
-      this.lastIdCounter = 0;
+    const timestamp = Date.now();
+    let count = 0;
+    if (!this.loggedAtTimestamp.get(timestamp)) {
+      this.loggedAtTimestamp.set(timestamp, 1);
+    } else {
+      // prevent multiple activities getting the same ID if created in the same millisecond
+      count = this.loggedAtTimestamp.get(timestamp)!;
+      this.loggedAtTimestamp.set(timestamp, count + 1);
     }
 
-    const count = this.lastIdCounter.toString().padStart(4, '0');
-    const id = Number(`${tick}${count}`);
-    this.lastIdCounter++;
-
-    return id;
+    const countStr = count.toString().padStart(4, '0');
+    return Number(`${tick}${countStr}`);
   }
 
   private appendActivities(...activities: Omit<IBotActivity, 'id'>[]) {
     for (const activity of activities) {
       (activity as IBotActivity).id ??= this.createId(activity.tick);
-      (activity as IBotActivity).frameId ??= this.cohortStartingFrameId;
-    }
-
-    const cohortFrameId = this.cohortStartingFrameId;
-    if (cohortFrameId) {
+      const frameId = ((activity as IBotActivity).frameId ??= this.cohortStartingFrameId);
       void this.queue.add(() =>
-        this.storage.historyFile(cohortFrameId).mutate((history: IHistoryFile) => {
+        this.storage.historyFile(frameId).mutate((history: IHistoryFile) => {
           history.activities.push(...(activities as IBotActivity[]));
         }),
       );
-    } else {
-      this.unsavedActivities.push(...(activities as IBotActivity[]));
     }
   }
 }

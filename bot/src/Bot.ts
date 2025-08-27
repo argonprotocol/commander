@@ -65,8 +65,18 @@ export default class Bot implements IBotSyncStatus {
     this.isStarting = true;
     console.log('STARTING BOT');
 
+    let currentFrameId = await this.currentFrameId.catch(() => 0);
+    try {
+      this.mainchainClients = new MainchainClients(this.options.archiveRpcUrl);
+      const client = await this.mainchainClients.archiveClientPromise;
+      currentFrameId = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
+    } catch (error) {
+      console.error('Error initializing archive client', error);
+      throw error;
+    }
+
     this.storage = new Storage(this.options.datadir);
-    this.history = new History(this.storage);
+    this.history = new History(this.storage, currentFrameId);
     this.history.handleStarting();
 
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
@@ -76,14 +86,6 @@ export default class Bot implements IBotSyncStatus {
 
     console.log('CONNECTING TO LOCAL RPC');
     this.errorMessage = null;
-
-    try {
-      this.mainchainClients = new MainchainClients(this.options.archiveRpcUrl);
-      await this.mainchainClients.archiveClientPromise;
-    } catch (error) {
-      console.error('Error initializing archive client', error);
-      throw error;
-    }
 
     while (!this.localClient) {
       try {
