@@ -3,6 +3,7 @@
   <div class="h-screen w-screen flex flex-col overflow-hidden cursor-default">
     <TopBar />
     <main v-if="controller.isLoaded && !controller.isImporting" class="flex-grow relative">
+      <AlertBars />
       <MiningPanel v-if="showMiningPanel" />
       <VaultingPanel v-else-if="controller.panel === 'vaulting'" />
       <LiquidLockingPanel v-else-if="controller.panel === 'liquid-locking'" />
@@ -67,6 +68,7 @@ import TroubleshootingOverlay from './overlays/Troubleshooting.vue';
 import ImportingOverlay from './overlays/ImportingOverlay.vue';
 import BootingOverlay from './overlays/BootingOverlay.vue';
 import AppUpdatesOverlay from './overlays/AppUpdatesOverlay.vue';
+import AlertBars from './components/AlertBars.vue';
 
 const controller = useController();
 const config = useConfig();

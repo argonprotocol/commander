@@ -12,6 +12,7 @@ import { BitcoinLocksTable } from './db/BitcoinLocksTable.ts';
 
 export class Db {
   public sql: PluginSql;
+  public hasMigrationError: boolean;
   public serverStateTable: ServerStateTable;
   public cohortFramesTable: CohortFramesTable;
   public cohortsTable: CohortsTable;
@@ -21,10 +22,11 @@ export class Db {
   public vaultsTable: VaultsTable;
   public bitcoinLocksTable: BitcoinLocksTable;
 
-  constructor(sql: PluginSql) {
+  constructor(sql: PluginSql, hasMigrationError: boolean) {
     ensureOnlyOneInstance(this.constructor);
 
     this.sql = sql;
+    this.hasMigrationError = hasMigrationError;
     this.serverStateTable = new ServerStateTable(this);
     this.cohortFramesTable = new CohortFramesTable(this);
     this.cohortsTable = new CohortsTable(this);
@@ -35,9 +37,16 @@ export class Db {
     this.bitcoinLocksTable = new BitcoinLocksTable(this);
   }
 
-  static async load(): Promise<Db> {
-    const sql = await PluginSql.load(`sqlite:${Db.relativePath}`);
-    return new Db(sql);
+  static async load(retries: number = 0): Promise<Db> {
+    try {
+      const sql = await PluginSql.load(`sqlite:${Db.relativePath}`);
+      return new Db(sql, !!retries);
+    } catch (error) {
+      if (typeof error == 'string' && error.startsWith('migration ') && retries < 1) {
+        return this.load(retries + 1);
+      }
+      throw error;
+    }
   }
 
   async execute(query: string, bindValues?: unknown[]): Promise<QueryResult> {
