@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Override vars
-        if: ${{ github.event.inputs.version && contains(github.event.inputs.version, '-rc') || false }}
+        if: ${{ contains( github.event.inputs.version || github.ref_name, '-rc') || false }}
         run: |
           echo "CHANNEL_NAME=channel-experimental" >> $GITHUB_ENV
           echo "CHANNEL_TITLE=Experimental channel" >> $GITHUB_ENV
