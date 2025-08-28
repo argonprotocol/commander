@@ -16,14 +16,12 @@ export class JsonStore<T extends Record<string, any> & ILastModifiedAt> {
   public async mutate(mutateFn: (data: T) => boolean | void | Promise<boolean | void>): Promise<boolean> {
     const result = await this.saveQueue.add(async () => {
       await this.load();
-      if (!this.data) {
-        this.data = structuredClone(this.defaults) as T;
-      }
-      const result = await mutateFn(this.data);
+      const data = this.data ?? (structuredClone(this.defaults) as T);
+      const result = await mutateFn(data);
       if (result === false) return false;
-      this.data.lastModifiedAt = new Date();
+      data.lastModifiedAt = new Date();
       // filter non properties
-      this.data = Object.fromEntries(Object.entries(this.data).filter(([key]) => key in this.defaults)) as T;
+      this.data = Object.fromEntries(Object.entries(data).filter(([key]) => key in this.defaults)) as T;
       await atomicWrite(this.path, JsonExt.stringify(this.data, 2));
       return true;
     });
@@ -49,7 +47,7 @@ export class JsonStore<T extends Record<string, any> & ILastModifiedAt> {
   }
 
   private async load(): Promise<void> {
-    this.defaults = await this.defaultsFn();
+    this.defaults ??= await this.defaultsFn();
     if (this.data === undefined) {
       try {
         // eslint-disable-next-line @typescript-eslint/unbound-method
