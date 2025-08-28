@@ -33,7 +33,7 @@ export class SSH {
       this.connection = new SSHConnection({
         address: this.config.serverDetails.ipAddress,
         username: this.config.serverDetails.sshUser,
-        privateKey: this.config.security.sshPrivateKey,
+        privateKeyPath: this.config.security.sshPrivateKeyPath,
       });
       await this.connection.connect();
     }
@@ -42,12 +42,12 @@ export class SSH {
 
   public static async tryConnection(
     serverDetails: IConfigServerDetails,
-    sshPrivateKey: string,
+    sshPrivateKeyPath: string,
   ): Promise<ITryServerData> {
     const connection = new SSHConnection({
       address: serverDetails.ipAddress,
       username: serverDetails.sshUser,
-      privateKey: sshPrivateKey,
+      privateKeyPath: sshPrivateKeyPath,
     });
     await connection.connect();
     const server = new Server(connection);

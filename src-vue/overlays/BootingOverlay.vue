@@ -90,7 +90,7 @@ async function applyRestoredServer(details: string) {
       if (!parseResult.success) return;
 
       const serverDetails = parseResult.data;
-      await SSH.tryConnection(serverDetails, config.security.sshPrivateKey);
+      await SSH.tryConnection(serverDetails, config.security.sshPrivateKeyPath);
       config.isServerUpToDate = false;
       config.serverDetails = serverDetails;
       await config.save();

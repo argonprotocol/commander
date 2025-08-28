@@ -72,7 +72,7 @@ export default class Importer {
       sshUser: this.config.serverDetails.sshUser,
     };
 
-    const serverData = await this.fetchServerData(serverDetails, this.config.security.sshPrivateKey);
+    const serverData = await this.fetchServerData(serverDetails, this.config.security.sshPrivateKeyPath);
 
     if (!serverData) {
       throw new Error('Failed to fetch server data');
@@ -93,11 +93,11 @@ export default class Importer {
 
   private async fetchServerData(
     serverDetails: IConfigServerDetails,
-    sshPrivateKey: string,
+    sshPrivateKeyPath: string,
   ): Promise<ITryServerData | undefined> {
-    if (!serverDetails.ipAddress || !sshPrivateKey) return;
+    if (!serverDetails.ipAddress || !sshPrivateKeyPath) return;
 
-    const serverData = await SSH.tryConnection(serverDetails, sshPrivateKey);
+    const serverData = await SSH.tryConnection(serverDetails, sshPrivateKeyPath);
     return serverData;
   }
 }

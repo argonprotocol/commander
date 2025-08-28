@@ -9,6 +9,7 @@
     "dev": "vite",
     "tsc": "tsc && yarn workspaces foreach --all run tsc",
     "build": "yarn build:version && yarn build:server && vue-tsc --noEmit && vite build",
+    "build:workspace": "yarn workspaces foreach --all run build",
     "build:server": "yarn workspace @argonprotocol/commander-bot run build && tsx scripts/buildServer.ts",
     "build:version": "tsx scripts/syncVersions.ts",
     "build:config": "tsx scripts/updateNetworkConfigs.ts",

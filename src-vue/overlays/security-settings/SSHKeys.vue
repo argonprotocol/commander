@@ -53,14 +53,14 @@
     <CopyToClipboard
       ref="copyToClipboard"
       @click="highlightCopiedContent"
-      :content="config.security.sshPrivateKey"
+      :content="sshPrivateKey"
       class="relative mb-3"
     >
       <textarea
         :style="{ height: privateKeyTextareaHeight }"
         class="bg-white py-3 pl-3 pr-8 border border-slate-300 rounded-md w-full pointer-events-none resize-none whitespace-pre overflow-hidden font-mono text-md focus:outline-none"
         readonly
-      >{{ config.security.sshPrivateKey }}</textarea>
+      >{{ sshPrivateKey }}</textarea>
       <div
         class="absolute right-px rounded-r-md top-1 w-[72px] bottom-2 bg-gradient-to-r from-transparent to-[40px] to-white pointer-events-auto"
       ></div>
@@ -72,7 +72,7 @@
           ref="privateKeyTextareaShadow"
           class="bg-white py-3 pl-3 pr-8 border border-slate-300 rounded-md w-full pointer-events-none overflow-x-hidden"
         >
-          <pre class="bg-blue-200 whitespace-pre w-full inline-block overflow-visible font-mono text-md">{{ config.security.sshPrivateKey }}</pre>
+          <pre class="bg-blue-200 whitespace-pre w-full inline-block overflow-visible font-mono text-md">{{ sshPrivateKey }}</pre>
         </div>
         <div
           class="flex flex-row items-center absolute right-[1px] top-1 bottom-1 pointer-events-none bg-white pl-2 pr-[15px] rounded-r-md"
@@ -93,6 +93,7 @@ import * as Vue from 'vue';
 import { useConfig } from '../../stores/config';
 import CopyToClipboard from '../../components/CopyToClipboard.vue';
 import CopyIcon from '../../assets/copy.svg?component';
+import { readTextFile } from '@tauri-apps/plugin-fs';
 
 const config = useConfig();
 const copyToClipboard = Vue.ref<typeof CopyToClipboard>();
@@ -122,9 +123,13 @@ function highlightCopiedContent() {
   }
 }
 
+const sshPrivateKey = Vue.ref('');
+
 // Adjust textarea height when component mounts and when content changes
-Vue.onMounted(() => {
+Vue.onMounted(async () => {
   console.log('onMounted');
+  await config.load();
+  sshPrivateKey.value = await readTextFile(config.security.sshPrivateKeyPath);
   adjustTextareaHeight();
   setTimeout(() => {
     adjustTextareaHeight();
@@ -132,7 +137,7 @@ Vue.onMounted(() => {
 });
 
 Vue.watch(
-  () => config.security.sshPrivateKey,
+  () => sshPrivateKey,
   () => {
     Vue.nextTick(() => {
       adjustTextareaHeight();

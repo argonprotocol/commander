@@ -53,7 +53,7 @@ export class Config {
     this._security = {
       masterMnemonic: '',
       sshPublicKey: '',
-      sshPrivateKey: '',
+      sshPrivateKeyPath: '',
     };
     this._loadedData = {
       version: packageJson.version,

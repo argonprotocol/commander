@@ -21,10 +21,10 @@ async fn open_ssh_connection(
     host: &str,
     port: u16,
     username: String,
-    private_key: String,
+    private_key_path: String,
 ) -> Result<String, String> {
     log::info!("ensure_ssh_connection");
-    ssh_pool::open_connection(address, host, port, username, private_key)
+    ssh_pool::open_connection(address, host, port, username, private_key_path)
         .await
         .map_err(|e| {
             log::error!("Error connecting to SSH: {:#}", e);
@@ -133,13 +133,13 @@ async fn overwrite_security(
     app: AppHandle,
     master_mnemonic: String,
     ssh_public_key: String,
-    ssh_private_key: String,
+    ssh_private_key_path: String,
 ) -> Result<String, String> {
     log::info!("overwrite_security");
     let new_security = security::Security {
         master_mnemonic,
         ssh_public_key,
-        ssh_private_key,
+        ssh_private_key_path,
     };
     new_security.save(&app).map_err(|e| e.to_string())?;
 

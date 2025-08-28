@@ -197,7 +197,7 @@ async function updateServer() {
       ipAddress: ipAddress.value,
     };
     const existing = SSH.connection;
-    await SSH.tryConnection(newServerDetails, config.security.sshPrivateKey);
+    await SSH.tryConnection(newServerDetails, config.security.sshPrivateKeyPath);
 
     config.isServerReadyToInstall = true;
     config.isServerUpToDate = false;

@@ -310,7 +310,7 @@ async function addServer() {
       ...config.serverDetails,
       ipAddress: ipAddress.value,
     };
-    const serverMeta = await SSH.tryConnection(newServerDetails, config.security.sshPrivateKey);
+    const serverMeta = await SSH.tryConnection(newServerDetails, config.security.sshPrivateKeyPath);
     if (serverMeta.walletAddress && serverMeta.walletAddress !== config.miningAccount.address) {
       hasServerDetailsError.value = true;
     }
