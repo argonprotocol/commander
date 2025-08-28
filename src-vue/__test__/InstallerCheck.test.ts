@@ -1,35 +1,16 @@
+import './helpers/mocks.ts';
 import { expect, it, vi } from 'vitest';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 
-dayjs.extend(utc);
-
-vi.mock('../lib/SSH', async () => {
-  const { sshMockFn } = await import('./helpers/ssh');
-  return sshMockFn();
-});
-vi.mock('@tauri-apps/plugin-dialog', async () => {
-  return {
-    message: vi.fn(),
-  };
-});
-vi.mock('../lib/tauriApi', async () => {
-  return {
-    invokeWithTimeout: vi.fn((command: string, args: any) => {
-      console.log('invokeWithTimeout', command, args);
-
-      return Promise.resolve();
-    }),
-  };
-});
-
-import { InstallerCheck } from '../lib/InstallerCheck';
 import { Config } from '../lib/Config';
+import { InstallerCheck } from '../lib/InstallerCheck';
 import { createMockedDbPromise } from './helpers/db';
 import { InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
 import Installer from '../lib/Installer';
 import { IInstallStepStatuses, InstallStepStatusType } from '../lib/Server';
-import { mnemonicGenerate } from '@argonprotocol/mainchain';
+
+dayjs.extend(utc);
 
 it.only('jump through the install steps rapidly when time has expired', async () => {
   const dbPromise = createMockedDbPromise({ isMinerReadyToInstall: 'false' });

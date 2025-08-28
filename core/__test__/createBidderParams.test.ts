@@ -51,8 +51,8 @@ it('can create bidder params', async () => {
   );
 
   expect(bidderParams.minBid).toBe(0n);
-  // BAB: this is based on a breakeven at slow growth calc with the above rules and the test network state at time of writing
-  expect(bidderParams.maxBid).toBe(66_532_221n);
+  // BAB: not sure how to test this - it's based on live data from the chain
+  // expect(bidderParams.maxBid).toBe(66_532_221n);
   expect(bidderParams.maxBudget).toBe(10_000_000n + accruedEarnings);
   expect(bidderParams.maxSeats).toBe(10);
   expect(bidderParams.bidDelay).toBe(1);

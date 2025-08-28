@@ -18,6 +18,10 @@ export class MiningFrames {
 
   private static networkName: keyof typeof NetworkConfig | undefined = undefined;
 
+  public static canFrameBeZero() {
+    return this.networkName === 'localnet' || this.networkName === 'dev-docker';
+  }
+
   public static getForTick(tick: number) {
     const { ticksBetweenFrames, biddingStartTick } = this.getConfig();
 

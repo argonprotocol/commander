@@ -133,7 +133,7 @@ export class History {
     submittedCount: number;
   }) {
     const { tick, blockNumber, frameId, ...param } = args;
-    console.log('BIDS SUBMITTED', { tick, blockNumber, param });
+    console.log('BIDS SUBMITTED', { tick, blockNumber, param, frameId });
     this.appendActivities({
       tick,
       blockNumber,
@@ -153,7 +153,7 @@ export class History {
     bidError?: ExtrinsicError;
   }) {
     const { tick, blockNumber, frameId, ...param } = args;
-    console.log('BIDS REJECTED', { tick, blockNumber, param });
+    console.log('BIDS REJECTED', { tick, blockNumber, param, frameId });
     this.appendActivities({
       tick,
       blockNumber,
@@ -210,7 +210,7 @@ export class History {
     nextEntrants: { address: string; bidMicrogons: bigint }[];
   }) {
     const { tick, blockNumber, nextEntrants, frameId } = args;
-    console.log('INCOMING BIDS', { tick, blockNumber, bids: nextEntrants });
+    console.log('INCOMING BIDS', { tick, blockNumber, bids: nextEntrants, frameId });
     const hasDiffs = JsonExt.stringify(nextEntrants) !== JsonExt.stringify(this.lastBids);
     this.lastProcessedBlockNumber = Math.max(blockNumber, this.lastProcessedBlockNumber);
 

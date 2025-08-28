@@ -3,12 +3,13 @@ import { vi } from 'vitest';
 export const sshMockFn = () => {
   return {
     SSH: {
-      getConnection: () =>
+      getOrCreateConnection: () =>
         Promise.resolve({
           runCommandWithTimeout: vi.fn((command: string, timeout: number) => {
             console.log('SSH.runCommandWithTimeout', command, timeout);
             return Promise.resolve(['', 0]);
           }),
+          uploadFileWithTimeout: vi.fn(),
         }),
       tryConnection: vi.fn(),
       closeConnection: vi.fn(),

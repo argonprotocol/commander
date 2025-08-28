@@ -1,31 +1,11 @@
+import './helpers/mocks.ts';
 import { beforeEach, expect, it, vi } from 'vitest';
 import * as Vue from 'vue';
-
-vi.mock('../lib/SSH', async () => {
-  const { sshMockFn } = await import('./helpers/ssh');
-  return sshMockFn();
-});
-
-vi.mock('@tauri-apps/plugin-dialog', async () => {
-  return {
-    message: vi.fn(),
-  };
-});
-vi.mock('../lib/tauriApi', async () => {
-  return {
-    invokeWithTimeout: vi.fn((command: string, args: any) => {
-      console.log('invokeWithTimeout', command, args);
-
-      return Promise.resolve();
-    }),
-  };
-});
-import Installer, { resetInstaller } from '../lib/Installer';
 import { Config } from '../lib/Config';
+import Installer, { resetInstaller } from '../lib/Installer';
 import { createMockedDbPromise } from './helpers/db';
 import { IInstallStepStatuses, InstallStepStatusType } from '../lib/Server';
 import { InstallStepKey } from '../interfaces/IConfig';
-import { mnemonicGenerate } from '@argonprotocol/mainchain';
 
 beforeEach(() => {
   resetInstaller();

@@ -206,12 +206,14 @@ export type IDeferred<T = void> = {
   readonly isSettled: boolean;
 };
 
+export const instanceChecks = new WeakSet<any>();
+
 export function ensureOnlyOneInstance(constructor: any) {
-  if (constructor.isInitialized) {
+  if (instanceChecks.has(constructor)) {
     console.log(new Error().stack);
     throw new Error(`${constructor.name} already initialized`);
   }
-  constructor.isInitialized = true;
+  instanceChecks.add(constructor);
 }
 
 export function resetOnlyOneInstance(constructor: any) {
