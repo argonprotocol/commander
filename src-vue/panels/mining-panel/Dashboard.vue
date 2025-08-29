@@ -358,7 +358,6 @@ import { useCurrency } from '../../stores/currency';
 import basicEmitter from '../../emitters/basicEmitter';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import CountupClock from '../../components/CountupClock.vue';
-import AlertBars from '../../components/AlertBars.vue';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
 import AuctionIcon from '../../assets/auction.svg?component';
 import ActivityIcon from '../../assets/activity.svg?component';
