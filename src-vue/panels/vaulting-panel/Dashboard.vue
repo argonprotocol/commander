@@ -189,7 +189,6 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import utc from 'dayjs/plugin/utc';
 import { useCurrency } from '../../stores/currency';
-import AlertBars from '../../components/AlertBars.vue';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
 import { useMyVault, useVaults } from '../../stores/vaults.ts';
 import { useConfig } from '../../stores/config.ts';

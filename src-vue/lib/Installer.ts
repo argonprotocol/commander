@@ -39,7 +39,8 @@ export default class Installer {
   public isLoadedPromise: Promise<void>;
   public isReadyToRun: boolean = false;
 
-  public isRunning = false;
+  public isRunning: boolean;
+  public isRunningInBackground: boolean;
   public fileUploadProgress: number = 0;
 
   public reasonToSkipInstall: string;
@@ -55,6 +56,9 @@ export default class Installer {
 
   constructor(config: Config) {
     ensureOnlyOneInstance(this.constructor);
+
+    this.isRunning = false;
+    this.isRunningInBackground = false;
 
     this.config = config;
     this.installerCheck = new InstallerCheck(this, config);
@@ -118,6 +122,7 @@ export default class Installer {
 
     console.log('RUNNING INSTALLER');
     this.isRunning = true;
+    this.isRunningInBackground = false;
     this.config.isMinerWaitingForUpgradeApproval = false;
     this.config.isMinerUpToDate = false;
     await this.config.save();
@@ -163,6 +168,7 @@ export default class Installer {
       await server.startInstallerScript();
       this.fileUploadProgress = 99;
 
+      this.isRunningInBackground = true;
       this.installerCheck.shouldUseCachedInstallSteps = false;
 
       console.info('Waiting for install to complete');
@@ -170,6 +176,7 @@ export default class Installer {
 
       console.info('Confirming all install flags');
       this.isRunning = false;
+      this.isRunningInBackground = false;
       this.isReadyToRun = false;
       this.remoteFilesNeedUpdating = false;
       console.info('Installer finished');
@@ -192,6 +199,7 @@ export default class Installer {
     }
 
     this.isRunning = false;
+    this.isRunningInBackground = false;
     this.isReadyToRun = false;
   }
 
@@ -406,6 +414,7 @@ export default class Installer {
     const server = await this.getServer();
     this.isRunning = await server.isInstallerScriptRunning();
     if (this.isRunning) {
+      this.isRunningInBackground = true;
       console.log('Install process IS running remotely');
     }
 

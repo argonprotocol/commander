@@ -68,7 +68,7 @@ import TroubleshootingOverlay from './overlays/Troubleshooting.vue';
 import ImportingOverlay from './overlays/ImportingOverlay.vue';
 import BootingOverlay from './overlays/BootingOverlay.vue';
 import AppUpdatesOverlay from './overlays/AppUpdatesOverlay.vue';
-import AlertBars from './components/AlertBars.vue';
+import AlertBars from './navigation/AlertBars.vue';
 import HowMiningWorksOverlay from './overlays/bot/HowMiningWorks.vue';
 import HowVaultingWorksOverlay from './overlays/vault/HowVaultingWorks.vue';
 import { PanelKey } from './interfaces/IConfig.ts';
