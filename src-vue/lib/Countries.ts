@@ -1,6 +1,27 @@
+import { IConfig } from '../interfaces/IConfig.ts';
+
 export interface ICountry {
   name: string;
   value: string;
+}
+
+export async function getUserJurisdiction(): Promise<IConfig['userJurisdiction']> {
+  const ipResponse = await fetch('https://api.ipify.org?format=json');
+  const { ip: ipAddress } = await ipResponse.json();
+
+  const geoResponse = await fetch(`https://api.hackertarget.com/geoip/?q=${ipAddress}&output=json`);
+  const { city, region, state, country: countryStr, latitude, longitude } = await geoResponse.json();
+  const country = Countries.closestMatch(countryStr) || ({} as any);
+
+  return {
+    ipAddress,
+    city,
+    region: region || state,
+    countryName: country.name || countryStr,
+    countryCode: country.value || '',
+    latitude,
+    longitude,
+  };
 }
 
 export default class Countries {

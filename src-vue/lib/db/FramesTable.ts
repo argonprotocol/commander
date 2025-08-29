@@ -198,6 +198,7 @@ export class FramesTable extends BaseTable {
 
     while (records.length < 365) {
       const lastRecord = records[records.length - 1];
+      if (!lastRecord) break;
       const previousDay = dayjs.utc(lastRecord.date).subtract(1, 'day');
       if (previousDay.isBefore(dayjs.utc('2025-01-01'))) {
         break;

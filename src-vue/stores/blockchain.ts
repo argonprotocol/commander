@@ -46,11 +46,13 @@ export const useBlockchainStore = defineStore('blockchain', () => {
   ]);
 
   async function fetchBlock(client: MainchainClient, blockHash: BlockHash) {
-    const header = await client.rpc.chain.getHeader(blockHash);
+    const block = await client.rpc.chain.getBlock(blockHash);
+    const header = block.block.header;
     const author = getAuthorFromHeader(client, header);
     const clientAt = await client.at(blockHash);
     const events = await clientAt.query.system.events();
-    const extrinsics = await clientAt.query.system.extrinsicCount().then(x => (x.isSome ? x.value.toNumber() : 0));
+    // there's no way to get this without fetching the whole block
+    const extrinsics = block.block.extrinsics.length;
     let microgons = 0n;
     let micronots = 0n;
     events.find(({ event }: { event: any }) => {

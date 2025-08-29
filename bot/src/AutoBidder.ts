@@ -47,13 +47,13 @@ export class AutoBidder {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     for (const key of this.cohortBiddersByActivationFrameId.keys()) {
-      await this.onBiddingEnd(key);
+      await this.onBiddingEnd(key, true);
     }
     console.log('AUTOBIDDER STOPPED');
   }
 
-  private async onBiddingEnd(cohortActivationFrameId: number): Promise<void> {
-    await this.cohortBiddersByActivationFrameId.get(cohortActivationFrameId)?.stop();
+  private async onBiddingEnd(cohortActivationFrameId: number, isShuttingDown = false): Promise<void> {
+    await this.cohortBiddersByActivationFrameId.get(cohortActivationFrameId)?.stop(!isShuttingDown);
     this.cohortBiddersByActivationFrameId.delete(cohortActivationFrameId);
     console.log('Bidding stopped', { cohortActivationFrameId });
   }
@@ -121,12 +121,13 @@ export class AutoBidder {
         });
       },
       onBidsUpdated: args => {
-        const { tick, bids, atBlockNumber } = args;
+        const { tick, bids, atBlockNumber, isReloadingInitialState } = args;
         this.history.handleIncomingBids({
           tick,
           blockNumber: atBlockNumber,
           nextEntrants: bids,
           frameId: cohortActivationFrameId,
+          isReloadingInitialState,
         });
       },
       onBidsSubmitted: args => {

@@ -92,7 +92,7 @@ describeIntegration('Accountset tests', () => {
     expect(result.successfulBids).toBe(5);
     expect(result.bidError).toBeFalsy();
     const bids = await accountset.bids(result.blockHash);
-    console.log(bids);
+    console.log('Bids', bids);
     expect(bids.filter(x => x.bidPlace !== undefined)).toHaveLength(5);
   });
 

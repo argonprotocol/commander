@@ -1,4 +1,14 @@
 {
+  "dev-docker": {
+    "archiveUrl": "ws://localhost:9944",
+    "tickMillis": 2000,
+    "bitcoinBlockMillis": 2000,
+    "esploraHost": "http://localhost:3002",
+    "ticksBetweenFrames": 1440,
+    "slotBiddingStartAfterTicks": 0,
+    "genesisTick": 0,
+    "biddingStartTick": 0
+  },
   "localnet": {
     "archiveUrl": "ws://localhost:9944",
     "tickMillis": 10000,

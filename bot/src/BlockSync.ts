@@ -45,7 +45,7 @@ export class BlockSync {
   lastSynchedTick: number = 0;
   earliestQueuedTick?: number;
 
-  didProcessFinalizedBlock?: (lastProcessed: ILastProcessed) => void;
+  didProcessBlock?: (lastProcessed: ILastProcessed) => void;
 
   private unsubscribe?: () => void;
   private isStopping: boolean = false;
@@ -104,11 +104,14 @@ export class BlockSync {
 
     await this.botStateFile.mutate(async x => {
       if (!x.oldestFrameIdToSync) {
-        // use || to avoid 0
         x.oldestFrameIdToSync =
-          this.oldestFrameIdToSync ||
-          MiningFrames.getForHeader(this.archiveClient, finalizedHeader) ||
+          this.oldestFrameIdToSync ??
+          MiningFrames.getForHeader(this.archiveClient, finalizedHeader) ??
           MiningFrames.calculateCurrentFrameIdFromSystemTime();
+        if (x.oldestFrameIdToSync === 0 && !MiningFrames.canFrameBeZero()) {
+          throw new Error(`Oldest frame to sync cannot be be 0`);
+        }
+        console.log(`Set oldest frame to ${x.oldestFrameIdToSync}`);
       }
       const oldestTickRange = MiningFrames.getTickRangeForFrame(x.oldestFrameIdToSync);
       this.oldestTickToSync = oldestTickRange[0];
@@ -160,14 +163,16 @@ export class BlockSync {
         const headerFrameId = MiningFrames.getForTick(tick);
 
         if (x.blocksByNumber[blockNumber]?.hash === blockHash || headerFrameId < this.oldestFrameIdToSync!) {
-          console.info('Found oldest block to backfill', {
-            blockNumber,
-            headerFrameId,
-            oldestToKeep: this.oldestFrameIdToSync,
-          });
+          if (isFirstLoad) {
+            console.info('Found oldest block to backfill', {
+              blockNumber,
+              headerFrameId,
+              oldestToKeep: this.oldestFrameIdToSync,
+            });
+          }
           break;
         }
-        console.log(`Queuing block to sync. Block: ${blockNumber}, Frame ID: ${headerFrameId}, Hash: ${blockHash}`);
+        console.log(`Queueing block to sync. Block: ${blockNumber}, Frame ID: ${headerFrameId}, Hash: ${blockHash}`);
         // set synced back if we are syncing to a block that is older than the current synced block
         if (x.syncedToBlockNumber >= blockNumber) {
           x.syncedToBlockNumber = blockNumber - 1;
@@ -340,9 +345,10 @@ export class BlockSync {
     }
 
     const blockNumber = syncedToBlockNumber + 1;
+    if (blockNumber < 1) return;
     const blockMeta = blockSyncData.blocksByNumber[blockNumber];
 
-    console.log('Processing block', blockMeta);
+    console.log(`Processing block ${blockNumber}`, blockMeta);
 
     const client = this.getRpcClient(blockNumber);
     const api = await client.at(blockMeta.hash);
@@ -433,11 +439,11 @@ export class BlockSync {
       x.lastBlockNumberByFrameId[currentFrameId] = blockNumber;
     });
 
-    this.didProcessFinalizedBlock?.(this.lastProcessed);
+    this.didProcessBlock?.(this.lastProcessed);
     const remaining = bestBlockNumber - blockNumber;
-    console.log(
-      `Processed block ${blockNumber} at tick ${tick}. (synced ${((blockNumber * 100) / bestBlockNumber).toFixed(1)}%)`,
-    );
+    const syncPercent = (blockNumber * 100) / bestBlockNumber;
+    const syncString = syncPercent >= 100 ? '' : ` (synced ${syncPercent.toFixed(1)}%)`;
+    console.log(`Processed block ${blockNumber} at tick ${tick}${syncString}.`);
     return {
       processed: blockMeta,
       remaining,

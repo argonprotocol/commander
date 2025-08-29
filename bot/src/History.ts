@@ -133,7 +133,7 @@ export class History {
     submittedCount: number;
   }) {
     const { tick, blockNumber, frameId, ...param } = args;
-    console.log('BIDS SUBMITTED', { tick, blockNumber, param });
+    console.log('BIDS SUBMITTED', { tick, blockNumber, param, frameId });
     this.appendActivities({
       tick,
       blockNumber,
@@ -153,7 +153,7 @@ export class History {
     bidError?: ExtrinsicError;
   }) {
     const { tick, blockNumber, frameId, ...param } = args;
-    console.log('BIDS REJECTED', { tick, blockNumber, param });
+    console.log('BIDS REJECTED', { tick, blockNumber, param, frameId });
     this.appendActivities({
       tick,
       blockNumber,
@@ -208,13 +208,17 @@ export class History {
     blockNumber: number;
     frameId: number;
     nextEntrants: { address: string; bidMicrogons: bigint }[];
+    isReloadingInitialState: boolean;
   }) {
     const { tick, blockNumber, nextEntrants, frameId } = args;
-    console.log('INCOMING BIDS', { tick, blockNumber, bids: nextEntrants });
-    const hasDiffs = JsonExt.stringify(nextEntrants) !== JsonExt.stringify(this.lastBids);
     this.lastProcessedBlockNumber = Math.max(blockNumber, this.lastProcessedBlockNumber);
-
+    const hasDiffs = JsonExt.stringify(nextEntrants) !== JsonExt.stringify(this.lastBids);
     if (hasDiffs) {
+      if (args.isReloadingInitialState) {
+        this.lastBids = nextEntrants;
+        return;
+      }
+      console.log('INCOMING BIDS', { tick, blockNumber, bids: nextEntrants, frameId });
       for (const [i, { address, bidMicrogons }] of nextEntrants.entries()) {
         const prevBidIndex = this.lastBids.findIndex(y => y.address === address);
         const entry: IBotActivityBidReceived = {

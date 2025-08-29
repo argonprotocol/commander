@@ -26,6 +26,7 @@ export class Bot {
   private config: Config;
   private dbPromise: Promise<Db>;
   private botSyncer!: BotSyncer;
+  private isLoaded = false;
 
   constructor(config: Config, dbPromise: Promise<Db>) {
     ensureOnlyOneInstance(this.constructor);
@@ -39,6 +40,8 @@ export class Bot {
   }
 
   public async load(installer: Installer): Promise<void> {
+    if (this.isLoaded) return;
+    this.isLoaded = true;
     const db = await this.dbPromise;
     this.botSyncer = new BotSyncer(this.config, db, installer, {
       onEvent: (type: keyof IBotEmitter, payload?: any) => botEmitter.emit(type, payload),
@@ -61,6 +64,28 @@ export class Bot {
     await server.stopBotDocker();
     await server.startBotDocker();
     this.botSyncer.isPaused = false;
+  }
+
+  public async resyncBiddingRules(): Promise<void> {
+    const server = new Server(await SSH.getOrCreateConnection());
+    try {
+      this.status = BotStatus.ServerSyncing;
+      this.syncProgress = 25;
+      this.botSyncer.isPaused = true;
+      await server.stopBotDocker();
+      this.syncProgress = 30;
+      await server.uploadBiddingRules(this.config.biddingRules);
+      this.syncProgress = 40;
+      await server.startBotDocker();
+      this.syncProgress = 100;
+      this.status = BotStatus.Ready;
+    } catch (err) {
+      this.status = BotStatus.Broken;
+      throw err;
+    } finally {
+      this.botSyncer.isPaused = false;
+      this.syncProgress = 0;
+    }
   }
 
   public get isStarting(): boolean {

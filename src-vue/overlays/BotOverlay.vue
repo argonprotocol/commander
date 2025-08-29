@@ -328,6 +328,8 @@ import NeedMoreCapitalHover from './bot/NeedMoreCapitalHover.vue';
 import Importer from '../lib/Importer';
 import BotReturns from './bot/BotReturns.vue';
 import BotCapital from './bot/BotCapital.vue';
+import { useInstaller } from '../stores/installer.ts';
+import { useBot } from '../stores/bot.ts';
 
 const calculator = getCalculator();
 const calculatorData = getCalculatorData();
@@ -337,6 +339,8 @@ let previousBiddingRules: string | null = null;
 const currency = useCurrency();
 const config = useConfig();
 const dbPromise = getDbPromise();
+const installer = useInstaller();
+const bot = useBot();
 
 const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
@@ -472,13 +476,22 @@ function cancelImport() {
 async function saveRules() {
   isSaving.value = true;
 
+  let didSave = false;
   if (rules.value) {
     rules.value.requiredMicronots = calculateMicronotsRequired();
     await config.saveBiddingRules();
+    didSave = true;
   }
 
   isSaving.value = false;
   isOpen.value = false;
+  if (config.isMinerInstalled && didSave) {
+    try {
+      await bot.resyncBiddingRules();
+    } catch (error) {
+      console.error('Failed to reload server bidding rules:', error);
+    }
+  }
   hideTooltip();
 }
 

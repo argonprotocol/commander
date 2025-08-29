@@ -22,7 +22,7 @@ import { createDeferred, ensureOnlyOneInstance, miniSecretFromUri } from './Util
 import IDeferred from '../interfaces/IDeferred';
 import { CurrencyKey } from './Currency';
 import { bip39 } from '@argonprotocol/bitcoin';
-import Countries from './Countries';
+import { getUserJurisdiction } from './Countries';
 import ISecurity from '../interfaces/ISecurity';
 import { getMainchain } from '../stores/mainchain';
 import { WalletBalances } from './WalletBalances';
@@ -716,22 +716,5 @@ const defaults: IConfigDefaults = {
     };
   },
   defaultCurrencyKey: () => CurrencyKey.ARGN,
-  userJurisdiction: async () => {
-    const ipResponse = await fetch('https://api.ipify.org?format=json');
-    const { ip: ipAddress } = await ipResponse.json();
-
-    const geoResponse = await fetch(`https://api.hackertarget.com/geoip/?q=${ipAddress}&output=json`);
-    const { city, region, state, country: countryStr, latitude, longitude } = await geoResponse.json();
-    const country = Countries.closestMatch(countryStr) || ({} as any);
-
-    return {
-      ipAddress,
-      city,
-      region: region || state,
-      countryName: country.name || countryStr,
-      countryCode: country.value || '',
-      latitude,
-      longitude,
-    };
-  },
+  userJurisdiction: getUserJurisdiction,
 };

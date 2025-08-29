@@ -166,32 +166,32 @@ const options = Vue.ref({
   },
   [AdvancedRestartOption.RecreateLocalDatabase]: {
     isChecked: false,
-    isDisabled: installer.isRunning,
+    isDisabled: false,
     checkedBy: '',
   },
   [AdvancedRestartOption.RestartDockers]: {
     isChecked: false,
-    isDisabled: !config.isMinerInstalled && !installer.isRunning,
+    isDisabled: false,
     checkedBy: '',
   },
   [AdvancedRestartOption.ResyncBiddingDataOnCloudMachine]: {
     isChecked: false,
-    isDisabled: !config.isMinerInstalled && !installer.isRunning,
+    isDisabled: false,
     checkedBy: '',
   },
   [AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine]: {
     isChecked: false,
-    isDisabled: !config.isMinerInstalled && !installer.isRunning,
+    isDisabled: false,
     checkedBy: '',
   },
   [AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine]: {
     isChecked: false,
-    isDisabled: !config.isMinerInstalled && !installer.isRunning,
+    isDisabled: false,
     checkedBy: '',
   },
   [AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine]: {
     isChecked: false,
-    isDisabled: !config.isMinerInstalled && !installer.isRunning,
+    isDisabled: false,
     checkedBy: '',
   },
 });
@@ -223,7 +223,12 @@ function toggleOption(key: AdvancedRestartOption) {
   } else if (key === AdvancedRestartOption.ResyncBiddingDataOnCloudMachine) {
     handleSubOption(
       AdvancedRestartOption.ResyncBiddingDataOnCloudMachine,
-      AdvancedRestartOption.RestartDockers,
+      AdvancedRestartOption.ReloadAppUi,
+      isChecked,
+    );
+    handleSubOption(
+      AdvancedRestartOption.ResyncBiddingDataOnCloudMachine,
+      AdvancedRestartOption.RecreateLocalDatabase,
       isChecked,
     );
   } else if (key === AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine) {
@@ -298,13 +303,15 @@ async function runSelectedOptions() {
 }
 
 function updateDisabledOptions() {
-  if (!installer.isRunning && !bot.isSyncing) return;
-
-  options.value[AdvancedRestartOption.RestartDockers].isDisabled = true;
-  options.value[AdvancedRestartOption.ResyncBiddingDataOnCloudMachine].isDisabled = true;
-  options.value[AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine].isDisabled = true;
-  options.value[AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine].isDisabled = true;
+  console.log('On disalbig options, installer.isRunning = ', installer.isRunning);
+  const isDisabled = !config.isMinerInstalled && !installer.isRunning;
+  options.value[AdvancedRestartOption.RecreateLocalDatabase].isDisabled = installer.isRunning;
+  options.value[AdvancedRestartOption.RestartDockers].isDisabled = isDisabled;
+  options.value[AdvancedRestartOption.ResyncBiddingDataOnCloudMachine].isDisabled = isDisabled;
+  options.value[AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine].isDisabled = isDisabled;
+  options.value[AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine].isDisabled = isDisabled;
 }
+updateDisabledOptions();
 
 Vue.watch(() => installer.isRunning, updateDisabledOptions, { immediate: true });
 Vue.watch(() => bot.isSyncing, updateDisabledOptions, { immediate: true });

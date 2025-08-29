@@ -6,7 +6,6 @@ import {
   InstallStepStatus,
 } from '../interfaces/IConfig';
 import { Config } from './Config';
-import { invoke } from '@tauri-apps/api/core';
 import { InstallerCheck } from './InstallerCheck';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -15,6 +14,7 @@ import IDeferred from '../interfaces/IDeferred';
 import { message as tauriMessage } from '@tauri-apps/plugin-dialog';
 import { exit as tauriExit } from '@tauri-apps/plugin-process';
 import { Server } from './Server';
+import { invokeWithTimeout } from './tauriApi.ts';
 
 dayjs.extend(utc);
 
@@ -201,6 +201,12 @@ export default class Installer {
     this.isRunning = false;
     this.isRunningInBackground = false;
     this.isReadyToRun = false;
+  }
+
+  public async uploadBiddingRules() {
+    const server = await this.getServer();
+
+    await server.uploadBiddingRules(this.config.biddingRules);
   }
 
   public async ensureIpAddressIsWhitelisted(): Promise<void> {
@@ -602,7 +608,11 @@ export default class Installer {
   }
 
   private async getLocalShasum(): Promise<string> {
-    const embeddedFiles = await invoke('read_embedded_file', { localRelativePath: 'resources/SHASUM256' });
+    const embeddedFiles = await invokeWithTimeout(
+      'read_embedded_file',
+      { localRelativePath: 'resources/SHASUM256' },
+      10e3,
+    );
     if (typeof embeddedFiles !== 'string') {
       throw new Error('Failed to read local version file');
     }

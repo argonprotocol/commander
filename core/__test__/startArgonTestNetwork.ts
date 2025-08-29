@@ -1,7 +1,8 @@
 import Path from 'path';
 import docker from 'docker-compose';
 import { runOnTeardown } from '@argonprotocol/testing';
-import { MiningFrames } from '../src/index.js';
+import { MiningFrames, NetworkConfig } from '../src/index.js';
+import { getClient } from '@argonprotocol/mainchain';
 
 export async function startArgonTestNetwork(
   uniqueTestName: string,
@@ -15,7 +16,7 @@ export async function startArgonTestNetwork(
   notaryUrl: string;
   getPort: (service: 'miner-1' | 'miner-2' | 'bitcoin', internalPort: number) => Promise<number>;
 }> {
-  MiningFrames.setNetwork('localnet');
+  MiningFrames.setNetwork('dev-docker' as any);
   const config = [
     Path.join(Path.dirname(require.resolve('@argonprotocol/testing')), 'docker-compose.yml'),
     Path.resolve(__dirname, '..', '..', 'docker-compose.yml'),
@@ -48,8 +49,23 @@ export async function startArgonTestNetwork(
   const portResult = await docker.port('archive-node', '9944', { config, env });
   const notaryPortResult = await docker.port('notary', '9925', { config, env });
   const port = portResult.data.port;
+  const archiveUrl = `ws://localhost:${port}`;
+  const client = await getClient(archiveUrl);
+  while ((await client.rpc.chain.getHeader().then(x => x.number.toNumber())) === 0) {
+    await new Promise(res => setTimeout(res, 100));
+  }
+  const miningConfig = await MiningFrames.loadConfigs(client);
+  console.log('Loaded mining config:', miningConfig);
+  Object.assign(NetworkConfig['dev-docker'], {
+    ...miningConfig,
+    archiveUrl,
+    bitcoinBlockMillis: miningConfig.tickMillis * 10,
+  });
+
+  await client.disconnect();
+
   return {
-    archiveUrl: `ws://localhost:${port}`,
+    archiveUrl,
     notaryUrl: `ws://localhost:${notaryPortResult.data.port}`,
     getPort(service, internalPort) {
       return docker.port(service, internalPort, { config, env }).then(res => res.data.port);
