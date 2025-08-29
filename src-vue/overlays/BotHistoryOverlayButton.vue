@@ -20,6 +20,7 @@
               <td class="text-left w-[5%]">
                 <ActivityArrowIcon v-if="activity.type === 'bidUp'" class="w-5 h-5 text-green-500" />
                 <ActivityArrowIcon v-if="activity.type === 'bidDown'" class="w-5 h-5 rotate-180 text-red-500" />
+                <ActivityArrowIcon v-if="activity.type === 'bidInc'" class="w-5 h-5 rotate-90 text-green-500" />
                 <ActivityFailureIcon v-if="activity.type === 'failure'" class="w-5 h-5 text-red-500" />
                 <ActivitySuccessIcon v-if="activity.type === 'success'" class="w-5 h-5 text-green-500" />
               </td>
@@ -56,7 +57,7 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { createNumeralHelpers } from '../lib/numeral';
 import { useStats } from '../stores/stats';
 import { useConfig } from '../stores/config';
-import { Accountset, parseSubaccountRange } from '@argonprotocol/commander-core';
+import { Accountset, MiningFrames, parseSubaccountRange } from '@argonprotocol/commander-core';
 import ActivityArrowIcon from '../assets/activity-arrow.svg?component';
 import ActivityFailureIcon from '../assets/activity-failure.svg?component';
 import ActivitySuccessIcon from '../assets/activity-success.svg?component';
@@ -120,7 +121,7 @@ const activities = Vue.computed(() => {
         bidderAddress = activity.data.bidderAddress;
         isMine = !!subaccounts[bidderAddress];
       }
-      const timestamp = activity.tick * 60 * 1000;
+      const timestamp = activity.tick * MiningFrames.tickMillis;
       const message = extractMessage(activity);
       return {
         id,
@@ -131,7 +132,7 @@ const activities = Vue.computed(() => {
         message,
       };
     })
-    .slice(0, 10);
+    .slice(0, 15);
 });
 
 function extractMessage(activity: IBotActivity): string {
@@ -144,13 +145,18 @@ function extractMessage(activity: IBotActivity): string {
     } = activity.data as IBotActivityBidReceived;
     if (previousBidPosition === undefined || previousBidPosition === null) {
       return `A new bid of ${currency.symbol}${microgonToMoneyNm(microgonsBid).format('0,0.00')} was inserted at position #${(bidPosition || 0) + 1}`;
-    } else if (bidPosition === undefined || bidPosition === null) {
-      return `Existing bid #${previousBidPosition + 1} (${currency.symbol}${microgonToMoneyNm(microgonsBid ?? 0n).format('0,0.00')}) fell off the list`;
-    } else if (bidPosition > previousBidPosition) {
-      return `Existing bid #${previousBidPosition + 1} (${currency.symbol}${microgonToMoneyNm(microgonsBid ?? 0n).format('0,0.00')}) rose to position #${bidPosition + 1}`;
     } else {
-      // bidPosition < previousBidPosition
-      return `Existing bid #${previousBidPosition + 1} (${currency.symbol}${microgonToMoneyNm(previousMicrogonsBid ?? 0n).format('0,0.00')}) fell to position #${bidPosition + 1}`;
+      let action = 'fell off the list';
+      if (bidPosition !== null && bidPosition !== undefined) {
+        if (bidPosition < previousBidPosition) {
+          action = `rose to position #${bidPosition + 1}`;
+        } else if (bidPosition === previousBidPosition) {
+          action = `added ${currency.symbol}${microgonToMoneyNm((microgonsBid ?? 0n) - (previousMicrogonsBid ?? 0n)).format('0,0.00')} at position #${bidPosition + 1}`;
+        } else {
+          action = `fell to position #${bidPosition + 1}`;
+        }
+      }
+      return `Existing bid #${previousBidPosition + 1} (${currency.symbol}${microgonToMoneyNm(microgonsBid ?? 0n).format('0,0.00')}) ${action}`;
     }
   } else if (activity.type === BotActivityType.BidsSubmitted) {
     const { microgonsPerSeat, txFeePlusTip, submittedCount } = activity.data as IBotActivityBidsSubmitted;
@@ -166,7 +172,7 @@ function extractMessage(activity: IBotActivity): string {
   return activity.type;
 }
 
-function extractBidType(activity: IBotActivity): 'bidUp' | 'bidDown' | 'failure' | 'success' | 'unknown' {
+function extractBidType(activity: IBotActivity): 'bidUp' | 'bidDown' | 'bidInc' | 'failure' | 'success' | 'unknown' {
   const successTypes = [
     BotActivityType.Starting,
     BotActivityType.DockersConfirmed,
@@ -196,8 +202,10 @@ function extractBidType(activity: IBotActivity): 'bidUp' | 'bidDown' | 'failure'
       return 'bidDown';
     } else if (activity.data.previousBidPosition === undefined || activity.data.previousBidPosition === null) {
       return 'bidUp';
-    } else if (activity.data.bidPosition > activity.data.previousBidPosition) {
+    } else if (activity.data.bidPosition < activity.data.previousBidPosition) {
       return 'bidUp';
+    } else if (activity.data.bidPosition === activity.data.previousBidPosition) {
+      return 'bidInc';
     } else {
       return 'bidDown';
     }
