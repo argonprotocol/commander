@@ -16,7 +16,7 @@
 
     <div class="flex flex-row items-start w-full pt-3 pb-5 px-5 gap-x-5">
       <div class="flex flex-col grow pt-2 text-md">
-        <div v-if="config.biddingRules">
+        <div v-if="config.biddingRules" class="w-11/12">
           <p class="font-light">
             You can use any polkadot/substrate compatible wallet to add funds to your Commander account. Just scan the
             QR code shown on the right, or copy and paste the address that's printed below it.
@@ -28,7 +28,7 @@
             Based on the rules configured in your account, your Vault needs the following tokens in order to operate.
           </p>
 
-          <table class="w-11/12">
+          <table class="w-full">
             <thead>
               <tr>
                 <td>Required</td>
@@ -66,7 +66,7 @@
             </tbody>
           </table>
 
-          <button @click="closeOverlay" class="w-11/12 mt-8 bg-slate-600/20 hover:bg-slate-600/15 border border-slate-900/10 inner-button-shadow text-slate-900 px-4 py-2 rounded-lg focus:outline-none cursor-pointer">
+          <button @click="closeOverlay" class="w-full mt-8 bg-slate-600/20 hover:bg-slate-600/15 border border-slate-900/10 inner-button-shadow text-slate-900 px-4 py-2 rounded-lg focus:outline-none cursor-pointer">
             Close Wallet
           </button>
 
