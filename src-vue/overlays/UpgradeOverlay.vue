@@ -87,7 +87,7 @@ const isStartingUpgrade = Vue.ref(false);
 const draggable = Vue.reactive(new Draggable());
 
 const isUpgrading = Vue.computed(() => {
-  return !config.isServerUpToDate && !config.isWaitingForUpgradeApproval;
+  return !config.isMinerUpToDate && !config.isMinerWaitingForUpgradeApproval;
 });
 
 async function startUpgrade() {

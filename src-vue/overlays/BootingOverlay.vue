@@ -91,7 +91,7 @@ async function applyRestoredServer(details: string) {
 
       const serverDetails = parseResult.data;
       await SSH.tryConnection(serverDetails, config.security.sshPrivateKeyPath);
-      config.isServerUpToDate = false;
+      config.isMinerUpToDate = false;
       config.serverDetails = serverDetails;
       await config.save();
     }

@@ -6,6 +6,8 @@ import { open as tauriOpenUrl } from '@tauri-apps/plugin-shell';
 import { useController } from './stores/controller';
 import { useInstaller } from './stores/installer';
 import { useBot } from './stores/bot';
+import { PanelKey } from './interfaces/IConfig';
+import { useConfig } from './stores/config';
 
 function openAboutOverlay() {
   basicEmitter.emit('openAboutOverlay');
@@ -14,6 +16,7 @@ function openAboutOverlay() {
 export default async function menuStart() {
   const controller = useController();
   const installer = useInstaller();
+  const config = useConfig();
   const bot = useBot();
 
   const commanderMenu = await Submenu.new({
@@ -70,7 +73,7 @@ export default async function menuStart() {
       {
         id: 'mining-dashboard',
         text: 'Open Mining',
-        action: () => controller.setPanel('mining'),
+        action: () => controller.setPanelKey(PanelKey.Mining),
       },
       {
         id: 'token-transfer-to-mining',
@@ -92,7 +95,7 @@ export default async function menuStart() {
       {
         id: 'vaulting-dashboard',
         text: 'Open Vaulting',
-        action: () => controller.setPanel('vaulting'),
+        action: () => controller.setPanelKey(PanelKey.Vaulting),
       },
       {
         id: 'token-transfer-to-vaulting',
@@ -118,7 +121,16 @@ export default async function menuStart() {
         id: 'reload',
         text: 'Reload UI',
         accelerator: 'CmdOrCtrl+R',
-        action: () => window.location.reload(),
+        action: () => {
+          config
+            .save()
+            .then(() => {
+              window.location.reload();
+            })
+            .catch(() => {
+              console.log('Failed to save config before reload');
+            });
+        },
       },
     ],
   });

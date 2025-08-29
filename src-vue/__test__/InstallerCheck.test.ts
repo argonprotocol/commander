@@ -32,7 +32,7 @@ import { IInstallStepStatuses, InstallStepStatusType } from '../lib/Server';
 import { mnemonicGenerate } from '@argonprotocol/mainchain';
 
 it.only('jump through the install steps rapidly when time has expired', async () => {
-  const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'false' });
+  const dbPromise = createMockedDbPromise({ isMinerReadyToInstall: 'false' });
   const config = new Config(dbPromise);
   await config.load();
 

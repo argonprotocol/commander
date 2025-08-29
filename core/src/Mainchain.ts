@@ -245,7 +245,6 @@ export class Mainchain {
     let frameIdToCheck = startingFrameId;
     while (true) {
       // We must loop backwards until we find a frame with winning bids
-      frameIdToCheck--;
       if (frameIdToCheck < startingFrameId - 10) {
         // We've checked the last 10 frames and found no winning bids, so we're done
         return [];
@@ -254,6 +253,7 @@ export class Mainchain {
       if (winningBids.length > 0) {
         return winningBids;
       }
+      frameIdToCheck--;
     }
   }
 

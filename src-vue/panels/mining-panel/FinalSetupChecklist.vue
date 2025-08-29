@@ -1,132 +1,166 @@
 <!-- prettier-ignore -->
 <template>
-  <div class="flex flex-col h-full w-full p-3">
-    <div class="grow relative bg-[#FCF9FD] rounded border border-[#CCCEDA] shadow">
-      <div class="relative px-[15%]">
-        <div :class="[isLaunchingMiningBot || !wallets.isLoaded ? 'opacity-30 pointer-events-none' : '']">
+  <div class="flex flex-col h-full w-full relative">
+    <div v-if="!config.miningAccountPreviousHistory" @click="goBack" class="absolute flex flex-row gap-x-2 z-10 top-3 pb-3 pr-10 left-5 items-center text-slate-400/50 hover:text-slate-600 cursor-pointer">
+      <ArrowLeftIcon class="size-4 " />
+      <div>
+        Back to Start
+      </div>
+      <div class="absolute bottom-0 left-0 w-[200%] h-px bg-gradient-to-r from-slate-400/30 from-0% via-slate-400/30 via-50% to-transparent to-100%"></div>
+    </div>
+    <div class="relative px-[15%] pt-2">
+      <div :class="[isLaunchingMiningBot || !wallets.isLoaded ? 'opacity-30 pointer-events-none' : '']">
 
-          <h1 class="text-[40px] font-bold text-left mt-20 mb-4 whitespace-nowrap">
-            You're Almost Ready to Start Mining!
-          </h1>
+        <h1 class="text-4xl font-bold text-left mt-24 mb-4 whitespace-nowrap text-argon-text-primary">
+          Four Steps Are Required Before Mining
+        </h1>
 
-          <p class="mb-4">
-            Your personal bidding bot is ready and waiting. You only need to complete a few more steps, such as funding your account and connecting a cloud machine.
-          </p>
+        <p class="mb-4 text-argon-text-primary leading-7">
+          Setting up your mining operation only takes a few minutes. This page walks you through the entire process. We recommend
+          completing each item in the order they're listed, but you're free to do as you please.
+        </p>
 
-          <section
-            @click="openBotOverlay"
-            class="flex flex-row cursor-pointer mt-8 border-t border-[#CCCEDA] py-6 hover:bg-argon-menu-hover"
-          >
-            <Checkbox :isChecked="wallets.isLoaded && config.hasSavedBiddingRules" />
-            <div class="px-4">
-              <h2 class="text-2xl text-[#A600D4] font-bold">Configure Mining Bot</h2>
-              <p v-if="config.hasSavedBiddingRules">
-                You've already set up your starting bid threshold, the maximum price you're willing to
-                invest, and other basic settings that are required.
-              </p>
-              <p v-else>
-                You need to confirm your starting bid threshold, the maximum price you're willing to
-                invest, and other basic settings in order for your bot to submit bids on your behalf.
-              </p>
-            </div>
-          </section>
+        <section
+          @click="openHowMiningWorksOverlay"
+          class="flex flex-row cursor-pointer mt-8 border-t border-[#CCCEDA] py-6 hover:bg-argon-menu-hover"
+        >
+          <Checkbox :isChecked="config.hasReadMiningInstructions" />
+          <div class="px-4">
+            <h2 class="text-2xl text-[#A600D4] font-bold">Learn How Mining Works</h2>
+            <p v-if="!config.hasReadMiningInstructions">
+              Read an overview of what mining is, how it works, and the core concepts you'll need to understand.
+            </p>
+            <p v-else>
+              You skimmed the basics of what mining is, how it works, and the core concepts you'll need to understand.
+            </p>
+          </div>
+        </section>
 
-          <section
-            @click="openFundMiningAccountOverlay"
-            class="flex flex-row cursor-pointer border-t border-b border-[#CCCEDA] py-6"
-          >
-            <Checkbox :isChecked="walletIsFullyFunded" />
-            <div class="px-4">
-              <h2 class="text-2xl text-[#A600D4] font-bold">
-                {{ walletIsPartiallyFunded ? 'Finish' : '' }} Fund{{ walletIsPartiallyFunded ? 'ing' : '' }}
-                Your Wallet
-              </h2>
-              <p v-if="walletIsFullyFunded">
-                Your account has been fully funded with enough argons and argonots to begin bidding. You can now connect a cloud machine and launch your mining bot.
-              </p>
-              <p v-else-if="walletIsPartiallyFunded">
-                Your account already has
-                <template v-if="wallets.totalMiningMicrogons">
-                  {{ microgonToArgonNm(wallets.totalMiningMicrogons).format('0,0.[00000000]') }} argon{{
-                    microgonToArgonNm(wallets.totalMiningMicrogons).format('0.00000000') === '1.00000000' ? '' : 's'
-                  }}
-                </template>
-                <template v-if="wallets.totalMiningMicrogons && wallets.miningWallet.availableMicronots">
-                  and
-                </template>
-                <template v-if="wallets.miningWallet.availableMicronots">
-                  {{ micronotToArgonotNm(wallets.miningWallet.availableMicronots || 0n).format('0,0.[00000000]') }} argonot{{
-                    micronotToArgonotNm(wallets.miningWallet.availableMicronots || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
-                  }}
-                </template>.
+        <section
+          @click="openBotOverlay"
+          class="flex flex-row cursor-pointer border-t border-[#CCCEDA] py-6 hover:bg-argon-menu-hover"
+          ref="botOverlayReferenceElement"
+        >
+          <Checkbox :isChecked="wallets.isLoaded && config.hasSavedBiddingRules" />
+          <div class="px-4">
+            <h2 class="text-2xl text-[#A600D4] font-bold">Configure Your Mining Bot</h2>
+            <p v-if="!config.hasSavedBiddingRules">
+              Decide how much capital you want to commit, your starting bid, maximum bid, and other basic settings.
+            </p>
+            <p v-else>
+              You set up bidding rules and 
+              <BotCapital align="start" :alignOffset="alignOffsetForBotCapital">
+                <span @mouseenter="alignOffsetForBotCapital = calculateAlignOffset($event, botOverlayReferenceElement, 'start')" class="underline decoration-dashed underline-offset-4 decoration-slate-600/80 cursor-pointer">
+                  committed 
+                  {{ currency.symbol }}{{ microgonToArgonNm(config.biddingRules?.baseCapitalCommitment || 0n).format('0,0.[00]') }} in capital
+                </span>
+              </BotCapital>
+              with an
+              <BotReturns align="end" :alignOffset="alignOffsetForBotReturns">
+                <span @mouseenter="alignOffsetForBotReturns = calculateAlignOffset($event, botOverlayReferenceElement, 'end')" class="inline-block underline decoration-dashed underline-offset-4 decoration-slate-600/80 cursor-pointer">
+                  average expected return of {{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                </span>
+              </BotReturns>
+              (APY).
+            </p>
+          </div>
+        </section>
 
-                However you <strong class="opacity-80">still need</strong> another
-
-                <template v-if="additionalMicrogonsNeeded">
-                  {{ microgonToArgonNm(additionalMicrogonsNeeded).format('0,0.[00000000]') }} argon{{
-                    microgonToArgonNm(additionalMicrogonsNeeded).format('0.00000000') === '1.00000000' ? '' : 's'
-                  }}
-                </template>
-                <template v-if="additionalMicrogonsNeeded && additionalMicronotsNeeded">
-                  and
-                </template>
-                <template v-if="additionalMicronotsNeeded">
-                  {{ micronotToArgonotNm(additionalMicronotsNeeded).format('0,0.[00000000]') }} argonot{{
-                    micronotToArgonotNm(additionalMicronotsNeeded).format('0.00000000') === '1.00000000' ? '' : 's'
-                  }}
-                </template>.
-                Complete this step by moving the missing tokens to your account.
-              </p>
-              <p v-else-if="config.hasSavedBiddingRules">
-                Your acccount needs a minimum of
-                {{ microgonToArgonNm(config.biddingRules?.baseCapitalCommitment || 0n).format('0,0.[00000000]') }} argon{{
-                  microgonToArgonNm(config.biddingRules?.baseCapitalCommitment || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
+        <section
+          @click="openFundMiningAccountOverlay"
+          class="flex flex-row cursor-pointer border-t border-b border-[#CCCEDA] py-6"
+        >
+          <Checkbox :isChecked="walletIsFullyFunded" />
+          <div class="px-4">
+            <h2 class="text-2xl text-[#A600D4] font-bold">
+              {{ walletIsPartiallyFunded ? 'Finish' : '' }} Fund{{ walletIsPartiallyFunded ? 'ing' : '' }}
+              Your Wallet
+            </h2>
+            <p v-if="walletIsFullyFunded">
+              Your account has been fully funded with enough argons and argonots to begin bidding.
+            </p>
+            <p v-else-if="walletIsPartiallyFunded">
+              Your account already has
+              <template v-if="wallets.totalMiningMicrogons">
+                {{ microgonToArgonNm(wallets.totalMiningMicrogons).format('0,0.[00000000]') }} argon{{
+                  microgonToArgonNm(wallets.totalMiningMicrogons).format('0.00000000') === '1.00000000' ? '' : 's'
                 }}
+              </template>
+              <template v-if="wallets.totalMiningMicrogons && wallets.miningWallet.availableMicronots">
                 and
-                {{
-                  micronotToArgonotNm(config.biddingRules?.requiredMicronots || 0n).format('0,0.[00000000]')
+              </template>
+              <template v-if="wallets.miningWallet.availableMicronots">
+                {{ micronotToArgonotNm(wallets.miningWallet.availableMicronots || 0n).format('0,0.[00000000]') }} argonot{{
+                  micronotToArgonotNm(wallets.miningWallet.availableMicronots || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
                 }}
-                argonot{{
+              </template>.
+
+              However you <strong class="opacity-80">still need</strong> another
+
+              <template v-if="additionalMicrogonsNeeded">
+                {{ microgonToArgonNm(additionalMicrogonsNeeded).format('0,0.[00000000]') }} argon{{
+                  microgonToArgonNm(additionalMicrogonsNeeded).format('0.00000000') === '1.00000000' ? '' : 's'
+                }}
+              </template>
+              <template v-if="additionalMicrogonsNeeded && additionalMicronotsNeeded">
+                and
+              </template>
+              <template v-if="additionalMicronotsNeeded">
+                {{ micronotToArgonotNm(additionalMicronotsNeeded).format('0,0.[00000000]') }} argonot{{
+                  micronotToArgonotNm(additionalMicronotsNeeded).format('0.00000000') === '1.00000000' ? '' : 's'
+                }}
+              </template>.
+              Complete this step by moving the missing tokens to your account.
+            </p>
+            <p v-else-if="config.hasSavedBiddingRules">
+              Your acccount needs a minimum of
+              {{ microgonToArgonNm(config.biddingRules?.baseCapitalCommitment || 0n).format('0,0.[00000000]') }} argon{{
+                microgonToArgonNm(config.biddingRules?.baseCapitalCommitment || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
+              }}
+              and
+              {{
+                micronotToArgonotNm(config.biddingRules?.requiredMicronots || 0n).format('0,0.[00000000]')
+              }}
+              argonot{{
                   micronotToArgonotNm(config.biddingRules?.requiredMicronots || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
                 }}
-                to submit auction bids. A secure wallet is already attached to your account. All you need to do is move
-                some tokens.
+                to submit auction bids.
               </p>
               <p v-else>
-                Your account needs both argons and argonots to submit auction bids. A secure wallet is already attached to your account. All you need to do is move
-                some tokens.
+                Your account needs both argons and argonots in order to submit auction bids and start mining.
               </p>
             </div>
           </section>
 
-          <section
-            @click="openServerConnectOverlay"
-            class="flex flex-row cursor-pointer border-t border-b border-[#CCCEDA] py-6"
-          >
-            <Checkbox :isChecked="wallets.isLoaded && !!config.serverDetails.ipAddress" />
-            <div class="px-4">
-              <h2 class="text-2xl text-[#A600D4] font-bold">Connect Mining Machine</h2>
-              <p>
-                Argon's mining software is runnable on cheap virtual cloud machines. We will guide you step-by-step
-                through the process of spinning up a new server and installing the software.
-              </p>
-            </div>
-          </section>
-        </div>
-
-        <button
-          @click="launchMiningBot"
-          :class="[
-            walletIsFullyFunded && config.serverDetails.ipAddress
-              ? 'text-white'
-              : 'text-white/70 pointer-events-none opacity-30',
-            isLaunchingMiningBot ? 'opacity-30 pointer-events-none' : '',
-          ]"
-          class="bg-argon-button border border-argon-button-hover mt-8 text-2xl font-bold px-4 py-4 rounded-md w-full cursor-pointer hover:bg-argon-button-hover hover:inner-button-shadow"
+        <section
+          @click="openServerConnectOverlay"
+          class="flex flex-row cursor-pointer border-b border-[#CCCEDA] py-6"
         >
-          {{ isLaunchingMiningBot ? 'Launching Mining Bot...' : 'Launch Mining Bot' }}
-        </button>
+          <Checkbox :isChecked="wallets.isLoaded && !!config.serverDetails.ipAddress" />
+          <div class="px-4">
+            <h2 class="text-2xl text-[#A600D4] font-bold">Connect a Cloud Machine</h2>
+            <p v-if="!config.serverDetails.ipAddress">
+              Argon's mining software is runnable on cheap virtual cloud machines. We'll show you how to add one.
+            </p>
+            <p v-else>
+              Your cloud machine is connected, verified, and ready to go.
+            </p>
+          </div>
+        </section>
       </div>
+
+      <button
+        @click="launchMiningBot"
+        :class="[
+          walletIsFullyFunded && config.serverDetails.ipAddress
+            ? 'text-white'
+            : 'text-white/70 pointer-events-none opacity-30',
+          isLaunchingMiningBot ? 'opacity-30 pointer-events-none' : '',
+        ]"
+        class="bg-argon-button border border-argon-button-hover mt-8 text-2xl font-bold px-4 py-4 rounded-md w-full cursor-pointer hover:bg-argon-button-hover hover:inner-button-shadow"
+      >
+        {{ isLaunchingMiningBot ? 'Launching Mining Bot...' : 'Launch Mining Bot' }}
+      </button>
     </div>
   </div>
 </template>
@@ -141,8 +175,12 @@ import { useWallets } from '../../stores/wallets';
 import { useCurrency } from '../../stores/currency';
 import Checkbox from '../../components/Checkbox.vue';
 import { useInstaller } from '../../stores/installer';
-import { createNumeralHelpers } from '../../lib/numeral';
+import numeral, { createNumeralHelpers } from '../../lib/numeral';
 import { bigIntMax } from '@argonprotocol/commander-core/src/utils';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+import { getCalculator, getCalculatorData } from '../../stores/mainchain';
+import BotReturns from '../../overlays/bot/BotReturns.vue';
+import BotCapital from '../../overlays/bot/BotCapital.vue';
 
 dayjs.extend(utc);
 
@@ -150,10 +188,17 @@ const config = useConfig();
 const installer = useInstaller();
 const wallets = useWallets();
 const currency = useCurrency();
+const calculator = getCalculator();
+const calculatorData = getCalculatorData();
 
 const { microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
 
+const botOverlayReferenceElement = Vue.ref<HTMLElement | null>(null);
+const alignOffsetForBotReturns = Vue.ref(0);
+const alignOffsetForBotCapital = Vue.ref(0);
+
 const isLaunchingMiningBot = Vue.ref(false);
+const averageAPY = Vue.ref(0);
 
 const walletIsPartiallyFunded = Vue.computed(() => {
   if (!config.hasSavedBiddingRules) {
@@ -191,6 +236,23 @@ const walletIsFullyFunded = Vue.computed(() => {
   return true;
 });
 
+function calculateAlignOffset(event: MouseEvent, parentElement: HTMLElement | null, align: 'start' | 'end') {
+  const element = event.target as HTMLElement;
+  if (!element || !parentElement) {
+    return 0;
+  }
+
+  const elementRect = element.getBoundingClientRect();
+  const parentRect = parentElement.getBoundingClientRect();
+
+  // Calculate the difference between the right edge of element and the right edge of botOverlayReferenceElement
+  const elementRightEdge = elementRect.left + (align === 'start' ? 0 : elementRect.width);
+  const parentRightEdge = parentRect.left + (align === 'start' ? 0 : parentRect.width);
+  const offset = elementRightEdge - parentRightEdge;
+
+  return align === 'start' ? -offset : offset;
+}
+
 function openBotOverlay() {
   basicEmitter.emit('openBotOverlay');
 }
@@ -203,16 +265,32 @@ function openServerConnectOverlay() {
   basicEmitter.emit('openServerConnectOverlay');
 }
 
+function openHowMiningWorksOverlay() {
+  basicEmitter.emit('openHowMiningWorksOverlay');
+}
+
+function goBack() {
+  config.isPreparingMinerSetup = false;
+}
+
 async function launchMiningBot() {
   if (isLaunchingMiningBot.value) {
     return;
   }
   isLaunchingMiningBot.value = true;
-  config.isServerReadyToInstall = true;
+  config.isMinerReadyToInstall = true;
   await config.save();
   await installer.run();
   isLaunchingMiningBot.value = false;
 }
+
+Vue.onMounted(async () => {
+  calculatorData.isInitializedPromise.then(() => {
+    calculator.updateBiddingRules(config.biddingRules);
+    calculator.calculateBidAmounts();
+    averageAPY.value = calculator.averageAPY;
+  });
+});
 </script>
 
 <style scoped>
@@ -220,5 +298,9 @@ async function launchMiningBot() {
 
 section:hover {
   background: linear-gradient(to right, transparent 0%, #f7edf8 10%, #f7edf8 90%, transparent 100%);
+}
+
+section p {
+  @apply mt-1 ml-0.5 opacity-60;
 }
 </style>

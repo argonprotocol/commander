@@ -97,7 +97,7 @@
           class="text-md flex max-w-140 shrink flex-col rounded bg-white p-1 text-gray-900 shadow-lg ring-1 ring-gray-900/20"
         >
           <div
-            v-if="!config.hasSavedBiddingRules && !config.hasSavedVaultingRules"
+            v-if="!config.isMinerInstalled && !hasVault"
             class="flex w-110 flex-col gap-y-2 rounded-md px-4 py-4 text-slate-900/80"
           >
             <p>This is where you'll be notified of important alerts such as when your mining bot's capital runs low.</p>
@@ -150,7 +150,7 @@
           </div>
 
           <div
-            v-if="config.hasSavedBiddingRules"
+            v-else-if="config.hasSavedBiddingRules"
             :class="[installer.isRunning ? 'pointer-events-none opacity-50' : '']"
           >
             <div v-if="miningStatus === 'Funded'" class="rounded-md bg-slate-400/10 px-6 py-5">
@@ -343,6 +343,7 @@ import basicEmitter from '../emitters/basicEmitter';
 import { createNumeralHelpers } from '../lib/numeral';
 import { useStats } from '../stores/stats';
 import { useInstaller } from '../stores/installer';
+import { useMyVault } from '../stores/vaults';
 
 enum Status {
   WaitingForSetup = 'WaitingForSetup',
@@ -364,6 +365,7 @@ const config = useConfig();
 const wallets = useWallets();
 const currency = useCurrency();
 const installer = useInstaller();
+const myVault = useMyVault();
 const stats = useStats();
 const { microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
 
@@ -383,10 +385,14 @@ const micronotsTotal = Vue.computed(() => {
   return wallets.miningWallet.availableMicronots + wallets.miningWallet.reservedMicronots;
 });
 
+const hasVault = Vue.computed(() => {
+  return myVault.data.createdVault;
+});
+
 const miningStatus = Vue.computed<Status>(() => {
   if (!config.hasSavedBiddingRules) {
     return Status.WaitingForSetup;
-  } else if (!config.isServerReadyToInstall && wallets.miningWallet.availableMicrogons === 0n) {
+  } else if (!config.isMinerReadyToInstall && wallets.miningWallet.availableMicrogons === 0n) {
     return Status.WaitingForFunding;
   }
 

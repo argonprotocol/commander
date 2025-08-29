@@ -24,7 +24,7 @@
               class="relative text-3xl font-bold text-left border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 text-[#672D73]"
               style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)"
             >
-              <DialogTitle as="div" class="relative z-10">{{ isBrandNew ? 'Create' : 'Update' }} Personal Mining Bot</DialogTitle>
+              <DialogTitle as="div" class="relative z-10">{{ isBrandNew ? 'Configure' : 'Update' }} Your Mining Bot</DialogTitle>
               <div @click="cancelOverlay" class="absolute top-[22px] right-[0px] z-10 flex items-center justify-center text-sm/6 font-semibold cursor-pointer border rounded-md w-[30px] h-[30px] focus:outline-none border-slate-400/60 hover:border-slate-500/70 hover:bg-[#D6D9DF]">
                 <XMarkIcon class="w-5 h-5 text-[#B74CBA] stroke-4" />
               </div>
@@ -34,29 +34,35 @@
               <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
                 Commander uses an automated bidding bot to maximize your chance of winning seats. This screen allows you to
                 configure the rules for how your bot should make decisions and place bids.
-                <template v-if="!config.isServerReadyToInstall && !config.isServerInstalled">
-                  You can also  <span @click="wantsToImportExisting = true" class="text-argon-600/80 hover:text-argon-600 cursor-pointer font-bold">import from an existing cloud machine</span>.
+                <template v-if="!config.isMinerReadyToInstall && !config.isMinerInstalled">
+                  You can also  <span @click="wantsToImportExisting = true" class="text-argon-600 hover:text-argon-600/80 cursor-pointer">import from an existing cloud machine</span>.
                 </template>
               </DialogDescription>
 
-              <section class="flex flex-row border-t border-b border-slate-300 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
+              <section class="flex flex-row border-t border-b border-slate-500/30 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
                 <div class="w-1/2 flex flex-col grow">
-                  <div PrimaryStat class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
-                    <header StatHeader class="mx-4 relative z-10">
-                      Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
-                    </header>
-                    <div class="grow relative mt-2 pb-12 pt-10 text-5xl font-bold font-mono text-argon-600">
-                      <NeedMoreCapitalHover v-if="probableMinSeats < rules.seatGoalCount" :calculator="calculator" />
-                      <InputArgon v-model="rules.baseCapitalCommitment" :min="10_000_000n" :minDecimals="0" />
+                  <BotCapital align="start" :width="botCapitalWidth">
+                    <div PrimaryStat @mouseenter="botCapitalWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                      <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
+                        Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
+                      </header>
+                      <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
+                        <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
+                          You are committing 16 argonot tokens, plus
+                        </div>
+                        <div class="flex flex-row items-center justify-center grow relative h-26 text-5xl font-bold font-mono text-argon-600">
+                          <NeedMoreCapitalHover v-if="probableMinSeats < rules.seatGoalCount" :calculator="calculator" />
+                          <InputArgon v-model="rules.baseCapitalCommitment" :min="10_000_000n" :minDecimals="0" />
+                        </div>
+                        <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-10/12 mx-auto">
+                          This capital will give you a good chance of<br/>
+                          capturing
+                          <template v-if="probableMinSeats === probableMaxSeats">({{ probableMinSeats }} mining seats per epoch.</template>
+                          <template v-else>between {{ probableMinSeats }} and {{ probableMaxSeats }} mining seats per epoch.</template>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div class="pt-3 text-argon-600/70 text-md">
-                    <span class="cursor-pointer">
-                      View Seat Probabilities
-                      <template v-if="probableMinSeats === probableMaxSeats">({{ probableMinSeats }} seats)</template>
-                      <template v-else>(between {{ probableMinSeats }} and {{ probableMaxSeats }} seats)</template>
-                    </span>
-                  </div>
+                  </BotCapital>
                 </div>
                 <div class="flex flex-col items-center justify-center text-3xl mx-2 text-center">
                   <span class="relative -top-1 opacity-50">
@@ -64,50 +70,27 @@
                   </span>
                 </div>
                 <div class="w-1/2 flex flex-col grow">
-                  <!-- @mouseenter="showTooltip($event, tooltip.estimatedAPYRange, { width: 'parent' })" @mouseleave="hideTooltip"  -->
-                  <div PrimaryStat class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
-                    <header StatHeader class="mx-4 relative z-10">Annual Percentage Yields</header>
-                    <div class="grow flex flex-col mt-3 w-full px-4">
-                      <table class="w-full h-full table-fixed relative z-50 whitespace-nowrap -mt-1">
-                        <tbody>
-                          <tr class="text-argon-600 h-1/3">
-                            <td class="w-5/12"></td>
-                            <td class="font-light font-sans text-argon-800/40 w-5/12">Slow Growth</td>
-                            <td class="font-light font-sans text-argon-800/40 w-5/12">Fast Growth</td>
-                          </tr>
-                          <tr class="font-bold font-mono text-argon-600 h-1/3">
-                            <td class="font-light font-sans text-argon-800/40 border-t border-dashed border-slate-300 text-left pl-2 pr-10">Maximum Bid ({{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }})</td>
-                            <td class="text-lg border-t border-dashed border-slate-300">
-                              <Tooltip :content="`This is the return if you bid the maximum amount (${currency.symbol}${microgonToMoneyNm(maximumBidAmount).format('0,0.00')}) and the tokens grow at their slowest projected rate, which you can change in the Ecosystem Growth box below.`">
-                                {{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
-                              </Tooltip>
-                            </td>
-                            <td class="text-lg border-t border-dashed border-slate-300">
-                              <Tooltip :content="`This is the return if you bid the maximum amount (${currency.symbol}${microgonToMoneyNm(maximumBidAmount).format('0,0.00')}) and the tokens also grow at their fastest projected rate (you can change this in the Ecosystem Growth box below).`">
-                                {{ numeral(maximumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
-                              </Tooltip>
-                            </td>
-                          </tr>
-                          <tr class="font-bold font-mono text-argon-600 h-1/3">
-                            <td class="font-light font-sans text-argon-800/40 border-t border-dashed border-slate-300 text-left pl-2 pr-10">Starting Bid ({{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }})</td>
-                            <td class="text-lg border-t border-dashed border-slate-300">
-                              <Tooltip :content="`If your bids are accepted at the starting price (${currency.symbol}${microgonToMoneyNm(minimumBidAmount).format('0,0.00')}) and the tokens grow at the slowest projected rate (which you can change in Ecosystem Growth) then this is your return.`">
-                                {{ numeral(minimumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
-                              </Tooltip>
-                            </td>
-                            <td class="text-lg border-t border-dashed border-slate-300">
-                              <Tooltip :content="`If your bids are accepted at the starting price (${currency.symbol}${microgonToMoneyNm(minimumBidAmount).format('0,0.00')}) and the tokens grow at their fastest projected rate (which you can change in Ecosystem Growth) then this is your return.`">
-                                {{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
-                              </Tooltip>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                  <BotReturns align="end" :width="botReturnsWidth">
+                    <div PrimaryStat @mouseenter="botReturnsWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                      <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
+                        Return on Capital
+                      </header>
+                      <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
+                        <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
+                          You are expected to earn {{ currency.symbol }}{{ microgonToMoneyNm(averageEarnings).format('0,0.00') }} per epoch with an APY of
+                        </div>
+                        <div class="flex flex-row items-center justify-center grow relative h-26 text-5xl font-bold font-mono text-argon-600">
+                          {{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                        </div>
+                        <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full">
+                        This represents the average of your estimated return<br/>
+                        range, which is between
+                        {{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}%
+                        and {{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}% APY.
+                      </div>
+                      </div>
                     </div>
-                  </div>
-                  <div class="pt-3 text-argon-600/70 text-md">
-                    <span class="cursor-pointer">View Risk Analysis (it's 99% from server ops)</span>
-                  </div>
+                  </BotReturns>
                 </div>
               </section>
 
@@ -257,7 +240,7 @@
                         {{ config.serverDetails.ipAddress || '0.0.0.0' }}
                       </div>
                       <div class="text-gray-500/60 text-md font-mono">
-                        {{ config.isServerInstalled ? 'Existing Server' : 'New Server' }}
+                        {{ config.isMinerInstalled ? 'Existing Server' : 'New Server' }}
                       </div>
                     </div>
                   </div>
@@ -301,8 +284,8 @@
                   <span>Cancel</span>
                 </button>
                 <button @click="saveRules" @mouseenter="showTooltip($event, tooltip.saveRules, { width: 'parent' })" @mouseleave="hideTooltip" class="bg-argon-button hover:border-argon-800 text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
-                  <span v-if="!isSaving">{{ isBrandNew ? 'Create Mining Bot' : 'Update Settings' }}</span>
-                  <span v-else>{{ isBrandNew ? 'Creating Mining Bot...' : 'Updating Settings...' }}</span>
+                  <span v-if="!isSaving">{{ isBrandNew ? 'Initialize Rules' : 'Update Rules' }}</span>
+                  <span v-else>{{ isBrandNew ? 'Initializing...' : 'Updating...' }}</span>
                 </button>
               </div>
             </div>
@@ -343,6 +326,8 @@ import { JsonExt } from '@argonprotocol/commander-core';
 import InputArgon from '../components/InputArgon.vue';
 import NeedMoreCapitalHover from './bot/NeedMoreCapitalHover.vue';
 import Importer from '../lib/Importer';
+import BotReturns from './bot/BotReturns.vue';
+import BotCapital from './bot/BotCapital.vue';
 
 const calculator = getCalculator();
 const calculatorData = getCalculatorData();
@@ -365,6 +350,9 @@ const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
 const wantsToImportExisting = Vue.ref(false);
 
+const botCapitalWidth = Vue.ref('');
+const botReturnsWidth = Vue.ref('');
+
 const importIpAddress = Vue.ref('');
 const importError = Vue.ref<string | null>(null);
 const isImporting = Vue.ref(false);
@@ -386,6 +374,9 @@ const minimumBidAtFastGrowthAPY = Vue.ref(0);
 const maximumBidAtSlowGrowthAPY = Vue.ref(0);
 const maximumBidAtFastGrowthAPY = Vue.ref(0);
 
+const averageAPY = Vue.ref(0);
+const averageEarnings = Vue.ref(0n);
+
 const tooltip = {
   capitalToCommit:
     'The more capital you put in, the more seats you have a chance to win and therefore the higher your earning potential.',
@@ -402,12 +393,16 @@ const tooltip = {
       rules.value.seatGoalInterval === SeatGoalInterval.Epoch
         ? `An "epoch" is equivalent to 10 days`
         : `A "frame" is equivalent to 1 day`;
-    return `This is your bot's goal, not its ceiling. ${interval}. If the bot can snag more than ${rules.value.seatGoalCount} seats, it will do so. If it fails to achieve its goal, it will alert you.`;
+    return `This is your bot's goal, not its ceiling. ${interval}. If the bot can snag more than ${rules.value.seatGoalCount} seats, it will do so. If it fails to achieve its goal, it will alert you in the app.`;
   }),
   expectedGrowth: `These numbers don't affect your bot's decisions; they only factor into the Estimated APY shown above. Argons is growth in circulation; Argonots is change in token price. Both are factored annually.`,
-  cloudMachine: `Leave this as-is. We'll guide you through setting up a new Cloud Machine on the next screen.`,
-  saveRules: `Let's go! You can modify these settings later.`,
+  cloudMachine: `You can leave this server configuration box as-is for now. Later in the process, we'll guide you through the step-by-step flow of how to set up a new Cloud Machine. Don't worry, it's easy.`,
+  saveRules: `Let's go! You can modify the rules later.`,
 };
+
+function calculateElementWidth(element: HTMLElement) {
+  return element.getBoundingClientRect().width + 'px';
+}
 
 function openEditBoxOverlay($event: MouseEvent, type: IEditBoxOverlayTypeForMining) {
   const parent = ($event.target as HTMLElement).closest('[MainWrapperParent]');
@@ -511,6 +506,8 @@ function updateAPYs() {
   maximumBidAtSlowGrowthAPY.value = calculator.maximumBidAtSlowGrowthAPY;
   maximumBidAtFastGrowthAPY.value = calculator.maximumBidAtFastGrowthAPY;
 
+  averageAPY.value = calculator.averageAPY;
+
   const probableMinSeatsBn = BigNumber(rules.value.baseCapitalCommitment).dividedBy(calculator.maximumBidAmount);
   probableMinSeats.value = Math.max(probableMinSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(), 0);
 
@@ -519,6 +516,10 @@ function updateAPYs() {
     probableMaxSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(),
     calculatorData.miningSeatCount,
   );
+
+  const slowGrowthEarnings = BigInt(probableMinSeats.value) * calculator.slowGrowthRewards;
+  const fastGrowthEarnings = BigInt(probableMaxSeats.value) * calculator.fastGrowthRewards;
+  averageEarnings.value = (slowGrowthEarnings + fastGrowthEarnings) / 2n;
 }
 
 Vue.watch(
@@ -588,19 +589,25 @@ basicEmitter.on('openBotOverlay', async () => {
   [PrimaryStat] {
     @apply relative;
 
+    div[InputFieldWrapper] {
+      @apply text-argon-600 border-none font-mono text-6xl font-bold !outline-none hover:bg-transparent focus:!outline-none;
+      box-shadow: none;
+    }
+    div[NumArrows] {
+      @apply relative top-2;
+    }
+    svg[NumArrowUp],
+    svg[NumArrowDown] {
+      @apply size-[24px];
+    }
+
     [StatHeader] {
-      @apply group-hover:text-[#a08fb7];
-      background: linear-gradient(
-        to right,
-        transparent 0%,
-        oklch(0.88 0.09 320 / 0.2) 10%,
-        oklch(0.88 0.09 320 / 0.2) 90%,
-        transparent 100%
-      );
+      @apply text-argon-600/70;
+      background: linear-gradient(to bottom, oklch(0.88 0.09 320 / 0.2) 0%, transparent 100%);
       text-shadow: 1px 1px 0 white;
     }
 
-    &::before {
+    /* &::before {
       @apply from-argon-menu-bg bg-gradient-to-b from-[0px] to-transparent;
       content: '';
       display: block;
@@ -609,7 +616,7 @@ basicEmitter.on('openBotOverlay', async () => {
       position: absolute;
       top: -5px;
       left: -5px;
-    }
+    } */
   }
 
   section div[StatHeader] {
@@ -658,26 +665,6 @@ basicEmitter.on('openBotOverlay', async () => {
         @apply relative z-10;
       }
     }
-  }
-
-  [PrimaryStat] {
-    div {
-      @apply inline-block;
-    }
-    div[InputFieldWrapper] {
-      @apply text-argon-600 border-none font-mono text-6xl font-bold !outline-none hover:bg-transparent focus:!outline-none;
-      box-shadow: none;
-    }
-    div[NumArrows] {
-      @apply relative top-1;
-    }
-    svg[NumArrowUp],
-    svg[NumArrowDown] {
-      @apply size-[24px];
-    }
-    /* span[Suffix] {
-      @apply min-w-1;
-    } */
   }
 }
 </style>

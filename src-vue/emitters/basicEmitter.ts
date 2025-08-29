@@ -31,6 +31,8 @@ type IBasicEmitter = {
   };
   openImportingOverlay: { importer: Importer; dataRaw: string };
   openCheckForAppUpdatesOverlay: void;
+  openHowMiningWorksOverlay: void;
+  openHowVaultingWorksOverlay: void;
 };
 
 const basicEmitter: Emitter<IBasicEmitter> = mitt<IBasicEmitter>();

@@ -93,9 +93,9 @@ async function removeServer() {
   if (isRemoving.value) return;
   isRemoving.value = true;
 
-  config.isServerReadyToInstall = false;
-  config.isServerInstalled = false;
-  config.isServerUpToDate = false;
+  config.isMinerReadyToInstall = false;
+  config.isMinerInstalled = false;
+  config.isMinerUpToDate = false;
   config.serverDetails = { ...config.serverDetails, ipAddress: '' };
   config.installDetails = Config.getDefault('installDetails') as IConfigInstallDetails;
   await config.save();

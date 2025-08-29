@@ -1,6 +1,13 @@
 import packageJson from '../../package.json';
 import { Db } from './Db';
-import { IConfig, IConfigDefaults, IConfigStringified, InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
+import {
+  IConfig,
+  IConfigDefaults,
+  IConfigStringified,
+  InstallStepKey,
+  InstallStepStatus,
+  PanelKey,
+} from '../interfaces/IConfig';
 import { Keyring, type KeyringPair, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
 import { JsonExt } from '@argonprotocol/commander-core';
 import {
@@ -57,6 +64,7 @@ export class Config {
     };
     this._loadedData = {
       version: packageJson.version,
+      panelKey: PanelKey.Mining,
       requiresPassword: false,
       serverDetails: {
         ipAddress: '',
@@ -70,11 +78,18 @@ export class Config {
       miningAccountPreviousHistory: Config.getDefault(
         dbFields.miningAccountPreviousHistory,
       ) as IConfig['miningAccountPreviousHistory'],
+
+      hasReadMiningInstructions: Config.getDefault(dbFields.hasReadMiningInstructions) as boolean,
+      isPreparingMinerSetup: Config.getDefault(dbFields.isPreparingMinerSetup) as boolean,
+      isMinerReadyToInstall: Config.getDefault(dbFields.isMinerReadyToInstall) as boolean,
+      isMinerInstalled: Config.getDefault(dbFields.isMinerInstalled) as boolean,
+      isMinerUpToDate: Config.getDefault(dbFields.isMinerUpToDate) as boolean,
+      isMinerWaitingForUpgradeApproval: Config.getDefault(dbFields.isMinerWaitingForUpgradeApproval) as boolean,
+
+      hasReadVaultingInstructions: Config.getDefault(dbFields.hasReadVaultingInstructions) as boolean,
+      isPreparingVaultSetup: Config.getDefault(dbFields.isPreparingVaultSetup) as boolean,
       isVaultReadyToCreate: Config.getDefault(dbFields.isVaultReadyToCreate) as boolean,
-      isServerReadyToInstall: Config.getDefault(dbFields.isServerReadyToInstall) as boolean,
-      isServerInstalled: Config.getDefault(dbFields.isServerInstalled) as boolean,
-      isServerUpToDate: Config.getDefault(dbFields.isServerUpToDate) as boolean,
-      isWaitingForUpgradeApproval: Config.getDefault(dbFields.isWaitingForUpgradeApproval) as boolean,
+
       hasMiningSeats: Config.getDefault(dbFields.hasMiningSeats) as boolean,
       hasMiningBids: Config.getDefault(dbFields.hasMiningBids) as boolean,
       biddingRules: Config.getDefault(dbFields.biddingRules) as IConfig['biddingRules'],
@@ -209,6 +224,17 @@ export class Config {
 
   //////////////////////////////
 
+  get panelKey(): PanelKey {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.panelKey;
+  }
+
+  set panelKey(value: PanelKey) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.panelKey = value;
+    this._tryFieldsToSave(dbFields.panelKey, value);
+  }
+
   get requiresPassword(): boolean {
     this._throwErrorIfNotLoaded();
     return this._loadedData.requiresPassword;
@@ -269,6 +295,98 @@ export class Config {
     this._tryFieldsToSave(dbFields.latestFrameIdProcessed, value);
   }
 
+  get hasReadMiningInstructions(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.hasReadMiningInstructions;
+  }
+
+  set hasReadMiningInstructions(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.hasReadMiningInstructions = value;
+    this._tryFieldsToSave(dbFields.hasReadMiningInstructions, value);
+  }
+
+  get isPreparingMinerSetup(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.isPreparingMinerSetup;
+  }
+
+  set isPreparingMinerSetup(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.isPreparingMinerSetup = value;
+    this._tryFieldsToSave(dbFields.isPreparingMinerSetup, value);
+  }
+
+  get isMinerReadyToInstall(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.isMinerReadyToInstall;
+  }
+
+  set isMinerReadyToInstall(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.isMinerReadyToInstall = value;
+    this._tryFieldsToSave(dbFields.isMinerReadyToInstall, value);
+  }
+
+  get isMinerUpToDate(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.isMinerUpToDate;
+  }
+
+  set isMinerUpToDate(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.isMinerUpToDate = value;
+    this._tryFieldsToSave(dbFields.isMinerUpToDate, value);
+  }
+
+  get isMinerInstalled(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.isMinerInstalled;
+  }
+
+  set isMinerInstalled(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.isMinerInstalled = value;
+    this._loadedData.miningAccountPreviousHistory = null;
+    this._loadedData.miningAccountHadPreviousLife = false;
+    this._tryFieldsToSave(dbFields.isMinerInstalled, value);
+    this._tryFieldsToSave(dbFields.miningAccountPreviousHistory, null);
+    this._tryFieldsToSave(dbFields.miningAccountHadPreviousLife, false);
+  }
+
+  get isMinerWaitingForUpgradeApproval(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.isMinerWaitingForUpgradeApproval;
+  }
+
+  set isMinerWaitingForUpgradeApproval(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.isMinerWaitingForUpgradeApproval = value;
+    this._tryFieldsToSave(dbFields.isMinerWaitingForUpgradeApproval, value);
+  }
+
+  get hasReadVaultingInstructions(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.hasReadVaultingInstructions;
+  }
+
+  set hasReadVaultingInstructions(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.hasReadVaultingInstructions = value;
+    this._tryFieldsToSave(dbFields.hasReadVaultingInstructions, value);
+  }
+
+  get isPreparingVaultSetup(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.isPreparingVaultSetup;
+  }
+
+  set isPreparingVaultSetup(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.isPreparingVaultSetup = value;
+    this._tryFieldsToSave(dbFields.isPreparingVaultSetup, value);
+  }
+
   get isVaultReadyToCreate(): boolean {
     this._throwErrorIfNotLoaded();
     return this._loadedData.isVaultReadyToCreate;
@@ -278,54 +396,6 @@ export class Config {
     this._throwErrorIfNotLoaded();
     this._loadedData.isVaultReadyToCreate = value;
     this._tryFieldsToSave(dbFields.isVaultReadyToCreate, value);
-  }
-
-  get isServerReadyToInstall(): boolean {
-    this._throwErrorIfNotLoaded();
-    return this._loadedData.isServerReadyToInstall;
-  }
-
-  set isServerReadyToInstall(value: boolean) {
-    this._throwErrorIfNotLoaded();
-    this._loadedData.isServerReadyToInstall = value;
-    this._tryFieldsToSave(dbFields.isServerReadyToInstall, value);
-  }
-
-  get isServerUpToDate(): boolean {
-    this._throwErrorIfNotLoaded();
-    return this._loadedData.isServerUpToDate;
-  }
-
-  set isServerUpToDate(value: boolean) {
-    this._throwErrorIfNotLoaded();
-    this._loadedData.isServerUpToDate = value;
-    this._tryFieldsToSave(dbFields.isServerUpToDate, value);
-  }
-
-  get isServerInstalled(): boolean {
-    this._throwErrorIfNotLoaded();
-    return this._loadedData.isServerInstalled;
-  }
-
-  set isServerInstalled(value: boolean) {
-    this._throwErrorIfNotLoaded();
-    this._loadedData.isServerInstalled = value;
-    this._loadedData.miningAccountPreviousHistory = null;
-    this._loadedData.miningAccountHadPreviousLife = false;
-    this._tryFieldsToSave(dbFields.isServerInstalled, value);
-    this._tryFieldsToSave(dbFields.miningAccountPreviousHistory, null);
-    this._tryFieldsToSave(dbFields.miningAccountHadPreviousLife, false);
-  }
-
-  get isWaitingForUpgradeApproval(): boolean {
-    this._throwErrorIfNotLoaded();
-    return this._loadedData.isWaitingForUpgradeApproval;
-  }
-
-  set isWaitingForUpgradeApproval(value: boolean) {
-    this._throwErrorIfNotLoaded();
-    this._loadedData.isWaitingForUpgradeApproval = value;
-    this._tryFieldsToSave(dbFields.isWaitingForUpgradeApproval, value);
   }
 
   get hasMiningSeats(): boolean {
@@ -516,6 +586,7 @@ export class Config {
 }
 
 const dbFields = {
+  panelKey: 'panelKey',
   requiresPassword: 'requiresPassword',
   serverDetails: 'serverDetails',
   installDetails: 'installDetails',
@@ -524,11 +595,18 @@ const dbFields = {
   miningAccountAddress: 'miningAccountAddress',
   miningAccountHadPreviousLife: 'miningAccountHadPreviousLife',
   miningAccountPreviousHistory: 'miningAccountPreviousHistory',
+
+  hasReadMiningInstructions: 'hasReadMiningInstructions',
+  isPreparingMinerSetup: 'isPreparingMinerSetup',
+  isMinerReadyToInstall: 'isMinerReadyToInstall',
+  isMinerInstalled: 'isMinerInstalled',
+  isMinerUpToDate: 'isMinerUpToDate',
+  isMinerWaitingForUpgradeApproval: 'isMinerWaitingForUpgradeApproval',
+
+  hasReadVaultingInstructions: 'hasReadVaultingInstructions',
+  isPreparingVaultSetup: 'isPreparingVaultSetup',
   isVaultReadyToCreate: 'isVaultReadyToCreate',
-  isServerReadyToInstall: 'isServerReadyToInstall',
-  isServerInstalled: 'isServerInstalled',
-  isServerUpToDate: 'isServerUpToDate',
-  isWaitingForUpgradeApproval: 'isWaitingForUpgradeApproval',
+
   hasMiningSeats: 'hasMiningSeats',
   hasMiningBids: 'hasMiningBids',
   biddingRules: 'biddingRules',
@@ -538,6 +616,7 @@ const dbFields = {
 } as const;
 
 const defaults: IConfigDefaults = {
+  panelKey: () => PanelKey.Mining,
   requiresPassword: () => false,
   serverDetails: () => {
     return {
@@ -569,11 +648,18 @@ const defaults: IConfigDefaults = {
   miningAccountAddress: () => '',
   miningAccountHadPreviousLife: () => false,
   miningAccountPreviousHistory: () => null,
+
+  hasReadMiningInstructions: () => false,
+  isPreparingMinerSetup: () => false,
+  isMinerReadyToInstall: () => false,
+  isMinerInstalled: () => false,
+  isMinerUpToDate: () => false,
+  isMinerWaitingForUpgradeApproval: () => false,
+
+  hasReadVaultingInstructions: () => false,
+  isPreparingVaultSetup: () => false,
   isVaultReadyToCreate: () => false,
-  isServerReadyToInstall: () => false,
-  isServerInstalled: () => false,
-  isServerUpToDate: () => false,
-  isWaitingForUpgradeApproval: () => false,
+
   hasMiningSeats: () => false,
   hasMiningBids: () => false,
   biddingRules: () => {

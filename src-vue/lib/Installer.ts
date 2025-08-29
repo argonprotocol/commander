@@ -68,7 +68,7 @@ export default class Installer {
   public async load(): Promise<void> {
     await this.config.isLoadedPromise;
 
-    if (this.config.isServerReadyToInstall) {
+    if (this.config.isMinerReadyToInstall) {
       await this.ensureIpAddressIsWhitelisted();
       const server = await this.getServer();
       const accountAddressOnServer = await server.downloadAccountAddress();
@@ -118,8 +118,8 @@ export default class Installer {
 
     console.log('RUNNING INSTALLER');
     this.isRunning = true;
-    this.config.isWaitingForUpgradeApproval = false;
-    this.config.isServerUpToDate = false;
+    this.config.isMinerWaitingForUpgradeApproval = false;
+    this.config.isMinerUpToDate = false;
     await this.config.save();
 
     if (this.remoteFilesNeedUpdating) {
@@ -254,8 +254,8 @@ export default class Installer {
 
     this.removeReasonsToSkipInstall();
     this.config.resetField('installDetails');
-    this.config.isWaitingForUpgradeApproval = false;
-    this.config.isServerUpToDate = false;
+    this.config.isMinerWaitingForUpgradeApproval = false;
+    this.config.isMinerUpToDate = false;
     await this.config.save();
 
     void this.run();
@@ -304,12 +304,12 @@ export default class Installer {
     this.reasonToSkipInstall = '';
     this.reasonToSkipInstallData = {};
 
-    if (!this.config.isServerReadyToInstall) {
+    if (!this.config.isMinerReadyToInstall) {
       this.isReadyToRun = false;
       this.reasonToSkipInstall = ReasonsToSkipInstall.ServerNotConnected;
-      this.reasonToSkipInstallData = { isServerReadyToInstall: this.config.isServerReadyToInstall };
-      this.config.isServerUpToDate = false;
-      this.config.isWaitingForUpgradeApproval = false;
+      this.reasonToSkipInstallData = { isMinerReadyToInstall: this.config.isMinerReadyToInstall };
+      this.config.isMinerUpToDate = false;
+      this.config.isMinerWaitingForUpgradeApproval = false;
       await this.config.save();
       return false;
     }
@@ -330,8 +330,8 @@ export default class Installer {
       this.isReadyToRun = false;
       this.reasonToSkipInstall = ReasonsToSkipInstall.ServerUpToDate;
       this.reasonToSkipInstallData = { isServerInstallComplete, remoteFilesNeedUpdating };
-      this.config.isServerUpToDate = true;
-      this.config.isWaitingForUpgradeApproval = false;
+      this.config.isMinerUpToDate = true;
+      this.config.isMinerWaitingForUpgradeApproval = false;
       await this.config.save();
       return false;
     }
@@ -350,10 +350,10 @@ export default class Installer {
       this.reasonToSkipInstallData = {
         isServerInstallComplete,
         isFreshInstall,
-        isServerUpToDate: false,
+        isMinerUpToDate: false,
       };
-      this.config.isServerUpToDate = false;
-      this.config.isWaitingForUpgradeApproval = true;
+      this.config.isMinerUpToDate = false;
+      this.config.isMinerWaitingForUpgradeApproval = true;
       await this.config.save();
       return false;
     }
@@ -364,7 +364,7 @@ export default class Installer {
       this.isReadyToRun = true;
       this.removeReasonsToSkipInstall();
       this.config.resetField('installDetails');
-      this.config.isWaitingForUpgradeApproval = false;
+      this.config.isMinerWaitingForUpgradeApproval = false;
       await this.config.save();
       return true;
     }
@@ -374,7 +374,7 @@ export default class Installer {
       this.isReadyToRun = false;
       this.reasonToSkipInstall = ReasonsToSkipInstall.ServerError;
       this.reasonToSkipInstallData = { hasInstallError: this.installerCheck.hasError };
-      this.config.isServerUpToDate = false;
+      this.config.isMinerUpToDate = false;
       await this.config.save();
       return false;
     }
@@ -388,7 +388,7 @@ export default class Installer {
       return false;
     }
 
-    this.config.isServerUpToDate = remoteFilesNeedUpdating;
+    this.config.isMinerUpToDate = remoteFilesNeedUpdating;
     this.isReadyToRun = true;
     return true;
   }
@@ -399,7 +399,7 @@ export default class Installer {
       return true;
     }
 
-    if (!this.config.isServerReadyToInstall) {
+    if (!this.config.isMinerReadyToInstall) {
       return false;
     }
 

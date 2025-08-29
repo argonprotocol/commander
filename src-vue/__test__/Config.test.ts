@@ -22,18 +22,18 @@ it('can load config defaults', async () => {
   const dbPromise = createMockedDbPromise();
   const config = new Config(dbPromise);
   await config.load();
-  expect(config.isServerReadyToInstall).toBe(false);
-  expect(config.isServerInstalled).toBe(false);
-  expect(config.isServerUpToDate).toBe(false);
-  expect(config.isWaitingForUpgradeApproval).toBe(false);
+  expect(config.isMinerReadyToInstall).toBe(false);
+  expect(config.isMinerInstalled).toBe(false);
+  expect(config.isMinerUpToDate).toBe(false);
+  expect(config.isMinerWaitingForUpgradeApproval).toBe(false);
   expect(config.hasMiningSeats).toBe(false);
   expect(config.hasMiningBids).toBe(false);
   expect(config.biddingRules).toBeTruthy();
 });
 
 it('can load config from db state', async () => {
-  const dbPromise = createMockedDbPromise({ isServerInstalled: 'true' });
+  const dbPromise = createMockedDbPromise({ isMinerInstalled: 'true' });
   const config = new Config(dbPromise);
   await config.load();
-  expect(config.isServerInstalled).toBe(true);
+  expect(config.isMinerInstalled).toBe(true);
 });

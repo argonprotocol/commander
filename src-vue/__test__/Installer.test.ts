@@ -32,7 +32,7 @@ beforeEach(() => {
 });
 
 it('should skip install if server is not connected', async () => {
-  const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'false' });
+  const dbPromise = createMockedDbPromise({ isMinerReadyToInstall: 'false' });
   const config = new Config(dbPromise);
   await config.load();
 
@@ -45,7 +45,7 @@ it('should skip install if server is not connected', async () => {
 });
 
 it('should skip install if install is already running', async () => {
-  const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'true' });
+  const dbPromise = createMockedDbPromise({ isMinerReadyToInstall: 'true' });
   const config = new Config(dbPromise);
   await config.load();
 
@@ -65,9 +65,9 @@ it('should install if all conditions are met', async () => {
   const installer = new Installer(config);
   await installer.load();
 
-  config.isServerReadyToInstall = true;
-  config.isServerInstalled = false;
-  config.isServerUpToDate = false;
+  config.isMinerReadyToInstall = true;
+  config.isMinerInstalled = false;
+  config.isMinerUpToDate = false;
   config.serverDetails = {
     ...config.serverDetails,
     ipAddress: '127.0.0.1',
@@ -89,7 +89,7 @@ it('should install if all conditions are met', async () => {
 });
 
 it.only('should run through entire install process', async () => {
-  const dbPromise = createMockedDbPromise({ isServerReadyToInstall: 'true' });
+  const dbPromise = createMockedDbPromise({ isMinerReadyToInstall: 'true' });
   const config = Vue.reactive(new Config(dbPromise)) as Config;
   await config.load();
 
