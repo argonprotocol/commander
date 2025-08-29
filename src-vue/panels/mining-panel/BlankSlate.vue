@@ -1,27 +1,42 @@
 <!-- prettier-ignore -->
 <template>
   <div class="flex flex-col h-full">
-    <div style="text-shadow: 1px 1px 0 white">
-      <div class="text-5xl leading-tight font-bold text-center mt-20 text-[#4B2B4E]">
-        Earn Argons and Argonots
-        <div>By Running Your Own Mining Node</div>
-      </div>
-      <p class="text-base text-justify w-[780px] !mx-auto mt-10 text-[#4B2B4E]">
-        Argon uses a special auction process to determine who can mine. The winners of each auction hold the right to
-        mine for ten days, then it goes back up for bidding. Argon's mining software is runnable on cheap virtual cloud
-        machines, which makes getting involved easy and cost-effective. Click the button below to get started.
-      </p>
+    <div class="flex flex-col items-center grow justify-center">
+      <section class="flex flex-col items-center">
+        <div style="text-shadow: 1px 1px 0 white">
+          <div class="text-5xl leading-tight font-bold text-center mt-20 text-argon-text-primary">
+            Earn Argons and Argonots
+            <div>By Running Your Own Mining Node</div>
+          </div>
+          <p class="text-base text-justify w-[780px] !mx-auto mt-10 text-argon-text-primary">
+            Argon is a fully decentralized and democratic. Anyone can participate in the mining and rewards of the system, and 
+            a special auction process serves as gatekeeper. Auctions are held every 24 hours, and the winners are given the keys
+            for ten days before the cycle repeats itself. The best thing is, special mining hardware provides no advantage.
+            Argon is optimized for cheap virtual cloud machines, which makes getting involved easy and cost-effective.
+            Click a button below to get started.
+          </p>
+        </div>
+        <div class="flex flex-row items-center text-2xl mt-10 w-full justify-center gap-x-6">
+          <button
+            @click="openHowMiningWorksOverlay"
+            class="cursor-pointer bg-argon-600/10 hover:bg-argon-600/20 border border-argon-800/30 inner-button-shadow font-bold text-argon-600 [text-shadow:1px_1px_0_rgba(255,255,255,0.5)] px-12 py-2 rounded-md block"
+          >
+            Learn How Mining Works
+          </button>
+          <button
+            @click="startSettingUpMiner"
+            class="flex flex-row cursor-pointer items-center gap-x-2 bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow font-bold text-white px-12 py-2 rounded-md"
+          >
+            Set Up a Mining Operation
+            <ChevronDoubleRightIcon class="size-5 relative top-px" />
+          </button>
+        </div>
+      </section>
     </div>
-    <button
-      @click="openBotOverlay"
-      class="bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow text-2xl font-bold text-white px-12 py-2 rounded-md mx-auto block mt-10 cursor-pointer"
-    >
-      Create Personal Mining Bot
-    </button>
     <div class="flex-grow flex flex-row items-end w-full">
       <div class="flex flex-col w-full px-5 pb-5">
         <ul
-          class="flex flex-row text-center text-sm text-[#4B2B4E] w-full py-7 border-t border-b border-slate-300 mb-5"
+          class="flex flex-row text-center text-sm text-argon-text-primary w-full py-7 border-t border-b border-slate-300 mb-5"
         >
           <li class="w-1/4">
             <div class="text-4xl font-bold">
@@ -99,28 +114,34 @@
   </div>
 </template>
 
+<script lang="ts">
+const isLoaded = Vue.ref(false);
+</script>
+
 <script setup lang="ts">
 import * as Vue from 'vue';
 import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { storeToRefs } from 'pinia';
-import basicEmitter from '../../emitters/basicEmitter';
-import { useBlockchainStore, type IBlock } from '../../stores/blockchain';
+import { useBlockchainStore } from '../../stores/blockchain';
+import { useConfig } from '../../stores/config';
 import { useCurrency } from '../../stores/currency';
 import { calculateAPY } from '../../lib/Utils';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
+import { ChevronDoubleRightIcon } from '@heroicons/vue/24/outline';
+import basicEmitter from '../../emitters/basicEmitter';
 
 dayjs.extend(utc);
 
 const blockchainStore = useBlockchainStore();
 const currency = useCurrency();
+const config = useConfig();
 
 const { cachedBlocks: blocks } = storeToRefs(blockchainStore);
 const { microgonToArgonNm, micronotToArgonotNm, microgonToMoneyNm } = createNumeralHelpers(currency);
 
 const minutesSinceBlock = Vue.ref(0);
 const secondsSinceBlock = Vue.ref(0);
-const isLoaded = Vue.ref(false);
 
 const aggregatedBlockRewards = Vue.computed(() => {
   return (
@@ -164,8 +185,12 @@ function updateTimeSinceBlock() {
   setTimeout(() => updateTimeSinceBlock(), 1000);
 }
 
-function openBotOverlay() {
-  basicEmitter.emit('openBotOverlay');
+function openHowMiningWorksOverlay() {
+  basicEmitter.emit('openHowMiningWorksOverlay');
+}
+
+function startSettingUpMiner() {
+  config.isPreparingMinerSetup = true;
 }
 
 Vue.onMounted(async () => {

@@ -38,6 +38,8 @@ export default class BiddingCalculator {
   public maximumBidAtSlowGrowthAPY!: number;
   public maximumBidAtFastGrowthAPY!: number;
 
+  public averageAPY!: number;
+
   public pivotPoint: null | 'ExpectedGrowth' | 'MinimumBid' | 'MaximumBid' = null;
 
   public isInitializedPromise: Promise<void>;
@@ -66,6 +68,14 @@ export default class BiddingCalculator {
       return bigIntMax(this.maximumBidAmountFromMinimumBid, this.maximumBidAmountFromExpectedGrowth);
     }
     return null;
+  }
+
+  public get slowGrowthRewards(): bigint {
+    return this.calculateMinRewardsThisSeat();
+  }
+
+  public get fastGrowthRewards(): bigint {
+    return this.calculateOptimisticRewardsThisSeat();
   }
 
   public async updateBiddingRules(biddingRules: IBiddingRules) {
@@ -113,6 +123,13 @@ export default class BiddingCalculator {
     this.minimumBidAtFastGrowthAPY = this.calculateAPY('minimum', 'fast');
     this.maximumBidAtSlowGrowthAPY = this.calculateAPY('maximum', 'slow');
     this.maximumBidAtFastGrowthAPY = this.calculateAPY('maximum', 'fast');
+
+    this.averageAPY =
+      (Math.min(this.minimumBidAtSlowGrowthAPY, 999_999) +
+        Math.min(this.minimumBidAtFastGrowthAPY, 999_999) +
+        Math.min(this.maximumBidAtSlowGrowthAPY, 999_999) +
+        Math.min(this.maximumBidAtFastGrowthAPY, 999_999)) /
+      4;
   }
 
   private calculateBidAmount(bidType: IBidType) {

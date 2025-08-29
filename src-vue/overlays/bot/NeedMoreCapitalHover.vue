@@ -1,7 +1,7 @@
 <template>
   <HoverCardRoot v-model:open="isOpen" @update:open="updateIsOpen">
     <HoverCardTrigger CardTrigger @click="clickTrigger" class="inline-block cursor-pointer outline-none">
-      <AlertIcon class="relative -top-2 mr-2 inline-block h-10 w-10 text-yellow-700" />
+      <AlertIcon class="relative -top-1 mr-2 inline-block h-10 w-10 text-yellow-700" />
     </HoverCardTrigger>
     <HoverCardPortal>
       <HoverCardContent
@@ -9,18 +9,18 @@
         @focusOutside="focusOutside"
         :alignOffset="-50"
         :sideOffset="5"
-        :collisionPadding="5"
+        :collisionPadding="24"
         align="end"
         class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFade text-md z-100 w-[500px] rounded-md border border-gray-800/20 bg-white px-4 pt-4 pb-5 text-left leading-5.5 text-gray-600 shadow-xl select-none data-[state=open]:transition-all"
       >
         <p>
-          You need to commit a minimum of {{ currency.symbol
-          }}{{ microgonToMoneyNm(idealCapitalCommitment).format('0,0.[00]') }} in order to have a chance at your goal of
-          winning {{ config.biddingRules.seatGoalCount }} seats.
+          You need a minimum of {{ currency.symbol
+          }}{{ microgonToMoneyNm(idealCapitalCommitment).format('0,0.[00]') }} in order to have a chance at fulfilling
+          your goal of winning {{ config.biddingRules.seatGoalCount }} seats.
         </p>
         <button
           @click="increaseCapitalCommitment"
-          class="border-argon-600/30 mt-4 flex cursor-pointer flex-row items-center rounded-md border bg-slate-200 px-4 py-1.5 font-bold"
+          class="border-argon-600/30 mt-4 flex w-full cursor-pointer flex-row items-center justify-center rounded-md border bg-slate-200 px-4 py-1.5 font-bold"
         >
           <IncreaseIcon class="relative -mt-0.5 mr-2 inline-block size-4" />
           <span class="">

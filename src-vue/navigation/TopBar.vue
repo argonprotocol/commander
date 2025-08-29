@@ -19,18 +19,18 @@
       >
         <li
           class="border-r border-slate-400"
-          @click="controller.setPanel('mining')"
-          :class="{ selected: controller.panel === 'mining' }"
+          @click="controller.setPanelKey(PanelKey.Mining)"
+          :class="{ selected: controller.panelKey === PanelKey.Mining }"
         >
           <span class="relative px-2 text-center">
-            <div :class="{ invisible: controller.panel === 'mining' }">Mining</div>
-            <div v-if="controller.panel === 'mining'" class="absolute top-0 left-0 w-full h-full font-bold">Mining</div>
+            <div :class="{ invisible: controller.panelKey === PanelKey.Mining }">Mining</div>
+            <div v-if="controller.panelKey === PanelKey.Mining" class="absolute top-0 left-0 w-full h-full font-bold">Mining</div>
           </span>
         </li>
-        <li @click="controller.setPanel('vaulting')" :class="{ selected: controller.panel === 'vaulting' }">
+        <li @click="controller.setPanelKey(PanelKey.Vaulting)" :class="{ selected: controller.panelKey === PanelKey.Vaulting }">
           <span class="relative px-1 text-center">
-            <div :class="{ invisible: controller.panel === 'vaulting' }">Vaulting</div>
-            <div v-if="controller.panel === 'vaulting'" class="absolute top-0 left-0 w-full h-full font-bold">
+            <div :class="{ invisible: controller.panelKey === PanelKey.Vaulting }">Vaulting</div>
+            <div v-if="controller.panelKey === PanelKey.Vaulting" class="absolute top-0 left-0 w-full h-full font-bold">
               Vaulting
             </div>
           </span>
@@ -42,9 +42,9 @@
       class="flex flex-row mr-3 space-x-2 items-center justify-end w-1/2 pointer-events-none relative top-[1px]"
       :class="[wallets.isLoaded ? '' : 'opacity-20']"
     >
-      <div :class="[controller.panel === 'mining' && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><StatusMenu /></div>
-      <div :class="[controller.panel === 'mining' && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><CurrencyMenu /></div>
-      <div :class="[controller.panel === 'mining' && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><AccountMenu /></div>
+      <div :class="[controller.panelKey === PanelKey.Mining && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><StatusMenu /></div>
+      <div :class="[controller.panelKey === PanelKey.Mining && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><CurrencyMenu /></div>
+      <div :class="[controller.panelKey === PanelKey.Mining && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><AccountMenu /></div>
     </div>
   </div>
 </template>
@@ -59,6 +59,7 @@ import StatusMenu from './StatusMenu.vue';
 import AccountMenu from './AccountMenu.vue';
 import { useWallets } from '../stores/wallets';
 import { useBot } from '../stores/bot';
+import { PanelKey } from '../interfaces/IConfig.ts';
 
 const controller = useController();
 const wallets = useWallets();

@@ -43,7 +43,6 @@
                       Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
                     </header>
                     <div class="grow relative mt-2 pb-12 pt-10 text-5xl font-bold font-mono text-argon-600">
-                      <!-- <NeedMoreCapitalHover v-if="probableMinSeats < rules.seatGoalCount" :calculator="calculator" /> -->
                       <InputArgon v-model="rules.baseCapitalCommitment" :min="10_000_000n" :minDecimals="0" class="focus:outline-none" />
                     </div>
                   </div>
@@ -59,7 +58,6 @@
                 </div>
 
                 <div class="w-1/2 flex flex-col grow">
-                  <!-- @mouseenter="showTooltip($event, tooltip.estimatedAPYRange, { width: 'parent' })" @mouseleave="hideTooltip"  -->
                   <div PrimaryStat class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
                     <header StatHeader class="mx-4 relative z-10">Annual Percentage Yields</header>
                     <div class="grow flex flex-col mt-3 w-full px-4">

@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <div class="flex flex-row items-start w-full pt-3 pb-10 px-5 gap-x-5">
+    <div class="flex flex-row items-start w-full pt-3 pb-5 px-5 gap-x-5">
       <div class="flex flex-col grow pt-2 text-md">
         <div v-if="config.biddingRules">
           <p class="font-light">
@@ -28,7 +28,7 @@
             Based on the rules configured in your account, your Vault needs the following tokens in order to operate.
           </p>
 
-          <table>
+          <table class="w-11/12">
             <thead>
               <tr>
                 <td>Required</td>
@@ -66,6 +66,10 @@
             </tbody>
           </table>
 
+          <button @click="closeOverlay" class="w-11/12 mt-8 bg-slate-600/20 hover:bg-slate-600/15 border border-slate-900/10 inner-button-shadow text-slate-900 px-4 py-2 rounded-lg focus:outline-none cursor-pointer">
+            Close Wallet
+          </button>
+
         </div>
         <div v-else>You haven't set any bidding rules. Please do so before adding funds.</div>
       </div>
@@ -77,10 +81,12 @@
             {{ abbreviateAddress(wallet.address) }}
             <CopyIcon class="w-4 h-4 ml-1 inline-block" />
           </span>
+          <div class="text-center text-argon-600 text-sm mt-1">COPY</div>
           <template #copied>
             <div class="absolute top-0 left-0 w-full h-full pointer-events-none">
               {{ abbreviateAddress(wallet.address) }}
               <CopyIcon class="w-4 h-4 ml-1 inline-block" />
+              <div class="text-center text-argon-600 text-sm mt-1">COPY</div>
             </div>
           </template>
         </CopyToClipboard>
@@ -96,10 +102,10 @@ import { useConfig } from '../../stores/config';
 import { useWallets } from '../../stores/wallets';
 import { useCurrency } from '../../stores/currency';
 import { abbreviateAddress } from '../../lib/Utils';
-import { ChevronLeftIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { XMarkIcon } from '@heroicons/vue/24/outline';
 import CopyIcon from '../../assets/copy.svg?component';
 import CopyToClipboard from '../../components/CopyToClipboard.vue';
-import numeral, { createNumeralHelpers } from '../../lib/numeral';
+import { createNumeralHelpers } from '../../lib/numeral';
 import { bigIntMax } from '@argonprotocol/commander-core/src/utils';
 
 const props = defineProps({
@@ -185,7 +191,7 @@ Vue.onMounted(() => {
 @reference "../../main.css";
 
 table {
-  @apply text-md mt-6 w-11/12 font-mono;
+  @apply text-md mt-6 font-mono;
   thead {
     @apply font-bold uppercase;
   }

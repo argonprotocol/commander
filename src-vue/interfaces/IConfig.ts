@@ -32,6 +32,11 @@ export enum InstallStepStatus {
   Hidden = 'Hidden',
 }
 
+export enum PanelKey {
+  Mining = 'Mining',
+  Vaulting = 'Vaulting',
+}
+
 export const ConfigServerDetailsSchema = z.object({
   ipAddress: z.string(),
   sshUser: z.string(),
@@ -85,6 +90,7 @@ export const MiningAccountPreviousHistoryRecordSchema = z.object({
 // ---- Main Schema ---- //
 
 export const ConfigSchema = z.object({
+  panelKey: z.nativeEnum(PanelKey),
   version: z.string(),
   requiresPassword: z.boolean(),
   serverDetails: ConfigServerDetailsSchema,
@@ -96,12 +102,16 @@ export const ConfigSchema = z.object({
   miningAccountHadPreviousLife: z.boolean(),
   miningAccountPreviousHistory: z.array(MiningAccountPreviousHistoryRecordSchema).nullable(),
 
-  isVaultReadyToCreate: z.boolean(),
+  hasReadMiningInstructions: z.boolean(),
+  isPreparingMinerSetup: z.boolean(),
+  isMinerReadyToInstall: z.boolean(), // isConnected
+  isMinerInstalled: z.boolean(), // isNewServer
+  isMinerUpToDate: z.boolean(), // isInstalling
+  isMinerWaitingForUpgradeApproval: z.boolean(), // isRequiringUpgrade
 
-  isServerReadyToInstall: z.boolean(), // isConnected
-  isServerInstalled: z.boolean(), // isNewServer
-  isServerUpToDate: z.boolean(), // isInstalling
-  isWaitingForUpgradeApproval: z.boolean(), // isRequiringUpgrade
+  hasReadVaultingInstructions: z.boolean(),
+  isPreparingVaultSetup: z.boolean(),
+  isVaultReadyToCreate: z.boolean(),
 
   hasMiningSeats: z.boolean(), // hasMiningSeats
   hasMiningBids: z.boolean(), // hasMiningBids
@@ -137,6 +147,7 @@ export type IConfigStringified = {
 };
 
 export interface IConfigDefaults {
+  panelKey: () => IConfig['panelKey'];
   requiresPassword: () => IConfig['requiresPassword'];
   serverDetails: () => IConfig['serverDetails'];
   installDetails: () => IConfig['installDetails'];
@@ -145,11 +156,18 @@ export interface IConfigDefaults {
   miningAccountAddress: () => IConfig['miningAccountAddress'];
   miningAccountHadPreviousLife: () => IConfig['miningAccountHadPreviousLife'];
   miningAccountPreviousHistory: () => IConfig['miningAccountPreviousHistory'];
+
+  hasReadMiningInstructions: () => IConfig['hasReadMiningInstructions'];
+  isPreparingMinerSetup: () => IConfig['isPreparingMinerSetup'];
+  isMinerReadyToInstall: () => IConfig['isMinerReadyToInstall'];
+  isMinerInstalled: () => IConfig['isMinerInstalled'];
+  isMinerUpToDate: () => IConfig['isMinerUpToDate'];
+  isMinerWaitingForUpgradeApproval: () => IConfig['isMinerWaitingForUpgradeApproval'];
+
+  hasReadVaultingInstructions: () => IConfig['hasReadVaultingInstructions'];
+  isPreparingVaultSetup: () => IConfig['isPreparingVaultSetup'];
   isVaultReadyToCreate: () => IConfig['isVaultReadyToCreate'];
-  isServerReadyToInstall: () => IConfig['isServerReadyToInstall'];
-  isServerInstalled: () => IConfig['isServerInstalled'];
-  isServerUpToDate: () => IConfig['isServerUpToDate'];
-  isWaitingForUpgradeApproval: () => IConfig['isWaitingForUpgradeApproval'];
+
   hasMiningSeats: () => IConfig['hasMiningSeats'];
   hasMiningBids: () => IConfig['hasMiningBids'];
   biddingRules: () => IConfig['biddingRules'];

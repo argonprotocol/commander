@@ -171,27 +171,27 @@ const options = Vue.ref({
   },
   [AdvancedRestartOption.RestartDockers]: {
     isChecked: false,
-    isDisabled: !config.isServerInstalled && !installer.isRunning,
+    isDisabled: !config.isMinerInstalled && !installer.isRunning,
     checkedBy: '',
   },
   [AdvancedRestartOption.ResyncBiddingDataOnCloudMachine]: {
     isChecked: false,
-    isDisabled: !config.isServerInstalled && !installer.isRunning,
+    isDisabled: !config.isMinerInstalled && !installer.isRunning,
     checkedBy: '',
   },
   [AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine]: {
     isChecked: false,
-    isDisabled: !config.isServerInstalled && !installer.isRunning,
+    isDisabled: !config.isMinerInstalled && !installer.isRunning,
     checkedBy: '',
   },
   [AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine]: {
     isChecked: false,
-    isDisabled: !config.isServerInstalled && !installer.isRunning,
+    isDisabled: !config.isMinerInstalled && !installer.isRunning,
     checkedBy: '',
   },
   [AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine]: {
     isChecked: false,
-    isDisabled: !config.isServerInstalled && !installer.isRunning,
+    isDisabled: !config.isMinerInstalled && !installer.isRunning,
     checkedBy: '',
   },
 });

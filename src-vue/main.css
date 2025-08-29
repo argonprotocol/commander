@@ -14,6 +14,8 @@
   --color-argon-900: oklch(0.27 0.12 320);
   --color-argon-950: oklch(0.2 0.08 320);
 
+  --color-argon-text-primary: #4b2b4e;
+
   --color-argon-menu-bg: #fdfcfd;
   --color-argon-menu-hover: #f7edf8;
   --color-argon-button: #a600d4;

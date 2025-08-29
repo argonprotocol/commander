@@ -103,11 +103,11 @@ export class BotSyncer {
   private get isRunnable(): boolean {
     return (
       !this.isPaused &&
-      this.config.isServerReadyToInstall &&
-      this.config.isServerUpToDate &&
-      this.config.isServerInstalled &&
+      this.config.isMinerReadyToInstall &&
+      this.config.isMinerUpToDate &&
+      this.config.isMinerInstalled &&
       this.config.hasSavedBiddingRules &&
-      !this.config.isWaitingForUpgradeApproval
+      !this.config.isMinerWaitingForUpgradeApproval
     );
   }
 

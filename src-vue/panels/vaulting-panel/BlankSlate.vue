@@ -1,27 +1,37 @@
 <!-- prettier-ignore -->
 <template>
   <div class="flex flex-col h-full">
-    <div style="text-shadow: 1px 1px 0 white">
-      <div class="text-5xl leading-tight font-bold text-center mt-20 text-[#4B2B4E]">
-        Earn Revenue By Operating
-        <div>Stabilization Vaults for the Network</div>
-      </div>
-      <p class="text-base text-justify w-[780px] !mx-auto mt-10 text-[#4B2B4E]">
-        Argon's Stabilization Vaults are the backbone of its ingenuity. Bitcoins are locked into vaults, which generates
-        unencumbered shorts on the argon stablecoin, which creates a currency that is impossible to death-spiral.
-        Vaulters earn rewards by operating these vaults and managing liquidity pools. Anyone can participate in these
-        liquidity pools and earn continuous yield on their argons.
-      </p>
+    <div class="flex flex-col items-center grow justify-center">
+      <section class="flex flex-col items-center">
+        <div style="text-shadow: 1px 1px 0 white">
+          <div class="text-5xl leading-tight font-bold text-center mt-20 text-[#4B2B4E]">
+            Earn Revenue By Operating
+            <div>Stabilization Vaults for the Network</div>
+          </div>
+          <p class="text-base text-justify w-[780px] !mx-auto mt-10 text-[#4B2B4E]">
+            Argon's Stabilization Vaults are the backbone of its ingenuity. These vaults are designed to lock Bitcoins into
+            special contracts that generate unencumbered shorts against the Argon stablecoin. It is these Bitcoin-to-Argon shorts 
+            that give Argon its price stability and make it impossible to death-spiral. In return for operating vaults and managing
+            the related liquidity pools, Vaulters are able to earn substantial rewards. Click a button below to get started.
+          </p>
+        </div>
+        <div class="flex flex-row items-center text-2xl mt-10 w-full justify-center gap-x-6">
+          <button
+            @click="openHowVaultingWorksOverlay"
+            class="cursor-pointer bg-argon-600/10 hover:bg-argon-600/20 border border-argon-800/30 inner-button-shadow font-bold text-argon-600 [text-shadow:1px_1px_0_rgba(255,255,255,0.5)] px-12 py-2 rounded-md block"
+          >
+            Learn How Vaulting Works
+          </button>
+          <button
+            @click="startSettingUpVault"
+            class="flex flex-row cursor-pointer items-center gap-x-2 bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow font-bold text-white px-12 py-2 rounded-md"
+          >
+            Set Up a Stabilization Vault
+            <ChevronDoubleRightIcon class="size-5 relative top-px" />
+          </button>
+        </div>
+      </section>
     </div>
-    <div class="flex flex-row items-center text-2xl mt-10 w-full justify-center">
-      <button
-        @click="openVaultOverlay"
-        class="bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow font-bold text-white px-14 py-2 rounded-lg cursor-pointer"
-      >
-        Create Stabilization Vault
-      </button>
-    </div>
-
     <div class="flex-grow flex flex-row items-end w-full">
       <div class="flex flex-col w-full px-5 pb-5">
         <ul
@@ -129,11 +139,13 @@ import basicEmitter from '../../emitters/basicEmitter';
 import { useCurrency } from '../../stores/currency';
 import VaultImage from '../../assets/vault.svg?component';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
-
+import { ChevronDoubleRightIcon } from '@heroicons/vue/24/outline';
 import { useVaults } from '../../stores/vaults.ts';
 import { SATOSHIS_PER_BITCOIN } from '../../lib/Currency.ts';
+import { useConfig } from '../../stores/config';
 
 const currency = useCurrency();
+const config = useConfig();
 
 const vaultCount = Vue.ref(0);
 
@@ -154,8 +166,12 @@ const microgonValueInVaults = Vue.ref(0n);
  */
 const averageVaultAPY = Vue.ref(0);
 
-function openVaultOverlay() {
-  basicEmitter.emit('openVaultOverlay');
+function openHowVaultingWorksOverlay() {
+  basicEmitter.emit('openHowVaultingWorksOverlay');
+}
+
+function startSettingUpVault() {
+  config.isPreparingVaultSetup = true;
 }
 
 async function updateRevenue() {

@@ -85,7 +85,7 @@ export default class Importer {
     this.config.biddingRules = serverData.biddingRules!;
     this.config.oldestFrameIdToSync = serverData.oldestFrameIdToSync!;
     this.config.serverDetails = { ...this.config.serverDetails, ipAddress: ipAddress };
-    this.config.isServerInstalled = true;
+    this.config.isMinerInstalled = true;
     await this.config.save();
 
     this.onFinished?.();

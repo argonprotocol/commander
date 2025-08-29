@@ -199,8 +199,8 @@ async function updateServer() {
     const existing = SSH.connection;
     await SSH.tryConnection(newServerDetails, config.security.sshPrivateKeyPath);
 
-    config.isServerReadyToInstall = true;
-    config.isServerUpToDate = false;
+    config.isMinerReadyToInstall = true;
+    config.isMinerUpToDate = false;
     config.serverDetails = newServerDetails;
     await config.save();
     if (existing) {

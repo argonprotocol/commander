@@ -136,8 +136,8 @@ export class InstallerCheck {
 
     this.config.installDetails = installDetailsPending;
     if (this.isServerInstallComplete) {
-      this.config.isServerInstalled = true;
-      this.config.isServerUpToDate = true;
+      this.config.isMinerInstalled = true;
+      this.config.isMinerUpToDate = true;
     }
     await this.config.save();
   }

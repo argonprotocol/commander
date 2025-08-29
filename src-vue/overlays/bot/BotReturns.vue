@@ -1,0 +1,154 @@
+<template>
+  <TooltipProvider :disableHoverableContent="true" :delayDuration="0">
+    <TooltipRoot>
+      <TooltipTrigger>
+        <slot />
+      </TooltipTrigger>
+      <TooltipPortal>
+        <TooltipContent
+          :side-offset="-5"
+          :align-offset="alignOffset ?? 0"
+          side="bottom"
+          :align="props.align ?? 'center'"
+          class="text-md data-[state=delayed-open]:data-[side=top]:animate-slideDownAndFade data-[state=delayed-open]:data-[side=right]:animate-slideLeftAndFade data-[state=delayed-open]:data-[side=left]:animate-slideRightAndFade data-[state=delayed-open]:data-[side=bottom]:animate-slideUpAndFade pointer-events-none z-100 rounded-lg border border-gray-800/20 bg-white px-5 pt-4 pb-2 text-left leading-5.5 text-gray-600 shadow-xl will-change-[transform,opacity]"
+          :style="{ width: props.width }"
+        >
+          <p>
+            There are several ways to calculate your mining returns. For example, you could win mining seats at your
+            Starting Bid price of {{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }}. Or it
+            could be at your Maximum Bid of {{ currency.symbol
+            }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}. Or any price in-between. You can adjust
+            Starting and Maximum in your config settings.
+          </p>
+
+          <p>
+            The second impact on your returns is the growth of the argon ecosystem. You can set ranges in your config to
+            test various scenarios. For example, you currently have the slowest growth of the Argon Stablecoin at
+            {{ numeral(rules.argonCirculationGrowthPctMin).formatIfElse('0', '0', '+0.[0]') }}% and the fastest growth
+            at {{ numeral(rules.argonCirculationGrowthPctMax).formatIfElse('0', '0', '+0.[0]') }}%.
+          </p>
+
+          <p>Below is an APY breakdown of your various return possibilities:</p>
+
+          <table class="relative z-50 mt-2 h-full w-full table-fixed whitespace-nowrap">
+            <tbody>
+              <tr class="text-argon-600 h-1/3">
+                <td class="w-5/12"></td>
+                <td class="text-argon-800/40 w-5/12 pl-5 text-right font-sans font-light">Slow Growth</td>
+                <td class="text-argon-800/40 w-5/12 pl-5 text-right font-sans font-light">Medium Growth</td>
+                <td class="text-argon-800/40 w-5/12 pl-5 text-right font-sans font-light">Fast Growth</td>
+              </tr>
+              <tr class="text-argon-600 h-1/3 font-mono font-bold">
+                <td
+                  class="text-argon-800/40 border-t border-dashed border-slate-300 pr-10 pl-2 text-left font-sans font-light"
+                >
+                  Maximum Bid ({{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }})
+                </td>
+                <td class="border-t border-dashed border-slate-300 text-right">
+                  {{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                </td>
+                <td class="border-t border-dashed border-slate-300 text-right">
+                  {{ numeral(maximumBidAtMediumGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                </td>
+                <td class="border-t border-dashed border-slate-300 text-right">
+                  {{ numeral(maximumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                </td>
+              </tr>
+              <tr class="text-argon-600 h-1/3 font-mono font-bold">
+                <td
+                  class="text-argon-800/40 border-t border-dashed border-slate-300 pr-10 pl-2 text-left font-sans font-light"
+                >
+                  Starting Bid ({{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }})
+                </td>
+                <td class="border-t border-dashed border-slate-300 text-right">
+                  {{ numeral(minimumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                </td>
+                <td class="border-t border-dashed border-slate-300 text-right">
+                  {{ numeral(minimumBidAtMediumGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                </td>
+                <td class="border-t border-dashed border-slate-300 text-right">
+                  {{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <TooltipArrow :width="24" :height="12" class="fill-white stroke-gray-400/50 shadow-2xl" />
+        </TooltipContent>
+      </TooltipPortal>
+    </TooltipRoot>
+  </TooltipProvider>
+</template>
+
+<script setup lang="ts">
+import * as Vue from 'vue';
+import { useConfig } from '../../stores/config';
+import { useCurrency } from '../../stores/currency';
+import numeral, { createNumeralHelpers } from '../../lib/numeral';
+import { TooltipArrow, TooltipContent, TooltipPortal, TooltipProvider, TooltipRoot, TooltipTrigger } from 'reka-ui';
+import { IBiddingRules } from '@argonprotocol/commander-core';
+import { getCalculator, getCalculatorData } from '../../stores/mainchain';
+
+const props = withDefaults(
+  defineProps<{
+    align?: 'start' | 'end' | 'center';
+    alignOffset?: number;
+    width?: string;
+  }>(),
+  {
+    width: '700px',
+  },
+);
+
+const calculator = getCalculator();
+const calculatorData = getCalculatorData();
+
+const config = useConfig();
+const currency = useCurrency();
+const { microgonToMoneyNm } = createNumeralHelpers(currency);
+
+const rules = Vue.computed(() => config.biddingRules as IBiddingRules);
+
+const maximumBidAtSlowGrowthAPY = Vue.ref(0);
+const maximumBidAtMediumGrowthAPY = Vue.ref(0);
+const maximumBidAtFastGrowthAPY = Vue.ref(0);
+const minimumBidAtSlowGrowthAPY = Vue.ref(0);
+const minimumBidAtMediumGrowthAPY = Vue.ref(0);
+const minimumBidAtFastGrowthAPY = Vue.ref(0);
+
+const maximumBidAmount = Vue.ref(0n);
+const minimumBidAmount = Vue.ref(0n);
+
+function updateAPYs() {
+  calculator.updateBiddingRules(rules.value);
+  calculator.calculateBidAmounts();
+
+  maximumBidAmount.value = calculator.maximumBidAmount;
+  minimumBidAmount.value = calculator.minimumBidAmount;
+
+  maximumBidAtSlowGrowthAPY.value = calculator.maximumBidAtSlowGrowthAPY;
+  maximumBidAtMediumGrowthAPY.value = (calculator.maximumBidAtSlowGrowthAPY + calculator.maximumBidAtFastGrowthAPY) / 2;
+  maximumBidAtFastGrowthAPY.value = calculator.maximumBidAtFastGrowthAPY;
+  minimumBidAtSlowGrowthAPY.value = calculator.minimumBidAtSlowGrowthAPY;
+  minimumBidAtMediumGrowthAPY.value = (calculator.minimumBidAtSlowGrowthAPY + calculator.minimumBidAtFastGrowthAPY) / 2;
+  minimumBidAtFastGrowthAPY.value = calculator.minimumBidAtFastGrowthAPY;
+}
+
+Vue.onMounted(() => {
+  calculatorData.isInitializedPromise.then(() => {
+    updateAPYs();
+  });
+});
+</script>
+
+<style scoped>
+@reference "../../main.css";
+
+table td {
+  @apply py-2;
+}
+
+p {
+  @apply mb-4;
+}
+</style>

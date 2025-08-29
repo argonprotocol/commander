@@ -6,6 +6,7 @@ import { getDbPromise } from './helpers/dbPromise';
 import { createDeferred } from '../lib/Utils';
 import handleUnknownFatalError from './helpers/handleUnknownFatalError';
 import Importer from '../lib/Importer';
+import { PanelKey } from '../interfaces/IConfig';
 
 export const useController = defineStore('controller', () => {
   const isLoaded = Vue.ref(false);
@@ -13,19 +14,22 @@ export const useController = defineStore('controller', () => {
 
   const dbPromise = getDbPromise();
   const config = useConfig();
-  const panel = Vue.ref('mining');
+  const panelKey = Vue.ref<PanelKey>('' as PanelKey);
 
   const isImporting = Vue.ref(false);
 
-  function setPanel(value: string) {
-    if (panel.value === value) return;
+  function setPanelKey(value: PanelKey) {
+    if (panelKey.value === value) return;
 
     basicEmitter.emit('closeAllOverlays');
-    panel.value = value;
+    panelKey.value = value;
+    config.panelKey = value;
+    void config.save();
   }
 
   async function load() {
     await config.isLoadedPromise;
+    panelKey.value = config.panelKey;
     isLoaded.value = true;
     isLoadedResolve();
   }
@@ -46,8 +50,8 @@ export const useController = defineStore('controller', () => {
   load().catch(handleUnknownFatalError);
 
   return {
-    panel,
-    setPanel,
+    panelKey,
+    setPanelKey,
     isLoaded,
     isLoadedPromise,
     isImporting,
