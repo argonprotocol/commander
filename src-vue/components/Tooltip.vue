@@ -19,5 +19,19 @@
 </template>
 
 <script setup lang="ts">
-import { TooltipArrow, TooltipContent, TooltipPortal, TooltipProvider, TooltipRoot, TooltipTrigger } from 'reka-ui';
+import type { TooltipRootEmits, TooltipRootProps } from 'reka-ui';
+import {
+  TooltipArrow,
+  TooltipContent,
+  TooltipPortal,
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+  useForwardPropsEmits,
+} from 'reka-ui';
+
+const props = defineProps<TooltipRootProps & { content?: string }>();
+const emits = defineEmits<TooltipRootEmits>();
+
+const forward = useForwardPropsEmits(props, emits);
 </script>
