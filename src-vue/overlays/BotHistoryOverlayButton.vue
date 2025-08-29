@@ -19,7 +19,8 @@
             <tr v-for="activity of activities" :key="activity.id" class="whitespace-nowrap">
               <td class="text-left w-[5%]">
                 <ActivityArrowIcon v-if="activity.type === 'bidUp'" class="w-5 h-5 text-green-500" />
-                <ActivityArrowIcon v-if="activity.type === 'bidDown'" class="w-5 h-5 rotate-180 text-red-500" />
+                <ActivityArrowIcon v-if="activity.type === 'bidDown' && activity.isMine" class="w-5 h-5 rotate-180 text-red-500" />
+                <ActivityArrowIcon v-if="activity.type === 'bidDown' && !activity.isMine" class="w-5 h-5 rotate-180 text-gray-200" />
                 <ActivityArrowIcon v-if="activity.type === 'bidInc'" class="w-5 h-5 rotate-90 text-green-500" />
                 <ActivityFailureIcon v-if="activity.type === 'failure'" class="w-5 h-5 text-red-500" />
                 <ActivitySuccessIcon v-if="activity.type === 'success'" class="w-5 h-5 text-green-500" />

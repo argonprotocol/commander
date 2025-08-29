@@ -122,7 +122,20 @@ export class BlockSync {
       });
     });
 
-    const startingMinerState = await this.accountset.loadRegisteredMiners(this.localClient);
+    await this.backfillBestBlockHeader(await this.localClient.rpc.chain.getHeader(), true);
+
+    const data = (await this.blockSyncFile.get())!;
+    console.log('After initial sync state', {
+      ...data,
+      blocksByNumber: Object.keys(data.blocksByNumber).length,
+    });
+
+    const oldestBlock = data.blocksByNumber[data.syncedToBlockNumber + 1];
+    if (!oldestBlock) {
+      throw new Error(`No block found to start syncing from at ${data.syncedToBlockNumber + 1}`);
+    }
+    const accountMinersClient = await this.archiveClient.at(oldestBlock.hash);
+    const startingMinerState = await this.accountset.loadRegisteredMiners(accountMinersClient);
     const registeredMiners = startingMinerState
       .filter(x => x.seat !== undefined)
       .map(x => ({
@@ -131,12 +144,6 @@ export class BlockSync {
       }));
 
     this.accountMiners = new AccountMiners(this.accountset, registeredMiners as any);
-    await this.backfillBestBlockHeader(await this.localClient.rpc.chain.getHeader(), true);
-    const data = (await this.blockSyncFile.get())!;
-    console.log('After initial sync state', {
-      ...data,
-      blocksByNumber: Object.keys(data.blocksByNumber).length,
-    });
 
     // catchup now
     await this.syncToLatest();

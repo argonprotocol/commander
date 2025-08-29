@@ -72,7 +72,13 @@ export default class Restarter {
     await remove(dbPath, { baseDir: BaseDirectory.AppLocalData });
     await invoke('run_db_migrations');
     await db.reconnect();
-    localStorage.setItem('ConfigRestore', JSON.stringify({ serverDetails: JSON.stringify(serverDetails) }));
+    localStorage.setItem(
+      'ConfigRestore',
+      JSON.stringify({
+        serverDetails: JSON.stringify(serverDetails),
+        hasReadMiningInstructions: config.hasReadMiningInstructions,
+      }),
+    );
   }
 
   public async restart() {
