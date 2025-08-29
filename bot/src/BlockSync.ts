@@ -442,7 +442,7 @@ export class BlockSync {
     this.didProcessBlock?.(this.lastProcessed);
     const remaining = bestBlockNumber - blockNumber;
     const syncPercent = (blockNumber * 100) / bestBlockNumber;
-    const syncString = syncPercent >= 100 ? '' : `(synced ${syncPercent.toFixed(1)}%)`;
+    const syncString = syncPercent >= 100 ? '' : ` (synced ${syncPercent.toFixed(1)}%)`;
     console.log(`Processed block ${blockNumber} at tick ${tick}${syncString}.`);
     return {
       processed: blockMeta,

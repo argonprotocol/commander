@@ -35,6 +35,7 @@ export class BotSyncer {
   private botState!: IBotState;
   private botFns: IBotFns;
   private installer: Installer;
+  private isLoaded: boolean = false;
 
   private isSyncingThePast: boolean = false;
 
@@ -51,6 +52,8 @@ export class BotSyncer {
   }
 
   public async load(): Promise<void> {
+    if (this.isLoaded) return;
+    this.isLoaded = true;
     console.log('BotSyncer: Loading...');
     await this.config.isLoadedPromise;
     await this.installer.isLoadedPromise;
@@ -62,6 +65,7 @@ export class BotSyncer {
   private async runContinuously(): Promise<void> {
     if (this.isRunnable) {
       try {
+        console.log('BotSyncer: Checking Last Modified...');
         const lastModifiedDate = await BotFetch.lastModifiedDate();
         if ((lastModifiedDate?.getTime() ?? 0) > (this.lastModifiedDate?.getTime() ?? 0)) {
           this.lastModifiedDate = lastModifiedDate;

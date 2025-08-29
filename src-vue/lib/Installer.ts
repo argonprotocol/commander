@@ -195,6 +195,12 @@ export default class Installer {
     this.isReadyToRun = false;
   }
 
+  public async uploadBiddingRules() {
+    const server = await this.getServer();
+
+    await server.uploadBiddingRules(this.config.biddingRules);
+  }
+
   public async ensureIpAddressIsWhitelisted(): Promise<void> {
     // we don't have anything to connect to yet!
     if (!this.config.serverDetails.ipAddress) return;

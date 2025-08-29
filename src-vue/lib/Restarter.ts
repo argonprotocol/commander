@@ -26,6 +26,10 @@ export default class Restarter {
   }
 
   public async run(toRestart: Set<AdvancedRestartOption>) {
+    if (toRestart.has(AdvancedRestartOption.RecreateLocalDatabase)) {
+      await this.recreateLocalDatabase();
+    }
+
     if (toRestart.has(AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine)) {
       const server = await this.getServer();
       await server.completelyWipeEverything();
@@ -51,10 +55,6 @@ export default class Restarter {
     if (toRestart.has(AdvancedRestartOption.RestartDockers)) {
       const server = await this.getServer();
       await server.restartDocker();
-    }
-
-    if (toRestart.has(AdvancedRestartOption.RecreateLocalDatabase)) {
-      await this.recreateLocalDatabase();
     }
 
     if (toRestart.has(AdvancedRestartOption.ReloadAppUi)) {
