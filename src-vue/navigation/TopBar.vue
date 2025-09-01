@@ -15,6 +15,7 @@
 
     <div class="flex-grow flex justify-center pointer-events-none">
       <ul
+        ref="toggleRef"
         class="TOGGLE flex flex-row fit-content bg-[#E9EBF1] border border-[#b8b9bd] rounded text-center text-slate-600 pointer-events-auto"
       >
         <li
@@ -44,7 +45,7 @@
     >
       <div :class="[controller.panelKey === PanelKey.Mining && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><StatusMenu /></div>
       <div :class="[controller.panelKey === PanelKey.Mining && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><CurrencyMenu /></div>
-      <div :class="[controller.panelKey === PanelKey.Mining && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><AccountMenu /></div>
+      <div :class="[controller.panelKey === PanelKey.Mining && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><AccountMenu ref="accountMenuRef" /></div>
     </div>
   </div>
 </template>
@@ -60,10 +61,43 @@ import AccountMenu from './AccountMenu.vue';
 import { useWallets } from '../stores/wallets';
 import { useBot } from '../stores/bot';
 import { PanelKey } from '../interfaces/IConfig.ts';
+import { ITourPos, useTour } from '../stores/tour';
 
 const controller = useController();
 const wallets = useWallets();
+const tour = useTour();
 const bot = useBot();
+
+const toggleRef = Vue.ref<HTMLElement | null>(null);
+const accountMenuRef = Vue.ref<InstanceType<typeof AccountMenu> | null>(null);
+
+tour.registerPositionCheck('miningTab', (): ITourPos => {
+  const rect = toggleRef.value?.getBoundingClientRect().toJSON() || { left: 0, right: 0, top: 0, bottom: 0 };
+  rect.left -= 20;
+  rect.right += 20;
+  rect.top -= 10;
+  rect.bottom += 10;
+  return rect;
+});
+
+tour.registerPositionCheck('vaultingTab', () => {
+  const rect = toggleRef.value?.getBoundingClientRect().toJSON() || { left: 0, right: 0, top: 0, bottom: 0 };
+  rect.left -= 20;
+  rect.right += 20;
+  rect.top -= 10;
+  rect.bottom += 10;
+  return rect;
+});
+
+tour.registerPositionCheck('accountMenu', () => {
+  const accountMenuElem = accountMenuRef.value?.$el;
+  const rect = accountMenuElem?.getBoundingClientRect().toJSON() || { left: 0, right: 0, top: 0, bottom: 0 };
+  rect.left -= 7;
+  rect.right += 7;
+  rect.top -= 7;
+  rect.bottom += 7;
+  return { ...rect, blur: 5 };
+});
 </script>
 
 <style scoped>

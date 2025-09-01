@@ -33,6 +33,7 @@ type IBasicEmitter = {
   openCheckForAppUpdatesOverlay: void;
   openHowMiningWorksOverlay: void;
   openHowVaultingWorksOverlay: void;
+  openWelcomeOverlay: void;
 };
 
 const basicEmitter: Emitter<IBasicEmitter> = mitt<IBasicEmitter>();

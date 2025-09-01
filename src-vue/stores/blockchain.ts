@@ -5,7 +5,7 @@ import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { type MainchainClient } from '@argonprotocol/commander-core';
 import { getMainchain, getMainchainClient } from './mainchain.ts';
-import { BlockHash, getAuthorFromHeader } from '@argonprotocol/mainchain';
+import { getAuthorFromHeader, Header } from '@argonprotocol/mainchain';
 
 dayJsExtend(utc);
 dayJsExtend(relativeTime);
@@ -22,7 +22,6 @@ export type IBlock = {
   number: number;
   hash: string;
   author: string;
-  extrinsics: number;
   microgons: bigint;
   micronots: bigint;
   timestamp: Dayjs;
@@ -43,16 +42,13 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     cachedBlockLoading,
     cachedBlockLoading,
     cachedBlockLoading,
+    cachedBlockLoading,
   ]);
 
-  async function fetchBlock(client: MainchainClient, blockHash: BlockHash) {
-    const block = await client.rpc.chain.getBlock(blockHash);
-    const header = block.block.header;
+  async function fetchBlock(client: MainchainClient, header: Header) {
     const author = getAuthorFromHeader(client, header);
-    const clientAt = await client.at(blockHash);
+    const clientAt = await client.at(header.hash);
     const events = await clientAt.query.system.events();
-    // there's no way to get this without fetching the whole block
-    const extrinsics = block.block.extrinsics.length;
     let microgons = 0n;
     let micronots = 0n;
     events.find(({ event }: { event: any }) => {
@@ -71,7 +67,6 @@ export const useBlockchainStore = defineStore('blockchain', () => {
       number: header.number.toNumber(),
       hash: header.hash.toHex(),
       author: author ?? '',
-      extrinsics,
       microgons,
       micronots,
       timestamp: dayjs.utc(timestamp),
@@ -80,7 +75,7 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     return newBlock;
   }
 
-  async function fetchBlocks(lastBlockNumber: number | null, endingFrameId: number | null, maxBlockCount: number) {
+  async function fetchBlocks(lastBlockNumber: number | null, maxBlockCount: number) {
     const client = await getMainchainClient(true);
     const blocks: IBlock[] = [];
 
@@ -93,7 +88,8 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     while (blocks.length < maxBlockCount) {
       const blockHash = await client.rpc.chain.getBlockHash(blockNumber);
       if (!blockHash) break;
-      const block = await fetchBlock(client, blockHash);
+      const header = await client.rpc.chain.getHeader(blockHash);
+      const block = await fetchBlock(client, header);
       blocks.push(block);
       blockNumber--;
     }
@@ -107,7 +103,7 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     // Subscribe to new blocks
     return await client.rpc.chain.subscribeNewHeads(async header => {
       const blockHash = header.hash;
-      const block = await fetchBlock(client, blockHash);
+      const block = await fetchBlock(client, header);
       onBlock(block);
     });
   }

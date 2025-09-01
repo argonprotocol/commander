@@ -15,20 +15,21 @@
         >
           <p>
             There are several ways to calculate your mining returns. For example, you could win mining seats at your
-            Starting Bid price of {{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }}. Or it
-            could be at your Maximum Bid of {{ currency.symbol
-            }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}. Or any price in-between. You can adjust
-            Starting and Maximum in your config settings.
+            Starting Bid price of {{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }} or at
+            your Maximum Bid of {{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}. Or any
+            price in-between.
           </p>
 
           <p>
-            The second impact on your returns is the growth of the argon ecosystem. You can set ranges in your config to
-            test various scenarios. For example, you currently have the slowest growth of the Argon Stablecoin at
+            Regardles of your bid price, each seat in today's auction is guaranteed to earn an average of 1,224 argons
+            and 394 argonots. The second impact on your returns is the growth of the argon ecosystem. You can set ranges
+            in your config to test various scenarios. For example, you currently have the slowest growth of the Argon
+            Stablecoin at
             {{ numeral(rules.argonCirculationGrowthPctMin).formatIfElse('0', '0', '+0.[0]') }}% and the fastest growth
             at {{ numeral(rules.argonCirculationGrowthPctMax).formatIfElse('0', '0', '+0.[0]') }}%.
           </p>
 
-          <p>Below is an APY breakdown of your various return possibilities:</p>
+          <p>Below is an APY breakdown of your various return possibilities.</p>
 
           <table class="relative z-50 mt-2 h-full w-full table-fixed whitespace-nowrap">
             <tbody>

@@ -66,6 +66,7 @@ export class Config {
       version: packageJson.version,
       panelKey: PanelKey.Mining,
       requiresPassword: false,
+      showWelcomeOverlay: false,
       serverDetails: {
         ipAddress: '',
         sshUser: '',
@@ -244,6 +245,17 @@ export class Config {
     this._throwErrorIfNotLoaded();
     this._loadedData.requiresPassword = value;
     this._tryFieldsToSave(dbFields.requiresPassword, value);
+  }
+
+  get showWelcomeOverlay(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.showWelcomeOverlay;
+  }
+
+  set showWelcomeOverlay(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.showWelcomeOverlay = value;
+    this._tryFieldsToSave(dbFields.showWelcomeOverlay, value);
   }
 
   get security(): ISecurity {
@@ -588,6 +600,8 @@ export class Config {
 const dbFields = {
   panelKey: 'panelKey',
   requiresPassword: 'requiresPassword',
+  showWelcomeOverlay: 'showWelcomeOverlay',
+
   serverDetails: 'serverDetails',
   installDetails: 'installDetails',
   oldestFrameIdToSync: 'oldestFrameIdToSync',
@@ -618,6 +632,8 @@ const dbFields = {
 const defaults: IConfigDefaults = {
   panelKey: () => PanelKey.Mining,
   requiresPassword: () => false,
+  showWelcomeOverlay: () => true,
+
   serverDetails: () => {
     return {
       ipAddress: '',

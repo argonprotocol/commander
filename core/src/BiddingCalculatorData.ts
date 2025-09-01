@@ -50,7 +50,7 @@ export default class BiddingCalculatorData {
       this.microgonsMinedThisNextYear = await this.estimateBlockRewardsForFullYear(mainchain, microgonsMinedPerBlock);
       this.microgonsToMineThisSeat = (microgonsMinedPerBlock * 14_400n) / BigInt(miningSeatCount);
       this.microgonsInCirculation = await mainchain.fetchMicrogonsInCirculation();
-      this.micronotsRequiredForBid = await mainchain.getMinimumMicronotsForBid();
+      this.micronotsRequiredForBid = await mainchain.getMicronotsRequiredForBid();
 
       const micronotsMinedDuringNextCohort = await mainchain.getMinimumBlockRewardsDuringTickRange(
         tickAtStartOfNextCohort,

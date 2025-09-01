@@ -19,15 +19,16 @@
         <div class="flex flex-row items-center text-2xl mt-10 w-full justify-center gap-x-6">
           <button
             @click="openHowMiningWorksOverlay"
-            class="cursor-pointer bg-argon-600/10 hover:bg-argon-600/20 border border-argon-800/30 inner-button-shadow font-bold text-argon-600 [text-shadow:1px_1px_0_rgba(255,255,255,0.5)] px-12 py-2 rounded-md block"
+            class="cursor-pointer bg-white/10 hover:bg-argon-600/10 border border-argon-800/30 inner-button-shadow font-bold text-argon-600 [text-shadow:1px_1px_0_rgba(255,255,255,0.5)] px-12 py-2 rounded-md block"
           >
             Learn How Mining Works
           </button>
           <button
+          ref="miningButtonRef"
             @click="startSettingUpMiner"
             class="flex flex-row cursor-pointer items-center gap-x-2 bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow font-bold text-white px-12 py-2 rounded-md"
           >
-            Set Up a Mining Operation
+            Set Up Your Mining Operation
             <ChevronDoubleRightIcon class="size-5 relative top-px" />
           </button>
         </div>
@@ -79,36 +80,7 @@
             <div>Annual Percentage Yield</div>
           </li>
         </ul>
-        <ul Blocks class="w-full flex flex-row justify-end h-[137px]">
-          <template v-for="(block, index) in blocks" :key="`${block.hash}-${index}`">
-            <li Block class="leading-6" :class="{ 'opacity-50': !block.hash }">
-              <div v-if="block.hash" class="border-b border-slate-300 pb-1 mb-2">
-                #
-                <span class="font-bold opacity-50">{{ block.number }}</span>
-              </div>
-              <div v-if="block.hash">{{ block.extrinsics }} txns</div>
-              <div v-if="block.hash">{{ microgonToArgonNm(block.microgons).format('0.[00]') }} argons</div>
-              <div v-if="block.hash">{{ micronotToArgonotNm(block.micronots).format('0.[00]') }} argonots</div>
-            </li>
-            <li Connection :class="{ 'opacity-50': !block.hash }"></li>
-          </template>
-          <li Block class="flex flex-col text-center justify-center items-center">
-            <div v-if="blocks[blocks.length - 1].hash" class="flex flex-col text-center justify-center items-center">
-              <img src="/mining.gif" class="w-8 inline-block relative -left-1" />
-              <div class="flex flex-row justify-center pt-5">
-                <div class="flex flex-col items-center leading-none">
-                  <div>{{ minutesSinceBlock }}</div>
-                  <div>min{{ minutesSinceBlock === 1 ? '' : 's' }}</div>
-                </div>
-                <div class="h-full w-[1px] bg-slate-300 mx-3"></div>
-                <div class="flex flex-col items-center leading-none">
-                  <div>{{ secondsSinceBlock }}</div>
-                  <div>sec{{ secondsSinceBlock === 1 ? '' : 's' }}</div>
-                </div>
-              </div>
-            </div>
-          </li>
-        </ul>
+        <BlankSlateBlocks />
       </div>
     </div>
   </div>
@@ -120,9 +92,6 @@ const isLoaded = Vue.ref(false);
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import dayjs, { Dayjs } from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import { storeToRefs } from 'pinia';
 import { useBlockchainStore } from '../../stores/blockchain';
 import { useConfig } from '../../stores/config';
 import { useCurrency } from '../../stores/currency';
@@ -130,18 +99,17 @@ import { calculateAPY } from '../../lib/Utils';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
 import { ChevronDoubleRightIcon } from '@heroicons/vue/24/outline';
 import basicEmitter from '../../emitters/basicEmitter';
-
-dayjs.extend(utc);
+import BlankSlateBlocks from './components/BlankSlateBlocks.vue';
+import { useTour } from '../../stores/tour';
 
 const blockchainStore = useBlockchainStore();
 const currency = useCurrency();
 const config = useConfig();
+const tour = useTour();
 
-const { cachedBlocks: blocks } = storeToRefs(blockchainStore);
-const { microgonToArgonNm, micronotToArgonotNm, microgonToMoneyNm } = createNumeralHelpers(currency);
+const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
-const minutesSinceBlock = Vue.ref(0);
-const secondsSinceBlock = Vue.ref(0);
+const miningButtonRef = Vue.ref<HTMLElement | null>(null);
 
 const aggregatedBlockRewards = Vue.computed(() => {
   return (
@@ -154,37 +122,6 @@ const currentAPY = Vue.computed(() => {
   return calculateAPY(blockchainStore.aggregatedBidCosts, aggregatedBlockRewards.value);
 });
 
-let blocksSubscription: any = null;
-let lastBlockTimestamp: Dayjs;
-
-function loadBlocks() {
-  blockchainStore.fetchBlocks(null, null, 8).then(newBlocks => {
-    blocks.value = newBlocks.reverse();
-  });
-  lastBlockTimestamp = blocks.value[0]?.timestamp;
-  blocksSubscription = blockchainStore.subscribeToBlocks(newBlock => {
-    const blockExists = blocks.value.find(block => block.hash === newBlock.hash);
-    if (blockExists) return;
-
-    blocks.value.push(newBlock);
-    lastBlockTimestamp = newBlock.timestamp;
-    if (blocks.value.length > 8) {
-      blocks.value.shift();
-    }
-  });
-}
-
-function updateTimeSinceBlock() {
-  if (lastBlockTimestamp) {
-    const now = dayjs.utc();
-    const totalSecondsSinceBlock = now.diff(lastBlockTimestamp, 'seconds');
-    minutesSinceBlock.value = totalSecondsSinceBlock < 60 ? 0 : Math.floor(totalSecondsSinceBlock / 60);
-    secondsSinceBlock.value = totalSecondsSinceBlock % 60;
-  }
-
-  setTimeout(() => updateTimeSinceBlock(), 1000);
-}
-
 function openHowMiningWorksOverlay() {
   basicEmitter.emit('openHowMiningWorksOverlay');
 }
@@ -193,10 +130,16 @@ function startSettingUpMiner() {
   config.isPreparingMinerSetup = true;
 }
 
-Vue.onMounted(async () => {
-  updateTimeSinceBlock();
-  loadBlocks();
+tour.registerPositionCheck('miningButton', () => {
+  const rect = miningButtonRef.value?.getBoundingClientRect().toJSON() || { left: 0, right: 0, top: 0, bottom: 0 };
+  rect.left -= 20;
+  rect.right += 20;
+  rect.top -= 20;
+  rect.bottom += 20;
+  return rect;
+});
 
+Vue.onMounted(async () => {
   Promise.all([
     blockchainStore.updateAggregateBidCosts(),
     blockchainStore.updateAggregateBlockRewards(),
@@ -206,42 +149,3 @@ Vue.onMounted(async () => {
   });
 });
 </script>
-
-<style lang="scss" scoped>
-ul[Blocks] {
-  position: relative;
-  &:before {
-    content: '';
-    display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 8%;
-    height: 100%;
-    background: linear-gradient(to right, rgba(249, 242, 250, 1), rgba(249, 242, 250, 0));
-  }
-  li[Block] {
-    border: 4px solid #cacdd1;
-    width: 16%;
-    text-align: center;
-    padding: 10px 5px;
-    font-weight: 200;
-  }
-  li[Connection] {
-    width: 0.8%;
-    position: relative;
-    &:before {
-      content: '';
-      display: block;
-      width: calc(100% + 16px);
-      box-shadow: 1px 1px 0 0 rgba(0, 0, 0, 0.5);
-      height: 7px;
-      background-color: #b9bcc0;
-      position: absolute;
-      top: 50%;
-      right: -8px;
-      transform: translateY(-50%);
-    }
-  }
-}
-</style>

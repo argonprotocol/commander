@@ -30,6 +30,8 @@
       <TooltipOverlay />
       <AboutOverlay />
       <ComplianceOverlay />
+      <WelcomeTour v-if="tour.currentStep" />
+      <WelcomeOverlay v-else-if="config.showWelcomeOverlay" />
     </template>
     <TroubleshootingOverlay />
     <ImportingOverlay />
@@ -58,6 +60,7 @@ import ServerBrokenOverlay from './overlays/ServerBrokenOverlay.vue';
 import TopBar from './navigation/TopBar.vue';
 import { useController } from './stores/controller';
 import { useConfig } from './stores/config';
+import { useTour } from './stores/tour';
 import { useBot } from './stores/bot';
 import { waitForLoad } from '@argonprotocol/mainchain';
 import TooltipOverlay from './overlays/TooltipOverlay.vue';
@@ -72,9 +75,12 @@ import AlertBars from './navigation/AlertBars.vue';
 import HowMiningWorksOverlay from './overlays/bot/HowMiningWorks.vue';
 import HowVaultingWorksOverlay from './overlays/vault/HowVaultingWorks.vue';
 import { PanelKey } from './interfaces/IConfig.ts';
+import WelcomeOverlay from './overlays/WelcomeOverlay.vue';
+import WelcomeTour from './overlays/WelcomeTour.vue';
 
 const controller = useController();
 const config = useConfig();
+const tour = useTour();
 const bot = useBot();
 
 const isNeedingUpgrade = Vue.computed(() => {

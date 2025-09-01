@@ -32,11 +32,12 @@
 
             <div v-if="isLoaded && !wantsToImportExisting" class="flex flex-col grow relative w-full">
               <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
-                Commander uses an automated bidding bot to maximize your chance of winning seats. This screen allows you to
-                configure the rules for how your bot should make decisions and place bids.
-                <template v-if="!config.isMinerReadyToInstall && !config.isMinerInstalled">
+                Commander uses an automated bidding bot to maximize your chance of winning seats, and this screen allows you to
+                configure the rules for how this bot should make decisions on your behalf. Use your mouse to explore the various
+                settings and their impact on your potential profits.
+                <!-- <template v-if="!config.isMinerReadyToInstall && !config.isMinerInstalled">
                   You can also  <span @click="wantsToImportExisting = true" class="text-argon-600 hover:text-argon-600/80 cursor-pointer">import from an existing cloud machine</span>.
-                </template>
+                </template> -->
               </DialogDescription>
 
               <section class="flex flex-row border-t border-b border-slate-500/30 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
@@ -48,17 +49,17 @@
                       </header>
                       <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
                         <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
-                          You are committing 16 argonot tokens, plus
+                          You needs 16 argonot and 23,343 argons, which is valued at
                         </div>
-                        <div class="flex flex-row items-center justify-center grow relative h-26 text-5xl font-bold font-mono text-argon-600">
+                        <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
                           <NeedMoreCapitalHover v-if="probableMinSeats < rules.seatGoalCount" :calculator="calculator" />
                           <InputArgon v-model="rules.baseCapitalCommitment" :min="10_000_000n" :minDecimals="0" />
                         </div>
-                        <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-10/12 mx-auto">
-                          This capital will give you a good chance of<br/>
-                          capturing
+                        <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
+                          This is the amount of capital needed to have a good<br/>
+                          chance of achieving your minimum goal of 
                           <template v-if="probableMinSeats === probableMaxSeats">({{ probableMinSeats }} mining seats per epoch.</template>
-                          <template v-else>between {{ probableMinSeats }} and {{ probableMaxSeats }} mining seats per epoch.</template>
+                          <template v-else>{{ probableMinSeats }} seats per epoch.</template>
                         </div>
                       </div>
                     </div>
@@ -79,12 +80,12 @@
                         <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
                           You are expected to earn {{ currency.symbol }}{{ microgonToMoneyNm(averageEarnings).format('0,0.00') }} per epoch with an APY of
                         </div>
-                        <div class="flex flex-row items-center justify-center grow relative h-26 text-5xl font-bold font-mono text-argon-600">
+                        <div class="flex flex-row items-center justify-center grow relative h-26 text-6xl font-bold font-mono text-argon-600">
                           {{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
                         </div>
                         <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full">
-                        This represents the average of your estimated return<br/>
-                        range, which is between
+                        This represents an average of your estimated mining<br/>
+                        returns, which range between
                         {{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}%
                         and {{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}% APY.
                       </div>

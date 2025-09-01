@@ -18,7 +18,7 @@
         <div class="flex flex-row items-center text-2xl mt-10 w-full justify-center gap-x-6">
           <button
             @click="openHowVaultingWorksOverlay"
-            class="cursor-pointer bg-argon-600/10 hover:bg-argon-600/20 border border-argon-800/30 inner-button-shadow font-bold text-argon-600 [text-shadow:1px_1px_0_rgba(255,255,255,0.5)] px-12 py-2 rounded-md block"
+            class="cursor-pointer bg-white/10 hover:bg-argon-600/10 border border-argon-800/30 inner-button-shadow font-bold text-argon-600 [text-shadow:1px_1px_0_rgba(255,255,255,0.5)] px-12 py-2 rounded-md block"
           >
             Learn How Vaulting Works
           </button>
@@ -26,7 +26,7 @@
             @click="startSettingUpVault"
             class="flex flex-row cursor-pointer items-center gap-x-2 bg-argon-500 hover:bg-argon-600 border border-argon-700 inner-button-shadow font-bold text-white px-12 py-2 rounded-md"
           >
-            Set Up a Stabilization Vault
+            Set Up Your Stabilization Vault
             <ChevronDoubleRightIcon class="size-5 relative top-px" />
           </button>
         </div>
@@ -83,8 +83,8 @@
         <ul class="flex flex-row w-full overflow-x-hidden relative h-[117px]">
           <div class="flex flex-row h-full animate-scroll" :class="{ 'animate-paused': !isLoaded }">
             <template v-for="i in cloneCount" :key="'clone' + i">
-              <template v-for="vault in vaults" :key="vault.id">
-                <li class="flex flex-row rounded-lg bg-white/30 mr-4 h-full">
+              <template v-for="(vault, idx) in vaults" :key="vault.id">
+                <li :style="{ animationDelay: `${getAnimationDelay(idx)}ms`, '--sweep-delay': `${getAnimationDelay(idx)}ms` }" class="flex flex-row rounded-lg bg-white/30 mr-4 h-full pulse-highlight">
                   <VaultImage class="relative h-full opacity-60 z-10" />
                   <div class="flex flex-col border-l-0 border border-slate-400/50 px-2 rounded-r-lg w-80">
                     <table class="w-full h-full">
@@ -174,6 +174,11 @@ function startSettingUpVault() {
   config.isPreparingVaultSetup = true;
 }
 
+// Animation delay calculation based on visual position
+function getAnimationDelay(position: number): number {
+  return (position + 1) * 150;
+}
+
 async function updateRevenue() {
   try {
     const list = Object.values(vaultsStore.vaultsById);
@@ -229,6 +234,47 @@ Vue.onMounted(async () => {
   100% {
     transform: translateX(-50%);
   }
+}
+
+@keyframes pulseHighlight {
+  0% {
+    border-color: rgba(203, 213, 225, 0.4);
+  }
+  50% {
+    border-color: rgba(139, 92, 246, 0.2);
+  }
+  100% {
+    border-color: rgba(203, 213, 225, 0.4);
+  }
+}
+
+@keyframes sweepHighlight {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.pulse-highlight {
+  animation: pulseHighlight 3s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.pulse-highlight::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.08) 50%, transparent 100%);
+  animation: sweepHighlight 1.5s ease-in-out infinite;
+  animation-delay: var(--sweep-delay, 0s);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .animate-scroll {
