@@ -200,7 +200,7 @@
                 <tbody>
                   <tr>
                     <td>
-                      {{ microgonToArgonNm(config.biddingRules?.baseCapitalCommitment || 0n).format('0,0.[00000000]') }}
+                      {{ microgonToArgonNm(config.biddingRules?.baseMicrogonCommitment || 0n).format('0,0.[00000000]') }}
                       ARGNs
                     </td>
                     <td>{{ microgonToArgonNm(reinvestedEarnings || 0n).format('0,0.[00000000]') }} ARGNs</td>
@@ -378,7 +378,7 @@ const reinvestedEarnings = Vue.computed(() => {
 });
 
 const totalBiddingBudget = Vue.computed(() => {
-  return (config.biddingRules?.baseCapitalCommitment || 0n) + reinvestedEarnings.value;
+  return (config.biddingRules?.baseMicrogonCommitment || 0n) + reinvestedEarnings.value;
 });
 
 const micronotsTotal = Vue.computed(() => {
@@ -396,7 +396,7 @@ const miningStatus = Vue.computed<Status>(() => {
     return Status.WaitingForFunding;
   }
 
-  // const capitalCommited = config.biddingRules.baseCapitalCommitment + reinvestedEarnings.value;
+  // const capitalCommited = config.biddingRules.baseMicrogonCommitment + reinvestedEarnings.value;
   // const capitalFound = wallets.miningWallet.availableMicrogons + stats.myMiningBids.microgonsBid + stats.myMiningSeats.value;
   // if bot.maxSeatsPossible + stats.myMiningSeats.value > 10
 

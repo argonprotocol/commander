@@ -1,5 +1,5 @@
 <template>
-  <div @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
+  <div ref="rootRef" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
     <DropdownMenuRoot :openDelay="0" :closeDelay="0" class="pointer-events-auto relative" v-model:open="isOpen">
       <DropdownMenuTrigger
         Trigger
@@ -28,8 +28,7 @@
               class="pt-3 pb-3"
               :disabled="installer.isRunning"
             >
-              <header v-if="!config.hasSavedBiddingRules">Create Personal Mining Bot</header>
-              <header v-else>Configure Personal Mining Bot</header>
+              <header>Configure Your Mining Bot</header>
               <p>
                 Set lock fees and securitization
                 <br />
@@ -75,12 +74,12 @@
               <header>Jurisdictional Compliance</header>
             </DropdownMenuItem>
             <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
-            <DropdownMenuItem @click="() => openAboutOverlay()" class="py-2">
+            <DropdownMenuItem @click="() => takeTheTour()" :disabled="tour.isDisabled" class="pt-2 pb-1">
+              <header>Take the Tour</header>
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="() => openAboutOverlay()" class="pt-1 pb-2">
               <header>About Commander</header>
             </DropdownMenuItem>
-            <!-- <DropdownMenuItem class="py-2">
-              <header>How to Live Forever</header>
-            </DropdownMenuItem> -->
           </div>
           <DropdownMenuArrow :width="18" :height="10" class="mt-[0px] fill-white stroke-gray-300" />
         </DropdownMenuContent>
@@ -103,18 +102,25 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
   PointerDownOutsideEvent,
-  FocusOutsideEvent,
 } from 'reka-ui';
 import ConfigIcon from '../assets/config.svg?component';
 import basicEmitter from '../emitters/basicEmitter';
 import { useConfig } from '../stores/config';
 import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
 import { useInstaller } from '../stores/installer';
+import { useTour } from '../stores/tour';
 
 const config = useConfig();
 const installer = useInstaller();
+const tour = useTour();
 
 const isOpen = Vue.ref(false);
+const rootRef = Vue.ref<HTMLElement>();
+
+// Expose the root element to parent components
+defineExpose({
+  $el: rootRef,
+});
 
 let mouseLeaveTimerId: ReturnType<typeof setTimeout> | null = null;
 
@@ -182,6 +188,11 @@ function openFundMiningAccountOverlay() {
 function openFundVaultingAccountOverlay() {
   basicEmitter.emit('openWalletOverlay', { walletId: 'vaulting', screen: 'receive' });
 }
+
+function takeTheTour() {
+  tour.start();
+  isOpen.value = false;
+}
 </script>
 
 <style scoped>
@@ -189,6 +200,11 @@ function openFundVaultingAccountOverlay() {
 
 [data-reka-collection-item] {
   @apply focus:bg-argon-menu-hover cursor-pointer px-4 focus:!text-indigo-600 focus:outline-none;
+
+  &[data-disabled] {
+    opacity: 0.3;
+    pointer-events: none;
+  }
   header {
     @apply text-right font-bold whitespace-nowrap text-gray-900;
   }

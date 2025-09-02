@@ -131,7 +131,7 @@ function isOurAddress(address: string): boolean {
 }
 
 Vue.onMounted(async () => {
-  blocks.value = await blockchainStore.fetchBlocks(null, null, 10);
+  blocks.value = await blockchainStore.fetchBlocks(null, 10);
 
   unsubscribeFromBlocks = await blockchainStore.subscribeToBlocks(newBlock => {
     if (newBlock.number === blocks.value[0]?.number) return;

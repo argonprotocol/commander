@@ -66,6 +66,7 @@ export class Config {
       version: packageJson.version,
       panelKey: PanelKey.Mining,
       requiresPassword: false,
+      showWelcomeOverlay: false,
       serverDetails: {
         ipAddress: '',
         sshUser: '',
@@ -256,6 +257,17 @@ export class Config {
     this._throwErrorIfNotLoaded();
     this._loadedData.requiresPassword = value;
     this._tryFieldsToSave(dbFields.requiresPassword, value);
+  }
+
+  get showWelcomeOverlay(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.showWelcomeOverlay;
+  }
+
+  set showWelcomeOverlay(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.showWelcomeOverlay = value;
+    this._tryFieldsToSave(dbFields.showWelcomeOverlay, value);
   }
 
   get security(): ISecurity {
@@ -596,6 +608,8 @@ export class Config {
 const dbFields = {
   panelKey: 'panelKey',
   requiresPassword: 'requiresPassword',
+  showWelcomeOverlay: 'showWelcomeOverlay',
+
   serverDetails: 'serverDetails',
   installDetails: 'installDetails',
   oldestFrameIdToSync: 'oldestFrameIdToSync',
@@ -626,6 +640,8 @@ const dbFields = {
 const defaults: IConfigDefaults = {
   panelKey: () => PanelKey.Mining,
   requiresPassword: () => false,
+  showWelcomeOverlay: () => true,
+
   serverDetails: () => {
     return {
       ipAddress: '',
@@ -692,14 +708,14 @@ const defaults: IConfigDefaults = {
       maximumBidAdjustmentType: BidAmountAdjustmentType.Relative,
       maximumBidCustom: 0n,
       maximumBidAdjustAbsolute: 0n,
-      maximumBidAdjustRelative: 0,
+      maximumBidAdjustRelative: -1.0,
 
       seatGoalType: SeatGoalType.Min,
       seatGoalCount: 3,
       seatGoalInterval: SeatGoalInterval.Epoch,
 
-      baseCapitalCommitment: 1_000n * BigInt(MICROGONS_PER_ARGON),
-      requiredMicronots: 0n,
+      baseMicrogonCommitment: 1_000n * BigInt(MICROGONS_PER_ARGON),
+      baseMicronotCommitment: 0n,
     };
   },
   vaultingRules: () => {
@@ -719,8 +735,8 @@ const defaults: IConfigDefaults = {
 
       personalBtcInMicrogons: 1_000n * BigInt(MICROGONS_PER_ARGON),
 
-      baseCapitalCommitment: 2_000n * BigInt(MICROGONS_PER_ARGON),
-      requiredMicronots: 0n,
+      baseMicrogonCommitment: 2_000n * BigInt(MICROGONS_PER_ARGON),
+      baseMicronotCommitment: 0n,
     };
   },
   defaultCurrencyKey: () => CurrencyKey.ARGN,

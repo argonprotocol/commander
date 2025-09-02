@@ -30,13 +30,11 @@
               </div>
             </h2>
 
-            <div v-if="isLoaded && !wantsToImportExisting" class="flex flex-col grow relative w-full">
+            <div v-if="isLoaded" class="flex flex-col grow relative w-full">
               <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
-                Commander uses an automated bidding bot to maximize your chance of winning seats. This screen allows you to
-                configure the rules for how your bot should make decisions and place bids.
-                <template v-if="!config.isMinerReadyToInstall && !config.isMinerInstalled">
-                  You can also  <span @click="wantsToImportExisting = true" class="text-argon-600 hover:text-argon-600/80 cursor-pointer">import from an existing cloud machine</span>.
-                </template>
+                Commander uses an automated bidding bot to maximize your chance of winning seats, and this screen allows you to
+                configure the rules for how this bot should make decisions on your behalf. Use your mouse to explore the various
+                settings and their impact on your potential profits.
               </DialogDescription>
 
               <section class="flex flex-row border-t border-b border-slate-500/30 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
@@ -48,17 +46,17 @@
                       </header>
                       <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
                         <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
-                          You are committing 16 argonot tokens, plus
+                          You need {{ micronotToArgonotNm(baseMicronotCommitment).format('0,0') }} argonot{{ micronotToArgonotNm(baseMicronotCommitment).format('0,0') === '1' ? '' : 's' }} and {{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') }} argon{{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') === '0,0' ? '' : 's' }}, which are valued at
                         </div>
-                        <div class="flex flex-row items-center justify-center grow relative h-26 text-5xl font-bold font-mono text-argon-600">
+                        <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
                           <NeedMoreCapitalHover v-if="probableMinSeats < rules.seatGoalCount" :calculator="calculator" />
-                          <InputArgon v-model="rules.baseCapitalCommitment" :min="10_000_000n" :minDecimals="0" />
+                          <InputArgon v-model="rules.baseMicrogonCommitment" :min="10_000_000n" :minDecimals="0" />
                         </div>
-                        <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-10/12 mx-auto">
-                          This capital will give you a good chance of<br/>
-                          capturing
+                        <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
+                          This is the amount of capital needed to secure a good<br/>
+                          chance of achieving your minimum goal of 
                           <template v-if="probableMinSeats === probableMaxSeats">({{ probableMinSeats }} mining seats per epoch.</template>
-                          <template v-else>between {{ probableMinSeats }} and {{ probableMaxSeats }} mining seats per epoch.</template>
+                          <template v-else>{{ probableMinSeats }} seats per epoch.</template>
                         </div>
                       </div>
                     </div>
@@ -79,12 +77,12 @@
                         <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
                           You are expected to earn {{ currency.symbol }}{{ microgonToMoneyNm(averageEarnings).format('0,0.00') }} per epoch with an APY of
                         </div>
-                        <div class="flex flex-row items-center justify-center grow relative h-26 text-5xl font-bold font-mono text-argon-600">
+                        <div class="flex flex-row items-center justify-center grow relative h-26 text-6xl font-bold font-mono text-argon-600">
                           {{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
                         </div>
                         <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full">
-                        This represents the average of your estimated return<br/>
-                        range, which is between
+                        This represents an average of your estimated mining<br/>
+                        returns, which range between
                         {{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}%
                         and {{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}% APY.
                       </div>
@@ -247,36 +245,10 @@
                 </section>
               </div>
             </div>
-            <div v-else-if="isLoaded && wantsToImportExisting" class="flex flex-col items-center justify-center grow relative w-full">
-              <div class="flex flex-col relative w-120">
-                <div class="flex flex-row items-center text-gray-500/60 hover:text-argon-600/70 cursor-pointer" @click="cancelImport()">
-                  <ArrowLongLeftIcon class="w-5 h-5 inline-block relative mb-5" />
-                  <span class="ml-1 mb-5">Go Back</span>
-                </div>
-                <div class="text-2xl font-bold text-gray-500 mb-1">Import From Existing Cloud Machine</div>
-                <div class="text-md text-gray-600/80">
-                  <div class="mb-4">
-                    This will overwrite your current settings with configuration data from the server located at the IP address you
-                    enter below. This server will also be used to run your bot, and it must be accessible through the same
-                    SSH creditionals connected to this app.
-                  </div>
-                  <div class="pr-5">
-                    <div v-if="importError" class="flex flex-row bg-red-50/80 border border-red-600/10 border-b-0 text-red-600 text-md px-3 py-2 rounded-md">
-                      <ArrowTurnLeftDownIcon class="w-5 h-5 inline-block mr-1 relative top-1.5" />
-                      <span>{{ importError }}</span>
-                    </div>
-                    <input v-model="importIpAddress" type="text" class="w-full border border-gray-300 rounded-md px-3 py-2 mb-4" placeholder="0.0.0.0" @keyup.enter="startImport" />
-                  </div>
-                  <button @click="startImport" class="bg-argon-button hover:border-argon-800 text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
-                    {{ isImporting ? 'Importing Config...' : 'Import Config' }}
-                  </button>
-                </div>
-              </div>
-            </div>
             <div v-else>Loading...</div>
 
             <div class="flex flex-row justify-end border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
-              <div :class="[wantsToImportExisting ? 'opacity-50 pointer-events-none' : '']" class="flex flex-row space-x-4 justify-center items-center">
+              <div class="flex flex-row space-x-4 justify-center items-center">
                 <ActiveBidsOverlayButton :loadFromMainchain="true" class="mr-10">
                   <span class="text-argon-600/70 cursor-pointer">Show Existing Mining Bids</span>
                 </ActiveBidsOverlayButton>
@@ -331,6 +303,12 @@ import BotCapital from './bot/BotCapital.vue';
 import { useInstaller } from '../stores/installer.ts';
 import { useBot } from '../stores/bot.ts';
 
+/* TODO: The capital to commit box at the top left of the page is incorrect. It should be the total market value of your 
+   baseMicrogonCommitment + baseMicronotCommitment. It is currently only showing the baseMicrogonCommitment. The challenge is
+   that we're calculating your baseMicronotCommitment based on how many seats we think you could win, and we calculate the seats
+   we think you could win based on your baseMicrogonCommitment. This creates a circular dependency.
+*/
+
 const calculator = getCalculator();
 const calculatorData = getCalculatorData();
 
@@ -342,7 +320,7 @@ const dbPromise = getDbPromise();
 const installer = useInstaller();
 const bot = useBot();
 
-const { microgonToMoneyNm } = createNumeralHelpers(currency);
+const { microgonToMoneyNm, microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
 
 const rules = Vue.computed(() => {
   return config.biddingRules as IBiddingRules;
@@ -352,14 +330,9 @@ const isBrandNew = Vue.ref(true);
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
-const wantsToImportExisting = Vue.ref(false);
 
 const botCapitalWidth = Vue.ref('');
 const botReturnsWidth = Vue.ref('');
-
-const importIpAddress = Vue.ref('');
-const importError = Vue.ref<string | null>(null);
-const isImporting = Vue.ref(false);
 
 const editBoxOverlayId = Vue.ref<IEditBoxOverlayTypeForMining | null>(null);
 const editBoxOverlayPosition = Vue.ref<{ top?: number; left?: number; width?: number } | undefined>(undefined);
@@ -377,6 +350,8 @@ const minimumBidAtSlowGrowthAPY = Vue.ref(0);
 const minimumBidAtFastGrowthAPY = Vue.ref(0);
 const maximumBidAtSlowGrowthAPY = Vue.ref(0);
 const maximumBidAtFastGrowthAPY = Vue.ref(0);
+
+const baseMicronotCommitment = Vue.ref(0n);
 
 const averageAPY = Vue.ref(0);
 const averageEarnings = Vue.ref(0n);
@@ -431,7 +406,7 @@ function cancelOverlay() {
 
 function calculateMicronotsRequired(): bigint {
   let possibleSeats = Math.ceil(
-    BigNumber(rules.value.baseCapitalCommitment).dividedBy(calculatorData.previousDayMidBid).toNumber(),
+    BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculatorData.previousDayMidBid).toNumber(),
   );
 
   if (rules.value?.seatGoalType === SeatGoalType.Max) {
@@ -445,40 +420,12 @@ function calculateMicronotsRequired(): bigint {
   return BigInt(Math.ceil(Number(totalMicronotsRequired) / 1_000_000) * 1_000_000);
 }
 
-async function startImport() {
-  isImporting.value = true;
-  importError.value = null;
-
-  if (!importIpAddress.value) {
-    isImporting.value = true;
-    importError.value = 'You must enter an IP address';
-    return;
-  }
-
-  try {
-    const importer = new Importer(config as Config, dbPromise);
-    await importer.importFromServer(importIpAddress.value);
-  } catch (error) {
-    isImporting.value = false;
-    importError.value = error instanceof Error ? error.message : 'An unknown error occurred';
-  }
-
-  isBrandNew.value = false;
-  wantsToImportExisting.value = false;
-  isImporting.value = false;
-}
-
-function cancelImport() {
-  isImporting.value = false;
-  wantsToImportExisting.value = false;
-}
-
 async function saveRules() {
   isSaving.value = true;
 
   let didSave = false;
   if (rules.value) {
-    rules.value.requiredMicronots = calculateMicronotsRequired();
+    rules.value.baseMicronotCommitment = baseMicronotCommitment.value;
     await config.saveBiddingRules();
     didSave = true;
   }
@@ -521,10 +468,12 @@ function updateAPYs() {
 
   averageAPY.value = calculator.averageAPY;
 
-  const probableMinSeatsBn = BigNumber(rules.value.baseCapitalCommitment).dividedBy(calculator.maximumBidAmount);
+  baseMicronotCommitment.value = calculateMicronotsRequired();
+
+  const probableMinSeatsBn = BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculator.maximumBidAmount);
   probableMinSeats.value = Math.max(probableMinSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(), 0);
 
-  const probableMaxSeatsBn = BigNumber(rules.value.baseCapitalCommitment).dividedBy(calculator.minimumBidAmount);
+  const probableMaxSeatsBn = BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculator.minimumBidAmount);
   probableMaxSeats.value = Math.min(
     probableMaxSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(),
     calculatorData.miningSeatCount,
@@ -532,6 +481,8 @@ function updateAPYs() {
 
   const slowGrowthEarnings = BigInt(probableMinSeats.value) * calculator.slowGrowthRewards;
   const fastGrowthEarnings = BigInt(probableMaxSeats.value) * calculator.fastGrowthRewards;
+  console.log('slowGrowthEarnings', slowGrowthEarnings, probableMinSeats.value);
+  console.log('fastGrowthEarnings', fastGrowthEarnings, probableMaxSeats.value);
   averageEarnings.value = (slowGrowthEarnings + fastGrowthEarnings) / 2n;
 }
 
@@ -549,7 +500,6 @@ basicEmitter.on('openBotOverlay', async () => {
   if (isOpen.value) return;
   isLoaded.value = false;
   isOpen.value = true;
-  wantsToImportExisting.value = false;
 
   isBrandNew.value = !config.hasSavedBiddingRules;
   calculatorData.isInitializedPromise.then(() => {
@@ -557,7 +507,7 @@ basicEmitter.on('openBotOverlay', async () => {
     if (isBrandNew.value) {
       const minimumCapitalNeeded = calculator.maximumBidAmount * BigInt(rules.value.seatGoalCount);
       const minimumCapitalNeededRoundedUp = Math.ceil(Number(minimumCapitalNeeded) / 1_000_000) * 1_000_000;
-      rules.value.baseCapitalCommitment = BigInt(minimumCapitalNeededRoundedUp);
+      rules.value.baseMicrogonCommitment = BigInt(minimumCapitalNeededRoundedUp);
     }
     updateAPYs();
     isLoaded.value = true;

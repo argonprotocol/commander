@@ -8,6 +8,7 @@ import { useInstaller } from './stores/installer';
 import { useBot } from './stores/bot';
 import { PanelKey } from './interfaces/IConfig';
 import { useConfig } from './stores/config';
+import { useTour } from './stores/tour';
 
 function openAboutOverlay() {
   basicEmitter.emit('openAboutOverlay');
@@ -18,6 +19,7 @@ export default async function menuStart() {
   const installer = useInstaller();
   const config = useConfig();
   const bot = useBot();
+  const tour = useTour();
 
   const commanderMenu = await Submenu.new({
     text: 'Commander',
@@ -172,6 +174,11 @@ export default async function menuStart() {
         id: 'faq',
         text: 'Frequently Asked Questions',
         action: () => void tauriOpenUrl('https://argonprotocol.org/faq'),
+      },
+      {
+        id: 'tour',
+        text: 'Take the Tour',
+        action: () => tour.start(),
       },
       await PredefinedMenuItem.new({ item: 'Separator' }),
       {

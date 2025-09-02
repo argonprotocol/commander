@@ -1,8 +1,8 @@
 import BigNumber from 'bignumber.js';
 import { type ArgonClient, convertFixedU128ToBigNumber, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
-import { bigIntMin, bigNumberToBigInt } from './utils.js';
+import { bigIntMax, bigIntMin, bigNumberToBigInt } from './utils.js';
 import { type IWinningBid } from '@argonprotocol/commander-bot';
-import { MiningFrames } from './MiningFrames.js';
+import { MiningFrames, TICKS_PER_COHORT } from './MiningFrames.js';
 import type { ApiDecoration } from '@polkadot/api/types';
 import type { MainchainClients } from './MainchainClients.js';
 
@@ -27,7 +27,7 @@ export class Mainchain {
     return this.clients.get(needsHistoricalBlocks);
   }
 
-  public async getMinimumMicronotsForBid(): Promise<bigint> {
+  public async getMicronotsRequiredForBid(): Promise<bigint> {
     const client = await this.prunedClientOrArchivePromise;
     return await client.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
   }
@@ -121,6 +121,28 @@ export class Mainchain {
     return aggregateBidCosts;
   }
 
+  public async getRecentSeatSummaries(): Promise<
+    { biddingFrameId: number; seats: number; lowestWinningBid: bigint; highestWinningBid: bigint }[]
+  > {
+    const client = await this.prunedClientOrArchivePromise;
+    const bidsPerFrame = await client.query.miningSlot.minersByCohort.entries();
+
+    const summaries = [];
+    for (const [frameIdRaw, cohortData] of bidsPerFrame) {
+      const bids = cohortData.map(x => x.bid.toBigInt());
+      const lowestWinningBid = bigIntMin(...bids);
+      const highestWinningBid = bigIntMax(...bids);
+      summaries.push({
+        biddingFrameId: Number(frameIdRaw.toHuman()) - 1,
+        seats: cohortData.length,
+        lowestWinningBid,
+        highestWinningBid,
+      });
+    }
+
+    return summaries.sort((a, b) => b.biddingFrameId - a.biddingFrameId);
+  }
+
   public async getAggregateBlockRewards(): Promise<{
     microgons: bigint;
     micronots: bigint;
@@ -140,8 +162,8 @@ export class Mainchain {
       const fullRotationsSinceCohortStart = currentCohortId - cohortId.toNumber();
       const ticksSinceCohortStart = fullRotationsSinceCohortStart * 1_440 + ticksElapsedToday;
       const startingTick = currentTick - ticksSinceCohortStart;
-      const endingTick = currentTick;
-      const microgonsMinedInCohort = (blockReward.toBigInt() * BigInt(ticksSinceCohortStart)) / 10n;
+      const endingTick = startingTick + TICKS_PER_COHORT;
+      const microgonsMinedInCohort = (blockReward.toBigInt() * BigInt(TICKS_PER_COHORT)) / 10n;
       const micronotsMinedInCohort = (await this.getMinimumBlockRewardsDuringTickRange(startingTick, endingTick)) / 10n;
       rewards.microgons += microgonsMinedInCohort;
       rewards.micronots += micronotsMinedInCohort;
@@ -221,16 +243,17 @@ export class Mainchain {
     return tickAtStartOfNextCohort - 1_440;
   }
 
-  public async fetchWinningBids(): Promise<IWinningBid[]> {
+  public async fetchWinningBids(): Promise<(IWinningBid & { micronotsStakedPerSeat: bigint })[]> {
     const client = await this.prunedClientOrArchivePromise;
     const nextCohort = await client.query.miningSlot.bidsForNextSlotCohort();
-    return nextCohort.map((c, i): IWinningBid => {
+    return nextCohort.map((c, i): IWinningBid & { micronotsStakedPerSeat: bigint } => {
       const address = c.accountId.toHuman();
       const subAccountIndex = undefined;
       const lastBidAtTick = c.bidAtTick.toNumber();
       const bidPosition = i;
       const microgonsPerSeat = c.bid.toBigInt();
-      return { address, subAccountIndex, lastBidAtTick, bidPosition, microgonsPerSeat };
+      const micronotsStakedPerSeat = c.argonots.toBigInt();
+      return { address, subAccountIndex, lastBidAtTick, bidPosition, microgonsPerSeat, micronotsStakedPerSeat };
     });
   }
 

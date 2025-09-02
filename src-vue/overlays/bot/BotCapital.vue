@@ -14,18 +14,17 @@
           :style="{ width: props.width }"
         >
           <p>
-            This box contains the amount of capital (both argons and argonots) that you want to invest into your mining
-            operations. Your bidding bot uses these tokens to win mining seats on your behalf. The number of seats you
-            win will vary based on how much capital you invest and how many other bidders are participating in the
-            auction.
+            This box contains the number of tokens (both argons and argonots) that are committed to your mining
+            operations. Your bidding bot will use these tokens to win mining seats on your behalf. The number of seats
+            you win will vary based on how much capital you invest and how many other bidders are competing against you.
           </p>
 
           <p>
-            You can set your Starting Bid and Maximum Bid in the config settings to give your bot a bidding range it is
-            required to stay within.
+            You can set your Starting Bid and Maximum Bid in the config settings to give your bot a bidding range it
+            must stay within.
           </p>
 
-          <p>Below is a breakdown of your estimated seat outcomes:</p>
+          <p>Below is a breakdown of your estimated seat outcomes over the next ten days.</p>
 
           <table class="relative z-50 mt-2 h-full w-full table-fixed whitespace-nowrap">
             <tbody>
@@ -132,10 +131,10 @@ function updateAPYs() {
   maximumBidAmount.value = calculator.maximumBidAmount;
   minimumBidAmount.value = calculator.minimumBidAmount;
 
-  const probableMinSeatsBn = BigNumber(rules.value.baseCapitalCommitment).dividedBy(calculator.maximumBidAmount);
+  const probableMinSeatsBn = BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculator.maximumBidAmount);
   probableMinSeats.value = Math.max(probableMinSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(), 0);
 
-  const probableMaxSeatsBn = BigNumber(rules.value.baseCapitalCommitment).dividedBy(calculator.minimumBidAmount);
+  const probableMaxSeatsBn = BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculator.minimumBidAmount);
   probableMaxSeats.value = Math.min(
     probableMaxSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(),
     calculatorData.miningSeatCount,

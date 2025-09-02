@@ -51,11 +51,11 @@ export const useController = defineStore('controller', () => {
 
   return {
     panelKey,
-    setPanelKey,
     isLoaded,
     isLoadedPromise,
     isImporting,
     importFromFile,
     importFromMnemonic,
+    setPanelKey,
   };
 });

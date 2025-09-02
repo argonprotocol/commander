@@ -71,7 +71,7 @@ export default class BiddingCalculator {
   }
 
   public get slowGrowthRewards(): bigint {
-    return this.calculateMinRewardsThisSeat();
+    return this.calculateMinimumRewardsThisSeat();
   }
 
   public get fastGrowthRewards(): bigint {
@@ -139,7 +139,7 @@ export default class BiddingCalculator {
   }
 
   public get breakevenBidAtSlowGrowth(): bigint {
-    const totalRewards = this.calculateMinRewardsThisSeat();
+    const totalRewards = this.calculateMinimumRewardsThisSeat();
     const costOfArgonotBidLossInMicrogons = this.calculateCostOfArgonotBidLossInMicrogons(
       this.biddingRules.argonotPriceChangePctMin,
     );
@@ -234,7 +234,7 @@ export default class BiddingCalculator {
     return Math.max(apy, -100);
   }
 
-  private calculateMinRewardsThisSeat(): bigint {
+  private calculateMinimumRewardsThisSeat(): bigint {
     const microgonsToMine = this.data.microgonsToMineThisSeat;
     const microgonsToMint = this.calculateMicrogonsToMintThisSeat(this.biddingRules.argonCirculationGrowthPctMin);
     const micronotsMinedAsMicrogons = this.micronotMinedAsMicrogonValue(this.biddingRules.argonotPriceChangePctMin);

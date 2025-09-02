@@ -482,7 +482,7 @@ export class MyVault {
 
   public static getMicrogoonSplit(rules: IVaultingRules, existingFees: bigint = 0n) {
     const estimatedOperationalFees = existingFees + 75_000n;
-    const microgonsForVaulting = rules.baseCapitalCommitment - estimatedOperationalFees;
+    const microgonsForVaulting = rules.baseMicrogonCommitment - estimatedOperationalFees;
     const microgonsForSecuritization = BigInt(
       BigNumber(rules.capitalForSecuritizationPct).div(100).times(microgonsForVaulting).toFixed(),
     );

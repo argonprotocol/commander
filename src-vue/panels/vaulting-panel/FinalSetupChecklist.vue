@@ -46,7 +46,7 @@
             </p>
             <p v-else>
               You setup your bidding rules and <span class="underline decoration-dashed underline-offset-4 decoration-slate-600/80">committed 
-              {{ currency.symbol }}{{ microgonToArgonNm(config.vaultingRules?.baseCapitalCommitment || 0n).format('0,0.[00]') }}</span>
+              {{ currency.symbol }}{{ microgonToArgonNm(config.vaultingRules?.baseMicrogonCommitment || 0n).format('0,0.[00]') }}</span>
               <!-- with an <span class="underline decoration-dashed underline-offset-4 decoration-slate-600/80">average expected APY return of {{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</span>. -->
             </p>
           </div>
@@ -64,16 +64,16 @@
             </h2>
             <p>
               Your account needs a minimum of
-              {{ microgonToArgonNm(config.vaultingRules?.baseCapitalCommitment || 0n).format('0,0.[00000000]') }} argon{{
-                microgonToArgonNm(config.vaultingRules?.baseCapitalCommitment || 0n).format('0') === '1' ? '' : 's'
+              {{ microgonToArgonNm(config.vaultingRules?.baseMicrogonCommitment || 0n).format('0,0.[00000000]') }} argon{{
+                microgonToArgonNm(config.vaultingRules?.baseMicrogonCommitment || 0n).format('0') === '1' ? '' : 's'
               }}
-              <template v-if="config.vaultingRules?.requiredMicronots">
+              <template v-if="config.vaultingRules?.baseMicronotCommitment">
                 and
                 {{
-                  micronotToArgonotNm(config.vaultingRules?.requiredMicronots || 0n).format('0,0.[00000000]')
+                  micronotToArgonotNm(config.vaultingRules?.baseMicronotCommitment || 0n).format('0,0.[00000000]')
                 }}
                 argonot{{
-                  micronotToArgonotNm(config.vaultingRules?.requiredMicronots || 0n).format('0') === '1' ? '' : 's'
+                  micronotToArgonotNm(config.vaultingRules?.baseMicronotCommitment || 0n).format('0') === '1' ? '' : 's'
                 }}
               </template>
               to operate your vault. A secure wallet is already attached to your account. All you need to do is move
@@ -127,11 +127,11 @@ const walletIsFullyFunded = Vue.computed(() => {
     return false;
   }
 
-  if (wallets.vaultingWallet.availableMicrogons < (config.vaultingRules?.baseCapitalCommitment || 0n)) {
+  if (wallets.vaultingWallet.availableMicrogons < (config.vaultingRules?.baseMicrogonCommitment || 0n)) {
     return false;
   }
 
-  if (wallets.vaultingWallet.availableMicronots < (config.vaultingRules?.requiredMicronots || 0n)) {
+  if (wallets.vaultingWallet.availableMicronots < (config.vaultingRules?.baseMicronotCommitment || 0n)) {
     return false;
   }
 

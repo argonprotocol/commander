@@ -93,6 +93,8 @@ export const ConfigSchema = z.object({
   panelKey: z.nativeEnum(PanelKey),
   version: z.string(),
   requiresPassword: z.boolean(),
+  showWelcomeOverlay: z.boolean(),
+
   serverDetails: ConfigServerDetailsSchema,
   installDetails: ConfigInstallDetailsSchema,
   oldestFrameIdToSync: z.number(),
@@ -149,6 +151,8 @@ export type IConfigStringified = {
 export interface IConfigDefaults {
   panelKey: () => IConfig['panelKey'];
   requiresPassword: () => IConfig['requiresPassword'];
+  showWelcomeOverlay: () => IConfig['showWelcomeOverlay'];
+
   serverDetails: () => IConfig['serverDetails'];
   installDetails: () => IConfig['installDetails'];
   oldestFrameIdToSync: () => IConfig['oldestFrameIdToSync'];

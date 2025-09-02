@@ -52,7 +52,7 @@
               <BotCapital align="start" :alignOffset="alignOffsetForBotCapital">
                 <span @mouseenter="alignOffsetForBotCapital = calculateAlignOffset($event, botOverlayReferenceElement, 'start')" class="underline decoration-dashed underline-offset-4 decoration-slate-600/80 cursor-pointer">
                   committed 
-                  {{ currency.symbol }}{{ microgonToArgonNm(config.biddingRules?.baseCapitalCommitment || 0n).format('0,0.[00]') }} in capital
+                  {{ currency.symbol }}{{ microgonToArgonNm(config.biddingRules?.baseMicrogonCommitment || 0n).format('0,0.[00]') }} in capital
                 </span>
               </BotCapital>
               with an
@@ -114,15 +114,15 @@
             </p>
             <p v-else-if="config.hasSavedBiddingRules">
               Your acccount needs a minimum of
-              {{ microgonToArgonNm(config.biddingRules?.baseCapitalCommitment || 0n).format('0,0.[00000000]') }} argon{{
-                microgonToArgonNm(config.biddingRules?.baseCapitalCommitment || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
+              {{ microgonToArgonNm(config.biddingRules?.baseMicrogonCommitment || 0n).format('0,0.[00000000]') }} argon{{
+                microgonToArgonNm(config.biddingRules?.baseMicrogonCommitment || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
               }}
               and
               {{
-                micronotToArgonotNm(config.biddingRules?.requiredMicronots || 0n).format('0,0.[00000000]')
+                micronotToArgonotNm(config.biddingRules?.baseMicronotCommitment || 0n).format('0,0.[00000000]')
               }}
               argonot{{
-                  micronotToArgonotNm(config.biddingRules?.requiredMicronots || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
+                  micronotToArgonotNm(config.biddingRules?.baseMicronotCommitment || 0n).format('0.00000000') === '1.00000000' ? '' : 's'
                 }}
                 to submit auction bids.
               </p>
@@ -209,11 +209,11 @@ const walletIsPartiallyFunded = Vue.computed(() => {
 });
 
 const additionalMicrogonsNeeded = Vue.computed(() => {
-  return bigIntMax(config.biddingRules.baseCapitalCommitment - wallets.totalMiningMicrogons, 0n);
+  return bigIntMax(config.biddingRules.baseMicrogonCommitment - wallets.totalMiningMicrogons, 0n);
 });
 
 const additionalMicronotsNeeded = Vue.computed(() => {
-  return bigIntMax(config.biddingRules.requiredMicronots - wallets.miningWallet.availableMicronots, 0n);
+  return bigIntMax(config.biddingRules.baseMicronotCommitment - wallets.miningWallet.availableMicronots, 0n);
 });
 
 const walletIsFullyFunded = Vue.computed(() => {

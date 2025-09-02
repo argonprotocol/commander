@@ -26,19 +26,47 @@
         <VaultPersonalBtc v-else-if="id === 'personalBtc'" @update:data="updateData" ref="editorInstance" />
       </div>
 
-      <div v-if="hideSaveButton" class="flex flex-row justify-end pb-3 pr-3 space-x-3 mt-5 mx-2 border-t border-slate-400/50 pt-3">
+      <div v-if="shouldHideSaveButton" class="flex flex-row justify-end pb-3 pr-3 space-x-3 mt-5 mx-2 border-t border-slate-400/50 pt-3">
         <button @click="cancelOverlay" class="text-slate-800/70 border border-slate-400 px-3 rounded-md cursor-pointer">Close</button>
       </div>
       <div v-else class="flex flex-row justify-end pb-3 pr-3 space-x-3 mt-5 mx-2 border-t border-slate-400/50 pt-3">
         <button @click="cancelOverlay" class="text-slate-800/70 border border-slate-400 px-3 rounded-md cursor-pointer">Cancel</button>
-        <button @click="saveOverlay" class="text-white bg-argon-button border border-argon-600 px-3 rounded-md cursor-pointer">Save</button>
+        <button @click="saveOverlay" class="text-white bg-argon-button border border-argon-600 px-3 rounded-md cursor-pointer">{{ saveButtonLabel }}</button>
       </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
+<script lang="ts">
 import * as Vue from 'vue';
+
+export interface IEditBoxChildExposed {
+  beforeSave?: (stopSaveFn: () => void) => void | Promise<void>;
+  beforeCancel?: (stopCancelFn: () => void) => void | Promise<void>;
+  saveButtonLabel?: Vue.Ref<string>;
+  shouldHideSaveButton?: Vue.Ref<boolean>;
+}
+
+export type IEditBoxOverlayTypeForMining =
+  | 'maximumBid'
+  | 'minimumBid'
+  | 'rebiddingStrategy'
+  | 'capitalAllocation'
+  | 'expectedGrowth'
+  | 'cloudMachine';
+
+export type IEditBoxOverlayTypeForVaulting =
+  | 'capitalDistribution'
+  | 'securitizationRatio'
+  | 'poolRevenueShare'
+  | 'btcLockingFees'
+  | 'projectedUtilization'
+  | 'personalBtc';
+
+export type IEditBoxOverlayType = IEditBoxOverlayTypeForMining | IEditBoxOverlayTypeForVaulting;
+</script>
+
+<script setup lang="ts">
 import BotStartingBid from './edit-box/BotStartingBid.vue';
 import BotMaximumBid from './edit-box/BotMaximumBid.vue';
 import BotRebiddingStrategy from './edit-box/BotRebiddingStrategy.vue';
@@ -57,7 +85,6 @@ import { IBiddingRules } from '@argonprotocol/commander-core';
 
 const props = defineProps<{
   id: IEditBoxOverlayType;
-  hideSaveButton?: boolean;
   position?: { top?: number; left?: number; width?: number };
 }>();
 
@@ -66,32 +93,11 @@ const emit = defineEmits<{
   (e: 'update:data'): void;
 }>();
 
-const editorInstance = Vue.ref<InstanceType<
-  | typeof BotMaximumBid
-  | typeof BotStartingBid
-  | typeof BotRebiddingStrategy
-  | typeof BotCapitalAllocation
-  | typeof BotExpectedGrowth
-  | typeof BotCloudMachine
-> | null>(null);
-
-export type IEditBoxOverlayTypeForMining =
-  | 'maximumBid'
-  | 'minimumBid'
-  | 'rebiddingStrategy'
-  | 'capitalAllocation'
-  | 'expectedGrowth'
-  | 'cloudMachine';
-export type IEditBoxOverlayTypeForVaulting =
-  | 'capitalDistribution'
-  | 'securitizationRatio'
-  | 'poolRevenueShare'
-  | 'btcLockingFees'
-  | 'projectedUtilization'
-  | 'personalBtc';
-export type IEditBoxOverlayType = IEditBoxOverlayTypeForMining | IEditBoxOverlayTypeForVaulting;
-
 const config = useConfig();
+
+const editorInstance = Vue.ref<IEditBoxChildExposed | null>(null);
+const saveButtonLabel = Vue.ref('Save');
+const shouldHideSaveButton = Vue.ref(false);
 
 let previousBiddingRules = JsonExt.stringify(config.biddingRules);
 let lastBoundingClientRect: DOMRect | null = null;
@@ -149,20 +155,28 @@ function updateData() {
   emit('update:data');
 }
 
-function cancelOverlay(e?: MouseEvent) {
-  if (editorInstance.value && 'beforeCancel' in editorInstance.value) {
-    editorInstance.value.beforeCancel();
-  }
+async function cancelOverlay(e?: MouseEvent) {
+  let stopCancel = false;
+  let stopCancelFn = () => {
+    stopCancel = true;
+  };
+  await editorInstance.value?.beforeCancel?.(stopCancelFn);
+  if (stopCancel) return;
+
   config.biddingRules = JsonExt.parse<IBiddingRules>(previousBiddingRules);
   emit('close', props.id);
   e?.preventDefault();
   e?.stopPropagation();
 }
 
-function saveOverlay() {
-  if (editorInstance.value && 'beforeSave' in editorInstance.value) {
-    editorInstance.value.beforeSave();
-  }
+async function saveOverlay() {
+  let stopSave = false;
+  let stopSaveFn = () => {
+    stopSave = true;
+  };
+  await editorInstance.value?.beforeSave?.(stopSaveFn);
+  if (stopSave) return;
+
   emit('close', props.id);
 }
 
@@ -249,6 +263,20 @@ const observer = new ResizeObserver(entries => {
 
   lastBoundingClientRect = boundingClientRect;
 });
+
+Vue.watch(
+  () => editorInstance.value?.saveButtonLabel,
+  label => {
+    saveButtonLabel.value = label || 'Save';
+  },
+);
+
+Vue.watch(
+  () => editorInstance.value?.shouldHideSaveButton,
+  value => {
+    shouldHideSaveButton.value = value || false;
+  },
+);
 
 Vue.onMounted(() => {
   if (modalElem.value) {

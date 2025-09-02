@@ -23,7 +23,7 @@ export default async function createBidderParams(
   const maxBid = calculator.maximumBidAmount;
 
   const maxSeats = await helper.getMaxSeats();
-  const maxBudget = biddingRules.baseCapitalCommitment + accruedEarnings;
+  const maxBudget = biddingRules.baseMicrogonCommitment + accruedEarnings;
 
   const bidDelay = biddingRules.rebiddingDelay || 0;
   const bidIncrement = biddingRules.rebiddingIncrementBy || 1n;

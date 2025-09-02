@@ -14,21 +14,28 @@
           :style="{ width: props.width }"
         >
           <p>
-            There are several ways to calculate your mining returns. For example, you could win mining seats at your
-            Starting Bid price of {{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }}. Or it
-            could be at your Maximum Bid of {{ currency.symbol
-            }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}. Or any price in-between. You can adjust
-            Starting and Maximum in your config settings.
+            Calculating your future return is complex since it's impossible to predict what will happen at auction. For
+            example, you could win mining seats at your Starting Bid price of {{ currency.symbol
+            }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }}, or at your Maximum Bid of {{ currency.symbol
+            }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}, or any price in-between.
           </p>
 
           <p>
-            The second impact on your returns is the growth of the argon ecosystem. You can set ranges in your config to
-            test various scenarios. For example, you currently have the slowest growth of the Argon Stablecoin at
-            {{ numeral(rules.argonCirculationGrowthPctMin).formatIfElse('0', '0', '+0.[0]') }}% and the fastest growth
-            at {{ numeral(rules.argonCirculationGrowthPctMax).formatIfElse('0', '0', '+0.[0]') }}%.
+            Regardles of price, each seat in today's auction is guaranteed to earn an average of
+            {{ microgonToArgonNm(calculatorData.microgonsToMineThisSeat).format('0,0') }} argons and
+            {{ micronotToArgonotNm(calculatorData.micronotsToMineThisSeat).format('0,0') }} argonots. This provides the
+            safety of a minimum profit.
           </p>
 
-          <p>Below is an APY breakdown of your various return possibilities:</p>
+          <p>
+            Another impact on profits is the future growth of the argon ecosystem. You can update the slow/fast ranges
+            in your config to test various scenarios. For example, you currently have the Argon stablecoin set to grow
+            between
+            {{ numeral(rules.argonCirculationGrowthPctMin).formatIfElse('0', '0', '+0.[0]') }}% and
+            {{ numeral(rules.argonCirculationGrowthPctMax).formatIfElse('0', '0', '+0.[0]') }}%.
+          </p>
+
+          <p>Below is an APY breakdown of your various return possibilities.</p>
 
           <table class="relative z-50 mt-2 h-full w-full table-fixed whitespace-nowrap">
             <tbody>
@@ -105,7 +112,7 @@ const calculatorData = getCalculatorData();
 
 const config = useConfig();
 const currency = useCurrency();
-const { microgonToMoneyNm } = createNumeralHelpers(currency);
+const { microgonToMoneyNm, microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
 
 const rules = Vue.computed(() => config.biddingRules as IBiddingRules);
 

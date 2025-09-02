@@ -16,8 +16,8 @@ export const VaultingRulesSchema = z.object({
   poolUtilizationPctMin: z.number().min(0).max(100),
   poolUtilizationPctMax: z.number().min(0).max(100),
 
-  baseCapitalCommitment: z.bigint(),
-  requiredMicronots: z.bigint(),
+  baseMicrogonCommitment: z.bigint(),
+  baseMicronotCommitment: z.bigint(),
 });
 
 export type IVaultingRules = z.infer<typeof VaultingRulesSchema>;
