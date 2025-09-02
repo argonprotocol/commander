@@ -199,9 +199,21 @@ export class Config {
     return this._loadedData.miningAccountHadPreviousLife;
   }
 
+  set miningAccountHadPreviousLife(value: IConfig['miningAccountHadPreviousLife']) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.miningAccountHadPreviousLife = value;
+    this._tryFieldsToSave(dbFields.miningAccountHadPreviousLife, value);
+  }
+
   get miningAccountPreviousHistory(): IConfig['miningAccountPreviousHistory'] {
     this._throwErrorIfNotLoaded();
     return this._loadedData.miningAccountPreviousHistory;
+  }
+
+  set miningAccountPreviousHistory(value: IConfig['miningAccountPreviousHistory']) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.miningAccountPreviousHistory = value;
+    this._tryFieldsToSave(dbFields.miningAccountPreviousHistory, value);
   }
 
   get isBootingUpFromMiningAccountPreviousHistory(): boolean {
@@ -347,11 +359,7 @@ export class Config {
   set isMinerInstalled(value: boolean) {
     this._throwErrorIfNotLoaded();
     this._loadedData.isMinerInstalled = value;
-    this._loadedData.miningAccountPreviousHistory = null;
-    this._loadedData.miningAccountHadPreviousLife = false;
     this._tryFieldsToSave(dbFields.isMinerInstalled, value);
-    this._tryFieldsToSave(dbFields.miningAccountPreviousHistory, null);
-    this._tryFieldsToSave(dbFields.miningAccountHadPreviousLife, false);
   }
 
   get isMinerWaitingForUpgradeApproval(): boolean {

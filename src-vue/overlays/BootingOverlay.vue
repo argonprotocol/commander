@@ -84,17 +84,24 @@ localStorage.removeItem('ConfigRestore');
 async function applyRestoredServer(details: string) {
   try {
     const restoreData = JSON.parse(details) as Record<keyof IConfig, string>;
-    if (restoreData.serverDetails) {
-      const parseResult = ConfigServerDetailsSchema.safeParse(JsonExt.parse(restoreData.serverDetails));
-      console.log(parseResult);
-      if (!parseResult.success) return;
+    for (const key of Object.keys(restoreData) as (keyof IConfig)[]) {
+      let value = restoreData[key] as any;
+      // can't set this since it's readonly
+      if (key == 'version') {
+        continue;
+      }
+      if (key === 'serverDetails') {
+        const parseResult = ConfigServerDetailsSchema.safeParse(JsonExt.parse(value));
+        if (!parseResult.success) return;
 
-      const serverDetails = parseResult.data;
-      await SSH.tryConnection(serverDetails, config.security.sshPrivateKeyPath);
-      config.isMinerUpToDate = false;
-      config.serverDetails = serverDetails;
-      await config.save();
+        value = parseResult.data;
+        await SSH.tryConnection(parseResult.data, config.security.sshPrivateKeyPath);
+        config.isMinerUpToDate = false;
+      }
+
+      (config as any)[key] = value as any;
     }
+    await config.save();
   } catch (err) {
     console.error('Error restoring config from localStorage:', err);
   }

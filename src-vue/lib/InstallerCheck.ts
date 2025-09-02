@@ -138,6 +138,8 @@ export class InstallerCheck {
     if (this.isServerInstallComplete) {
       this.config.isMinerInstalled = true;
       this.config.isMinerUpToDate = true;
+      this.config.miningAccountHadPreviousLife = false;
+      this.config.miningAccountPreviousHistory = null;
     }
     await this.config.save();
   }
