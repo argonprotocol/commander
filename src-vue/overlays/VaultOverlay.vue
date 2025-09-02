@@ -43,7 +43,7 @@
                       Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
                     </header>
                     <div class="grow relative mt-2 pb-12 pt-10 text-5xl font-bold font-mono text-argon-600">
-                      <InputArgon v-model="rules.baseCapitalCommitment" :min="10_000_000n" :minDecimals="0" class="focus:outline-none" />
+                      <InputArgon v-model="rules.baseMicrogonCommitment" :min="10_000_000n" :minDecimals="0" class="focus:outline-none" />
                     </div>
                   </div>
                   <div class="pt-3 text-md">

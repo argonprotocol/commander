@@ -131,10 +131,10 @@ function updateAPYs() {
   maximumBidAmount.value = calculator.maximumBidAmount;
   minimumBidAmount.value = calculator.minimumBidAmount;
 
-  const probableMinSeatsBn = BigNumber(rules.value.baseCapitalCommitment).dividedBy(calculator.maximumBidAmount);
+  const probableMinSeatsBn = BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculator.maximumBidAmount);
   probableMinSeats.value = Math.max(probableMinSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(), 0);
 
-  const probableMaxSeatsBn = BigNumber(rules.value.baseCapitalCommitment).dividedBy(calculator.minimumBidAmount);
+  const probableMaxSeatsBn = BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculator.minimumBidAmount);
   probableMaxSeats.value = Math.min(
     probableMaxSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(),
     calculatorData.miningSeatCount,

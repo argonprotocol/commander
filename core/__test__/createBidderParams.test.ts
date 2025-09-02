@@ -36,8 +36,8 @@ it('can create bidder params', async () => {
       seatGoalType: 'Min',
       seatGoalCount: 3,
       seatGoalInterval: 'Epoch',
-      baseCapitalCommitment: 10000000n,
-      requiredMicronots: 1000000n,
+      baseMicrogonCommitment: 10000000n,
+      baseMicronotCommitment: 1000000n,
     } as IBiddingRules),
   );
   MiningFrames.setNetwork('localnet');

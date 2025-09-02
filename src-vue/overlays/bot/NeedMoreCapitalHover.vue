@@ -72,7 +72,7 @@ const idealCapitalCommitment = Vue.computed(() => {
 });
 
 function increaseCapitalCommitment() {
-  config.biddingRules.baseCapitalCommitment = idealCapitalCommitment.value;
+  config.biddingRules.baseMicrogonCommitment = idealCapitalCommitment.value;
 }
 
 function clickOutside(e: PointerDownOutsideEvent) {

@@ -700,14 +700,14 @@ const defaults: IConfigDefaults = {
       maximumBidAdjustmentType: BidAmountAdjustmentType.Relative,
       maximumBidCustom: 0n,
       maximumBidAdjustAbsolute: 0n,
-      maximumBidAdjustRelative: 0,
+      maximumBidAdjustRelative: -1.0,
 
       seatGoalType: SeatGoalType.Min,
       seatGoalCount: 3,
       seatGoalInterval: SeatGoalInterval.Epoch,
 
-      baseCapitalCommitment: 1_000n * BigInt(MICROGONS_PER_ARGON),
-      requiredMicronots: 0n,
+      baseMicrogonCommitment: 1_000n * BigInt(MICROGONS_PER_ARGON),
+      baseMicronotCommitment: 0n,
     };
   },
   vaultingRules: () => {
@@ -727,8 +727,8 @@ const defaults: IConfigDefaults = {
 
       personalBtcInMicrogons: 1_000n * BigInt(MICROGONS_PER_ARGON),
 
-      baseCapitalCommitment: 2_000n * BigInt(MICROGONS_PER_ARGON),
-      requiredMicronots: 0n,
+      baseMicrogonCommitment: 2_000n * BigInt(MICROGONS_PER_ARGON),
+      baseMicronotCommitment: 0n,
     };
   },
   defaultCurrencyKey: () => CurrencyKey.ARGN,

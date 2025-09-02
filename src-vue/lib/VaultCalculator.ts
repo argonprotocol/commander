@@ -44,7 +44,7 @@ export class VaultCalculator {
     const revenueFromInternalBn = BigNumber(totalPoolRevenue).multipliedBy(internalFactorBn);
     const revenueFromInternal = bigNumberToBigInt(revenueFromInternalBn);
 
-    const vaultCost = this.rules.baseCapitalCommitment;
+    const vaultCost = this.rules.baseMicrogonCommitment;
     const vaultRevenue = revenueFromInternal + revenueFromExternal + internalBtcRevenue;
 
     return calculateAPY(vaultCost, vaultCost + vaultRevenue);
@@ -71,7 +71,7 @@ export class VaultCalculator {
 
   public calculateBtcSpaceInMicrogons(): bigint {
     // this function has no utilization parameter because BTC space is only dependent on pool capital
-    const { baseCapitalCommitment: vaultCapital, capitalForSecuritizationPct, securitizationRatio } = this.rules;
+    const { baseMicrogonCommitment: vaultCapital, capitalForSecuritizationPct, securitizationRatio } = this.rules;
 
     const vaultCapitalBn = BigNumber(vaultCapital);
     const btcSecuritizationBn = vaultCapitalBn.multipliedBy(capitalForSecuritizationPct / 100);
@@ -121,7 +121,7 @@ export class VaultCalculator {
   }
 
   private caculateInternalPoolCapital(): bigint {
-    const { baseCapitalCommitment: internalCapital, capitalForLiquidityPct } = this.rules;
+    const { baseMicrogonCommitment: internalCapital, capitalForLiquidityPct } = this.rules;
 
     const internalCapitalBn = BigNumber(internalCapital);
     const internalPoolCapitalBn = internalCapitalBn.multipliedBy(capitalForLiquidityPct / 100);

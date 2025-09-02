@@ -28,8 +28,7 @@
               class="pt-3 pb-3"
               :disabled="installer.isRunning"
             >
-              <header v-if="!config.hasSavedBiddingRules">Create Personal Mining Bot</header>
-              <header v-else>Configure Personal Mining Bot</header>
+              <header>Configure Your Mining Bot</header>
               <p>
                 Set lock fees and securitization
                 <br />

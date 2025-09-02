@@ -36,7 +36,7 @@
               <ul>
                 <li>
                   <header>Mining Seats</header> 
-                  New block are constantly being added to the Argon blockchain at a rate of one per minute. Whoever is lucky enough to mine the block gets to collect the 
+                  New blocks are constantly being added to the Argon blockchain at a rate of one per minute. Whoever is lucky enough to mine the block gets to collect the 
                   block rewards (which can be quite substantial). However, unlike some proof-of-work (POW) blockchains, Argon does not allow just anyone to mine. Only
                   those who can show proof of owning a "mining seat" are given this right.
                 </li>
@@ -74,7 +74,7 @@
                   <ol>
                     <li>
                       <strong>Argonots</strong>. Argonots are a special governance token of the Argon network. They have several unique properities, 
-                      but for the sake of this article, they show proof of ownership. Every bid must contain a preset quantity of Argonots in order to be valid. 
+                      but for the sake of this description, they show proof of ownership. Every bid must contain a preset quantity of Argonots in order to be valid. 
                       This amount required changes over time based on the network's demand for mining seats. The following table shows the 
                       current quantity of Argonots required per bid: 
                       <table class="text-slate-800/50">

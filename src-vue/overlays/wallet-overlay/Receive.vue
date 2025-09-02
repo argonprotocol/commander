@@ -40,24 +40,24 @@
             </thead>
             <tbody class="selectable-text">
               <tr>
-                <td>{{ microgonToArgonNm(baseCapitalCommitment).format('0,0.[00000000]') }} ARGN</td>
+                <td>{{ microgonToArgonNm(baseMicrogonCommitment).format('0,0.[00000000]') }} ARGN</td>
                 <td>{{ microgonToArgonNm(wallet.availableMicrogons).format('0,0.[00000000]') }}</td>
                 <td>{{ microgonToArgonNm(wallets.totalMiningMicrogons - wallet.availableMicrogons).format('0,0.[00000000]') }}</td>
-                <td>{{ microgonToArgonNm(bigIntMax(0n, baseCapitalCommitment - wallets.totalMiningMicrogons)).format('0,0.[00000000]') }}</td>
-                <td v-if="!baseCapitalCommitment" class="text-right">--</td>
-                <td v-else-if="wallets.totalMiningMicrogons >= baseCapitalCommitment" class="text-right text-green-700 font-bold">success</td>
+                <td>{{ microgonToArgonNm(bigIntMax(0n, baseMicrogonCommitment - wallets.totalMiningMicrogons)).format('0,0.[00000000]') }}</td>
+                <td v-if="!baseMicrogonCommitment" class="text-right">--</td>
+                <td v-else-if="wallets.totalMiningMicrogons >= baseMicrogonCommitment" class="text-right text-green-700 font-bold">success</td>
                 <td v-else class="fade-in-out text-right text-red-700 font-bold">
                   <template v-if="wallet.availableMicrogons > 0n">partially funded</template>
                   <template v-else>waiting</template>
                 </td>
               </tr>
               <tr>
-                <td>{{ micronotToArgonotNm(requiredMicronots).format('0,0.[00000000]') }} ARGNOT</td>
+                <td>{{ micronotToArgonotNm(baseMicronotCommitment).format('0,0.[00000000]') }} ARGNOT</td>
                 <td>{{ micronotToArgonotNm(wallet.availableMicronots).format('0,0.[00000000]') }}</td>
                 <td>{{ micronotToArgonotNm(wallet.reservedMicronots).format('0,0.[00000000]') }}</td>
-                <td>{{ micronotToArgonotNm(bigIntMax(0n, requiredMicronots - wallet.availableMicronots)).format('0,0.[00000000]') }}</td>
-                <td v-if="!requiredMicronots" class="text-right">--</td>
-                <td v-else-if="wallet.availableMicronots >= requiredMicronots" class="text-right text-green-700 font-bold">success</td>
+                <td>{{ micronotToArgonotNm(bigIntMax(0n, baseMicronotCommitment - wallet.availableMicronots)).format('0,0.[00000000]') }}</td>
+                <td v-if="!baseMicronotCommitment" class="text-right">--</td>
+                <td v-else-if="wallet.availableMicronots >= baseMicronotCommitment" class="text-right text-green-700 font-bold">success</td>
                 <td v-else class="fade-in-out text-right text-red-700 font-bold">
                   <template v-if="wallet.availableMicronots > 0n">partially funded</template>
                   <template v-else>waiting</template>
@@ -134,20 +134,20 @@ function stillNeeded(amount: bigint, walletValue: bigint) {
   return stillNeeded > 0n ? stillNeeded : 0n;
 }
 
-const baseCapitalCommitment = Vue.computed(() => {
+const baseMicrogonCommitment = Vue.computed(() => {
   if (props.walletId === 'mining') {
-    return config.biddingRules?.baseCapitalCommitment || 0n;
+    return config.biddingRules?.baseMicrogonCommitment || 0n;
   } else if (props.walletId === 'vaulting') {
-    return config.vaultingRules?.baseCapitalCommitment || 0n;
+    return config.vaultingRules?.baseMicrogonCommitment || 0n;
   }
   return 0n;
 });
 
-const requiredMicronots = Vue.computed(() => {
+const baseMicronotCommitment = Vue.computed(() => {
   if (props.walletId === 'mining') {
-    return config.biddingRules?.requiredMicronots || 0n;
+    return config.biddingRules?.baseMicronotCommitment || 0n;
   } else if (props.walletId === 'vaulting') {
-    return config.vaultingRules?.requiredMicronots || 0n;
+    return config.vaultingRules?.baseMicronotCommitment || 0n;
   }
   return 0n;
 });

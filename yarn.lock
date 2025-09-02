@@ -3447,7 +3447,7 @@ __metadata:
     prettier-plugin-tailwindcss: "npm:0.6.14"
     qrcode: "npm:^1.5.4"
     qrcode-vue: "npm:^1.2.0"
-    reka-ui: "npm:^2.4.1"
+    reka-ui: "npm:^2.5.0"
     sass-embedded: "npm:^1.90.0"
     svgo: "npm:^3.3.2"
     tailwind-merge: "npm:^3.3.1"
@@ -7649,9 +7649,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"reka-ui@npm:^2.4.1":
-  version: 2.4.1
-  resolution: "reka-ui@npm:2.4.1"
+"reka-ui@npm:^2.5.0":
+  version: 2.5.0
+  resolution: "reka-ui@npm:2.5.0"
   dependencies:
     "@floating-ui/dom": "npm:^1.6.13"
     "@floating-ui/vue": "npm:^1.1.6"
@@ -7665,7 +7665,7 @@ __metadata:
     ohash: "npm:^2.0.11"
   peerDependencies:
     vue: ">= 3.2.0"
-  checksum: 10c0/45edf1e71309f270854a47b4a6bf3412b0f1c6337e770c776d054ec9fb2cd4e02bafb856db84891ed642384559ac98a39bfef556d9a8e9b7f2214b93ee28f97b
+  checksum: 10c0/4386dd4b89a7815002910c7ee9f126525d08fae1df30c1e030ef446bd5392de59fda7c3a1014be6ac91f85b1962c69689c3fb3dcca6c830e6867842cb7380741
   languageName: node
   linkType: hard
 
