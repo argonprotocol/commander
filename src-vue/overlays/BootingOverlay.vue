@@ -86,7 +86,8 @@ async function applyRestoredServer(details: string) {
     const restoreData = JSON.parse(details) as Record<keyof IConfig, string>;
     for (const key of Object.keys(restoreData) as (keyof IConfig)[]) {
       let value = restoreData[key] as any;
-      if (key === 'miningAccountHadPreviousLife' || key === 'miningAccountPreviousHistory' || key == 'version') {
+      // can't set this since it's readonly
+      if (key == 'version') {
         continue;
       }
       if (key === 'serverDetails') {
