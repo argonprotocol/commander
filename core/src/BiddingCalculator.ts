@@ -220,16 +220,16 @@ export default class BiddingCalculator {
     const micronotsMinedAsMicrogons = this.micronotMinedAsMicrogonValue(argonotPriceChangePct);
     const totalRewardsBn = BigNumber(microgonsToMine + micronotsMinedAsMicrogons + microgonsToMint);
 
-    let tdpr = totalRewardsBn.minus(totalCostBn).dividedBy(totalCostBn).multipliedBy(100).toNumber();
+    let totalPercentReturn = totalRewardsBn.minus(totalCostBn).dividedBy(totalCostBn).multipliedBy(100).toNumber();
 
-    if (tdpr < 1000) {
-      tdpr = Math.round(tdpr * 100) / 100;
+    if (totalPercentReturn < 1000) {
+      totalPercentReturn = Math.round(totalPercentReturn * 100) / 100;
     } else {
-      tdpr = Math.round(tdpr);
+      totalPercentReturn = Math.round(totalPercentReturn);
     }
-    tdpr = Math.max(tdpr, -100);
+    totalPercentReturn = Math.max(totalPercentReturn, -100);
 
-    const apy = Math.pow(1 + tdpr / 100, 36.5) * 100 - 100;
+    const apy = Math.pow(1 + totalPercentReturn / 100, 36.5) * 100 - 100;
 
     return Math.max(apy, -100);
   }
@@ -273,9 +273,7 @@ export default class BiddingCalculator {
       this.data.maxPossibleMiningSeatCount === 0
         ? BigNumber(0)
         : microgonsToMintThisEpochBn.dividedBy(this.data.maxPossibleMiningSeatCount);
-    const microgonsToMintThisSeat = bigNumberToBigInt(microgonsToMintThisSeatBn);
-
-    return microgonsToMintThisSeat;
+    return bigNumberToBigInt(microgonsToMintThisSeatBn);
   }
 
   private micronotToMicrogon(micronots: bigint): bigint {

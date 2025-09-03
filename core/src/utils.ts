@@ -2,16 +2,6 @@ import BigNumber from 'bignumber.js';
 
 export { formatArgons } from '@argonprotocol/mainchain';
 
-export function formatArgonots(x: bigint | number): number {
-  const isNegative = x < 0;
-  const [whole, decimal] = (Math.abs(Number(x)) / 1e6).toFixed(2).split('.');
-  if (decimal === '00') {
-    return Number(`${isNegative ? '-' : ''}${BigInt(whole)}`);
-  }
-  const wholeNumber = BigInt(whole);
-  return Number(`${isNegative ? '-' : ''}${wholeNumber}.${decimal}`);
-}
-
 export function formatPercent(x: BigNumber | undefined): string {
   if (!x) return 'na';
   return `${x.times(100).toFixed(3)}%`;
@@ -29,6 +19,15 @@ export function bigIntMax(...args: Array<bigint | null>): bigint {
 
 export function bigIntAbs(x: bigint): bigint {
   return x < 0n ? -x : x;
+}
+
+export function ceilTo(x: number | bigint, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.ceil(Number(x) * factor) / factor;
+}
+
+export function bigNumberToInteger(bn: BigNumber): number {
+  return bn.integerValue(BigNumber.ROUND_DOWN).toNumber();
 }
 
 export function bigNumberToBigInt(bn: BigNumber): bigint {
