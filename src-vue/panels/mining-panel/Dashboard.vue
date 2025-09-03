@@ -498,7 +498,7 @@ function loadChartData() {
   }
 
   chartRef.value?.reloadData(items);
-  updateFrameSliderPos(items.length - 1);
+  updateFrameSliderPos(items.length - 1, false);
 }
 
 function startDrag(event: PointerEvent) {
@@ -547,12 +547,18 @@ function stopDrag(event: PointerEvent) {
   document.body.classList.remove('isResizing');
 }
 
-function updateFrameSliderPos(index: number) {
+let isUserNavigatingHistory = false;
+
+function updateFrameSliderPos(index: number, isUserAction = true) {
+  if (isUserNavigatingHistory && !isUserAction) return;
   index = Math.max(index || 0, 0);
   sliderFrameIndex.value = index;
+  // if back to latest frame, reset user chosen pos
+  isUserNavigatingHistory = index < stats.frames.length - 1;
 
   const item = stats.frames[index];
   if (!item) return;
+
   const pointPosition = chartRef.value?.getPointPosition(index);
 
   currentFrame.value = item;
