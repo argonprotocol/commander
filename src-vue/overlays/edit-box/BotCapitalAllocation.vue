@@ -10,13 +10,20 @@
   <div class="flex flex-row items-center gap-2 w-full">
     <InputMenu v-model="config.biddingRules.seatGoalType" :options="[
         { name: `Min`, value: SeatGoalType.Min },
-        { name: `Max`, value: SeatGoalType.Max }
+        { name: 'Min Percent', value: SeatGoalType.MinPercent },
+        { name: `Max`, value: SeatGoalType.Max },
+        { name: `Max Percent`, value: SeatGoalType.MaxPercent }
       ]" :selectFirst="true" />
+    <template v-if="config.biddingRules.seatGoalType === SeatGoalType.MaxPercent || config.biddingRules.seatGoalType === SeatGoalType.MinPercent">
+    <InputNumber  v-model="config.biddingRules.seatGoalPercent" :min="0" :max="100" suffix="% of Seats" :dragBy="1" class="w-1/2 whitespace-nowrap" />
+    </template>
+    <template v-else >
     <InputNumber v-model="config.biddingRules.seatGoalCount" :min="0" suffix=" Seats" :dragBy="1" class="w-1/3" />
     <InputMenu v-model="config.biddingRules.seatGoalInterval" :options="[
         { name: `Per ${SeatGoalInterval.Epoch}`, value: SeatGoalInterval.Epoch },
         { name: `Per ${SeatGoalInterval.Frame}`, value: SeatGoalInterval.Frame }
       ]" :selectFirst="true" class="w-1/3" />
+    </template>
   </div>
 
   <label class="mt-3 font-bold opacity-60 mb-0.5">
@@ -31,7 +38,6 @@
 </template>
 
 <script setup lang="ts">
-import * as Vue from 'vue';
 import InputNumber from '../../components/InputNumber.vue';
 import InputMenu from '../../components/InputMenu.vue';
 import { getCalculator } from '../../stores/mainchain';

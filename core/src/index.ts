@@ -2,9 +2,9 @@ import BiddingCalculator from './BiddingCalculator.js';
 import createBidderParams, { Helper as BiddingParamsHelper } from './createBidderParams.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
 
-export { type IBiddingRules } from './IBiddingRules.js';
-export { type IBidderParams } from './IBidderParams.js';
-export { Mainchain, type MainchainClient } from './Mainchain.js';
+export * from './IBiddingRules.js';
+export * from './IBidderParams.js';
+export * from './Mainchain.js';
 export * from './MainchainClients.js';
 export * from './MiningFrames.js';
 export * from './NetworkConfig.js';

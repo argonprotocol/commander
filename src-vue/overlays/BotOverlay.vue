@@ -48,13 +48,13 @@
                         <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
                           You need {{ micronotToArgonotNm(baseMicronotCommitment).format('0,0') }} argonot{{ micronotToArgonotNm(baseMicronotCommitment).format('0,0') === '1' ? '' : 's' }} and {{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') }} argon{{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') === '0,0' ? '' : 's' }}, which are valued at
                         </div>
-                        <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
-                          <NeedMoreCapitalHover v-if="probableMinSeats < rules.seatGoalCount" :calculator="calculator" />
+                        <div class="flex flex-row items-center justify-center grow relative h-26 text-5xl font-bold font-mono text-argon-600">
+                          <NeedMoreCapitalHover v-if="probableMinSeats < getSeatGoalCount()" :calculator="calculator" :seat-goal-count="getSeatGoalCount()" />
                           <InputArgon v-model="rules.baseMicrogonCommitment" :min="10_000_000n" :minDecimals="0" />
                         </div>
                         <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
                           This is the amount of capital needed to secure a good<br/>
-                          chance of achieving your minimum goal of 
+                          chance of achieving your minimum goal of
                           <template v-if="probableMinSeats === probableMaxSeats">({{ probableMinSeats }} mining seats per epoch.</template>
                           <template v-else>{{ probableMinSeats }} seats per epoch.</template>
                         </div>
@@ -187,11 +187,11 @@
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
                     <div MainWrapper @mouseenter="showTooltip($event, tooltip.capitalAllocation, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'capitalAllocation')" class="flex flex-col w-full h-full items-center justify-center px-8">
                       <div StatHeader>Capital Allocation</div>
-                      <div MainRule v-if="rules.seatGoalType === SeatGoalType.Max && rules.seatGoalCount === 0" class="w-full">
-                        Disabled
-                      </div>
-                      <div MainRule v-else class="w-full">
-                       {{ rules.seatGoalType }} {{ rules.seatGoalCount }} Seats Per {{ rules.seatGoalInterval }}
+                      <div MainRule class="w-full">
+                        <template v-if="rules.seatGoalType === SeatGoalType.Max && rules.seatGoalCount === 0">Disabled</template>
+                        <template v-else-if="rules.seatGoalType === SeatGoalType.MaxPercent">Max {{ numeral(rules.seatGoalPercent / 100).format('0.[00]%') }} of Seats</template>
+                        <template v-else-if="rules.seatGoalType === SeatGoalType.MinPercent">Min {{ numeral(rules.seatGoalPercent / 100).format('0.[00]%') }} of Seats</template>
+                        <template v-else>{{ rules.seatGoalType }} {{ rules.seatGoalCount }} Seats Per {{ rules.seatGoalInterval }}</template>
                       </div>
                       <div class="text-gray-500/60 text-md">
                         {{ rules.seatGoalType === SeatGoalType.Max ? 'Stop After Goal Reached' : 'Reinvest Profits from Operation' }}
@@ -303,7 +303,7 @@ import BotCapital from './bot/BotCapital.vue';
 import { useInstaller } from '../stores/installer.ts';
 import { useBot } from '../stores/bot.ts';
 
-/* TODO: The capital to commit box at the top left of the page is incorrect. It should be the total market value of your 
+/* TODO: The capital to commit box at the top left of the page is incorrect. It should be the total market value of your
    baseMicrogonCommitment + baseMicronotCommitment. It is currently only showing the baseMicrogonCommitment. The challenge is
    that we're calculating your baseMicronotCommitment based on how many seats we think you could win, and we calculate the seats
    we think you could win based on your baseMicrogonCommitment. This creates a circular dependency.
@@ -372,7 +372,7 @@ const tooltip = {
       rules.value.seatGoalInterval === SeatGoalInterval.Epoch
         ? `An "epoch" is equivalent to 10 days`
         : `A "frame" is equivalent to 1 day`;
-    return `This is your bot's goal, not its ceiling. ${interval}. If the bot can snag more than ${rules.value.seatGoalCount} seats, it will do so. If it fails to achieve its goal, it will alert you in the app.`;
+    return `This is your bot's goal, not its ceiling. ${interval}. If the bot can snag more than ${seatGoalText()}, it will do so. If it fails to achieve its goal, it will alert you in the app.`;
   }),
   expectedGrowth: `These numbers don't affect your bot's decisions; they only factor into the Estimated APY shown above. Argons is growth in circulation; Argonots is change in token price. Both are factored annually.`,
   cloudMachine: `You can leave this server configuration box as-is for now. Later in the process, we'll guide you through the step-by-step flow of how to set up a new Cloud Machine. Don't worry, it's easy.`,
@@ -381,6 +381,21 @@ const tooltip = {
 
 function calculateElementWidth(element: HTMLElement) {
   return element.getBoundingClientRect().width + 'px';
+}
+
+function getSeatGoalCount() {
+  if (rules.value.seatGoalType === SeatGoalType.MaxPercent || rules.value.seatGoalType === SeatGoalType.MinPercent) {
+    return Math.floor((rules.value.seatGoalPercent / 100) * calculatorData.maxPossibleMiningSeatCount);
+  }
+  return rules.value.seatGoalCount;
+}
+
+function seatGoalText() {
+  if (rules.value.seatGoalType === SeatGoalType.MaxPercent || rules.value.seatGoalType === SeatGoalType.MinPercent) {
+    return `${rules.value.seatGoalPercent}% of all seats`;
+  } else {
+    return `${rules.value.seatGoalCount} seats`;
+  }
 }
 
 function openEditBoxOverlay($event: MouseEvent, type: IEditBoxOverlayTypeForMining) {
@@ -409,8 +424,8 @@ function calculateMicronotsRequired(): bigint {
     BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculatorData.previousDayMidBid).toNumber(),
   );
 
-  if (rules.value?.seatGoalType === SeatGoalType.Max) {
-    possibleSeats = Math.min(possibleSeats, rules.value.seatGoalCount);
+  if (rules.value?.seatGoalType === SeatGoalType.Max || rules.value?.seatGoalType === SeatGoalType.MaxPercent) {
+    possibleSeats = Math.min(possibleSeats, getSeatGoalCount());
   }
   possibleSeats = Math.min(possibleSeats, calculatorData.maxPossibleMiningSeatCount);
 
@@ -505,7 +520,7 @@ basicEmitter.on('openBotOverlay', async () => {
   calculatorData.isInitializedPromise.then(() => {
     previousBiddingRules = JsonExt.stringify(config.biddingRules);
     if (isBrandNew.value) {
-      const minimumCapitalNeeded = calculator.maximumBidAmount * BigInt(rules.value.seatGoalCount);
+      const minimumCapitalNeeded = calculator.maximumBidAmount * BigInt(getSeatGoalCount());
       const minimumCapitalNeededRoundedUp = Math.ceil(Number(minimumCapitalNeeded) / 1_000_000) * 1_000_000;
       rules.value.baseMicrogonCommitment = BigInt(minimumCapitalNeededRoundedUp);
     }

@@ -56,6 +56,9 @@ export class Helper {
     if (this.biddingRules.seatGoalType === SeatGoalType.Max) {
       return this.biddingRules.seatGoalCount || 0;
     }
+    if (this.biddingRules.seatGoalType === SeatGoalType.MaxPercent) {
+      return Math.floor((maxSeats * (this.biddingRules.seatGoalPercent || 0)) / 100);
+    }
 
     return maxSeats;
   }
