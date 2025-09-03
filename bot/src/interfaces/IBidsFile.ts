@@ -10,6 +10,7 @@ export interface IBidsFile extends ILastModifiedAt {
   micronotsStakedPerSeat: bigint;
   microgonsToBeMinedPerBlock: bigint;
   seatCountWon: number;
+  allMinersCount: number;
   winningBids: Array<IWinningBid>;
 }
 

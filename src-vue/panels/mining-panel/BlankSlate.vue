@@ -41,7 +41,7 @@
         >
           <li class="w-1/4">
             <div class="text-4xl font-bold">
-              {{ blockchainStore.miningSeatCount ? numeral(blockchainStore.miningSeatCount).format('0,0') : '---' }}
+              {{ blockchainStore.activeMiningSeatCount ? numeral(blockchainStore.activeMiningSeatCount).format('0,0') : '---' }}
             </div>
             <div>Mining Seats</div>
           </li>
@@ -143,7 +143,7 @@ Vue.onMounted(async () => {
   Promise.all([
     blockchainStore.updateAggregateBidCosts(),
     blockchainStore.updateAggregateBlockRewards(),
-    blockchainStore.updateMiningSeatCount(),
+    blockchainStore.updateActiveMiningSeatCount(),
   ]).then(() => {
     isLoaded.value = true;
   });

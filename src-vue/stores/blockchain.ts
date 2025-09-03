@@ -28,7 +28,7 @@ export type IBlock = {
 };
 
 export const useBlockchainStore = defineStore('blockchain', () => {
-  const miningSeatCount = Vue.ref(0);
+  const activeMiningSeatCount = Vue.ref(0);
   const aggregatedBidCosts = Vue.ref(0n);
   const aggregatedBlockRewards = Vue.ref({ microgons: 0n, micronots: 0n });
 
@@ -108,8 +108,9 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     });
   }
 
-  async function updateMiningSeatCount() {
-    miningSeatCount.value = await getMainchain().getMiningSeatCount();
+  async function updateActiveMiningSeatCount() {
+    const mainchain = getMainchain();
+    activeMiningSeatCount.value = await mainchain.getActiveMinersCount();
   }
 
   async function updateAggregateBidCosts() {
@@ -123,12 +124,12 @@ export const useBlockchainStore = defineStore('blockchain', () => {
   return {
     aggregatedBidCosts,
     aggregatedBlockRewards,
-    miningSeatCount,
+    activeMiningSeatCount,
     cachedBlocks,
     subscribeToBlocks,
     updateAggregateBidCosts,
     updateAggregateBlockRewards,
-    updateMiningSeatCount,
+    updateActiveMiningSeatCount,
     fetchBlocks,
   };
 });

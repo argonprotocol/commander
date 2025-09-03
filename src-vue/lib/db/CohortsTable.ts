@@ -121,16 +121,26 @@ export class CohortsTable extends BaseTable {
     return convertSqliteBigInts(records, this.bigIntFields);
   }
 
-  async insertOrUpdate(
-    id: number,
-    progress: number,
-    transactionFeesTotal: bigint,
-    micronotsStakedPerSeat: bigint,
-    microgonsBidPerSeat: bigint,
-    seatCountWon: number,
-    microgonsToBeMinedPerSeat: bigint,
-    micronotsToBeMinedPerSeat: bigint,
-  ): Promise<void> {
+  async insertOrUpdate(args: {
+    id: number;
+    progress: number;
+    transactionFeesTotal: bigint;
+    micronotsStakedPerSeat: bigint;
+    microgonsBidPerSeat: bigint;
+    seatCountWon: number;
+    microgonsToBeMinedPerSeat: bigint;
+    micronotsToBeMinedPerSeat: bigint;
+  }): Promise<void> {
+    const {
+      id,
+      progress,
+      transactionFeesTotal,
+      micronotsStakedPerSeat,
+      microgonsBidPerSeat,
+      seatCountWon,
+      microgonsToBeMinedPerSeat,
+      micronotsToBeMinedPerSeat,
+    } = args;
     await this.db.execute(
       `INSERT INTO Cohorts (
           id, 

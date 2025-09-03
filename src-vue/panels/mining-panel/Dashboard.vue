@@ -321,6 +321,7 @@ const currentFrame = Vue.ref<IDashboardFrameStats>({
   date: '',
   firstTick: 0,
   lastTick: 0,
+  allMinersCount: 0,
   seatCountActive: 0,
   seatCostTotalFramed: 0n,
   microgonToUsd: [0n],

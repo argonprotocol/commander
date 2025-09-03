@@ -295,7 +295,7 @@ export class Stats {
     for (const cohort of activeCohorts) {
       // Scale factor to preserve precision (cohort.progress has 3 decimal places)
       // factor = (100 - progress) / 100, scaled by 100000 for 3 decimal precision
-      const remainingRewardsPerSeat = this.calculateRemainingRewardsExpectedPerSeat(cohort);
+      const remainingRewardsPerSeat = this.calculateExpectedBlockRewardsPerSeat(cohort, 100 - cohort.progress);
       seatCount += cohort.seatCountWon;
       const seatCost = cohort.microgonsBidPerSeat * BigInt(cohort.seatCountWon);
       microgonsBidTotal += seatCost;
@@ -337,7 +337,10 @@ export class Stats {
     };
   }
 
-  private calculateRemainingRewardsExpectedPerSeat(cohort: ICohortRecord): {
+  private calculateExpectedBlockRewardsPerSeat(
+    cohort: ICohortRecord,
+    percentage: number,
+  ): {
     microgonsToBeMined: bigint;
     microgonsToBeMinted: bigint;
     micronotsToBeMined: bigint;
@@ -345,7 +348,7 @@ export class Stats {
     const microgonsExpected = bigIntMax(cohort.microgonsBidPerSeat, cohort.microgonsToBeMinedPerSeat);
     const microgonsExpectedToBeMinted = microgonsExpected - cohort.microgonsToBeMinedPerSeat;
 
-    const factorBn = BigNumber(100 - cohort.progress).dividedBy(100);
+    const factorBn = BigNumber(percentage).dividedBy(100);
 
     const microgonsToBeMinedBn = BigNumber(cohort.microgonsToBeMinedPerSeat).multipliedBy(factorBn);
     const micronotsToBeMinedBn = BigNumber(cohort.micronotsToBeMinedPerSeat).multipliedBy(factorBn);

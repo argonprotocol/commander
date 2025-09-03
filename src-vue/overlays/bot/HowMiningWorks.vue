@@ -277,7 +277,7 @@ function cancelOverlay() {
 }
 
 async function load() {
-  mainchain.getMiningSeatCount().then(x => (miningSeats.value = x));
+  mainchain.getActiveMinersCount().then(x => (miningSeats.value = x));
   mainchain.getMicronotsRequiredForBid().then(x => (micronotsRequiredForBid.value = x));
   mainchain.getCurrentFrameId().then(x => (currentFrameId.value = x));
   mainchain.getRecentSeatSummaries().then(x => (seatSummaries.value = x));
