@@ -16,7 +16,7 @@
         <p>
           You need a minimum of {{ currency.symbol
           }}{{ microgonToMoneyNm(idealCapitalCommitment).format('0,0.[00]') }} in order to have a chance at fulfilling
-          your goal of winning {{ config.biddingRules.seatGoalCount }} seats.
+          your goal of winning {{ seatGoalCount }} seats.
         </p>
         <button
           @click="increaseCapitalCommitment"
@@ -54,6 +54,7 @@ import IncreaseIcon from '../../assets/increase.svg?component';
 
 const props = defineProps<{
   calculator: BiddingCalculator;
+  seatGoalCount: number;
 }>();
 
 const config = useConfig();
@@ -66,7 +67,7 @@ const isClickedOpen = Vue.ref(false);
 let wasRecentlyClickedOutside = false;
 
 const idealCapitalCommitment = Vue.computed(() => {
-  const minimumCapitalNeeded = props.calculator.maximumBidAmount * BigInt(config.biddingRules.seatGoalCount);
+  const minimumCapitalNeeded = props.calculator.maximumBidAmount * BigInt(props.seatGoalCount);
   const minimumCapitalNeededRoundedUp = Math.ceil(Number(minimumCapitalNeeded) / 1_000_000) * 1_000_000;
   return BigInt(minimumCapitalNeededRoundedUp);
 });

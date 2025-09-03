@@ -42,7 +42,7 @@
                   Maximum Bid ({{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }})
                 </td>
                 <td class="border-t border-dashed border-slate-300 text-right">
-                  {{ rules.seatGoalCount }}
+                  {{ seatGoalCount }}
                 </td>
                 <td class="border-t border-dashed border-slate-300 text-right">
                   {{ probableMinSeats }}
@@ -61,7 +61,7 @@
                   Starting Bid ({{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }})
                 </td>
                 <td class="border-t border-dashed border-slate-300 text-right">
-                  {{ rules.seatGoalCount }}
+                  {{ seatGoalCount }}
                 </td>
                 <td class="border-t border-dashed border-slate-300 text-right">
                   {{ probableMaxSeats }}
@@ -87,11 +87,11 @@
 import * as Vue from 'vue';
 import { useCurrency } from '../../stores/currency';
 import BigNumber from 'bignumber.js';
-import numeral, { createNumeralHelpers } from '../../lib/numeral';
+import { createNumeralHelpers } from '../../lib/numeral';
 import { TooltipArrow, TooltipContent, TooltipPortal, TooltipProvider, TooltipRoot, TooltipTrigger } from 'reka-ui';
 import { getCalculator, getCalculatorData } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
-import { IBiddingRules } from '@argonprotocol/commander-core';
+import { IBiddingRules, SeatGoalType } from '@argonprotocol/commander-core';
 
 const props = withDefaults(
   defineProps<{
@@ -123,11 +123,15 @@ const minimumBidSeatsEarnings = Vue.ref(0n);
 
 const maximumBidAmount = Vue.ref(0n);
 const minimumBidAmount = Vue.ref(0n);
+const seatGoalCount = Vue.ref(rules.value.seatGoalCount);
 
 function updateAPYs() {
   calculator.updateBiddingRules(rules.value);
   calculator.calculateBidAmounts();
 
+  if (rules.value.seatGoalType === SeatGoalType.MinPercent || rules.value.seatGoalType === SeatGoalType.MaxPercent) {
+    seatGoalCount.value = Math.floor((rules.value.seatGoalCount / 100) * calculatorData.maxPossibleMiningSeatCount);
+  }
   maximumBidAmount.value = calculator.maximumBidAmount;
   minimumBidAmount.value = calculator.minimumBidAmount;
 

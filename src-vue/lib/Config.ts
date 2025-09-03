@@ -712,6 +712,7 @@ const defaults: IConfigDefaults = {
 
       seatGoalType: SeatGoalType.Min,
       seatGoalCount: 3,
+      seatGoalPercent: 0,
       seatGoalInterval: SeatGoalInterval.Epoch,
 
       baseMicrogonCommitment: 1_000n * BigInt(MICROGONS_PER_ARGON),

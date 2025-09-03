@@ -22,7 +22,9 @@ export enum BidAmountAdjustmentType {
 
 export enum SeatGoalType {
   Max = 'Max',
+  MaxPercent = 'MaxPercent',
   Min = 'Min',
+  MinPercent = 'MinPercent',
 }
 
 export enum SeatGoalInterval {
@@ -56,6 +58,7 @@ export const BiddingRulesSchema = z.object({
 
   seatGoalType: z.nativeEnum(SeatGoalType),
   seatGoalCount: z.number(),
+  seatGoalPercent: z.number(),
   seatGoalInterval: z.nativeEnum(SeatGoalInterval),
 
   baseMicrogonCommitment: z.bigint(),

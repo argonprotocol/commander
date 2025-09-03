@@ -35,6 +35,7 @@ it('can create bidder params', async () => {
       maximumBidAdjustRelative: -7.47,
       seatGoalType: 'Min',
       seatGoalCount: 3,
+      seatGoalPercent: 0,
       seatGoalInterval: 'Epoch',
       baseMicrogonCommitment: 10000000n,
       baseMicronotCommitment: 1000000n,
