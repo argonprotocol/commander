@@ -30,4 +30,12 @@ export interface IDashboardFrameStats {
   profit: number;
   profitPct: number;
   score: number;
+  expected: IDashboardExpectedStats;
+}
+
+export interface IDashboardExpectedStats {
+  blocksMinedTotal: number;
+  micronotsMinedTotal: bigint;
+  microgonsMinedTotal: bigint;
+  microgonsMintedTotal: bigint;
 }

@@ -175,7 +175,7 @@
                 <ChevronLeftIcon class="w-6 h-6 opacity-50 mx-1 group-hover:opacity-80" />
                 PREV
               </div>
-              <span class="flex flex-row items-center">
+              <span class="flex flex-row items-center" :title="'Frame #' + currentFrame.id">
                 <span>{{ currentFrameStartDate }} to {{ currentFrameEndDate }}</span>
                 <span v-if="stats.selectedFrameId > stats.latestFrameId - 10" class="inline-block rounded-full bg-green-500/80 w-2.5 h-2.5 ml-2"></span>
               </span>
@@ -190,16 +190,19 @@
 
                   <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30 pb-3">
                     <span>{{ currentFrame.seatCountActive }}</span>
-                    <label>Active Mining Seat{{ currentFrame.seatCountActive === 1 ? '' : 's' }}</label>
+                    <label class="relative block w-full">
+                      Active Mining Seat{{ currentFrame.seatCountActive === 1 ? '' : 's' }}
+                      <p class="absolute -bottom-4 uppercase h-[10px] text-center w-full text-xs text-gray-400">of {{ currentFrame.allMinersCount }} total network seats</p>
+                    </label>
                   </div>
 
                   <div class="h-full w-[1px] bg-slate-400/30"></div>
 
                   <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30 pb-3">
                     <span>{{ currentFrame.blocksMinedTotal }}</span>
-                    <label class="relative block w-full">
+                    <label class="relative block w-full" :title="'Expected Mined Blocks: ' + currentFrame.expected.blocksMinedTotal">
                       Blocks Mined
-                      <HealthIndicatorBar />
+                      <HealthIndicatorBar :percent="getPercent(currentFrame.blocksMinedTotal, currentFrame.expected.blocksMinedTotal)" />
                     </label>
                   </div>
 
@@ -213,9 +216,9 @@
                         ).formatIfElse('< 1_000', '0,0.00', '0,0')
                       }}
                     </span>
-                    <label class="relative block w-full">
+                    <label class="relative block w-full" :title="'Expected Argons Mined: ' + microgonToMoneyNm(currentFrame.expected.microgonsMinedTotal).format('0,0.00') + ', Minted: ' + microgonToMoneyNm(currentFrame.expected.microgonsMintedTotal).format('0,0.00')">
                       Argons Collected
-                      <HealthIndicatorBar />
+                      <HealthIndicatorBar :percent="getPercent(currentFrame.microgonsMinedTotal + currentFrame.microgonsMintedTotal, currentFrame.expected.microgonsMinedTotal + currentFrame.expected.microgonsMintedTotal)" />
                     </label>
                   </div>
 
@@ -227,9 +230,9 @@
                         microgonToMoneyNm(currentFrame.micronotsMinedTotal).formatIfElse('< 1_000', '0,0.00', '0,0')
                       }}
                     </span>
-                    <label class="relative block w-full">
+                    <label class="relative block w-full" :title="'Expected Argonots Collected ' + micronotToMoneyNm(currentFrame.expected.micronotsMinedTotal).format('0,0.00')">
                       Argonots Collected
-                      <HealthIndicatorBar />
+                      <HealthIndicatorBar :percent="getPercent(currentFrame.micronotsMinedTotal, currentFrame.expected.micronotsMinedTotal)" />
                     </label>
                   </div>
 
@@ -257,7 +260,7 @@
                       {{ currency.symbol
                       }}{{ microgonToMoneyNm(currentFrameCost).formatIfElse('< 1_000', '0,0.00', '0,0') }}
                     </span>
-                    <label>Relative Frame Cost</label>
+                    <label>{{ currentFrame.progress < 100 ? 'Relative' : '' }} Frame Cost</label>
                   </div>
 
                   <div class="h-full w-[1px] bg-slate-400/30"></div>
@@ -267,9 +270,9 @@
                       {{ currency.symbol
                       }}{{ microgonToMoneyNm(currentFrameEarnings).formatIfElse('< 1_000', '0,0.00', '0,0') }}
                     </span>
-                    <label class="relative block w-full">
-                      Relative Frame Earnings
-                      <HealthIndicatorBar />
+                    <label class="relative block w-full" :title="'Expected Earnings: ' + microgonToMoneyNm(expectedFrameEarnings).format('0,0.00')">
+                      {{ currentFrame.progress < 100 ? 'Relative' : '' }} Frame Earnings
+                      <HealthIndicatorBar :percent="getPercent(currentFrameEarnings, expectedFrameEarnings)" />
                     </label>
                   </div>
 
@@ -277,9 +280,9 @@
 
                   <div stat-box class="flex flex-col w-1/3 h-full pb-3">
                     <span>{{ numeral(currentFrameProfit).formatIfElseCapped('< 100', '0.[00]', '0,0', 9_999) }}%</span>
-                    <label class="relative block w-full">
-                      Current Frame Profit
-                      <HealthIndicatorBar />
+                    <label class="relative block w-full" :title="'Expected Profit: ' + numeral(expectedFrameProfit).formatIfElseCapped('< 100', '0.[00]', '0,0', 9_999) + '%'">
+                      {{ currentFrame.progress < 100 ? 'Current' : '' }} Frame Profit
+                      <HealthIndicatorBar :percent="getPercent(currentFrameProfit, expectedFrameProfit)" />
                     </label>
                   </div>
 
@@ -338,6 +341,13 @@ const currentFrame = Vue.ref<IDashboardFrameStats>({
   profit: 0,
   profitPct: 0,
   score: 0,
+
+  expected: {
+    blocksMinedTotal: 0,
+    micronotsMinedTotal: 0n,
+    microgonsMinedTotal: 0n,
+    microgonsMintedTotal: 0n,
+  },
 });
 const sliderFrameIndex = Vue.ref(0);
 const sliderLeftPosX = Vue.ref(0);
@@ -374,7 +384,6 @@ import ArgonotIcon from '../../assets/resources/argonot.svg?component';
 import ArgonotLockedIcon from '../../assets/resources/argonot-locked.svg?component';
 import MiningBidIcon from '../../assets/resources/mining-bid.svg?component';
 import MiningSeatIcon from '../../assets/resources/mining-seat.svg?component';
-import { toRaw } from 'vue';
 import ArgonBlocksOverlay from '../../overlays/ArgonBlocksOverlay.vue';
 import BitcoinBlocksOverlay from '../../overlays/BitcoinBlocksOverlay.vue';
 
@@ -382,6 +391,11 @@ const stats = useStats();
 const currency = useCurrency();
 
 const wallets = useWallets();
+
+function getPercent(value: bigint | number, total: bigint | number): number {
+  if (total === 0n || total === 0) return 0;
+  return BigNumber(value).dividedBy(total).multipliedBy(100).toNumber();
+}
 
 const { microgonToMoneyNm, micronotToMoneyNm } = createNumeralHelpers(currency);
 
@@ -410,6 +424,14 @@ const currentFrameEarnings = Vue.computed(() => {
   return microgons + currency.micronotToMicrogon(micronotsMinedTotal);
 });
 
+const expectedFrameEarnings = Vue.computed(() => {
+  if (!currentFrame.value.seatCountActive) return 0n;
+
+  const { expected } = currentFrame.value;
+  const microgons = expected.microgonsMinedTotal + expected.microgonsMintedTotal;
+  return microgons + currency.micronotToMicrogon(expected.micronotsMinedTotal);
+});
+
 const currentFrameCost = Vue.computed(() => {
   if (!currentFrame.value.seatCountActive) return 0n;
   return currentFrame.value.seatCostTotalFramed;
@@ -417,6 +439,13 @@ const currentFrameCost = Vue.computed(() => {
 
 const currentFrameProfit = Vue.computed(() => {
   const earningsBn = BigNumber(currentFrameEarnings.value);
+  const costBn = BigNumber(currentFrameCost.value);
+  const profitBn = earningsBn.minus(costBn).dividedBy(costBn).multipliedBy(100);
+  return profitBn.toNumber();
+});
+
+const expectedFrameProfit = Vue.computed(() => {
+  const earningsBn = BigNumber(expectedFrameEarnings.value);
   const costBn = BigNumber(currentFrameCost.value);
   const profitBn = earningsBn.minus(costBn).dividedBy(costBn).multipliedBy(100);
   return profitBn.toNumber();
