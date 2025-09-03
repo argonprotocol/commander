@@ -74,9 +74,7 @@ export class CohortsTable extends BaseTable {
         [],
       );
 
-      const framesExpectedBn = BigNumber(activeStats.cohortCount)
-        .multipliedBy(10)
-        .multipliedBy(activeStats.seatCountTotal);
+      const framesExpectedBn = BigNumber(activeStats.seatCountTotal).multipliedBy(10);
       const framesCompleted = BigNumber(activeStats.accruedProgress).dividedBy(10).toNumber();
       const framesRemaining = framesExpectedBn.minus(framesCompleted).toNumber();
 
