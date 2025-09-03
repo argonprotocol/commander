@@ -366,7 +366,33 @@ export class Stats {
   }
 
   private async fetchFramesFromDb(): Promise<IDashboardFrameStats[]> {
-    const lastYear = await this.db.framesTable.fetchLastYear();
+    const lastYear = await this.db.framesTable.fetchLastYear().then(x => x as IDashboardFrameStats[]);
+    for (const frame of lastYear) {
+      if (frame.id === 0) continue;
+      frame.expected = {
+        blocksMinedTotal: 0,
+        micronotsMinedTotal: 0n,
+        microgonsMinedTotal: 0n,
+        microgonsMintedTotal: 0n,
+      };
+      const activeCohorts = await this.db.cohortsTable.fetchActiveCohorts(frame.id);
+
+      for (const cohort of activeCohorts) {
+        if (!cohort.seatCountWon) continue;
+        const expectedCohortReturns = this.calculateExpectedBlockRewardsPerSeat(
+          cohort,
+          // Get one frame (1/10th) of the cohort rewards, times the frame progress
+          BigNumber(frame.progress).times(0.1).toNumber(),
+        );
+        const { microgonsToBeMined, microgonsToBeMinted, micronotsToBeMined } = expectedCohortReturns;
+        const percentOfMiners = cohort.seatCountWon / frame.allMinersCount;
+        frame.expected.blocksMinedTotal += Math.floor(percentOfMiners * 1440 * (frame.progress / 100));
+        const seatsN = BigInt(cohort.seatCountWon);
+        frame.expected.micronotsMinedTotal += micronotsToBeMined * seatsN;
+        frame.expected.microgonsMinedTotal += microgonsToBeMined * seatsN;
+        frame.expected.microgonsMintedTotal += microgonsToBeMinted * seatsN;
+      }
+    }
 
     const maxProfitPct = Math.min(Math.max(...lastYear.map(x => x.profitPct)), 1_000);
     return lastYear

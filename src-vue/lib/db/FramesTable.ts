@@ -154,7 +154,7 @@ export class FramesTable extends BaseTable {
     );
   }
 
-  async fetchLastYear(): Promise<Omit<IDashboardFrameStats, 'score'>[]> {
+  async fetchLastYear(): Promise<Omit<IDashboardFrameStats, 'score' | 'expected'>[]> {
     const rawRecords = await this.db.select<any[]>(`SELECT 
       id, firstTick, lastTick, microgonToUsd, microgonToArgonot, allMinersCount, seatCountActive, seatCostTotalFramed, blocksMinedTotal, micronotsMinedTotal, microgonsMinedTotal, microgonsMintedTotal, progress
     FROM Frames ORDER BY id DESC LIMIT 365`);
@@ -176,7 +176,7 @@ export class FramesTable extends BaseTable {
         console.log('profitPctBn', profitPctBn.toNumber(), profitBn.toNumber(), x.seatCostTotalFramed);
       }
 
-      const record: Omit<IDashboardFrameStats, 'score'> = {
+      const record: Omit<IDashboardFrameStats, 'score' | 'expected'> = {
         id: x.id,
         date,
         firstTick: x.firstTick,
@@ -209,7 +209,7 @@ export class FramesTable extends BaseTable {
         break;
       }
 
-      const blankRecord: Omit<IDashboardFrameStats, 'score'> = {
+      const blankRecord: Omit<IDashboardFrameStats, 'score' | 'expected'> = {
         id: 0,
         date: previousDay.format('YYYY-MM-DD'),
         firstTick: lastRecord.firstTick - 1_440,
