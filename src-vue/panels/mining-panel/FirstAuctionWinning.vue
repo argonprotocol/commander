@@ -78,7 +78,8 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { useConfig } from '../../stores/config';
 import { useCurrency } from '../../stores/currency';
-import BiddingCalculator, {
+import {
+  BiddingCalculator,
   type IBiddingRules,
   BiddingCalculatorData,
   BiddingParamsHelper,
@@ -88,7 +89,7 @@ import CountdownClock from '../../components/CountdownClock.vue';
 import ConfettiIcon from '../../assets/confetti.svg?component';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
 import BotHistoryOverlayButton from '../../overlays/BotHistoryOverlayButton.vue';
-import { getMainchain } from '../../stores/mainchain';
+import { getMining } from '../../stores/mainchain';
 import { useStats } from '../../stores/stats';
 import { createNumeralHelpers } from '../../lib/numeral';
 import { useWallets } from '../../stores/wallets';
@@ -96,7 +97,7 @@ import { bigIntMin } from '@argonprotocol/commander-core/src/utils';
 
 dayjs.extend(utc);
 
-const mainchain = getMainchain();
+const mainchain = getMining();
 
 const wallets = useWallets();
 const stats = useStats();
@@ -123,7 +124,7 @@ const priceTextSize = Vue.computed(() => {
   return bidPositions.value.length > 8 ? 'text-6xl' : 'text-7xl';
 });
 
-const calculatorData = new BiddingCalculatorData(getMainchain());
+const calculatorData = new BiddingCalculatorData(getMining());
 const calculator = new BiddingCalculator(calculatorData, config.biddingRules);
 const biddingParamsHelper = new BiddingParamsHelper(config.biddingRules as IBiddingRules, calculator);
 

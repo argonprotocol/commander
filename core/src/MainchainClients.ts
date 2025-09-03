@@ -1,9 +1,12 @@
 import { type ArgonClient } from '@argonprotocol/mainchain';
 import { wrapApi } from './ClientWrapper.js';
-import type { MainchainClient } from './Mainchain.js';
 import { ApiPromise, WsProvider } from '@polkadot/api';
 
 export class MainchainClients {
+  public get prunedClientOrArchivePromise(): Promise<ArgonClient> {
+    return this.prunedClientPromise ?? this.archiveClientPromise;
+  }
+
   archiveUrl: string;
   archiveClientPromise: Promise<ArgonClient>;
 
@@ -55,7 +58,7 @@ export class MainchainClients {
   }
 }
 
-async function getMainchainClientOrThrow(host: string): Promise<MainchainClient> {
+async function getMainchainClientOrThrow(host: string): Promise<ArgonClient> {
   const provider = new WsProvider(host);
   return (await ApiPromise.create({ provider, noInitWarn: true, throwOnConnect: true })) as unknown as ArgonClient;
 }

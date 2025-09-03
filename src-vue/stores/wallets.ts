@@ -1,7 +1,7 @@
 import * as Vue from 'vue';
 import { defineStore } from 'pinia';
 import { ask as askDialog } from '@tauri-apps/plugin-dialog';
-import { getMainchain } from './mainchain.ts';
+import { getMainchainClients, getMining } from './mainchain.ts';
 import handleUnknownFatalError from './helpers/handleUnknownFatalError.ts';
 import { useConfig } from './config.ts';
 import { createDeferred } from '../lib/Utils.ts';
@@ -95,7 +95,7 @@ export const useWallets = defineStore('wallets', () => {
 
   //////////////////////////////////////////////////////////////////////////////
 
-  const walletBalances = new WalletBalances(getMainchain());
+  const walletBalances = new WalletBalances(getMainchainClients());
   walletBalances.onBalanceChange = () => {
     totalWalletMicrogons.value = walletBalances.totalWalletMicrogons;
     totalWalletMicronots.value = walletBalances.totalWalletMicronots;

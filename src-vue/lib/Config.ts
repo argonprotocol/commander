@@ -24,7 +24,7 @@ import { CurrencyKey } from './Currency';
 import { bip39 } from '@argonprotocol/bitcoin';
 import { getUserJurisdiction } from './Countries';
 import ISecurity from '../interfaces/ISecurity';
-import { getMainchain } from '../stores/mainchain';
+import { getMainchainClients, getMining } from '../stores/mainchain';
 import { WalletBalances } from './WalletBalances';
 import { SECURITY } from './Env.ts';
 
@@ -549,7 +549,7 @@ export class Config {
     stringifiedData[dbFields.miningAccountAddress] = JsonExt.stringify(miningAccountAddress, 2);
     fieldsToSave.add(dbFields.miningAccountAddress);
 
-    const walletBalances = new WalletBalances(getMainchain());
+    const walletBalances = new WalletBalances(getMainchainClients());
     await walletBalances.load({ miningAccountAddress });
     await walletBalances.updateBalances();
 
@@ -563,7 +563,7 @@ export class Config {
   }
 
   private async _bootupFromMiningAccountPreviousHistory() {
-    const walletBalances = new WalletBalances(getMainchain());
+    const walletBalances = new WalletBalances(getMainchainClients());
     await walletBalances.load({ miningAccountAddress: this.miningAccount.address });
     walletBalances.onLoadHistoryProgress = (loadPct: number) => {
       this._miningAccountPreviousHistoryLoadPct = loadPct;

@@ -1,4 +1,4 @@
-import { Mainchain, MainchainClient, Accountset, parseSubaccountRange } from '@argonprotocol/commander-core';
+import { Accountset, ArgonClient, MainchainClients, parseSubaccountRange } from '@argonprotocol/commander-core';
 import { FrameSystemAccountInfo, KeyringPair, PalletBalancesAccountData } from '@argonprotocol/mainchain';
 import { createDeferred } from './Utils';
 import {
@@ -6,6 +6,7 @@ import {
   IMiningAccountPreviousHistoryRecord,
   IMiningAccountPreviousHistorySeat,
 } from '../interfaces/IConfig';
+import { FrameIterator } from '@argonprotocol/commander-core/src/FrameIterator.ts';
 
 export interface IWallet {
   address: string;
@@ -15,7 +16,7 @@ export interface IWallet {
 }
 
 export class WalletBalances {
-  private mainchain!: Mainchain;
+  private clients: MainchainClients;
   private subscriptions: VoidFunction[] = [];
   private deferredLoading = createDeferred<void>(false);
 
@@ -39,8 +40,8 @@ export class WalletBalances {
   public totalWalletMicrogons: bigint = 0n;
   public totalWalletMicronots: bigint = 0n;
 
-  constructor(mainchain: Mainchain) {
-    this.mainchain = mainchain;
+  constructor(mainchainClients: MainchainClients) {
+    this.clients = mainchainClients;
   }
 
   public async load(accountData: { miningAccountAddress?: string; vaultingAccountAddress?: string }) {
@@ -79,7 +80,7 @@ export class WalletBalances {
     const walletsToSubscribe = [this.miningWallet, this.vaultingWallet].filter(x => x.address);
 
     for (const wallet of walletsToSubscribe) {
-      const client = await this.mainchain.getClient(true);
+      const client = await this.clients.prunedClientOrArchivePromise;
       const [subMicrogon, subMicronot] = await Promise.all([
         client.query.system.account(wallet.address, result => {
           this.handleMicrogonBalanceChange(result, wallet);
@@ -95,7 +96,7 @@ export class WalletBalances {
   public async loadHistory(miningAccount: KeyringPair): Promise<IMiningAccountPreviousHistoryRecord[]> {
     await this.deferredLoading.promise;
 
-    const liveClient = await this.mainchain.prunedClientOrArchivePromise;
+    const liveClient = await this.clients.prunedClientOrArchivePromise;
     const accountSubaccounts = Accountset.getSubaccounts(miningAccount, parseSubaccountRange('0-99')!);
 
     const currentFrameBids: IMiningAccountPreviousHistoryBid[] = [];
@@ -116,7 +117,7 @@ export class WalletBalances {
       });
     }
 
-    await this.mainchain.forEachFrame(true, async (frameId, api, _meta, _abortController) => {
+    await new FrameIterator(this.clients, true).forEachFrame(async (frameId, api, _meta, _abortController) => {
       Object.assign(seatsByFrameId, await this.fetchSeatData(api, accountSubaccounts));
       const framesProcessed = latestFrameId - frameId;
       const framesToProcess = latestFrameId - earliestPossibleFrameId;
@@ -142,7 +143,7 @@ export class WalletBalances {
   }
 
   private async fetchSeatData(
-    api: MainchainClient,
+    api: ArgonClient,
     accountSubaccounts: Record<string, any>,
   ): Promise<Record<number, IMiningAccountPreviousHistorySeat[]>> {
     const minersByCohort = await api.query.miningSlot.minersByCohort.entries();
@@ -169,13 +170,13 @@ export class WalletBalances {
   }
 
   private async loadMicrogonBalance(wallet: IWallet) {
-    const client = await this.mainchain.prunedClientOrArchivePromise;
+    const client = await this.clients.prunedClientOrArchivePromise;
     const result = await client.query.system.account(wallet.address);
     this.handleMicrogonBalanceChange(result, wallet);
   }
 
   private async loadMicronotBalance(wallet: IWallet) {
-    const client = await this.mainchain.prunedClientOrArchivePromise;
+    const client = await this.clients.prunedClientOrArchivePromise;
     const result = await client.query.ownership.account(wallet.address);
     this.handleMicronotBalanceChange(result, wallet);
   }

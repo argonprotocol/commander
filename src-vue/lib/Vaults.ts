@@ -1,13 +1,14 @@
 import { BitcoinLocks, type PalletVaultsVaultFrameRevenue, Vault } from '@argonprotocol/mainchain';
-import { JsonExt, Mainchain } from '@argonprotocol/commander-core';
+import { bigNumberToBigInt, FrameIterator, JsonExt, MainchainClients } from '@argonprotocol/commander-core';
 import { BaseDirectory, readTextFile, rename, writeTextFile } from '@tauri-apps/plugin-fs';
-import { getMainchain, getMainchainClient } from '../stores/mainchain.ts';
+import { getMainchainClient, getMainchainClients, getMining } from '../stores/mainchain.ts';
 import { IBitcoinLockRecord } from './db/BitcoinLocksTable.ts';
 import { convertBigIntStringToNumber, createDeferred, IDeferred } from './Utils.ts';
 import { IAllVaultStats, IVaultFrameStats } from '../interfaces/IVaultStats.ts';
 import mainnetVaultRevenueHistory from '../data/vaultRevenue.mainnet.json';
 import testnetVaultRevenueHistory from '../data/vaultRevenue.testnet.json';
 import { NETWORK_NAME } from './Env.ts';
+import BigNumber from 'bignumber.js';
 
 const REVENUE_STATS_FILE = `${NETWORK_NAME}/vaultRevenue.json`;
 
@@ -94,10 +95,10 @@ export class Vaults {
     }
   }
 
-  public async refreshRevenue(mainchain?: Mainchain): Promise<IAllVaultStats> {
+  public async refreshRevenue(clients?: MainchainClients): Promise<IAllVaultStats> {
     await this.load();
-    mainchain ??= getMainchain();
-    const client = await mainchain.prunedClientOrArchivePromise;
+    clients ??= getMainchainClients();
+    const client = await clients.prunedClientOrArchivePromise;
 
     const revenue = this.stats ?? { synchedToFrame: 0, vaultsById: {} };
     const oldestFrameToGet = revenue.synchedToFrame;
@@ -105,7 +106,7 @@ export class Vaults {
     console.log('Synching vault revenue stats back to frame ', oldestFrameToGet);
 
     const currentFrameId = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
-    await mainchain.forEachFrame(false, async (justEndedFrameId, api, meta, abortController) => {
+    await new FrameIterator(clients, false).forEachFrame(async (justEndedFrameId, api, meta, abortController) => {
       if (meta.specVersion < 129) {
         abortController.abort();
         return;
@@ -332,5 +333,37 @@ export class Vaults {
       };
     }
     return stats;
+  }
+
+  public static async getLiquidityPoolPayout(
+    clients: MainchainClients,
+  ): Promise<{ totalPoolRewards: bigint; totalActivatedCapital: bigint }> {
+    const client = await (clients.prunedClientPromise ?? clients.archiveClientPromise);
+    const currentFrameId = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
+    const minersAtFrame = await client.query.miningSlot.minersByCohort(currentFrameId);
+    const vaultPools = await client.query.liquidityPools.vaultPoolsByFrame(currentFrameId);
+    let totalMicrogonsBid = 0n;
+    let totalActivatedCapital = 0n;
+    for (const miner of minersAtFrame) {
+      totalMicrogonsBid += miner.bid.toBigInt();
+    }
+    console.log('Liquidity bid pool at current frame', { totalMicrogonsBid, frameId: currentFrameId });
+    for (const [_vaultId, entry] of vaultPools) {
+      console.log('Capital activated', entry.toJSON());
+      for (const [_, balance] of entry.contributorBalances) {
+        totalActivatedCapital = balance.toBigInt();
+      }
+      if (!entry.distributedProfits.isSome) {
+        totalActivatedCapital -= entry.distributedProfits.value.toBigInt();
+      }
+    }
+
+    const totalPoolRewardsBn = BigNumber(totalMicrogonsBid).multipliedBy(0.8);
+    const totalPoolRewards = bigNumberToBigInt(totalPoolRewardsBn);
+
+    return {
+      totalPoolRewards, //: 100_000 * MICROGONS_PER_ARGON,
+      totalActivatedCapital, //: 998_000 * MICROGONS_PER_ARGON,
+    };
   }
 }

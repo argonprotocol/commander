@@ -3,7 +3,7 @@ import { Db } from './Db';
 import { BotFetch } from './BotFetch';
 import { type IBidsFile, type IBotState, type IBotStateStarting } from '@argonprotocol/commander-bot';
 import { MiningFrames, TICKS_PER_COHORT } from '@argonprotocol/commander-core';
-import { getMainchain } from '../stores/mainchain';
+import { getMining } from '../stores/mainchain';
 import { BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors';
 import { IBotEmitter } from './Bot';
 import Installer from './Installer';
@@ -39,7 +39,7 @@ export class BotSyncer {
 
   private isSyncingThePast: boolean = false;
 
-  private mainchain = getMainchain();
+  private mainchain = getMining();
 
   private bidsFileCacheByActivationFrameId: Record<number, [number, IBidsFile]> = {};
   private lastModifiedDate: Date | null = null;

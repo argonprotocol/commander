@@ -83,7 +83,7 @@ export class MiningFrames {
     return Math.floor(ticksSinceSlotOne / ticksBetweenFrames);
   }
 
-  private static getConfig(): IMiningFrameConfig {
+  public static getConfig(): IMiningFrameConfig {
     if (!this.networkName) {
       throw new Error(`Network name must be defined prior to loading configs`);
     }

@@ -2,8 +2,8 @@ import { type IBidderParams } from './IBidderParams.js';
 import { type IBiddingRules, SeatGoalType } from './IBiddingRules.js';
 import BiddingCalculator from './BiddingCalculator.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
-import { Mainchain } from './Mainchain.js';
 import type { MainchainClients } from './MainchainClients.js';
+import { Mining } from './Mining.js';
 
 export default async function createBidderParams(
   _cohortId: number,
@@ -11,9 +11,9 @@ export default async function createBidderParams(
   biddingRules: IBiddingRules,
   accruedEarnings: bigint,
 ): Promise<IBidderParams> {
-  const mainchain = new Mainchain(mainchainClients);
+  const mining = new Mining(mainchainClients);
 
-  const calculatorData = new BiddingCalculatorData(mainchain);
+  const calculatorData = new BiddingCalculatorData(mining);
   const calculator = new BiddingCalculator(calculatorData, biddingRules);
   await calculator.isInitializedPromise;
 

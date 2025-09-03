@@ -13,7 +13,7 @@ import {
 } from '@argonprotocol/mainchain';
 import { BitcoinNetwork, CosignScript, getBitcoinNetworkFromApi, getChildXpriv, HDKey } from '@argonprotocol/bitcoin';
 import { Db } from './Db.ts';
-import { getMainchain, getMainchainClient } from '../stores/mainchain.ts';
+import { getMining, getMainchainClient } from '../stores/mainchain.ts';
 import { createDeferred, IDeferred } from './Utils.ts';
 import { IVaultRecord, VaultsTable } from './db/VaultsTable.ts';
 import { IVaultingRules } from '../interfaces/IVaultingRules.ts';
@@ -158,7 +158,7 @@ export class MyVault {
   }
 
   private async updateCollectDueDate(lastCollectFrameId?: number) {
-    lastCollectFrameId ??= await getMainchain().getCurrentFrameId();
+    lastCollectFrameId ??= await getMining().getCurrentFrameId();
 
     const nextCollectDue = lastCollectFrameId + this.#configs!.timeToCollectFrames;
     this.data.nextCollectDueDate = MiningFrames.frameToDateRange(nextCollectDue)[0].getTime();

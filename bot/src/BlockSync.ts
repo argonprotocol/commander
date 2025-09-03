@@ -11,9 +11,10 @@ import {
 import {
   AccountMiners,
   type Accountset,
-  Mainchain,
   MainchainClients,
+  Mining,
   MiningFrames,
+  PriceIndex,
 } from '@argonprotocol/commander-core';
 import { type Storage } from './Storage.ts';
 import type { IBotState, IBotStateFile, IBotSyncStatus } from './interfaces/IBotStateFile.ts';
@@ -49,13 +50,14 @@ export class BlockSync {
 
   private unsubscribe?: () => void;
   private isStopping: boolean = false;
-  private mainchain!: Mainchain;
+  private mining!: Mining;
   private lastExchangeRateDate?: Date;
   private lastExchangeRateFrameId?: number;
   private tickDurationMillis!: number;
   private latestBestBlockHeader?: Header;
   private localClient!: ArgonClient;
   private archiveClient!: ArgonClient;
+  private priceIndex: PriceIndex;
 
   constructor(
     public bot: IBotSyncStatus,
@@ -67,7 +69,8 @@ export class BlockSync {
     this.scheduleNext = this.scheduleNext.bind(this);
     this.botStateFile = this.storage.botStateFile();
     this.blockSyncFile = this.storage.botBlockSyncFile();
-    this.mainchain = new Mainchain(this.mainchainClients);
+    this.mining = new Mining(this.mainchainClients);
+    this.priceIndex = new PriceIndex(this.mainchainClients);
   }
 
   async load() {
@@ -388,7 +391,7 @@ export class BlockSync {
       if (!checkedExchangeRateThisFrame || !checkedExchangeRateThisHour) {
         this.lastExchangeRateDate = new Date();
         this.lastExchangeRateFrameId = currentFrameId;
-        const microgonExchangeRateTo = await this.mainchain.fetchMicrogonExchangeRatesTo(api);
+        const microgonExchangeRateTo = await this.priceIndex.fetchMicrogonExchangeRatesTo(api);
         x.microgonToUsd.push(microgonExchangeRateTo.USD);
         x.microgonToBtc.push(microgonExchangeRateTo.BTC);
         x.microgonToArgonot.push(microgonExchangeRateTo.ARGNOT);
@@ -500,7 +503,7 @@ export class BlockSync {
             x.micronotsStakedPerSeat = await api.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
           }
           if (x.microgonsToBeMinedPerBlock === 0n) {
-            x.microgonsToBeMinedPerBlock = await this.mainchain.getMicrogonsPerBlockForMiner(api);
+            x.microgonsToBeMinedPerBlock = await this.mining.getMicrogonsPerBlockForMiner(api);
           }
 
           let bidPosition = 0;
@@ -536,7 +539,7 @@ export class BlockSync {
         x.micronotsStakedPerSeat = await api.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
       }
       if (x.microgonsToBeMinedPerBlock === 0n) {
-        x.microgonsToBeMinedPerBlock = await this.mainchain.getMicrogonsPerBlockForMiner(api);
+        x.microgonsToBeMinedPerBlock = await this.mining.getMicrogonsPerBlockForMiner(api);
       }
       x.biddingFrameTickRange = this.currentFrameTickRange;
       x.lastBlockNumber = blockNumber;
