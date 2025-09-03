@@ -279,6 +279,8 @@ async function launchMiningBot() {
   }
   isLaunchingMiningBot.value = true;
   config.isMinerReadyToInstall = true;
+  // in case the entry was skipped
+  config.isPreparingMinerSetup = true;
   await config.save();
   await installer.run();
   isLaunchingMiningBot.value = false;
