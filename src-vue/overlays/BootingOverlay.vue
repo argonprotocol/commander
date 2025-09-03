@@ -79,7 +79,6 @@ const draggable = Vue.reactive(new Draggable());
 
 const syncErrorType = Vue.ref<string | null>(null);
 const toRestore = localStorage.getItem('ConfigRestore');
-localStorage.removeItem('ConfigRestore');
 
 async function applyRestoredServer(details: string) {
   try {
@@ -87,7 +86,7 @@ async function applyRestoredServer(details: string) {
     for (const key of Object.keys(restoreData) as (keyof IConfig)[]) {
       let value = restoreData[key] as any;
       // can't set this since it's readonly
-      if (key == 'version') {
+      if (key === 'version') {
         continue;
       }
       if (key === 'serverDetails') {
@@ -108,7 +107,10 @@ async function applyRestoredServer(details: string) {
 }
 
 if (toRestore) {
-  void applyRestoredServer(toRestore);
+  // only clear out after finished
+  applyRestoredServer(toRestore).finally(() => {
+    localStorage.removeItem('ConfigRestore');
+  });
 }
 async function retry() {
   isRetrying.value = true;
