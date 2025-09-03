@@ -412,7 +412,7 @@ function calculateMicronotsRequired(): bigint {
   if (rules.value?.seatGoalType === SeatGoalType.Max) {
     possibleSeats = Math.min(possibleSeats, rules.value.seatGoalCount);
   }
-  possibleSeats = Math.min(possibleSeats, calculatorData.miningSeatCount);
+  possibleSeats = Math.min(possibleSeats, calculatorData.maxPossibleMiningSeatCount);
 
   const totalMicronotsRequired = BigInt(possibleSeats) * calculatorData.micronotsRequiredForBid;
 
@@ -476,7 +476,7 @@ function updateAPYs() {
   const probableMaxSeatsBn = BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculator.minimumBidAmount);
   probableMaxSeats.value = Math.min(
     probableMaxSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(),
-    calculatorData.miningSeatCount,
+    calculatorData.maxPossibleMiningSeatCount,
   );
 
   const slowGrowthEarnings = BigInt(probableMinSeats.value) * calculator.slowGrowthRewards;

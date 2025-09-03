@@ -231,6 +231,10 @@ export class History {
           if (prevBidAmount !== bidMicrogons) {
             entry.previousMicrogonsPerSeat = prevBidAmount;
           }
+          if (prevBidAmount === bidMicrogons && prevBidIndex === i) {
+            // no change
+            continue;
+          }
           entry.previousBidPosition = prevBidIndex;
         }
         this.appendActivities({

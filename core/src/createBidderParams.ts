@@ -51,7 +51,7 @@ export class Helper {
   public async getMaxSeats() {
     await this.calculator.data.isInitializedPromise;
 
-    const maxSeats = this.calculator.data.miningSeatCount / 10;
+    const maxSeats = this.calculator.data.nextCohortSize;
 
     if (this.biddingRules.seatGoalType === SeatGoalType.Max) {
       return this.biddingRules.seatGoalCount || 0;

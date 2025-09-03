@@ -137,7 +137,7 @@ function updateAPYs() {
   const probableMaxSeatsBn = BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculator.minimumBidAmount);
   probableMaxSeats.value = Math.min(
     probableMaxSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(),
-    calculatorData.miningSeatCount,
+    calculatorData.maxPossibleMiningSeatCount,
   );
 
   const averageEarningsPerSeat = (calculator.slowGrowthRewards + calculator.fastGrowthRewards) / 2n;

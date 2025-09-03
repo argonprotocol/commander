@@ -27,7 +27,8 @@ export default class BiddingCalculatorData {
 
   public microgonExchangeRateTo: { USD: bigint; ARGNOT: bigint } = { USD: BigInt(0), ARGNOT: BigInt(0) };
 
-  public miningSeatCount: number = 0;
+  public maxPossibleMiningSeatCount: number = 0;
+  public nextCohortSize: number = 0;
 
   constructor(mainchain: Mainchain) {
     this.isInitializedPromise = this.initialize(mainchain);
@@ -38,7 +39,12 @@ export default class BiddingCalculatorData {
       const tickAtStartOfNextCohort = await mainchain.getTickAtStartOfNextCohort();
       const tickAtEndOfNextCohort = tickAtStartOfNextCohort + TICKS_PER_COHORT;
 
-      const miningSeatCount = await mainchain.getMiningSeatCount();
+      const activeMinersCount = await mainchain.getActiveMinersCount();
+      const nextCohortSize = await mainchain.getNextCohortSize();
+      this.nextCohortSize = nextCohortSize;
+      const retiringCohortSize = await mainchain.getRetiringCohortSize();
+      const miningSeatCount = activeMinersCount + nextCohortSize - retiringCohortSize;
+
       const previousDayWinningBids = await mainchain.fetchPreviousDayWinningBidAmounts();
       this.previousDayHighBid = previousDayWinningBids.length > 0 ? bigIntMax(...previousDayWinningBids) : 0n;
       this.previousDayLowBid = previousDayWinningBids.length > 0 ? bigIntMin(...previousDayWinningBids) : 0n;
@@ -52,14 +58,14 @@ export default class BiddingCalculatorData {
       this.microgonsInCirculation = await mainchain.fetchMicrogonsInCirculation();
       this.micronotsRequiredForBid = await mainchain.getMicronotsRequiredForBid();
 
-      const micronotsMinedDuringNextCohort = await mainchain.getMinimumBlockRewardsDuringTickRange(
+      const micronotsMinedDuringNextCohort = await mainchain.getMinimumMicronotsMinedDuringTickRange(
         tickAtStartOfNextCohort,
         tickAtEndOfNextCohort,
       );
       this.micronotsToMineThisSeat = micronotsMinedDuringNextCohort / BigInt(miningSeatCount);
 
       this.microgonExchangeRateTo = await mainchain.fetchMicrogonExchangeRatesTo();
-      this.miningSeatCount = miningSeatCount;
+      this.maxPossibleMiningSeatCount = miningSeatCount;
     } catch (e) {
       console.error('Error initializing BiddingCalculatorData', e);
       throw e;
@@ -67,25 +73,25 @@ export default class BiddingCalculatorData {
   }
 
   private async estimateBlockRewardsForFullYear(mainchain: Mainchain, currentRewardsPerBlock: bigint): Promise<bigint> {
-    // TODO: We need to improve this function to calculate the minimumRewardsPerBlock at the tick being analyzed in for loop
-    const intervalsPerYear = (365 * 1_440) / BLOCK_REWARD_INTERVAL;
+    const yearOfTicks = 365 * 1440;
     const currentTick = await mainchain.getCurrentTick();
-    const startingRewardsPerBlock = await mainchain.minimumBlockRewardsAtTick(currentTick);
-
+    const {
+      rewardsPerBlock: startingRewardsPerBlock,
+      amountToMinerPercent,
+      ticksSinceGenesis,
+    } = await mainchain.minimumBlockRewardsAtTick(currentTick);
     let totalRewards = 0n;
     let minimumRewardsPerBlock = startingRewardsPerBlock;
-    for (let i = 0; i < intervalsPerYear; i++) {
-      minimumRewardsPerBlock += BLOCK_REWARD_INCREASE_PER_INTERVAL;
-      minimumRewardsPerBlock = bigIntMin(minimumRewardsPerBlock, BLOCK_REWARD_MAX);
-      currentRewardsPerBlock = bigIntMax(minimumRewardsPerBlock, currentRewardsPerBlock);
-      totalRewards += currentRewardsPerBlock * BigInt(BLOCK_REWARD_INTERVAL);
+    for (let tick = 0; tick <= yearOfTicks; tick++) {
+      const elapsed = ticksSinceGenesis + tick;
+      if (elapsed % BLOCK_REWARD_INTERVAL === 0 && tick > 0) {
+        minimumRewardsPerBlock += BLOCK_REWARD_INCREASE_PER_INTERVAL;
+        minimumRewardsPerBlock = bigIntMin(minimumRewardsPerBlock, BLOCK_REWARD_MAX);
+        currentRewardsPerBlock = bigIntMax(minimumRewardsPerBlock, currentRewardsPerBlock);
+      }
+      totalRewards += currentRewardsPerBlock;
     }
 
-    const intervalsPerYearRemainder = intervalsPerYear % 1;
-    if (intervalsPerYearRemainder > 0) {
-      totalRewards += currentRewardsPerBlock * BigInt(Math.floor(BLOCK_REWARD_INTERVAL * intervalsPerYearRemainder));
-    }
-
-    return totalRewards;
+    return bigNumberToBigInt(amountToMinerPercent.times(totalRewards));
   }
 }

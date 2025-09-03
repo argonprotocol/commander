@@ -321,6 +321,7 @@ const currentFrame = Vue.ref<IDashboardFrameStats>({
   date: '',
   firstTick: 0,
   lastTick: 0,
+  allMinersCount: 0,
   seatCountActive: 0,
   seatCostTotalFramed: 0n,
   microgonToUsd: [0n],
@@ -498,7 +499,7 @@ function loadChartData() {
   }
 
   chartRef.value?.reloadData(items);
-  updateFrameSliderPos(items.length - 1);
+  updateFrameSliderPos(items.length - 1, false);
 }
 
 function startDrag(event: PointerEvent) {
@@ -547,12 +548,18 @@ function stopDrag(event: PointerEvent) {
   document.body.classList.remove('isResizing');
 }
 
-function updateFrameSliderPos(index: number) {
+let isUserNavigatingHistory = false;
+
+function updateFrameSliderPos(index: number, isUserAction = true) {
+  if (isUserNavigatingHistory && !isUserAction) return;
   index = Math.max(index || 0, 0);
   sliderFrameIndex.value = index;
+  // if back to latest frame, reset user chosen pos
+  isUserNavigatingHistory = index < stats.frames.length - 1;
 
   const item = stats.frames[index];
   if (!item) return;
+
   const pointPosition = chartRef.value?.getPointPosition(index);
 
   currentFrame.value = item;

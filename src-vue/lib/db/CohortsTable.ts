@@ -74,9 +74,7 @@ export class CohortsTable extends BaseTable {
         [],
       );
 
-      const framesExpectedBn = BigNumber(activeStats.cohortCount)
-        .multipliedBy(10)
-        .multipliedBy(activeStats.seatCountTotal);
+      const framesExpectedBn = BigNumber(activeStats.seatCountTotal).multipliedBy(10);
       const framesCompleted = BigNumber(activeStats.accruedProgress).dividedBy(10).toNumber();
       const framesRemaining = framesExpectedBn.minus(framesCompleted).toNumber();
 
@@ -123,16 +121,26 @@ export class CohortsTable extends BaseTable {
     return convertSqliteBigInts(records, this.bigIntFields);
   }
 
-  async insertOrUpdate(
-    id: number,
-    progress: number,
-    transactionFeesTotal: bigint,
-    micronotsStakedPerSeat: bigint,
-    microgonsBidPerSeat: bigint,
-    seatCountWon: number,
-    microgonsToBeMinedPerSeat: bigint,
-    micronotsToBeMinedPerSeat: bigint,
-  ): Promise<void> {
+  async insertOrUpdate(args: {
+    id: number;
+    progress: number;
+    transactionFeesTotal: bigint;
+    micronotsStakedPerSeat: bigint;
+    microgonsBidPerSeat: bigint;
+    seatCountWon: number;
+    microgonsToBeMinedPerSeat: bigint;
+    micronotsToBeMinedPerSeat: bigint;
+  }): Promise<void> {
+    const {
+      id,
+      progress,
+      transactionFeesTotal,
+      micronotsStakedPerSeat,
+      microgonsBidPerSeat,
+      seatCountWon,
+      microgonsToBeMinedPerSeat,
+      micronotsToBeMinedPerSeat,
+    } = args;
     await this.db.execute(
       `INSERT INTO Cohorts (
           id, 

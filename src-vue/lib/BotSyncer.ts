@@ -288,6 +288,8 @@ export class BotSyncer {
       frameId,
       frameProgress,
     );
+    const bidsFile = await this.fetchBidsFileFromCache({ cohortActivationFrameId: frameId });
+    const allMinersCount = bidsFile.allMinersCount;
 
     const yesterdaysFrameId = this.botState.currentFrameId - 1;
     const isProcessed = frameProgress === 100.0 && frameId < yesterdaysFrameId;
@@ -305,6 +307,7 @@ export class BotSyncer {
       microgonToBtc: earningsFile.microgonToBtc,
       microgonToArgonot: earningsFile.microgonToArgonot,
 
+      allMinersCount,
       seatCountActive,
       seatCostTotalFramed,
       blocksMinedTotal,
@@ -369,31 +372,32 @@ export class BotSyncer {
       const [cohortStartingTick] = MiningFrames.getTickRangeForFrame(cohortActivationFrameId);
       const cohortEndingTick = cohortStartingTick + TICKS_PER_COHORT;
       const framesCompleted = Math.min(this.botState.currentFrameId - cohortActivationFrameId, 10);
-      const miningSeatCount = BigInt(await this.mainchain.getMiningSeatCount());
+      const miningSeatCount = BigInt(bidsFile.allMinersCount);
       const progress = Math.min((framesCompleted * 100 + currentFrameProgress) / 10, 100);
       const micronotsStaked = bidsFile.micronotsStakedPerSeat * BigInt(bidsFile.seatCountWon);
 
       const microgonsToBeMinedDuringCohort = bidsFile.microgonsToBeMinedPerBlock * BigInt(TICKS_PER_COHORT);
-      const micronotsToBeMinedDuringCohort = await this.mainchain.getMinimumBlockRewardsDuringTickRange(
+      const micronotsToBeMinedDuringCohort = await this.mainchain.getMinimumMicronotsMinedDuringTickRange(
         cohortStartingTick,
         cohortEndingTick,
       );
+
       const microgonsToBeMinedPerSeat = microgonsToBeMinedDuringCohort / miningSeatCount;
       const micronotsToBeMinedPerSeat = micronotsToBeMinedDuringCohort / miningSeatCount;
       const transactionFeesTotal = Object.values(bidsFile.transactionFeesByBlock).reduce((acc, fee) => acc + fee, 0n);
       const microgonsBidPerSeat =
         bidsFile.seatCountWon > 0 ? bidsFile.microgonsBidTotal / BigInt(bidsFile.seatCountWon) : 0n;
 
-      await this.db.cohortsTable.insertOrUpdate(
-        cohortActivationFrameId,
+      await this.db.cohortsTable.insertOrUpdate({
+        id: cohortActivationFrameId,
         progress,
         transactionFeesTotal,
-        micronotsStaked,
+        micronotsStakedPerSeat: micronotsStaked,
         microgonsBidPerSeat,
-        bidsFile.seatCountWon,
+        seatCountWon: bidsFile.seatCountWon,
         microgonsToBeMinedPerSeat,
         micronotsToBeMinedPerSeat,
-      );
+      });
     } catch (e) {
       console.error('Error syncing cohort:', e);
       throw e;

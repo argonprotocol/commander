@@ -77,6 +77,7 @@ CREATE TABLE Frames (
   microgonToUsd TEXT NOT NULL DEFAULT '[]',
   microgonToBtc TEXT NOT NULL DEFAULT '[]',
   microgonToArgonot TEXT NOT NULL DEFAULT '[]',
+  allMinersCount INTEGER NOT NULL DEFAULT 0,
   seatCountActive INTEGER NOT NULL DEFAULT 0,
   seatCostTotalFramed INTEGER NOT NULL DEFAULT 0,
   blocksMinedTotal INTEGER NOT NULL DEFAULT 0,

@@ -485,6 +485,7 @@ export class BlockSync {
         const { frameId, newMiners } = event.data;
         const activationFrameIdOfNewCohort = frameId.toNumber();
         const biddingFrameIdOfNewCohort = activationFrameIdOfNewCohort - 1;
+        const activeMiners = await api.query.miningSlot.activeMinersCount().then(x => x.toNumber());
         const biddingFrameTickRange = MiningFrames.getTickRangeForFrame(biddingFrameIdOfNewCohort);
         const lastBidsFile = this.storage.bidsFile(biddingFrameIdOfNewCohort, activationFrameIdOfNewCohort);
         await lastBidsFile.mutate(async x => {
@@ -493,12 +494,13 @@ export class BlockSync {
           x.winningBids = [];
           x.biddingFrameTickRange = biddingFrameTickRange;
           x.lastBlockNumber = blockNumber;
+          x.allMinersCount = activeMiners;
 
           if (x.micronotsStakedPerSeat === 0n) {
             x.micronotsStakedPerSeat = await api.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
           }
-          if (x.microgonsToBeMinedPerBlock) {
-            x.microgonsToBeMinedPerBlock = await api.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
+          if (x.microgonsToBeMinedPerBlock === 0n) {
+            x.microgonsToBeMinedPerBlock = await this.mainchain.getMicrogonsPerBlockForMiner(api);
           }
 
           let bidPosition = 0;
@@ -533,8 +535,8 @@ export class BlockSync {
       if (x.micronotsStakedPerSeat === 0n) {
         x.micronotsStakedPerSeat = await api.query.miningSlot.argonotsPerMiningSeat().then(x => x.toBigInt());
       }
-      if (x.microgonsToBeMinedPerBlock) {
-        x.microgonsToBeMinedPerBlock = await api.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
+      if (x.microgonsToBeMinedPerBlock === 0n) {
+        x.microgonsToBeMinedPerBlock = await this.mainchain.getMicrogonsPerBlockForMiner(api);
       }
       x.biddingFrameTickRange = this.currentFrameTickRange;
       x.lastBlockNumber = blockNumber;

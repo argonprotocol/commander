@@ -102,6 +102,7 @@ export class Storage {
           biddingFrameTickRange: tickRange,
           lastBlockNumber: 0,
           seatCountWon: 0,
+          allMinersCount: 0,
           microgonsBidTotal: 0n,
           transactionFeesByBlock: {},
           micronotsStakedPerSeat: 0n,

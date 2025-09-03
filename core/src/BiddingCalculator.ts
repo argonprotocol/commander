@@ -270,7 +270,9 @@ export default class BiddingCalculator {
 
     const microgonsToMintThisEpochBn = BigNumber(microgonsInCirculation).multipliedBy(epochMultiplier - 1);
     const microgonsToMintThisSeatBn =
-      this.data.miningSeatCount === 0 ? BigNumber(0) : microgonsToMintThisEpochBn.dividedBy(this.data.miningSeatCount);
+      this.data.maxPossibleMiningSeatCount === 0
+        ? BigNumber(0)
+        : microgonsToMintThisEpochBn.dividedBy(this.data.maxPossibleMiningSeatCount);
     const microgonsToMintThisSeat = bigNumberToBigInt(microgonsToMintThisSeatBn);
 
     return microgonsToMintThisSeat;

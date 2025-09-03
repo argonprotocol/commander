@@ -76,6 +76,7 @@ export class FramesTable extends BaseTable {
     microgonToUsd: bigint[];
     microgonToBtc: bigint[];
     microgonToArgonot: bigint[];
+    allMinersCount: number;
     seatCountActive: number;
     seatCostTotalFramed: bigint;
     blocksMinedTotal: number;
@@ -96,6 +97,7 @@ export class FramesTable extends BaseTable {
       microgonToUsd,
       microgonToBtc,
       microgonToArgonot,
+      allMinersCount,
       seatCountActive,
       seatCostTotalFramed,
       blocksMinedTotal,
@@ -115,7 +117,8 @@ export class FramesTable extends BaseTable {
         lastBlockNumber = ?, 
         microgonToUsd = ?, 
         microgonToBtc = ?, 
-        microgonToArgonot = ?, 
+        microgonToArgonot = ?,
+        allMinersCount = ?,
         seatCountActive = ?, 
         seatCostTotalFramed = ?,
         blocksMinedTotal = ?,
@@ -135,6 +138,7 @@ export class FramesTable extends BaseTable {
         microgonToUsd,
         microgonToBtc,
         microgonToArgonot,
+        allMinersCount,
         seatCountActive,
         seatCostTotalFramed,
         blocksMinedTotal,
@@ -152,7 +156,7 @@ export class FramesTable extends BaseTable {
 
   async fetchLastYear(): Promise<Omit<IDashboardFrameStats, 'score'>[]> {
     const rawRecords = await this.db.select<any[]>(`SELECT 
-      id, firstTick, lastTick, microgonToUsd, microgonToArgonot, seatCountActive, seatCostTotalFramed, blocksMinedTotal, micronotsMinedTotal, microgonsMinedTotal, microgonsMintedTotal, progress
+      id, firstTick, lastTick, microgonToUsd, microgonToArgonot, allMinersCount, seatCountActive, seatCostTotalFramed, blocksMinedTotal, micronotsMinedTotal, microgonsMinedTotal, microgonsMintedTotal, progress
     FROM Frames ORDER BY id DESC LIMIT 365`);
 
     const records = convertFromSqliteFields<IDashboardFrameStats[]>(rawRecords, this.fieldTypes).map((x: any) => {
@@ -177,6 +181,7 @@ export class FramesTable extends BaseTable {
         date,
         firstTick: x.firstTick,
         lastTick: x.lastTick,
+        allMinersCount: x.allMinersCount,
         seatCountActive: x.seatCountActive,
         seatCostTotalFramed: x.seatCostTotalFramed,
         blocksMinedTotal: x.blocksMinedTotal,
@@ -209,6 +214,7 @@ export class FramesTable extends BaseTable {
         date: previousDay.format('YYYY-MM-DD'),
         firstTick: lastRecord.firstTick - 1_440,
         lastTick: lastRecord.lastTick - 1_440,
+        allMinersCount: 0,
         seatCountActive: 0,
         seatCostTotalFramed: 0n,
         microgonToUsd: [0n],

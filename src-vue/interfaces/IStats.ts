@@ -15,6 +15,7 @@ export interface IDashboardFrameStats {
   date: string;
   firstTick: number;
   lastTick: number;
+  allMinersCount: number;
   seatCountActive: number;
   seatCostTotalFramed: bigint;
   blocksMinedTotal: number;
