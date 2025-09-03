@@ -160,7 +160,7 @@ async function loadBlocks() {
     await fetchPromise;
   }
 
-  blocksSubscription = blockchainStore.subscribeToBlocks(newBlockData => {
+  blocksSubscription = await blockchainStore.subscribeToBlocks(newBlockData => {
     const blockExists = cachedBlocks.value.find(x => x.number === newBlockData.number);
     if (blockExists) return;
 
