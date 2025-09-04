@@ -24,6 +24,13 @@ export class VaultCalculator {
   }
 
   public calculateInternalAPY(utilization: 'Low' | 'High'): number {
+    const vaultRevenue = this.calculateInternalRevenue(utilization);
+    const vaultCost = this.rules.baseMicrogonCommitment;
+
+    return calculateAPY(vaultCost, vaultCost + vaultRevenue);
+  }
+
+  public calculateInternalRevenue(utilization: 'Low' | 'High'): bigint {
     const { profitSharingPct } = this.rules;
 
     const totalPoolCapital = this.calculateTotalPoolCapital(utilization);
@@ -45,10 +52,7 @@ export class VaultCalculator {
     const revenueFromInternalBn = BigNumber(totalPoolRevenue).multipliedBy(internalFactorBn);
     const revenueFromInternal = bigNumberToBigInt(revenueFromInternalBn);
 
-    const vaultCost = this.rules.baseMicrogonCommitment;
-    const vaultRevenue = revenueFromInternal + revenueFromExternal + internalBtcRevenue;
-
-    return calculateAPY(vaultCost, vaultCost + vaultRevenue);
+    return revenueFromInternal + revenueFromExternal + internalBtcRevenue;
   }
 
   public calculateExternalAPY(utilization: 'Low' | 'High'): number {
@@ -105,7 +109,7 @@ export class VaultCalculator {
     return appliedRevenueFromBtc;
   }
 
-  private calculateTotalPoolSpace(utilization: 'Low' | 'High'): bigint {
+  public calculateTotalPoolSpace(utilization: 'Low' | 'High'): bigint {
     // Ultimately the pool space is dependent on how much BTC is in the vault
     const btcUtilizedInMicrogons = this.calculateBtcUtilizedInMicrogons(utilization);
 

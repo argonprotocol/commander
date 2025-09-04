@@ -11,73 +11,25 @@
       class="min-w-20 font-mono text-sm flex flex-row w-full text-left py-[2px] border border-slate-700/50 rounded-md text-gray-800 cursor-text"
     >
       <span class="select-none pl-[10px] py-[1px]">{{ prefix }}</span>
-      <div
-        :contenteditable="!props.disabled"
-        ref="inputElem"
-        @focus="handleFocus"
-        @blur="handleBlur"
-        @input="handleInput"
-        @beforeinput="handleBeforeInput($event as InputEvent)"
-        @paste="handlePaste($event as ClipboardEvent)"
-        @keydown="handleKeyDown($event)"
-        :class="[props.disabled ? 'opacity-70' : '']"
-        class="inline-block w-auto focus:outline-none py-[1px]"
-      ></div>
+      <div class="relative inline-block w-auto whitespace-nowrap">
+        <div :class="[!inputValueInserted || currentInputValueFormatted.startsWith(inputValueInserted) ? 'opacity-50' : 'opacity-0']" class="inline-block w-auto py-[1px] min-w-1">{{ currentInputValueFormatted }}</div>
+        <div
+          :contenteditable="!props.disabled"
+          ref="inputElem"
+          @focus="handleFocus"
+          @blur="handleBlur"
+          @input="handleInput"
+          @beforeinput="handleBeforeInput($event as InputEvent)"
+          @paste="handlePaste($event as ClipboardEvent)"
+          @keydown.capture="handleKeyDown($event)"
+          :class="[props.disabled ? 'opacity-70' : '']"
+          class="absolute top-0 right-0 w-full h-full focus:outline-none py-[1px] min-w-1"
+        ></div>
+      </div>
       <span Suffix :class="[props.disabled ? 'pointer-events-none' : '', suffix[0] === ' ' ? 'pl-[6px]' : 'pl-[2px]']" class="grow opacity-50 select-none pr-2 min-w-4 relative cursor-text py-[1px]">
         <span v-if="suffix" class="inline-block">{{ suffix }}</span>
         <span @click="moveCursorToEnd" @dblclick="selectAllText" class="absolute top-0 left-0 w-full h-full" />
       </span>
-
-      <Menu v-if="props.options.length > 0">
-        <MenuButton
-          as="button"
-          @click="toggleMenu"
-          :class="[showMenu ? 'text-gray-900' : 'text-gray-400']"
-          class="mr-2 text-sm font-semibold focus:outline-none cursor-pointer hover:text-gray-900"
-        >
-          <LightBulbIcon class="size-[18px] text-inherit" />
-        </MenuButton>
-        <transition
-          leave-active-class="transition ease-in duration-100"
-          leave-from-class="opacity-100"
-          leave-to-class="opacity-0"
-        >
-          <MenuItems
-            v-if="showMenu"
-            class="absolute top-full cursor-default -translate-y-1 z-20 right-0 h-auto max-h-80 w-auto max-w-100 bg-argon-menu-bg border border-gray-500/40 rounded-md px-0.5 py-0.5 shadow-md focus:outline-none"
-          >
-            <div class="absolute -top-[9px] right-[29.5px] w-[20px] h-[9px] overflow-hidden pointer-events-none">
-              <div
-                class="relative top-[5px] left-[5px] w-[15px] h-[15px] rotate-45 bg-slate-50 ring-1 ring-gray-900/20"
-              ></div>
-            </div>
-            <div class="flex flex-col w-full h-full overflow-y-auto">
-              <MenuItem
-                v-for="option of props.options"
-                v-slot="{ active: isActive }"
-                :value="option.value"
-                @click.stop="selectItem(option)"
-                :class="option.description ? 'border-b border-gray-500/20 last:border-b-0' : ''"
-                class="text-sm font-mono text-left font-bold text-gray-800 py-1 first:rounded-t last:rounded-b"
-              >
-                <div :class="[isActive ? 'bg-argon-button text-white' : '']" class="flex flex-col pr-3 pl-2 py-0 cursor-pointer">
-                  <div class="flex flex-row justify-between items-center">
-                    <div class="whitespace-nowrap grow pr-3">
-                      {{ option.title || numeral(option.value).format('0,0') }}
-                    </div>
-                    <div v-if="option.value !== undefined" class="opacity-70 font-light relative">
-                      {{ formatFn(option.value) }}
-                    </div>
-                  </div>
-                  <div v-if="option.description" class="font-sans opacity-50 font-light">
-                    {{ option.description }}
-                  </div>
-                </div>
-              </MenuItem>
-            </div>
-          </MenuItems>
-        </transition>
-      </Menu>
 
       <div NumArrows v-if="!props.disabled" class="flex flex-col mr-2">
         <NumArrow NumArrowUp
@@ -102,20 +54,14 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import BigNumber from 'bignumber.js';
-import { LightBulbIcon } from '@heroicons/vue/24/outline';
-import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
 import NumArrow from '../assets/num-arrow.svg?component';
-import { useCurrency } from '../stores/currency';
 import numeral from '../lib/numeral';
-
-const currency = useCurrency();
 
 const props = withDefaults(
   defineProps<{
     modelValue: number;
     max?: number;
     min?: number;
-    options?: any[];
     dragBy?: number;
     dragByMin?: number;
     disabled?: boolean;
@@ -126,7 +72,6 @@ const props = withDefaults(
     format?: 'percent' | 'number' | 'minutes';
   }>(),
   {
-    options: () => [],
     dragBy: 1,
     dragByMin: 0.01,
     prefix: '',
@@ -141,11 +86,13 @@ const props = withDefaults(
 let currentInputValue = props.modelValue;
 let lastValueBeforeMinIncrease = currentInputValue;
 
+const currentInputValueFormatted = Vue.ref(formatFn(currentInputValue));
+const inputValueInserted = Vue.ref('');
+
 const emit = defineEmits<{
   (e: 'update:modelValue', value: number): void;
 }>();
 
-const showMenu = Vue.ref(false);
 const $el = Vue.ref<HTMLElement | null>(null);
 const inputElem = Vue.ref<HTMLInputElement | null>(null);
 const hasFocus = Vue.ref(false);
@@ -216,11 +163,15 @@ function insertIntoInputElem(rawValue: number) {
   const hasFocus = document.activeElement === inputElem.value;
   const oldValue = inputElem.value.textContent || '';
   const newValue = formatFn(rawValue);
+
+  inputValueInserted.value = newValue;
+  currentInputValueFormatted.value = formatFn(currentInputValue);
+
   if (oldValue === newValue) {
     return;
   }
 
-  const oldCaretPosition = hasFocus ? getCaretPosition() : 0;
+  const oldCaretPosition = hasFocus ? getCaretPosition().end : 0;
 
   if (hasFocus) {
     // Use execCommand to preserve undo/redo stack
@@ -233,7 +184,7 @@ function insertIntoInputElem(rawValue: number) {
       selection.addRange(range);
 
       // Insert the new text (this creates undo history)
-      const result = document.execCommand('insertText', false, newValue);
+      document.execCommand('insertText', false, newValue);
 
       // Set caret position
       let newCaretPosition;
@@ -313,13 +264,11 @@ function handleFocus() {
 
 function handleBlur() {
   const activeElement = document.activeElement;
-  if (showMenu.value) return;
-  if (!activeElement || !$el.value?.contains(activeElement)) {
+  const activeElementIsOther = !activeElement || !$el.value?.contains(activeElement);
+  if (activeElementIsOther) {
     hasFocus.value = false;
     const boundedInputValue = calculateBoundedInputValue(currentInputValue);
-    if (boundedInputValue !== currentInputValue) {
-      updateInputValue(boundedInputValue);
-    }
+    updateInputValue(boundedInputValue);
   }
 }
 
@@ -450,12 +399,7 @@ function emitDrag(event: PointerEvent) {
     }
 
     // Apply min/max constraints
-    if (props.min !== undefined && newValue < props.min) {
-      newValue = props.min;
-    }
-    if (props.max !== undefined && newValue > props.max) {
-      newValue = props.max;
-    }
+    newValue = calculateBoundedInputValue(newValue);
 
     // Update visual feedback
     if (newValue > currentInputValue) {
@@ -508,21 +452,6 @@ function handlePointerUp(event: PointerEvent) {
   setTimeout(() => {
     isDragging = false;
   }, 100);
-}
-
-function selectItem(item: any) {
-  showMenu.value = false;
-  if (item.value !== undefined) {
-    updateInputValue(item.value, true);
-  }
-}
-
-function toggleMenu() {
-  if (isDragging) {
-    return;
-  }
-  showMenu.value = !showMenu.value;
-  setTimeout(() => $el.value?.focus(), 0);
 }
 
 function handlePaste(event: ClipboardEvent) {
@@ -604,7 +533,8 @@ function handlePaste(event: ClipboardEvent) {
 
 function handleBeforeInput(event: InputEvent) {
   if (event.inputType === 'insertText') {
-    const caretPosition = getCaretPosition();
+    const caretPosition = getCaretPosition().start;
+
     const char = event.data;
     if (caretPosition === 0 && char === '-') {
       return;
@@ -616,21 +546,37 @@ function handleBeforeInput(event: InputEvent) {
 
 function handleInput() {
   const currentText = inputElem.value?.textContent || '';
-  const numericValue = Number(currentText.replace(/,/g, ''));
-  if (!isNaN(numericValue)) {
-    updateInputValue(numericValue, true);
+  const inputValue = Number(currentText.replace(/,/g, ''));
+  if (isNaN(inputValue)) return;
+
+  const boundedInputValue = calculateBoundedInputValue(inputValue);
+  currentInputValue = boundedInputValue;
+  currentInputValueFormatted.value = formatFn(currentInputValue);
+
+  if (inputValue === boundedInputValue) {
+    updateInputValue(boundedInputValue, true);
+  } else {
+    inputValueInserted.value = currentText;
   }
 }
 
-function getCaretPosition() {
+function getCaretPosition(): { start: number; end: number } {
   const selection = window.getSelection();
-  if (!selection || !selection.anchorNode || !inputElem.value) return 0;
+  if (!selection || !selection.anchorNode || !inputElem.value) return { start: 0, end: 0 };
 
   const range = selection.getRangeAt(0);
   const preCaretRange = range.cloneRange();
   preCaretRange.selectNodeContents(inputElem.value);
+
+  // Calculate start position
+  preCaretRange.setEnd(range.startContainer, range.startOffset);
+  const start = preCaretRange.toString().length;
+
+  // Calculate end position
   preCaretRange.setEnd(range.endContainer, range.endOffset);
-  return preCaretRange.toString().length;
+  const end = preCaretRange.toString().length;
+
+  return { start, end };
 }
 
 function setCaretPosition(position: number) {
@@ -732,9 +678,8 @@ function handleKeyDown(event: KeyboardEvent) {
   const target = event.target as HTMLElement;
   if (!target) return;
 
-  // Allow undo/redo shortcuts to work
   if ((event.metaKey || event.ctrlKey) && (event.key === 'z' || event.key === 'y')) {
-    // Don't prevent default - let the browser handle it
+    // Allow undo/redo shortcuts to work
     return;
   }
 
@@ -746,6 +691,10 @@ function handleKeyDown(event: KeyboardEvent) {
     incrementValue();
   } else if (event.key === 'Enter') {
     event.preventDefault();
+  } else if (event.key === 'Escape') {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    inputElem.value?.blur();
   }
 }
 
@@ -788,5 +737,22 @@ Vue.watch(
 
 Vue.onMounted(() => {
   insertIntoInputElem(currentInputValue);
+});
+
+// Add click outside handler
+Vue.onMounted(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    const isOutsideClick = $el.value && !$el.value.contains(event.target as Node);
+    if (isOutsideClick) {
+      inputElem.value?.blur();
+    }
+  };
+
+  document.addEventListener('mousedown', handleClickOutside);
+
+  // Cleanup on unmount
+  Vue.onUnmounted(() => {
+    document.removeEventListener('mousedown', handleClickOutside);
+  });
 });
 </script>
