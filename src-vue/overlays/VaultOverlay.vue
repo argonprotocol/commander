@@ -248,7 +248,6 @@ import * as Vue from 'vue';
 import BigNumber from 'bignumber.js';
 import basicEmitter from '../emitters/basicEmitter';
 import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui';
-import Tooltip from '../components/Tooltip.vue';
 import { useConfig } from '../stores/config';
 import { getMainchainClients, getMining } from '../stores/mainchain';
 import { useCurrency } from '../stores/currency';
