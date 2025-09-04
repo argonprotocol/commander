@@ -27,7 +27,7 @@ type IBasicEmitter = {
   openAboutOverlay: void;
   openComplianceOverlay: void;
   openTroubleshootingOverlay: {
-    screen: 'server-diagnostics' | 'data-and-log-files' | 'options-for-restart';
+    screen: 'server-diagnostics' | 'data-and-log-files' | 'options-for-restart' | 'overview';
   };
   openImportingOverlay: { importer: Importer; dataRaw: string };
   openCheckForAppUpdatesOverlay: void;

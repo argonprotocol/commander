@@ -74,9 +74,46 @@
               <header>Jurisdictional Compliance</header>
             </DropdownMenuItem>
             <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
-            <DropdownMenuItem @click="() => takeTheTour()" :disabled="tour.isDisabled" class="pt-2 pb-1">
-              <header>Take the Tour</header>
-            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger class="relative py-2">
+                <ChevronLeftIcon class="absolute top-1/2 left-0.5 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                <header>Help</header>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent class="relative -top-1 min-w-50">
+                <div
+                  class="bg-argon-menu-bg flex shrink flex-col rounded p-1 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
+                >
+                  <DropdownMenuItem class="py-2" @click="() => openTroubleshooting()">
+                    <header>Troubleshooting</header>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
+                  <DropdownMenuItem class="py-2" @click="() => void openLink('https://argon.network/docs')">
+                    <header>Documentation</header>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem class="py-2" @click="() => void openLink('https://argon.network/faq')">
+                    <header>Frequently Asked Questions</header>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem class="py-2" @click="() => takeTheTour()" :disabled="tour.isDisabled">
+                    <header>Take the Welcome Tour</header>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
+                  <DropdownMenuItem class="py-2" @click="() => void openLink('https://discord.gg/xDwwDgCYr9')">
+                    <header>Discord User Community</header>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    class="py-2"
+                    @click="() => void openLink('https://github.com/argonprotocol/commander/issues')"
+                  >
+                    <header>GitHub Developer Community</header>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
+                  <DropdownMenuItem class="py-2" @click="() => checkForUpdates()">
+                    <header>Check for Updates</header>
+                  </DropdownMenuItem>
+                </div>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
             <DropdownMenuItem @click="() => openAboutOverlay()" class="pt-1 pb-2">
               <header>About Commander</header>
             </DropdownMenuItem>
@@ -109,6 +146,7 @@ import { useConfig } from '../stores/config';
 import { ChevronLeftIcon } from '@heroicons/vue/24/outline';
 import { useInstaller } from '../stores/installer';
 import { useTour } from '../stores/tour';
+import { open as tauriOpenUrl } from '@tauri-apps/plugin-shell';
 
 const config = useConfig();
 const installer = useInstaller();
@@ -139,6 +177,16 @@ function onMouseLeave() {
   mouseLeaveTimerId = setTimeout(() => {
     isOpen.value = false;
   }, 100);
+}
+
+function openLink(url: string) {
+  void tauriOpenUrl(url);
+  isOpen.value = false;
+}
+
+function checkForUpdates() {
+  basicEmitter.emit('openCheckForAppUpdatesOverlay');
+  isOpen.value = false;
 }
 
 function clickOutside(e: PointerDownOutsideEvent) {
@@ -187,6 +235,11 @@ function openFundMiningAccountOverlay() {
 
 function openFundVaultingAccountOverlay() {
   basicEmitter.emit('openWalletOverlay', { walletId: 'vaulting', screen: 'receive' });
+}
+
+function openTroubleshooting() {
+  basicEmitter.emit('openTroubleshootingOverlay', { screen: 'overview' });
+  isOpen.value = false;
 }
 
 function takeTheTour() {
