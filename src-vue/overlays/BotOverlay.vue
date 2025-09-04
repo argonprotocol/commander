@@ -24,7 +24,7 @@
               class="relative text-3xl font-bold text-left border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 text-[#672D73]"
               style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)"
             >
-              <DialogTitle as="div" class="relative z-10">{{ isBrandNew ? 'Configure' : 'Update' }} Your Mining Bot</DialogTitle>
+              <DialogTitle as="div" class="relative z-10">Configure Your Mining Bot</DialogTitle>
               <div @click="cancelOverlay" class="absolute top-[22px] right-[0px] z-10 flex items-center justify-center text-sm/6 font-semibold cursor-pointer border rounded-md w-[30px] h-[30px] focus:outline-none border-slate-400/60 hover:border-slate-500/70 hover:bg-[#D6D9DF]">
                 <XMarkIcon class="w-5 h-5 text-[#B74CBA] stroke-4" />
               </div>
@@ -39,8 +39,8 @@
 
               <section class="flex flex-row border-t border-b border-slate-500/30 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
                 <div class="w-1/2 flex flex-col grow">
-                  <BotCapital align="start" :width="botCapitalWidth">
-                    <div PrimaryStat @mouseenter="botCapitalWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                  <CapitalOverlay align="start" :width="capitalBoxWidth">
+                    <div PrimaryStat @mouseenter="capitalBoxWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
                       <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
                         Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
                       </header>
@@ -58,7 +58,7 @@
                         </div>
                       </div>
                     </div>
-                  </BotCapital>
+                  </CapitalOverlay>
                 </div>
                 <div class="flex flex-col items-center justify-center text-3xl mx-2 text-center">
                   <span class="relative -top-1 opacity-50">
@@ -66,8 +66,8 @@
                   </span>
                 </div>
                 <div class="w-1/2 flex flex-col grow">
-                  <BotReturns align="end" :width="botReturnsWidth">
-                    <div PrimaryStat @mouseenter="botReturnsWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                  <ReturnsOverlay align="end" :width="returnsBoxWidth">
+                    <div PrimaryStat @mouseenter="returnsBoxWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
                       <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
                         Return on Capital
                       </header>
@@ -86,7 +86,7 @@
                       </div>
                       </div>
                     </div>
-                  </BotReturns>
+                  </ReturnsOverlay>
                 </div>
               </section>
 
@@ -254,8 +254,8 @@
                   <span>Cancel</span>
                 </button>
                 <button @click="saveRules" @mouseenter="showTooltip($event, tooltip.saveRules, { width: 'parent' })" @mouseleave="hideTooltip" class="bg-argon-button hover:border-argon-800 text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
-                  <span v-if="!isSaving">{{ isBrandNew ? 'Initialize Rules' : 'Update Rules' }}</span>
-                  <span v-else>{{ isBrandNew ? 'Initializing...' : 'Updating...' }}</span>
+                  <span v-if="!isSaving">{{ isBrandNew ? 'Initialize' : 'Update' }} Rules</span>
+                  <span v-else>{{ isBrandNew ? 'Initializing' : 'Updating' }} Rules...</span>
                 </button>
               </div>
             </div>
@@ -292,8 +292,8 @@ import {
 import { bigIntAbs, bigNumberToInteger, ceilTo } from '@argonprotocol/commander-core/src/utils';
 import InputArgon from '../components/InputArgon.vue';
 import NeedMoreCapitalHover from './bot/NeedMoreCapitalHover.vue';
-import BotReturns from './bot/BotReturns.vue';
-import BotCapital from './bot/BotCapital.vue';
+import ReturnsOverlay from './bot/BotReturns.vue';
+import CapitalOverlay from './bot/BotCapital.vue';
 import { useInstaller } from '../stores/installer.ts';
 import { useBot } from '../stores/bot.ts';
 
@@ -319,8 +319,8 @@ const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
 
-const botCapitalWidth = Vue.ref('');
-const botReturnsWidth = Vue.ref('');
+const capitalBoxWidth = Vue.ref('');
+const returnsBoxWidth = Vue.ref('');
 
 const editBoxOverlayId = Vue.ref<IEditBoxOverlayTypeForMining | null>(null);
 const editBoxOverlayPosition = Vue.ref<{ top?: number; left?: number; width?: number } | undefined>(undefined);
@@ -473,8 +473,6 @@ function updateAPYs() {
 
   const slowGrowthEarnings = BigInt(probableMinSeats.value) * calculator.slowGrowthRewards;
   const fastGrowthEarnings = BigInt(probableMaxSeats.value) * calculator.fastGrowthRewards;
-  console.log('slowGrowthEarnings', slowGrowthEarnings, probableMinSeats.value);
-  console.log('fastGrowthEarnings', fastGrowthEarnings, probableMaxSeats.value);
   averageEarnings.value = (slowGrowthEarnings + fastGrowthEarnings) / 2n;
 }
 
@@ -575,17 +573,6 @@ basicEmitter.on('openBotOverlay', async () => {
       background: linear-gradient(to bottom, oklch(0.88 0.09 320 / 0.2) 0%, transparent 100%);
       text-shadow: 1px 1px 0 white;
     }
-
-    /* &::before {
-      @apply from-argon-menu-bg bg-gradient-to-b from-[0px] to-transparent;
-      content: '';
-      display: block;
-      width: calc(100% + 10px);
-      height: 30%;
-      position: absolute;
-      top: -5px;
-      left: -5px;
-    } */
   }
 
   section div[StatHeader] {

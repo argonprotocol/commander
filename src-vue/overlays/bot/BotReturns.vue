@@ -1,7 +1,7 @@
 <template>
   <TooltipProvider :disableHoverableContent="true" :delayDuration="0">
     <TooltipRoot>
-      <TooltipTrigger>
+      <TooltipTrigger asChild>
         <slot />
       </TooltipTrigger>
       <TooltipPortal>

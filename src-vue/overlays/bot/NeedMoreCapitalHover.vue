@@ -1,7 +1,7 @@
 <template>
   <HoverCardRoot v-model:open="isOpen" @update:open="updateIsOpen">
     <HoverCardTrigger CardTrigger @click="clickTrigger" class="inline-block cursor-pointer outline-none">
-      <AlertIcon class="relative -top-1 mr-2 inline-block h-10 w-10 text-yellow-700" />
+      <AlertIcon class="relative mr-2 inline-block h-10 w-10 text-yellow-700" />
     </HoverCardTrigger>
     <HoverCardPortal>
       <HoverCardContent

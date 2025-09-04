@@ -24,7 +24,7 @@
               class="relative text-3xl font-bold text-left border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 cursor-pointer text-[#672D73]"
               style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)"
             >
-              <DialogTitle as="div" class="relative z-10">{{ isBrandNew ? 'Create' : 'Update' }} Stabilization Vault</DialogTitle>
+              <DialogTitle as="div" class="relative z-10">Configure Your Stabilization Vault</DialogTitle>
               <div @click="cancelOverlay" class="absolute top-[22px] right-[0px] z-10 flex items-center justify-center text-sm/6 font-semibold cursor-pointer border rounded-md w-[30px] h-[30px] focus:outline-none border-slate-400/60 hover:border-slate-500/70 hover:bg-[#D6D9DF]">
                 <XMarkIcon class="w-5 h-5 text-[#B74CBA] stroke-4" />
               </div>
@@ -32,23 +32,31 @@
 
             <div v-if="isLoaded" class="flex flex-col grow relative w-full">
               <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
-                Vaults are special holding mechanisms within Argon that stabilize its stablecoin and provide liquidity to the broader network. You can earn
-                revenue by creating and managing these vaults.
+                Vaults are special holding mechanisms that stabilize the Argon stablecoin and provide liquidity to the broader network. You can earn
+                revenue by creating and managing these vaults. Use the screen below to configure your vault.
               </DialogDescription>
 
-              <section class="flex flex-row border-t border-b border-slate-300 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
+              <section class="flex flex-row border-t border-b border-slate-500/30 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
                 <div class="w-1/2 flex flex-col grow">
-                  <div PrimaryStat class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
-                    <header StatHeader class="mx-4 relative z-10">
-                      Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
-                    </header>
-                    <div class="grow relative mt-2 pb-12 pt-10 text-5xl font-bold font-mono text-argon-600">
-                      <InputArgon v-model="rules.baseMicrogonCommitment" :min="10_000_000n" :minDecimals="0" class="focus:outline-none" />
+                  <CapitalOverlay align="start" :width="capitalBoxWidth">
+                    <div PrimaryStat @mouseenter="capitalBoxWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                      <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
+                        Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
+                      </header>
+                      <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
+                        <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
+                          You are creating a new vault with a total capital value of
+                        </div>
+                        <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
+                          <InputArgon v-model="rules.baseMicrogonCommitment" :min="1_000_000_000n" :minDecimals="0" class="focus:outline-none" />
+                        </div>
+                        <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
+                          This capital will allow you to secure {{ numeral(btcSpaceAvailable).format('0,0.[00000000]') }} in BTC<br/>
+                          with a corresponding treasury pool investment of {{ microgonToArgonNm(poolSpace).format('0,0.[00]') }} argons.
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div class="pt-3 text-md">
-                    <span class="cursor-pointer text-argon-600/50 hover:text-argon-600/80">View Bitcoin Space ({{ numeral(btcSpaceAvailable).format('0,0.[00000000]') }} BTC)</span>
-                  </div>
+                  </CapitalOverlay>
                 </div>
 
                 <div class="flex flex-col items-center justify-center text-3xl mx-2 text-center">
@@ -58,51 +66,33 @@
                 </div>
 
                 <div class="w-1/2 flex flex-col grow">
-                  <div PrimaryStat class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
-                    <header StatHeader class="mx-4 relative z-10">Annual Percentage Yields</header>
-                    <div class="grow flex flex-col mt-3 w-full px-4">
-                      <table class="w-full h-full table-fixed relative z-50 whitespace-nowrap -mt-1">
-                        <tbody>
-                          <tr class="text-argon-600 h-1/3">
-                            <td class="w-5/12"></td>
-                            <td class="font-light font-sans text-argon-800/40 w-5/12">Low Utilization</td>
-                            <td class="font-light font-sans text-argon-800/40 w-5/12">High Utilization</td>
-                          </tr>
-                          <tr class="font-bold font-mono text-argon-600 h-1/3">
-                            <td class="font-light font-sans text-argon-800/40 border-t border-dashed border-slate-300 text-left pl-2 pr-10">Proj. Vault Profits</td>
-                            <td class="text-lg border-t border-dashed border-slate-300">
-                              <Tooltip :content="`This is the vault's expected profit if the lowest resource utilization is achieved. You can adjust these utilization projections in the box below.`">
-                                {{ numeral(vaultLowUtilizationAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
-                              </Tooltip>
-                            </td>
-                            <td class="text-lg border-t border-dashed border-slate-300">
-                              <Tooltip :content="``">
-                                {{ numeral(vaultHighUtilizationAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
-                              </Tooltip>
-                            </td>
-                          </tr>
-                          <tr class="font-bold font-mono text-argon-600 h-1/3">
-                            <td class="font-light font-sans text-argon-800/40 border-t border-dashed border-slate-300 text-left pl-2 pr-10">Proj. External Profits</td>
-                            <td class="text-lg border-t border-dashed border-slate-300">
-                              <Tooltip v-if="hasExternalPoolCapitalLow" :content="`This is the expected profits of those who help fund your liquidity pool capital. It is based on the minimum Resource Utilization projections.`">
-                                {{ numeral(externalLowUtilizationAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
-                              </Tooltip>
-                              <span v-else>n/a</span>
-                            </td>
-                            <td class="text-lg border-t border-dashed border-slate-300">
-                              <Tooltip v-if="hasExternalPoolCapitalHigh" :content="`If your bids are accepted at the starting price and the tokens grow at their fastest projected rate (which you can change in Ecosystem Growth) then this is your return.`">
-                                {{ numeral(externalHighUtilizationAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
-                              </Tooltip>
-                              <span v-else>n/a</span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                  <ReturnsOverlay align="end" :width="returnsBoxWidth">
+                    <div PrimaryStat @mouseenter="returnsBoxWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                      <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
+                        Return on Capital
+                      </header>
+                      <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
+                        <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
+                          Your vault is set to earn {{ currency.symbol }}{{ microgonToMoneyNm(averageEarnings).format('0,0.00') }} this year with an APY of
+                        </div>
+                        <div class="flex flex-row items-center justify-center grow relative h-26 text-6xl font-bold font-mono text-argon-600">
+                          {{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                        </div>
+                        <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full">
+                        This represents an average of your estimated vaulting<br/>
+                        returns,
+                        <template v-if="vaultLowUtilizationAPY < 999_999 || vaultHighUtilizationAPY < 999_999">
+                          which range between
+                          {{ numeral(vaultLowUtilizationAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}%
+                          and {{ numeral(vaultHighUtilizationAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}% APY.
+                        </template>
+                        <template v-else>
+                          all which are above 999,999% APY.
+                        </template>
+                      </div>
+                      </div>
                     </div>
-                  </div>
-                  <div class="pt-3 text-md">
-                    <span class="cursor-pointer text-argon-600/50 hover:text-argon-600/80">View Risk Analysis (99% from key security)</span>
-                  </div>
+                  </ReturnsOverlay>                  
                 </div>
               </section>
 
@@ -143,7 +133,7 @@
                         </div>
                         <span class="text-md w-2/12 text-gray-500/60">&nbsp;</span>
                         <div class="flex flex-row items-center justify-center text-md text-gray-500/60 w-5/12 whitespace-nowrap">
-                          Pool Liquidity
+                          Treasury Pool
                         </div>
                       </div>
                     </div>
@@ -205,7 +195,7 @@
                       </div>
                       <div class="flex flex-row items-center justify-center px-10 w-full text-center font-mono ">
                         <div class="flex flex-row items-center justify-center text-md px-1 text-gray-500/60 w-5/12">
-                          BTC Usage
+                          Security Usage
                         </div>
                         <span class="text-md w-2/12 text-gray-500/60">&nbsp;</span>
                         <div class="flex flex-row items-center justify-center text-md text-gray-500/60 w-5/12">
@@ -240,8 +230,8 @@
                   <span>Cancel</span>
                 </button>
                 <button @click="saveRules" @mouseenter="showTooltip($event, tooltip.saveRules, { width: 'parent' })" @mouseleave="hideTooltip" class="bg-argon-button text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
-                  <span v-if="!isSaving">{{ isBrandNew ? 'Create' : 'Update' }} Vault</span>
-                  <span v-else>{{ isBrandNew ? 'Creating' : 'Updating' }} Vault...</span>
+                  <span v-if="!isSaving">{{ isBrandNew ? 'Initialize' : 'Update' }} Rules</span>
+                  <span v-else>{{ isBrandNew ? 'Initializing' : 'Updating' }} Rules...</span>
                 </button>
               </div>
             </div>
@@ -273,11 +263,13 @@ import { MyVault } from '../lib/MyVault.ts';
 import InputArgon from '../components/InputArgon.vue';
 import ExistingNetworkVaultsOverlayButton from './ExistingNetworkVaultsOverlayButton.vue';
 import { VaultCalculator } from '../lib/VaultCalculator.ts';
+import CapitalOverlay from './vault/VaultCapital.vue';
+import ReturnsOverlay from './vault/VaultReturns.vue';
 
 const mainchainClients = getMainchainClients();
 const config = useConfig();
 const currency = useCurrency();
-const { microgonToMoneyNm } = createNumeralHelpers(currency);
+const { microgonToMoneyNm, microgonToArgonNm } = createNumeralHelpers(currency);
 
 let previousVaultingRules: string | null = null;
 
@@ -292,6 +284,12 @@ const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
 
+const capitalBoxWidth = Vue.ref('');
+const returnsBoxWidth = Vue.ref('');
+
+const averageAPY = Vue.ref(0);
+const averageEarnings = Vue.ref(0n);
+
 const editBoxOverlayId = Vue.ref<IEditBoxOverlayTypeForVaulting | null>(null);
 const editBoxOverlayPosition = Vue.ref<{ top?: number; left?: number; width?: number } | undefined>(undefined);
 const dialogPanel = Vue.ref(null);
@@ -302,6 +300,7 @@ const externalLowUtilizationAPY = Vue.ref(0);
 const externalHighUtilizationAPY = Vue.ref(0);
 
 const btcSpaceAvailable = Vue.ref(0);
+const poolSpace = Vue.ref(0n);
 
 const hasExternalPoolCapitalLow = Vue.ref(false);
 const hasExternalPoolCapitalHigh = Vue.ref(false);
@@ -323,6 +322,10 @@ const tooltip = {
   saveRules: 'You can update these settings later.',
 };
 
+function calculateElementWidth(element: HTMLElement) {
+  return element.getBoundingClientRect().width + 'px';
+}
+
 function openEditBoxOverlay($event: MouseEvent, type: IEditBoxOverlayTypeForVaulting) {
   const parent = ($event.target as HTMLElement).closest('[MainWrapperParent]');
   const rect = parent?.getBoundingClientRect() as DOMRect;
@@ -336,9 +339,9 @@ function openEditBoxOverlay($event: MouseEvent, type: IEditBoxOverlayTypeForVaul
 
 function cancelOverlay() {
   if (editBoxOverlayId.value) return;
-  console.log('CANCEL OVERLAY');
-  isOpen.value = false;
+
   hideTooltip();
+  isOpen.value = false;
 
   if (previousVaultingRules) {
     config.vaultingRules = JsonExt.parse<IVaultingRules>(previousVaultingRules);
@@ -384,6 +387,14 @@ function updateAPYs() {
 
   hasExternalPoolCapitalLow.value = calculator.calculateExternalPoolCapital('Low') > 0;
   hasExternalPoolCapitalHigh.value = calculator.calculateExternalPoolCapital('High') > 0;
+
+  averageAPY.value = (vaultLowUtilizationAPY.value + vaultHighUtilizationAPY.value) / 2;
+
+  const highVaultRevenue = calculator.calculateInternalRevenue('High');
+  const lowVaultRevenue = calculator.calculateInternalRevenue('Low');
+  averageEarnings.value = (highVaultRevenue + lowVaultRevenue) / 2n;
+
+  poolSpace.value = calculator.calculateTotalPoolSpace('High');
 }
 
 Vue.watch(
@@ -447,27 +458,22 @@ basicEmitter.on('openVaultOverlay', async () => {
   [PrimaryStat] {
     @apply relative;
 
-    [StatHeader] {
-      @apply group-hover:text-[#a08fb7];
-      background: linear-gradient(
-        to right,
-        transparent 0%,
-        oklch(0.88 0.09 320 / 0.2) 10%,
-        oklch(0.88 0.09 320 / 0.2) 90%,
-        transparent 100%
-      );
-      text-shadow: 1px 1px 0 white;
+    div[InputFieldWrapper] {
+      @apply text-argon-600 border-none font-mono text-6xl font-bold !outline-none hover:bg-transparent focus:!outline-none;
+      box-shadow: none;
+    }
+    div[NumArrows] {
+      @apply relative top-2;
+    }
+    svg[NumArrowUp],
+    svg[NumArrowDown] {
+      @apply size-[24px];
     }
 
-    &::before {
-      @apply from-argon-menu-bg bg-gradient-to-b from-[0px] to-transparent;
-      content: '';
-      display: block;
-      width: calc(100% + 10px);
-      height: 30%;
-      position: absolute;
-      top: -5px;
-      left: -5px;
+    [StatHeader] {
+      @apply text-argon-600/70;
+      background: linear-gradient(to bottom, oklch(0.88 0.09 320 / 0.2) 0%, transparent 100%);
+      text-shadow: 1px 1px 0 white;
     }
   }
 
@@ -517,26 +523,6 @@ basicEmitter.on('openVaultOverlay', async () => {
         @apply relative z-10;
       }
     }
-  }
-
-  [PrimaryStat] {
-    div {
-      @apply inline-block;
-    }
-    div[InputFieldWrapper] {
-      @apply text-argon-600 border-none font-mono text-6xl font-bold !outline-none hover:bg-transparent focus:!outline-none;
-      box-shadow: none;
-    }
-    div[NumArrows] {
-      @apply relative top-1;
-    }
-    svg[NumArrowUp],
-    svg[NumArrowDown] {
-      @apply size-[24px];
-    }
-    /* span[Suffix] {
-      @apply min-w-1;
-    } */
   }
 }
 </style>

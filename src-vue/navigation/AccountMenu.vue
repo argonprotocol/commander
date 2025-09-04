@@ -37,8 +37,7 @@
             </DropdownMenuItem>
             <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
             <DropdownMenuItem @click="() => openVaultOverlay()" class="pt-2 pb-3">
-              <header v-if="!config.hasSavedVaultingRules">Create Stabilization Vault</header>
-              <header v-else>Configure Stabilization Vault Settings</header>
+              <header>Configure Your Stabilization Vault</header>
               <p>
                 Set securitization ratios, profit sharing,
                 <br />
