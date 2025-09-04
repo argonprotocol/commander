@@ -351,9 +351,9 @@ export class Vaults {
     for (const [_vaultId, entry] of vaultPools) {
       console.log('Capital activated', entry.toJSON());
       for (const [_, balance] of entry.contributorBalances) {
-        totalActivatedCapital = balance.toBigInt();
+        totalActivatedCapital += balance.toBigInt();
       }
-      if (!entry.distributedProfits.isSome) {
+      if (entry.distributedProfits.isSome) {
         totalActivatedCapital -= entry.distributedProfits.value.toBigInt();
       }
     }
