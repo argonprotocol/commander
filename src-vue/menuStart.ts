@@ -168,12 +168,12 @@ export default async function menuStart() {
       {
         id: 'documentation',
         text: 'Documentation',
-        action: () => void tauriOpenUrl('https://argonprotocol.org/docs'),
+        action: () => void tauriOpenUrl('https://argon.network/docs'),
       },
       {
         id: 'faq',
         text: 'Frequently Asked Questions',
-        action: () => void tauriOpenUrl('https://argonprotocol.org/faq'),
+        action: () => void tauriOpenUrl('https://argon.network/faq'),
       },
       {
         id: 'tour',

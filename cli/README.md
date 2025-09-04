@@ -1,4 +1,4 @@
-This is a cli client for the Argon Protocol (https://argonprotocol.org). The cli allows you to interact with a subset of the Argon Protocol (Mining Bidding, Vaults, Liquidity
+This is a cli client for the Argon Protocol (https://argon.network). The cli allows you to interact with a subset of the Argon Protocol (Mining Bidding, Vaults, Liquidity
 Pools, Bitcoin)
 
 ## Installation
