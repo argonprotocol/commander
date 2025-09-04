@@ -15,7 +15,7 @@
     <template v-if="config.isLoaded">
       <template v-if="showMiningPanel">
         <UpgradeOverlay v-if="isNeedingUpgrade && config.isMinerReadyToInstall" />
-        <ServerBrokenOverlay v-else-if="bot.isBroken" />
+        <ServerBrokenOverlay v-else-if="bot.isBroken && !config.hasDbMigrationError" />
         <SyncingOverlay v-else-if="bot.isSyncing" />
         <BootingOverlay v-else-if="config.isBootingUpFromMiningAccountPreviousHistory" />
       </template>
