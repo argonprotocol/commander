@@ -560,6 +560,12 @@ export class Config {
     loadedData.miningAccountHadPreviousLife = miningAccountHadPreviousLife;
     stringifiedData[dbFields.miningAccountHadPreviousLife] = JsonExt.stringify(miningAccountHadPreviousLife, 2);
     fieldsToSave.add(dbFields.miningAccountHadPreviousLife);
+
+    if (miningAccountHadPreviousLife) {
+      loadedData.showWelcomeOverlay = false;
+      stringifiedData[dbFields.showWelcomeOverlay] = JsonExt.stringify(false, 2);
+      fieldsToSave.add(dbFields.showWelcomeOverlay);
+    }
   }
 
   private async _bootupFromMiningAccountPreviousHistory() {
