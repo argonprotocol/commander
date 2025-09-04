@@ -65,7 +65,6 @@ export class BotSyncer {
   private async runContinuously(): Promise<void> {
     if (this.isRunnable) {
       try {
-        console.log('BotSyncer: Checking Last Modified...');
         const lastModifiedDate = await BotFetch.lastModifiedDate();
         if ((lastModifiedDate?.getTime() ?? 0) > (this.lastModifiedDate?.getTime() ?? 0)) {
           this.lastModifiedDate = lastModifiedDate;
