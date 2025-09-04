@@ -91,7 +91,7 @@ import { createNumeralHelpers } from '../../lib/numeral';
 import { TooltipArrow, TooltipContent, TooltipPortal, TooltipProvider, TooltipRoot, TooltipTrigger } from 'reka-ui';
 import { getCalculator, getCalculatorData } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
-import { IBiddingRules, SeatGoalType } from '@argonprotocol/commander-core';
+import { IBiddingRules, SeatGoalInterval, SeatGoalType } from '@argonprotocol/commander-core';
 
 const props = withDefaults(
   defineProps<{
@@ -131,6 +131,11 @@ function updateAPYs() {
 
   if (rules.value.seatGoalType === SeatGoalType.MinPercent || rules.value.seatGoalType === SeatGoalType.MaxPercent) {
     seatGoalCount.value = Math.floor((rules.value.seatGoalCount / 100) * calculatorData.maxPossibleMiningSeatCount);
+  } else {
+    seatGoalCount.value = rules.value.seatGoalCount;
+    if (rules.value.seatGoalInterval === SeatGoalInterval.Frame) {
+      seatGoalCount.value *= 10;
+    }
   }
   maximumBidAmount.value = calculator.maximumBidAmount;
   minimumBidAmount.value = calculator.minimumBidAmount;
@@ -146,11 +151,13 @@ function updateAPYs() {
 
   const averageEarningsPerSeat = (calculator.slowGrowthRewards + calculator.fastGrowthRewards) / 2n;
 
-  maximumBidSeatsCost.value = BigInt(probableMinSeats.value) * calculator.maximumBidAmount;
-  maximumBidSeatsEarnings.value = BigInt(probableMinSeats.value) * averageEarningsPerSeat;
+  const minSeats = BigInt(probableMinSeats.value);
+  maximumBidSeatsCost.value = minSeats * (calculator.maximumBidAmount + calculatorData.micronotsRequiredForBid);
+  maximumBidSeatsEarnings.value = minSeats * averageEarningsPerSeat;
 
-  minimumBidSeatsCost.value = BigInt(probableMaxSeats.value) * calculator.minimumBidAmount;
-  minimumBidSeatsEarnings.value = BigInt(probableMaxSeats.value) * averageEarningsPerSeat;
+  const maxSeats = BigInt(probableMaxSeats.value);
+  minimumBidSeatsCost.value = maxSeats * (calculator.minimumBidAmount + calculatorData.micronotsRequiredForBid);
+  minimumBidSeatsEarnings.value = maxSeats * averageEarningsPerSeat;
 }
 
 Vue.onMounted(() => {
@@ -158,6 +165,14 @@ Vue.onMounted(() => {
     updateAPYs();
   });
 });
+
+Vue.watch(
+  rules,
+  () => {
+    updateAPYs();
+  },
+  { deep: true },
+);
 </script>
 
 <style scoped>

@@ -146,6 +146,13 @@ Vue.onMounted(() => {
     updateAPYs();
   });
 });
+Vue.watch(
+  rules,
+  () => {
+    updateAPYs();
+  },
+  { deep: true },
+);
 </script>
 
 <style scoped>

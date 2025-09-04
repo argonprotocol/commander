@@ -55,6 +55,11 @@ import IncreaseIcon from '../../assets/increase.svg?component';
 const props = defineProps<{
   calculator: BiddingCalculator;
   seatGoalCount: number;
+  idealCapitalCommitment: bigint;
+}>();
+
+const emit = defineEmits<{
+  (e: 'increaseCapitalCommitment'): void;
 }>();
 
 const config = useConfig();
@@ -66,14 +71,9 @@ const isOpen = Vue.ref(false);
 const isClickedOpen = Vue.ref(false);
 let wasRecentlyClickedOutside = false;
 
-const idealCapitalCommitment = Vue.computed(() => {
-  const minimumCapitalNeeded = props.calculator.maximumBidAmount * BigInt(props.seatGoalCount);
-  const minimumCapitalNeededRoundedUp = Math.ceil(Number(minimumCapitalNeeded) / 1_000_000) * 1_000_000;
-  return BigInt(minimumCapitalNeededRoundedUp);
-});
-
 function increaseCapitalCommitment() {
-  config.biddingRules.baseMicrogonCommitment = idealCapitalCommitment.value;
+  emit('increaseCapitalCommitment');
+  isOpen.value = false;
 }
 
 function clickOutside(e: PointerDownOutsideEvent) {
