@@ -1,23 +1,24 @@
 import BigNumber from 'bignumber.js';
-import { bigNumberToBigInt, Mainchain } from '@argonprotocol/commander-core';
+import { bigNumberToBigInt, MainchainClients, PriceIndex } from '@argonprotocol/commander-core';
 import { Config } from './Config';
 import { calculateAPY } from './Utils';
 import { bigIntMax } from '@argonprotocol/commander-core/src/utils';
+import { Vaults } from './Vaults.ts';
 
 export class VaultCalculator {
   private rules!: Config['vaultingRules'];
-  private mainchain: Mainchain;
+  private readonly clients: MainchainClients;
 
   private totalPoolRewards!: bigint;
   private existingPoolCapital!: bigint;
 
-  constructor(mainchain: Mainchain) {
-    this.mainchain = mainchain;
+  constructor(mainchainClients: MainchainClients) {
+    this.clients = mainchainClients;
   }
 
   async load(rules: Config['vaultingRules']) {
     this.rules = rules;
-    const { totalPoolRewards, totalActivatedCapital } = await this.mainchain.getLiquidityPoolPayout();
+    const { totalPoolRewards, totalActivatedCapital } = await Vaults.getLiquidityPoolPayout(this.clients);
     this.totalPoolRewards = totalPoolRewards;
     this.existingPoolCapital = totalActivatedCapital;
   }

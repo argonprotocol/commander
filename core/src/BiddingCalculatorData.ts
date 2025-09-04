@@ -1,7 +1,9 @@
 import BigNumber from 'bignumber.js';
-import { Mainchain, MICROGONS_PER_ARGON } from './Mainchain.js';
+import { Mining } from './Mining.js';
 import { TICKS_PER_COHORT } from './MiningFrames.js';
+import { PriceIndex } from './PriceIndex.js';
 import { bigIntMax, bigIntMin, bigNumberToBigInt } from './utils.js';
+import { MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
 
 export default class BiddingCalculatorData {
   public isInitializedPromise: Promise<void>;
@@ -23,40 +25,41 @@ export default class BiddingCalculatorData {
   public maxPossibleMiningSeatCount: number = 0;
   public nextCohortSize: number = 0;
 
-  constructor(mainchain: Mainchain) {
-    this.isInitializedPromise = this.initialize(mainchain);
+  constructor(mining: Mining) {
+    this.isInitializedPromise = this.initialize(mining);
   }
 
-  private async initialize(mainchain: Mainchain) {
+  private async initialize(mining: Mining): Promise<void> {
     try {
-      const tickAtStartOfNextCohort = await mainchain.getTickAtStartOfNextCohort();
+      const priceIndex = new PriceIndex(mining.clients);
+      const tickAtStartOfNextCohort = await mining.getTickAtStartOfNextCohort();
       const tickAtEndOfNextCohort = tickAtStartOfNextCohort + TICKS_PER_COHORT;
 
-      const activeMinersCount = await mainchain.getActiveMinersCount();
-      const nextCohortSize = await mainchain.getNextCohortSize();
+      const activeMinersCount = await mining.getActiveMinersCount();
+      const nextCohortSize = await mining.getNextCohortSize();
       this.nextCohortSize = nextCohortSize;
-      const retiringCohortSize = await mainchain.getRetiringCohortSize();
+      const retiringCohortSize = await mining.getRetiringCohortSize();
       const maxPossibleMinersInNextEpoch = activeMinersCount + nextCohortSize - retiringCohortSize;
 
-      const previousDayWinningBids = await mainchain.fetchPreviousDayWinningBidAmounts();
+      const previousDayWinningBids = await mining.fetchPreviousDayWinningBidAmounts();
       this.previousDayHighBid = previousDayWinningBids.length > 0 ? bigIntMax(...previousDayWinningBids) : 0n;
       this.previousDayLowBid = previousDayWinningBids.length > 0 ? bigIntMin(...previousDayWinningBids) : 0n;
       this.previousDayMidBid = bigNumberToBigInt(
         BigNumber(this.previousDayHighBid).plus(this.previousDayLowBid).dividedBy(2),
       );
 
-      const microgonsMinedPerBlock = await mainchain.fetchMicrogonsMinedPerBlockDuringNextCohort();
+      const microgonsMinedPerBlock = await mining.fetchMicrogonsMinedPerBlockDuringNextCohort();
       this.microgonsToMineThisSeat = (microgonsMinedPerBlock * 14_400n) / BigInt(maxPossibleMinersInNextEpoch);
-      this.microgonsInCirculation = await mainchain.fetchMicrogonsInCirculation();
-      this.micronotsRequiredForBid = await mainchain.getMicronotsRequiredForBid();
+      this.microgonsInCirculation = await priceIndex.fetchMicrogonsInCirculation();
+      this.micronotsRequiredForBid = await mining.getMicronotsRequiredForBid();
 
-      const micronotsMinedDuringNextCohort = await mainchain.getMinimumMicronotsMinedDuringTickRange(
+      const micronotsMinedDuringNextCohort = await mining.getMinimumMicronotsMinedDuringTickRange(
         tickAtStartOfNextCohort,
         tickAtEndOfNextCohort,
       );
       this.micronotsToMineThisSeat = micronotsMinedDuringNextCohort / BigInt(maxPossibleMinersInNextEpoch);
 
-      this.microgonExchangeRateTo = await mainchain.fetchMicrogonExchangeRatesTo();
+      this.microgonExchangeRateTo = await priceIndex.fetchMicrogonExchangeRatesTo();
       this.maxPossibleMiningSeatCount = maxPossibleMinersInNextEpoch;
     } catch (e) {
       console.error('Error initializing BiddingCalculatorData', e);

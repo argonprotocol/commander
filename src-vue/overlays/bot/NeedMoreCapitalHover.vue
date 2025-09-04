@@ -46,7 +46,7 @@ import {
   PointerDownOutsideEvent,
 } from 'reka-ui';
 import AlertIcon from '../../assets/alert.svg?component';
-import BiddingCalculator from '@argonprotocol/commander-core';
+import { BiddingCalculator } from '@argonprotocol/commander-core';
 import { useConfig } from '../../stores/config';
 import { useCurrency } from '../../stores/currency';
 import { createNumeralHelpers } from '../../lib/numeral';

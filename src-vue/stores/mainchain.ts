@@ -1,9 +1,10 @@
 import {
+  ArgonClient,
   BiddingCalculator,
   BiddingCalculatorData,
-  Mainchain,
-  MainchainClient,
   MainchainClients,
+  Mining,
+  PriceIndex,
 } from '@argonprotocol/commander-core';
 import { NETWORK_URL } from '../lib/Env.ts';
 import { useConfig } from './config';
@@ -14,7 +15,8 @@ import { BotStatus } from '../lib/BotSyncer.ts';
 import { useBot } from './bot.ts';
 
 let mainchainClients: MainchainClients;
-let mainchain: Mainchain;
+let mining: Mining;
+let priceIndex: PriceIndex;
 let calculator: BiddingCalculator;
 let calculatorData: BiddingCalculatorData;
 
@@ -26,7 +28,7 @@ export async function getMainchainClientAt(
   const blockHash = await client.rpc.chain.getBlockHash(height);
   return client.at(blockHash);
 }
-export function getMainchainClient(needsHistoricalAccess: boolean): Promise<MainchainClient> {
+export function getMainchainClient(needsHistoricalAccess: boolean): Promise<ArgonClient> {
   return getMainchainClients().get(needsHistoricalAccess);
 }
 
@@ -64,11 +66,18 @@ export function getMainchainClients(): MainchainClients {
   return mainchainClients;
 }
 
-export function getMainchain(): Mainchain {
-  if (!mainchain) {
-    mainchain = new Mainchain(getMainchainClients());
+export function getMining(): Mining {
+  if (!mining) {
+    mining = new Mining(getMainchainClients());
   }
-  return mainchain;
+  return mining;
+}
+
+export function getPriceIndex(): PriceIndex {
+  if (!priceIndex) {
+    priceIndex = new PriceIndex(getMainchainClients());
+  }
+  return priceIndex;
 }
 
 export function getCalculator(): BiddingCalculator {
@@ -83,6 +92,6 @@ export function getCalculator(): BiddingCalculator {
 }
 
 export function getCalculatorData(): BiddingCalculatorData {
-  calculatorData ??= new BiddingCalculatorData(getMainchain());
+  calculatorData ??= new BiddingCalculatorData(getMining());
   return calculatorData;
 }

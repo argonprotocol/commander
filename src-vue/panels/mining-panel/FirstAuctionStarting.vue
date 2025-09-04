@@ -63,20 +63,21 @@ import CountdownClock from '../../components/CountdownClock.vue';
 import ConfettiIcon from '../../assets/confetti.svg?component';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
 import BotHistoryOverlayButton from '../../overlays/BotHistoryOverlayButton.vue';
-import BiddingCalculator, {
+import {
+  BiddingCalculator,
   type IBiddingRules,
   BiddingCalculatorData,
   BiddingParamsHelper,
 } from '@argonprotocol/commander-core';
 import basicEmitter from '../../emitters/basicEmitter';
-import { getMainchain } from '../../stores/mainchain';
+import { getMining } from '../../stores/mainchain';
 import { useCurrency } from '../../stores/currency';
 import { useStats } from '../../stores/stats';
 import { createNumeralHelpers } from '../../lib/numeral';
 
 dayjs.extend(utc);
 
-const mainchain = getMainchain();
+const mainchain = getMining();
 const stats = useStats();
 const config = useConfig();
 const currency = useCurrency();
@@ -88,7 +89,7 @@ const startOfAuctionClosing: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
 const startOfNextCohort: Vue.Ref<dayjs.Dayjs | null> = Vue.ref(null);
 const maxSeatCount = Vue.ref(0);
 
-const calculatorData = new BiddingCalculatorData(getMainchain());
+const calculatorData = new BiddingCalculatorData(getMining());
 const calculator = new BiddingCalculator(calculatorData, config.biddingRules);
 const biddingParamsHelper = new BiddingParamsHelper(config.biddingRules as IBiddingRules, calculator);
 

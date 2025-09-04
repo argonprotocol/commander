@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js';
-import { getMainchain } from '../stores/mainchain';
+import { getMining, getPriceIndex } from '../stores/mainchain';
 import { MICROGONS_PER_ARGON, SATS_PER_BTC } from '@argonprotocol/mainchain';
 import { bigNumberToBigInt } from '@argonprotocol/commander-core';
 import IDeferred from '../interfaces/IDeferred';
@@ -68,7 +68,7 @@ export class Currency {
   public async load() {
     const [otherResponse, microgonExchangeRateTo] = await Promise.all([
       fetch('https://open.er-api.com/v6/latest/USD'),
-      getMainchain().fetchMicrogonExchangeRatesTo(),
+      getPriceIndex().fetchMicrogonExchangeRatesTo(),
     ]);
 
     this.microgonExchangeRateTo.USD = microgonExchangeRateTo.USD;

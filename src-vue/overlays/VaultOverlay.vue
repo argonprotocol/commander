@@ -260,7 +260,7 @@ import basicEmitter from '../emitters/basicEmitter';
 import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui';
 import Tooltip from '../components/Tooltip.vue';
 import { useConfig } from '../stores/config';
-import { getMainchain } from '../stores/mainchain';
+import { getMainchainClients, getMining } from '../stores/mainchain';
 import { useCurrency } from '../stores/currency';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
 import BgOverlay from '../components/BgOverlay.vue';
@@ -274,7 +274,7 @@ import InputArgon from '../components/InputArgon.vue';
 import ExistingNetworkVaultsOverlayButton from './ExistingNetworkVaultsOverlayButton.vue';
 import { VaultCalculator } from '../lib/VaultCalculator.ts';
 
-const mainchain = getMainchain();
+const mainchainClients = getMainchainClients();
 const config = useConfig();
 const currency = useCurrency();
 const { microgonToMoneyNm } = createNumeralHelpers(currency);
@@ -285,7 +285,7 @@ const rules = Vue.computed(() => {
   return config.vaultingRules as IVaultingRules;
 });
 
-const calculator = new VaultCalculator(mainchain);
+const calculator = new VaultCalculator(mainchainClients);
 
 const isBrandNew = Vue.ref(true);
 const isOpen = Vue.ref(false);

@@ -3,8 +3,8 @@ import { defineStore } from 'pinia';
 import dayjs, { extend as dayJsExtend, Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { type MainchainClient } from '@argonprotocol/commander-core';
-import { getMainchain, getMainchainClient } from './mainchain.ts';
+import { type ArgonClient } from '@argonprotocol/commander-core';
+import { getMining, getMainchainClient } from './mainchain.ts';
 import { getAuthorFromHeader, Header } from '@argonprotocol/mainchain';
 
 dayJsExtend(utc);
@@ -45,7 +45,7 @@ export const useBlockchainStore = defineStore('blockchain', () => {
     cachedBlockLoading,
   ]);
 
-  async function fetchBlock(client: MainchainClient, header: Header) {
+  async function fetchBlock(client: ArgonClient, header: Header) {
     const author = getAuthorFromHeader(client, header);
     const clientAt = await client.at(header.hash);
     const events = await clientAt.query.system.events();
@@ -109,16 +109,16 @@ export const useBlockchainStore = defineStore('blockchain', () => {
   }
 
   async function updateActiveMiningSeatCount() {
-    const mainchain = getMainchain();
+    const mainchain = getMining();
     activeMiningSeatCount.value = await mainchain.getActiveMinersCount();
   }
 
   async function updateAggregateBidCosts() {
-    aggregatedBidCosts.value = await getMainchain().getAggregateBidCosts();
+    aggregatedBidCosts.value = await getMining().getAggregateBidCosts();
   }
 
   async function updateAggregateBlockRewards() {
-    aggregatedBlockRewards.value = await getMainchain().getAggregateBlockRewards();
+    aggregatedBlockRewards.value = await getMining().getAggregateBlockRewards();
   }
 
   return {

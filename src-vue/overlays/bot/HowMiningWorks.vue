@@ -24,8 +24,8 @@
 
             <div v-if="isLoaded" class="flex flex-col grow relative w-full overflow-y-auto px-8 py-5">
               <p>
-                The most basic thing to understand about Argon is that there is no third-party company, authority, or server helping to run 
-                this app. It simply exists as code on your computer. In fact, the entire Argon blockchain is fully 
+                The most basic thing to understand about Argon is that there is no third-party company, authority, or server helping to run
+                this app. It simply exists as code on your computer. In fact, the entire Argon blockchain is fully
                 decentralized and anonymous. It's operated by the community, by people like yourself. That's why this app has no
                 signup screen or login screen -- you simply use it. Instead, a special auction bid system is used to
                 create a rotating governance structure that is shared by everyone and open to all.
@@ -35,19 +35,19 @@
 
               <ul>
                 <li>
-                  <header>Mining Seats</header> 
-                  New blocks are constantly being added to the Argon blockchain at a rate of one per minute. Whoever is lucky enough to mine the block gets to collect the 
+                  <header>Mining Seats</header>
+                  New blocks are constantly being added to the Argon blockchain at a rate of one per minute. Whoever is lucky enough to mine the block gets to collect the
                   block rewards (which can be quite substantial). However, unlike some proof-of-work (POW) blockchains, Argon does not allow just anyone to mine. Only
                   those who can show proof of owning a "mining seat" are given this right.
                 </li>
                 <li>
-                  <header>Winning a Seat</header> 
+                  <header>Winning a Seat</header>
                   The Argon network originally began with 100 mining seats. These seats were distributed at auction over a ten-day cycle (i.e., 10 seats per day).
                   Each seat was given a term limit of ten days, after which they were released back into auction.
-                  As the network grows, the number of seats will slowly increase to a maximum of 10,000 seats, but the basic process will 
+                  As the network grows, the number of seats will slowly increase to a maximum of 10,000 seats, but the basic process will
                   remain the same: they will be auctioned to the highest bidder, used for ten days, then released back into auctioned. Rinse and repeat. If you want to become a miner you must
                   win a seat.
-                  
+
                   <table class="text-slate-800/50">
                     <thead>
                       <tr>
@@ -70,13 +70,13 @@
                 </li>
                 <li>
                   <header>Bidding at Auction</header>
-                  Winning a mining seat require you to create a bid that contains two tokens: 
+                  Winning a mining seat require you to create a bid that contains two tokens:
                   <ol>
                     <li>
-                      <strong>Argonots</strong>. Argonots are a special governance token of the Argon network. They have several unique properities, 
-                      but for the sake of this description, they show proof of ownership. Every bid must contain a preset quantity of Argonots in order to be valid. 
-                      This amount required changes over time based on the network's demand for mining seats. The following table shows the 
-                      current quantity of Argonots required per bid: 
+                      <strong>Argonots</strong>. Argonots are a special governance token of the Argon network. They have several unique properities,
+                      but for the sake of this description, they show proof of ownership. Every bid must contain a preset quantity of Argonots in order to be valid.
+                      This amount required changes over time based on the network's demand for mining seats. The following table shows the
+                      current quantity of Argonots required per bid:
                       <table class="text-slate-800/50">
                         <thead>
                           <tr>
@@ -132,9 +132,9 @@
                 </li>
                 <li>
                   <header>Selection Process</header>
-                  Winners are selected solely based on their bid position at the close of the auction. The auction closes at a random 
-                  unannounced time within the final thirty-minutes of the frame/day. This random closing time ensures no one can 
-                  manipulate the results through auction-sniping. The following table shows today's active auction leaders: 
+                  Winners are selected solely based on their bid position at the close of the auction. The auction closes at a random
+                  unannounced time within the final thirty-minutes of the frame/day. This random closing time ensures no one can
+                  manipulate the results through auction-sniping. The following table shows today's active auction leaders:
                   <table class="text-slate-800/50">
                     <thead>
                       <tr>
@@ -161,8 +161,8 @@
                 </li>
                 <li>
                   <header>Acquiring Tokens</header>
-                  This app provides no ability to purchase argons or argonots. Instead, you must 
-                  acquire tokens on your own, either by mining new blocks, negotiating a private transaction, and/or buying through decentralized 
+                  This app provides no ability to purchase argons or argonots. Instead, you must
+                  acquire tokens on your own, either by mining new blocks, negotiating a private transaction, and/or buying through decentralized
                   exchanges such as Uniswap. Below are some links to the Uniswap markets for argons and argonots:
 
                   <table>
@@ -196,19 +196,19 @@
                 <li>
                   <header>Block Distribution</header>
                   Without getting into complicated mathematical algorithms, the right to mine new blocks is basically
-                  round-robined between all active mining seats. This means if the network has 100 active seats then each seat will mine an average of 
+                  round-robined between all active mining seats. This means if the network has 100 active seats then each seat will mine an average of
                   14.4 blocks per day (i.e, 1,440 blocks per day / 100 seats = 14.4 blocks per seat per day). Specialized ASIC mining hardware cannot affect this distribution.
                 </li>
                 <li>
                   <header>Seat Continuation</header>
                   As mentioned above, every seat has a ten day term limit. Once a seat's ten day mining period expires, it reverts back to the network
-                  where it is placed back into the auction pool. If you wish to continue mining, you must re-bid for a seat. This ensures an open and fair 
+                  where it is placed back into the auction pool. If you wish to continue mining, you must re-bid for a seat. This ensures an open and fair
                   market for all participants.
                 </li>
                 <li>
                   <strong>Automated Mining Bots</strong>. Commander was built to serve as an automated mining bot to help handle the bidding processs,
                   manage mining operations, and continually renew your seats every ten days. However, it doesn't dictate your strategy. It is up to you
-                  to decide the rules, such as starting bid, maximum bid, rebidding strategy, etc. 
+                  to decide the rules, such as starting bid, maximum bid, rebidding strategy, etc.
                 </li>
               </ul>
 
@@ -248,7 +248,7 @@ import basicEmitter from '../../emitters/basicEmitter';
 import { useConfig } from '../../stores/config';
 import BgOverlay from '../../components/BgOverlay.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
-import { getMainchain } from '../../stores/mainchain';
+import { getMining } from '../../stores/mainchain';
 import { createNumeralHelpers } from '../../lib/numeral';
 import { useCurrency } from '../../stores/currency';
 import { type IWinningBid } from '@argonprotocol/commander-bot';
@@ -256,7 +256,7 @@ import { ArrowRightCircleIcon } from '@heroicons/vue/24/outline';
 import { open as tauriOpen } from '@tauri-apps/plugin-shell';
 
 const config = useConfig();
-const mainchain = getMainchain();
+const mainchain = getMining();
 
 const currency = useCurrency();
 const { microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);

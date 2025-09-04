@@ -54,7 +54,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useCurrency } from '../stores/currency';
-import { getMainchain, getMainchainClient } from '../stores/mainchain';
+import { getMining, getMainchainClient } from '../stores/mainchain';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { useStats } from '../stores/stats';
 import { type IBidsFile } from '@argonprotocol/commander-bot';
@@ -79,7 +79,7 @@ const props = withDefaults(
 
 const stats = useStats();
 const currency = useCurrency();
-const mainchain = getMainchain();
+const mainchain = getMining();
 const config = useConfig();
 
 const panelPositioningClasses = Vue.computed(() => {

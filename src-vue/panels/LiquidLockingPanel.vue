@@ -82,11 +82,11 @@ import NibSlider from '../components/NibSlider.vue';
 import Vault from '../lib/LlbVault';
 import VaultSnapshot from '../lib/LlbVaultSnapshot';
 import BitcoinFees from '../lib/BitcoinFees';
-import { getMainchain } from '../stores/mainchain';
+import { getMining } from '../stores/mainchain';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
 import { useVaults } from '../stores/vaults.ts';
 
-const mainchain = getMainchain();
+const mainchain = getMining();
 const currency = useCurrency();
 
 const { microgonToMoneyNm } = createNumeralHelpers(currency);
