@@ -13,11 +13,11 @@ function captureCallerStack(skip = 2) {
   return s.split('\n').slice(skip).join('\n');
 }
 
-function augment(err: unknown, callerStack: string, name: string): Error {
+function augment(err: unknown, callerStack: string, logid: string): Error {
   if (err && err instanceof Error) {
     const msg = err.message ?? String(err);
-    if (!msg.includes(`${name}:`)) {
-      err.message = `${name}: ${msg}`;
+    if (!msg.includes(`${logid}:`)) {
+      err.message = `${logid}: ${msg}`;
     }
     if (err.stack && !err.stack.includes('--- caller stack ---')) {
       err.stack += `\n\n--- caller stack ---\n${callerStack}`;
@@ -34,7 +34,43 @@ function isPromiseLike(x: unknown): x is PromiseLike<unknown> {
   return 'then' in (x as { then?: unknown }) && typeof (x as { then?: unknown }).then === 'function';
 }
 
-function wrapFunction<T extends AnyFn>(fn: T, name: string): T {
+function callFunction<T extends AnyFn>(args: {
+  target: T;
+  thisArg: unknown;
+  argList: unknown[];
+  callerStack: string;
+  path: string;
+  logid: string;
+  callbacks: ICallbacks;
+}): ReturnType<T> {
+  const { target, thisArg, argList, callerStack, path, logid, callbacks } = args;
+  try {
+    const realThis = thisArg && typeof thisArg === 'object' ? (reverseObj.get(thisArg) ?? thisArg) : thisArg;
+    const out = Reflect.apply(target, realThis, argList);
+
+    if (isPromiseLike(out)) {
+      return out.then(
+        v => {
+          callbacks.onSuccess?.(path, v, ...argList);
+          return v;
+        },
+        e => {
+          const error = augment(e, callerStack, logid);
+          callbacks.onError?.(path, error, ...argList);
+          throw error;
+        },
+      ) as unknown as ReturnType<T>;
+    }
+    callbacks.onSuccess?.(path, out, ...argList);
+    return out as ReturnType<T>;
+  } catch (e) {
+    const error = augment(e, callerStack, logid);
+    callbacks.onError?.(path, error, ...argList);
+    throw error;
+  }
+}
+
+function wrapFunction<T extends AnyFn>(fn: T, logid: string, path: string, callbacks: ICallbacks): T {
   const existing = fnCache.get(fn);
   if (existing) return existing as unknown as T;
 
@@ -48,12 +84,16 @@ function wrapFunction<T extends AnyFn>(fn: T, name: string): T {
           let wrapped = cbCache.get(key);
           if (!wrapped) {
             wrapped = function (this: unknown, ...cbArgs: unknown[]) {
-              try {
-                return key.apply(this as ThisParameterType<T>, cbArgs as Parameters<T>);
-              } catch (e) {
-                throw augment(e, callerStack, name);
-              }
-            } as AnyFn;
+              return callFunction({
+                target: key,
+                thisArg: this,
+                argList: cbArgs,
+                callerStack,
+                path,
+                callbacks,
+                logid,
+              });
+            } as T;
             cbCache.set(key, wrapped);
           }
           return wrapped;
@@ -61,23 +101,15 @@ function wrapFunction<T extends AnyFn>(fn: T, name: string): T {
         return a;
       });
 
-      try {
-        const realThis =
-          thisArg && typeof thisArg === 'object' ? (reverseObj.get(thisArg as object) ?? thisArg) : thisArg;
-        const out = Reflect.apply(target, realThis, wrappedArgs);
-
-        if (isPromiseLike(out)) {
-          return out.then(
-            v => v,
-            e => {
-              throw augment(e, callerStack, name);
-            },
-          ) as unknown as ReturnType<T>;
-        }
-        return out as ReturnType<T>;
-      } catch (e) {
-        throw augment(e, callerStack, name);
-      }
+      return callFunction({
+        target,
+        thisArg,
+        argList: wrappedArgs,
+        callerStack,
+        callbacks,
+        logid,
+        path,
+      });
     },
   });
 
@@ -85,7 +117,13 @@ function wrapFunction<T extends AnyFn>(fn: T, name: string): T {
   return prox as unknown as T;
 }
 
-function deepProxy<T extends object>(obj: T, name: string, seen = new WeakMap<object, unknown>()): T {
+function deepProxy<T extends object>(
+  obj: T,
+  logid: string,
+  path: string,
+  callbacks: ICallbacks,
+  seen = new WeakMap<object, unknown>(),
+): T {
   if (seen.has(obj)) return seen.get(obj) as T;
   const prox = new Proxy(obj as unknown as Record<PropertyKey, unknown>, {
     get(target, prop, _receiver) {
@@ -94,6 +132,7 @@ function deepProxy<T extends object>(obj: T, name: string, seen = new WeakMap<ob
 
       if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return value;
 
+      const childPath = path ? `${path}.${String(prop)}` : String(prop);
       if (typeof value === 'function') {
         if (prop === 'then' || prop === 'catch' || prop === 'finally') {
           const fn = value as AnyFn;
@@ -109,9 +148,9 @@ function deepProxy<T extends object>(obj: T, name: string, seen = new WeakMap<ob
           }
           return bound;
         }
-        return wrapFunction(value as AnyFn, name);
+        return wrapFunction(value as AnyFn, logid, childPath, callbacks);
       }
-      if (typeof value === 'object') return deepProxy(value, name, seen);
+      if (typeof value === 'object') return deepProxy(value, logid, childPath, callbacks, seen);
 
       return value;
     },
@@ -122,14 +161,19 @@ function deepProxy<T extends object>(obj: T, name: string, seen = new WeakMap<ob
   return prox as T;
 }
 
+export interface ICallbacks {
+  onSuccess?: (fnPath: string, result: unknown, ...args: unknown[]) => unknown;
+  onError?: (fnPath: string, error: Error, ...args: unknown[]) => unknown;
+}
+
 const installedSymbol = Symbol('ArgonClientWrapper.installed');
 /** Wrap a Polkadot.js ApiPromise so all calls & callbacks get augmented stacks. */
-export function wrapApi<T extends ArgonClient>(api: T, name: string): T {
+export function wrapApi<T extends ArgonClient>(api: T, logid: string, callbacks: ICallbacks): T {
   if (installedSymbol in (api as object)) {
     return api; // Already wrapped
   }
-  const result = deepProxy(api, name);
-  Object.defineProperty(result, installedSymbol, {
+  const result = deepProxy(api, logid, '', callbacks);
+  Object.defineProperty(api, installedSymbol, {
     value: true,
     enumerable: false,
     configurable: false,

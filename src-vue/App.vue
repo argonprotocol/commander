@@ -15,7 +15,6 @@
     <template v-if="config.isLoaded">
       <template v-if="showMiningPanel">
         <UpgradeOverlay v-if="isNeedingUpgrade && config.isMinerReadyToInstall" />
-        <ServerBrokenOverlay v-else-if="bot.isBroken && !config.hasDbMigrationError" />
         <SyncingOverlay v-else-if="bot.isSyncing" />
         <BootingOverlay v-else-if="config.isBootingUpFromMiningAccountPreviousHistory" />
       </template>
@@ -56,7 +55,6 @@ import ServerConfigureOverlay from './overlays/ServerConfigureOverlay.vue';
 import SecuritySettingsOverlay from './overlays/SecuritySettingsOverlay.vue';
 import UpgradeOverlay from './overlays/UpgradeOverlay.vue';
 import SyncingOverlay from './overlays/SyncingOverlay.vue';
-import ServerBrokenOverlay from './overlays/ServerBrokenOverlay.vue';
 import TopBar from './navigation/TopBar.vue';
 import { useController } from './stores/controller';
 import { useConfig } from './stores/config';
