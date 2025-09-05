@@ -1,7 +1,7 @@
 <!-- prettier-ignore -->
 <template>
   <p class="text-md mb-3">
-    Choose how you want to distribute your capital between bitcoin securitization and pool liquidity.
+    Choose how you want to distribute your capital between bitcoin securitization and treasury pool capital.
   </p>
 
   <div v-if="showBidAmountAlert" class="rounded-md bg-yellow-50 p-4">
@@ -32,10 +32,10 @@
     </div>
     <div class="flex flex-col w-1/2">
       <div class="mt-3 font-bold opacity-60 mb-0.5">
-        Pool Liquidity Capital
+        Treasury Pool Capital
       </div>
       <div class="flex flex-row items-center gap-2 w-full">
-        <InputNumber v-model="config.vaultingRules.capitalForLiquidityPct" @update:modelValue="handlePoolChange" :min="0" :max="50" :dragBy="1" :dragByMin="0.1" :maxDecimals="1" format="percent" class="w-full" />
+        <InputNumber v-model="config.vaultingRules.capitalForTreasuryPct" @update:modelValue="handlePoolChange" :min="0" :max="50" :dragBy="1" :dragByMin="0.1" :maxDecimals="1" format="percent" class="w-full" />
       </div>
     </div>
   </div>
@@ -54,7 +54,7 @@ const calculator = getCalculator();
 const showBidAmountAlert = Vue.ref(false);
 
 function handleSecurityChange(value: number) {
-  config.vaultingRules.capitalForLiquidityPct = 100 - value;
+  config.vaultingRules.capitalForTreasuryPct = 100 - value;
 }
 
 function handlePoolChange(value: number) {

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const VaultingRulesSchema = z.object({
   capitalForSecuritizationPct: z.number(),
-  capitalForLiquidityPct: z.number(),
+  capitalForTreasuryPct: z.number(),
 
   securitizationRatio: z.number(),
   profitSharingPct: z.number(),

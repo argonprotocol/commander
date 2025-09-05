@@ -67,7 +67,7 @@ export class Vaults {
         microgonLiquidityAdded: frameRevenue.bitcoinLocksMarketValue.toBigInt(),
         bitcoinFeeRevenue: frameRevenue.bitcoinLockFeeRevenue.toBigInt(),
         bitcoinLocksCreated: frameRevenue.bitcoinLocksCreated.toNumber(),
-        liquidityPool: {
+        treasuryPool: {
           totalEarnings: frameRevenue.liquidityPoolTotalEarnings.toBigInt(),
           vaultEarnings: frameRevenue.liquidityPoolVaultEarnings.toBigInt(),
           externalCapital: frameRevenue.liquidityPoolExternalCapital.toBigInt(),
@@ -129,22 +129,22 @@ export class Vaults {
     return revenue;
   }
 
-  public contributedCapital(vaultId: number, maxFrames = 10): bigint {
+  public contributedTreasuryCapital(vaultId: number, maxFrames = 10): bigint {
     const vaultRevenue = this.stats?.vaultsById[vaultId];
     if (!vaultRevenue) return 0n;
 
     return vaultRevenue.changesByFrame
       .slice(0, maxFrames)
-      .reduce((total, change) => total + change.liquidityPool.externalCapital + change.liquidityPool.vaultCapital, 0n);
+      .reduce((total, change) => total + change.treasuryPool.externalCapital + change.treasuryPool.vaultCapital, 0n);
   }
 
-  public poolEarnings(vaultId: number, maxFrames = 10): bigint {
+  public treasuryPoolEarnings(vaultId: number, maxFrames = 10): bigint {
     const vaultRevenue = this.stats?.vaultsById[vaultId];
     if (!vaultRevenue) return 0n;
 
     return vaultRevenue.changesByFrame
       .slice(0, maxFrames)
-      .reduce((total, change) => total + change.liquidityPool.totalEarnings, 0n);
+      .reduce((total, change) => total + change.treasuryPool.totalEarnings, 0n);
   }
 
   public getTrailingYearVaultRevenue(vaultId: number): bigint {
@@ -227,11 +227,11 @@ export class Vaults {
     return lowestPrice;
   }
 
-  public getLiquidityFillPct(vaultId: number): number {
+  public getTreasuryFillPct(vaultId: number): number {
     const vault = this.vaultsById[vaultId];
     if (!vault) return 0;
 
-    const epochPoolCapital = Number(this.contributedCapital(vaultId, 10));
+    const epochPoolCapital = Number(this.contributedTreasuryCapital(vaultId, 10));
     const activatedSecuritization = Number(
       this.stats?.vaultsById[vaultId]?.changesByFrame[0]?.securitizationActivated ?? 0n,
     );
@@ -246,9 +246,9 @@ export class Vaults {
 
     const yearFeeRevenue = Number(this.getTrailingYearVaultRevenue(vaultId));
 
-    const epochPoolCapital = Number(this.contributedCapital(vaultId, 10));
+    const epochPoolCapital = Number(this.contributedTreasuryCapital(vaultId, 10));
 
-    const epochPoolEarnings = Number(this.poolEarnings(vaultId, 10));
+    const epochPoolEarnings = Number(this.treasuryPoolEarnings(vaultId, 10));
     const epochPoolEarningsRatio = epochPoolCapital ? epochPoolEarnings / epochPoolCapital : 0;
 
     const poolApy = (1 + epochPoolEarningsRatio) ** 36.5 - 1;
@@ -310,11 +310,11 @@ export class Vaults {
           bitcoinFeeRevenue: convertBigIntStringToNumber(change.bitcoinFeeRevenue as any) ?? 0n,
           securitization: convertBigIntStringToNumber(change.securitization as any) ?? 0n,
           securitizationActivated: convertBigIntStringToNumber(change.securitizationActivated as any) ?? 0n,
-          liquidityPool: {
-            externalCapital: convertBigIntStringToNumber(change.liquidityPool.externalCapital as any) ?? 0n,
-            vaultCapital: convertBigIntStringToNumber(change.liquidityPool.vaultCapital as any) ?? 0n,
-            totalEarnings: convertBigIntStringToNumber(change.liquidityPool.totalEarnings as any) ?? 0n,
-            vaultEarnings: convertBigIntStringToNumber(change.liquidityPool.vaultEarnings as any) ?? 0n,
+          treasuryPool: {
+            externalCapital: convertBigIntStringToNumber(change.treasuryPool.externalCapital as any) ?? 0n,
+            vaultCapital: convertBigIntStringToNumber(change.treasuryPool.vaultCapital as any) ?? 0n,
+            totalEarnings: convertBigIntStringToNumber(change.treasuryPool.totalEarnings as any) ?? 0n,
+            vaultEarnings: convertBigIntStringToNumber(change.treasuryPool.vaultEarnings as any) ?? 0n,
           },
           uncollectedEarnings: 0n,
         })),
@@ -335,7 +335,7 @@ export class Vaults {
     return stats;
   }
 
-  public static async getLiquidityPoolPayout(
+  public static async getTreasuryPoolPayout(
     clients: MainchainClients,
   ): Promise<{ totalPoolRewards: bigint; totalActivatedCapital: bigint }> {
     const client = await (clients.prunedClientPromise ?? clients.archiveClientPromise);
@@ -347,7 +347,7 @@ export class Vaults {
     for (const miner of minersAtFrame) {
       totalMicrogonsBid += miner.bid.toBigInt();
     }
-    console.log('Liquidity bid pool at current frame', { totalMicrogonsBid, frameId: currentFrameId });
+    console.log('Treasury pool at current frame', { totalMicrogonsBid, frameId: currentFrameId });
     for (const [_vaultId, entry] of vaultPools) {
       console.log('Capital activated', entry.toJSON());
       for (const [_, balance] of entry.contributorBalances) {

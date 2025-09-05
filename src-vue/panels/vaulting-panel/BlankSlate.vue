@@ -10,9 +10,9 @@
           </div>
           <p class="text-base text-justify w-[780px] !mx-auto mt-10 text-[#4B2B4E]">
             Argon's Stabilization Vaults are the backbone of its ingenuity. These vaults are designed to lock Bitcoins into
-            special contracts that generate unencumbered shorts against the Argon stablecoin. It is these Bitcoin-to-Argon shorts 
+            special contracts that generate unencumbered shorts against the Argon stablecoin. It is these Bitcoin-to-Argon shorts
             that give Argon its price stability and make it impossible to death-spiral. In return for operating vaults and managing
-            the related liquidity pools, Vaulters are able to earn substantial rewards. Click a button below to get started.
+            the related treasury pools, Vaulters are able to earn substantial rewards. Click a button below to get started.
           </p>
         </div>
         <div class="flex flex-row items-center text-2xl mt-10 w-full justify-center gap-x-6">
@@ -109,13 +109,13 @@
                         </tr>
                         <tr>
                           <td class="border-t border-slate-600/20 pl-1 font-bold text-sm text-slate-600/50">
-                            Liquidity
+                            Treasury Pools
                           </td>
                           <td class="border-t border-slate-600/20 w-full pr-1">
                             <div class="relative w-full bg-slate-500/10 border border-slate-400 rounded h-5">
                               <div
                                 class="absolute left-[-1px] top-[-1px] h-[calc(100%+2px)] bg-white/90 border border-slate-500 rounded"
-                                :style="{ width: vault.liquidityFillPct + '%' }"
+                                :style="{ width: vault.treasuryFillPct + '%' }"
                               ></div>
                             </div>
                           </td>
@@ -158,11 +158,11 @@ const cloneCount = Vue.computed(() => {
   return Math.ceil(minVaults / Math.max(1, vaultCount.value));
 });
 
-const vaults = Vue.ref([] as { id: number; btcFillPct: number; liquidityFillPct: number }[]);
+const vaults = Vue.ref([] as { id: number; btcFillPct: number; treasuryFillPct: number }[]);
 const bitcoinLocked = Vue.ref(0);
 const microgonValueInVaults = Vue.ref(0n);
 /**
- * Get btc revenue from last 10 days and add liquidity pool revenue from last 10 days. Multiply by 365 and divide by capital contributed.
+ * Get btc revenue from last 10 days and add treasury pool revenue from last 10 days. Multiply by 365 and divide by capital contributed.
  */
 const averageVaultAPY = Vue.ref(0);
 
@@ -191,7 +191,7 @@ async function updateRevenue() {
       vaults.value.push({
         id: vault.vaultId,
         btcFillPct: Math.round((Number(bitcoinSpaceUsed) / Number(maxSpace)) * 100),
-        liquidityFillPct: vaultsStore.getLiquidityFillPct(vault.vaultId),
+        treasuryFillPct: vaultsStore.getTreasuryFillPct(vault.vaultId),
       });
       vaultApys.push(apy);
     }

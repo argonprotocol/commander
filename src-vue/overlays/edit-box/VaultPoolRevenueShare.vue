@@ -1,7 +1,7 @@
 <!-- prettier-ignore -->
 <template>
   <p class="text-md mb-3">
-    As bitcoins lock into your vault, your ability to invest in liquidity pools increase. Instead of investing your capital, you can share a portion of your profits with outside funders.
+    As bitcoins lock into your vault, your ability to invest in treasury pools increase. Instead of investing your capital, you can share a portion of your profits with outside funders.
   </p>
 
   <div v-if="showBidAmountAlert" class="rounded-md bg-yellow-50 p-4">

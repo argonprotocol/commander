@@ -4,13 +4,13 @@ import { configDotenv } from 'dotenv';
 import Path from 'node:path';
 import vaultCli from './vaultCli.js';
 import miningCli from './miningCli.js';
-import liquidityCli from './liquidityCli.js';
+import treasuryCli from './treasuryCli.js';
 import bitcoinCli from './bitcoinCli.js';
 import { Accountset, parseSubaccountRange } from '@argonprotocol/commander-core';
 import { getClient, keyringFromSuri, type KeyringPair } from '@argonprotocol/mainchain';
 import { keyringFromFile, saveKeyringPair } from './keyringStore.js';
 
-export { accountCli, vaultCli, miningCli, liquidityCli, bitcoinCli, keyringFromFile, saveKeyringPair };
+export { accountCli, vaultCli, miningCli, treasuryCli, bitcoinCli, keyringFromFile, saveKeyringPair };
 
 export function globalOptions(program: Command) {
   return program.optsWithGlobals() as IGlobalOptions;
@@ -44,7 +44,7 @@ export function buildCli() {
     .addCommand(accountCli())
     .addCommand(vaultCli())
     .addCommand(miningCli())
-    .addCommand(liquidityCli())
+    .addCommand(treasuryCli())
     .addCommand(bitcoinCli());
 }
 
