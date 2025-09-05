@@ -32,8 +32,7 @@
 
             <div v-if="isLoaded" class="flex flex-col grow relative w-full">
               <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
-                Vaults are special holding mechanisms that stabilize the Argon stablecoin and provide liquidity to the broader network. You can earn
-                revenue by creating and managing these vaults. Use the screen below to configure your vault.
+                Vaults are special holding mechanisms that stabilize the Argon stablecoin and provide liquidity to the broader network. You can earn revenue by creating and managing these vaults. Use the screen below to configure your vault.
               </DialogDescription>
 
               <section class="flex flex-row border-t border-b border-slate-500/30 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
@@ -92,7 +91,7 @@
                       </div>
                       </div>
                     </div>
-                  </ReturnsOverlay>                  
+                  </ReturnsOverlay>
                 </div>
               </section>
 
@@ -124,7 +123,7 @@
                         </div>
                         <span class="text-md w-2/12 text-gray-500/60">&nbsp;vs&nbsp;</span>
                         <div MainRule class="flex flex-row items-center justify-center w-5/12">
-                          <span>{{ numeral(rules.capitalForLiquidityPct).format('0.[00]') }}%</span>
+                          <span>{{ numeral(rules.capitalForTreasuryPct).format('0.[00]') }}%</span>
                         </div>
                       </div>
                       <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono ">
@@ -306,11 +305,11 @@ const hasExternalPoolCapitalHigh = Vue.ref(false);
 
 const tooltip = {
   capitalToCommit:
-    'The more capital you commit, the more liquidity your provides to the network and therefore the higher your potential returns.',
+    'The more capital you commit, the more liquidity you provides to the network and therefore the higher your potential returns.',
   estimatedAPYRange:
     'These estimates are based on a combination of current pool rewards and the vault parameters you have configured below.',
   capitalDistribution:
-    'This is how your capital will be split between securitization and liquidity. Each delivers different return rates and yet both work together.',
+    'This is how your capital will be split between securitization and treasury pools. Each delivers different return rates and yet both work together.',
   securitizationRatio:
     'This is the ratio of argons to bitcoins that you are committing. These argons guarantee the bitcoin holders that their assets are safe.',
   poolRevenueShare:

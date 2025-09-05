@@ -2,7 +2,7 @@
 <template>
   <p class="text-md mb-3">
     This panel allows you to set the expected usage rates of your vault. Will the demand for Liquid Locking of Bitcoin be strong enough
-    to keep your vault at capacity? Will people contribute to your liquidity pool?
+    to keep your vault at capacity? Will people contribute to your treasury pool?
   </p>
 
   <div v-if="showBidAmountAlert" class="rounded-md bg-yellow-50 p-4">
@@ -29,7 +29,7 @@
   </div>
 
   <div class="mt-3 font-bold opacity-60 mb-0.5">
-    Liquidity Pool Usage
+    Treasury Pool Usage
   </div>
   <div class="flex flex-row items-center gap-2 w-full">
     <InputNumber v-model="config.vaultingRules.poolUtilizationPctMin" :min="0" :max="100" :dragBy="1" :dragByMin="0.1" :maxDecimals="1" format="percent" suffix=" slow" class="w-1/2" />

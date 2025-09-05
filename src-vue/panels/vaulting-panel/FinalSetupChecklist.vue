@@ -7,7 +7,7 @@
         Back to Start
       </div>
       <div class="absolute bottom-0 left-0 w-[200%] h-px bg-gradient-to-r from-slate-400/30 from-0% via-slate-400/30 via-50% to-transparent to-100%"></div>
-    </div>    
+    </div>
     <div class="relative px-[15%] pt-2">
       <div>
         <h1 class="text-4xl font-bold text-left mt-24 mb-4 whitespace-nowrap text-argon-text-primary">
@@ -42,10 +42,10 @@
           <div class="px-4">
             <h2 class="text-2xl text-[#A600D4] font-bold">Configure Your Vault Settings</h2>
             <p v-if="!config.hasSavedVaultingRules">
-              Decide how much capital to commit, your distribution between securitization and liquidity, and other basic settings.
+              Decide how much capital to commit, your distribution between securitization and treasury pools, and other basic settings.
             </p>
             <p v-else>
-              You setup your bidding rules and <span class="underline decoration-dashed underline-offset-4 decoration-slate-600/80">committed 
+              You setup your bidding rules and <span class="underline decoration-dashed underline-offset-4 decoration-slate-600/80">committed
               {{ currency.symbol }}{{ microgonToArgonNm(config.vaultingRules?.baseMicrogonCommitment || 0n).format('0,0.[00]') }}</span>
               <!-- with an <span class="underline decoration-dashed underline-offset-4 decoration-slate-600/80">average expected APY return of {{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</span>. -->
             </p>

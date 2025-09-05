@@ -728,7 +728,7 @@ const defaults: IConfigDefaults = {
   vaultingRules: () => {
     return {
       capitalForSecuritizationPct: 50,
-      capitalForLiquidityPct: 50,
+      capitalForTreasuryPct: 50,
       securitizationRatio: 1,
       profitSharingPct: 10,
       btcFlatFee: 2n * BigInt(MICROGONS_PER_ARGON),

@@ -23,10 +23,11 @@
               </span>
             </div>
             <div class="grid grid-cols-2 flex-row border-t-1 py-2">
-              <label>In Liquidity Pool ({{ numeral(config.vaultingRules.capitalForLiquidityPct).format('0.[00]') }}%)</label>
+              <label>In Treasury Pool ({{ numeral(config.vaultingRules.capitalForTreasuryPct).format('0.[00]') }}%)</label>
               <span class="text-right">
-                {{ currency.symbol }}{{ microgonToMoneyNm(ownLiquidityPoolCapitalDeployed).formatIfElse('< 1_000', '0,0.00', '0,0') }}
-                <span class="pl-5 text-gray-500" v-if="pendingLiquidityPool > 0">({{ currency.symbol }}{{ microgonToMoneyNm(pendingLiquidityPool).formatIfElse('< 1_000', '0,0.00', '0,0') }} pending)</span>
+                {{ currency.symbol
+                }}{{ microgonToMoneyNm(ownTreasuryPoolCapitalDeployed).formatIfElse('< 1_000', '0,0.00', '0,0') }}
+                <span class="pl-5 text-gray-500" v-if="pendingTreasuryPool > 0">({{ currency.symbol }}{{ microgonToMoneyNm(pendingTreasuryPool).formatIfElse('< 1_000', '0,0.00', '0,0') }} pending)</span>
               </span>
             </div>
 
@@ -161,7 +162,7 @@
           </template>
         </div>
         <div v-else-if="!vaultingRules.personalBtcInMicrogons" class="text-2xl font-bold text-center">
-          Configure a personal bitcoin amount to capture your Vault's liquidity
+          Configure a personal bitcoin amount to active your Vault's Treasury Pools
         </div>
         <div v-else class="text-md font-bold text-gray-400 text-center">
           Initializing your personal bitcoin lock...
@@ -265,21 +266,21 @@ const pendingSecuritization = Vue.computed(() => {
   return microgonsForSecuritization - (vault.createdVault?.activatedSecuritization() ?? 0n);
 });
 
-const pendingLiquidityPool = Vue.computed(() => {
-  const { microgonsForLiquidity } = MyVault.getMicrogoonSplit(config.vaultingRules);
-  return microgonsForLiquidity - ownLiquidityPoolCapitalDeployed.value;
+const pendingTreasuryPool = Vue.computed(() => {
+  const { microgonsForTreasury } = MyVault.getMicrogoonSplit(config.vaultingRules);
+  return microgonsForTreasury - ownTreasuryPoolCapitalDeployed.value;
 });
 
-const ownLiquidityPoolCapitalDeployed = Vue.computed(() => {
-  const liquidityPool = vault.data.stats;
-  if (!liquidityPool) return 0n;
-  return liquidityPool.changesByFrame
+const ownTreasuryPoolCapitalDeployed = Vue.computed(() => {
+  const treasuryPool = vault.data.stats;
+  if (!treasuryPool) return 0n;
+  return treasuryPool.changesByFrame
     .slice(0, 10)
-    .reduce((acc, change) => acc + (change.liquidityPool.vaultCapital ?? 0n), 0n);
+    .reduce((acc, change) => acc + (change.treasuryPool.vaultCapital ?? 0n), 0n);
 });
 const capitalInUse = Vue.computed(() => {
   let activatedSecuritization = vault.createdVault?.activatedSecuritization() ?? 0n;
-  return activatedSecuritization + ownLiquidityPoolCapitalDeployed.value;
+  return activatedSecuritization + ownTreasuryPoolCapitalDeployed.value;
 });
 
 const apy = Vue.computed(() => {
@@ -290,8 +291,8 @@ const apy = Vue.computed(() => {
   let framesRemaining = 365; // Assuming 365 frames for a year
   for (const change of stats.changesByFrame) {
     ytdRevenue += change.bitcoinFeeRevenue;
-    ytdRevenue += change.liquidityPool.vaultEarnings;
-    capitalDeployed.push(change.securitization + change.liquidityPool.vaultCapital);
+    ytdRevenue += change.treasuryPool.vaultEarnings;
+    capitalDeployed.push(change.securitization + change.treasuryPool.vaultCapital);
     framesRemaining -= 1;
     if (framesRemaining <= 0) break;
   }
@@ -310,7 +311,7 @@ const revenueMicrogons = Vue.computed(() => {
   let sum = stats.baseline.feeRevenue ?? 0n;
   for (const change of stats.changesByFrame) {
     sum += change.bitcoinFeeRevenue ?? 0n;
-    sum += change.liquidityPool.vaultEarnings ?? 0n;
+    sum += change.treasuryPool.vaultEarnings ?? 0n;
   }
   return sum;
 });
@@ -419,7 +420,7 @@ Vue.onMounted(async () => {
       setTimeout(() => (isSavingRules.value = false), 60000);
     }
   } catch (error) {
-    console.error('Error prebonding liquidity pool:', error);
+    console.error('Error prebonding treasury pool:', error);
     saveRulesErrorMessage.value = error instanceof Error ? error.message : `${error}`;
     saveRulesProgressPct.value = 100;
   }

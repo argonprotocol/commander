@@ -7,7 +7,7 @@ import { u8aToHex } from '@polkadot/util';
 export class VaultMonitor {
   public events = createNanoEvents<{
     'bitcoin-space-above': (vaultId: number, amount: bigint) => void;
-    'liquidity-pool-space-above': (vaultId: number, amount: bigint) => void;
+    'treasury-pool-space-above': (vaultId: number, amount: bigint) => void;
   }>();
   public readonly vaultsById: { [id: number]: Vault } = {};
   public readonly blockWatch: BlockWatch;
@@ -100,7 +100,7 @@ export class VaultMonitor {
         btcDeal: `${formatArgons(vault.terms.bitcoinBaseFee)} + ${formatPercent(vault.terms.bitcoinAnnualPercentRate)}`,
         securitization: `${formatArgons(vault.securitization)} at ${vault.securitizationRatio}x`,
         securActivated: `${formatArgons(vault.activatedSecuritizationPerSlot())}/slot`,
-        liquidPoolDeal: `${formatPercent(vault.terms.liquidityPoolProfitSharing)} sharing`,
+        treasurySharing: `${formatPercent(vault.terms.liquidityPoolProfitSharing)} sharing`,
         operator: `${this.accountset.namedAccounts.has(vault.operatorAccountId) ? ` (${this.accountset.namedAccounts.get(vault.operatorAccountId)})` : vault.operatorAccountId}`,
         state: vault.isClosed ? 'closed' : vault.openedDate < new Date() ? 'open' : 'pending',
       });
@@ -177,13 +177,13 @@ export class VaultMonitor {
   }
 
   private checkMiningBondAlerts(vaultId: number, vault: Vault) {
-    if (this.alerts.liquidityPoolSpaceAvailable === undefined) return;
+    if (this.alerts.treasuryPoolSpaceAvailable === undefined) return;
 
     const activatedSecuritization = vault.activatedSecuritizationPerSlot();
     const capitalization = this.activatedCapitalByVault[vaultId] ?? 0n;
     const available = activatedSecuritization - capitalization;
-    if (available >= this.alerts.liquidityPoolSpaceAvailable) {
-      this.events.emit('liquidity-pool-space-above', vaultId, available);
+    if (available >= this.alerts.treasuryPoolSpaceAvailable) {
+      this.events.emit('treasury-pool-space-above', vaultId, available);
     }
   }
 
@@ -201,7 +201,7 @@ export type WatchAlerts = {
    */
   bitcoinSpaceAvailable?: bigint;
   /**
-   * Liquidity pool space available
+   * Treasury pool space available
    */
-  liquidityPoolSpaceAvailable?: bigint;
+  treasuryPoolSpaceAvailable?: bigint;
 };

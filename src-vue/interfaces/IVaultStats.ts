@@ -24,7 +24,7 @@ export interface IVaultFrameStats {
   microgonLiquidityAdded: bigint;
   securitization: bigint;
   securitizationActivated: bigint;
-  liquidityPool: {
+  treasuryPool: {
     externalCapital: bigint;
     vaultCapital: bigint;
     totalEarnings: bigint;

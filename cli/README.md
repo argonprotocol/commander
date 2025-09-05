@@ -1,5 +1,4 @@
-This is a cli client for the Argon Protocol (https://argon.network). The cli allows you to interact with a subset of the Argon Protocol (Mining Bidding, Vaults, Liquidity
-Pools, Bitcoin)
+This is a cli client for the Argon Protocol (https://argon.network). The cli allows you to interact with a subset of the Argon Protocol (Mining Bidding, Vaults, Treasury Pools, Bitcoin)
 
 ## Installation
 
@@ -90,7 +89,7 @@ Commands:
   accounts                         Manage subaccounts from a single keypair
   vaults                           Monitor vaults and manage securitization
   mining                           Watch mining seats or setup bidding
-  liquidity-pools                  Monitor or bond to liquidity pools
+  treasury-pools                   Monitor or bond to treasury pools
   bitcoin                          Wait for bitcoin space
   help [command]                   display help for command
 ```

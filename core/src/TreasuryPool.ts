@@ -38,8 +38,8 @@ interface IVaultMiningBondFund {
   earnings?: bigint;
 }
 
-export class BidPool {
-  public bidPoolAmount: bigint = 0n;
+export class TreasuryPool {
+  public miningAuctionAmount: bigint = 0n;
   public nextFrameId: number = 1;
   public poolVaultCapitalByFrame: {
     [frameId: number]: {
@@ -84,7 +84,7 @@ export class BidPool {
     }
 
     const vaults = Object.entries(this.vaultsById);
-    const newSecuritization: BidPool['vaultSecuritization'] = [];
+    const newSecuritization: TreasuryPool['vaultSecuritization'] = [];
     for (const [vaultId, vault] of vaults) {
       const amount = vault.activatedSecuritizationPerSlot();
       newSecuritization.push({
@@ -103,7 +103,7 @@ export class BidPool {
     this.printDebounce();
   }
 
-  public async getBidPool(): Promise<bigint> {
+  public async getAuctionRevenue(): Promise<bigint> {
     const client = this.client;
     const balanceBytes = await client.rpc.state.call('MiningSlotApi_bid_pool', '');
     const balance = client.createType('U128', balanceBytes);
@@ -116,7 +116,7 @@ export class BidPool {
     const api = await client.at(blockHash);
     const rawVaultIds = await api.query.vaults.vaultsById.keys();
     const vaultIds = rawVaultIds.map(x => x.args[0].toNumber());
-    this.bidPoolAmount = await this.getBidPool();
+    this.miningAuctionAmount = await this.getAuctionRevenue();
     this.nextFrameId = (await api.query.miningSlot.nextFrameId()).toNumber();
 
     const contributors = await api.query.liquidityPools.vaultPoolsByFrame.entries();
@@ -147,7 +147,7 @@ export class BidPool {
       if (api.events.liquidityPools.BidPoolDistributed.is(event)) {
         const { frameId: rawFrameId } = event.data;
         this.lastDistributedFrameId = rawFrameId.toNumber();
-        this.bidPoolAmount = await this.getBidPool();
+        this.miningAuctionAmount = await this.getAuctionRevenue();
 
         this.FrameSubscriptions[rawFrameId.toNumber()]?.();
         const entrant = await api.query.liquidityPools.vaultPoolsByFrame(rawFrameId);
@@ -183,10 +183,10 @@ export class BidPool {
         api.query.liquidityPools.capitalActive as any,
         api.query.liquidityPools.capitalRaising as any,
       ],
-      async ([_bids, nextFrameId, openVaultBidPoolCapital, nextPoolCapital]) => {
-        this.bidPoolAmount = await this.getBidPool();
+      async ([_bids, nextFrameId, activePoolCapital, raisingPoolCapital]) => {
+        this.miningAuctionAmount = await this.getAuctionRevenue();
         this.nextFrameId = nextFrameId.toNumber();
-        for (const entrant of [...openVaultBidPoolCapital, ...nextPoolCapital]) {
+        for (const entrant of [...activePoolCapital, ...raisingPoolCapital]) {
           this.setVaultFrameData(entrant.frameId.toNumber(), entrant.vaultId.toNumber(), {
             activatedCapital: entrant.activatedCapital.toBigInt(),
           });
@@ -209,11 +209,11 @@ export class BidPool {
     });
 
     if (!affordability.canAfford) {
-      console.warn('Insufficient balance to bond argons to liquidity pool', {
+      console.warn('Insufficient balance to bond argons to treasury pool', {
         ...affordability,
         argonsNeeded: amount,
       });
-      throw new Error('Insufficient balance to bond argons to liquidity pool');
+      throw new Error('Insufficient balance to bond argons to treasury pool');
     }
 
     const result = await txSubmitter.submit({
@@ -276,7 +276,7 @@ export class BidPool {
         rows,
       }).printTable();
     }
-    console.log(`\n\nActive Bid Pool: ${formatArgons(this.bidPoolAmount)} (Frame ${this.nextFrameId})`);
+    console.log(`\n\nActive Bid Pool: ${formatArgons(this.miningAuctionAmount)} (Frame ${this.nextFrameId})`);
     const Frame = this.poolVaultCapitalByFrame[this.nextFrameId];
     if (Object.keys(Frame ?? {}).length > 0) {
       const rows = [];
@@ -316,7 +316,7 @@ export class BidPool {
         Owner: this.getOperatorName(x.vaultId),
         'Bitcoin Space': formatArgons(x.bitcoinSpace),
         'Activated Securitization': `${formatArgons(x.activatedSecuritization)} / slot`,
-        'Liquidity Pool': `${formatPercent(x.vaultSharingPercent)} profit sharing${table}`,
+        'Treasury Pool': `${formatPercent(x.vaultSharingPercent)} profit sharing${table}`,
       });
     }
     if (nextCapital.length) {
@@ -327,7 +327,7 @@ export class BidPool {
           { name: 'Owner', alignment: 'left' },
           { name: 'Bitcoin Space', alignment: 'right' },
           { name: 'Activated Securitization', alignment: 'right' },
-          { name: 'Liquidity Pool', alignment: 'left', minLen: maxWidth },
+          { name: 'Treasury Pool', alignment: 'left', minLen: maxWidth },
         ],
         rows: nextCapital,
       }).printTable();

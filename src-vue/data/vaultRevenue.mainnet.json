@@ -78,7 +78,7 @@
           "bitcoinFeeRevenue": "0n",
           "securitization": "3600000000n",
           "securitizationActivated": "3599807851n",
-          "liquidityPool": {
+          "treasuryPool": {
             "totalEarnings": "0n",
             "vaultEarnings": "0n",
             "externalCapital": "0n",
@@ -94,7 +94,7 @@
           "bitcoinFeeRevenue": "0n",
           "securitization": "3600000000n",
           "securitizationActivated": "3599807851n",
-          "liquidityPool": {
+          "treasuryPool": {
             "totalEarnings": "0n",
             "vaultEarnings": "0n",
             "externalCapital": "0n",
@@ -110,7 +110,7 @@
           "bitcoinFeeRevenue": "0n",
           "securitization": "3600000000n",
           "securitizationActivated": "3599807851n",
-          "liquidityPool": {
+          "treasuryPool": {
             "totalEarnings": "0n",
             "vaultEarnings": "0n",
             "externalCapital": "0n",
@@ -126,7 +126,7 @@
           "bitcoinFeeRevenue": "0n",
           "securitization": "3600000000n",
           "securitizationActivated": "3599807851n",
-          "liquidityPool": {
+          "treasuryPool": {
             "totalEarnings": "0n",
             "vaultEarnings": "0n",
             "externalCapital": "0n",
@@ -142,7 +142,7 @@
           "bitcoinFeeRevenue": "0n",
           "securitization": "3600000000n",
           "securitizationActivated": "3599807851n",
-          "liquidityPool": {
+          "treasuryPool": {
             "totalEarnings": "0n",
             "vaultEarnings": "0n",
             "externalCapital": "0n",

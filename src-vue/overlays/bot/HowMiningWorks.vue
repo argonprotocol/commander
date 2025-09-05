@@ -24,7 +24,7 @@
 
             <div v-if="isLoaded" class="flex flex-col grow relative w-full overflow-y-auto px-8 py-5">
               <p>
-                The most basic thing to understand about Argon is that there is no third-party company, authority, or server helping to run
+                The most basic thing to understand about Argon Commander is that there is no third-party company, authority, or server helping to run
                 this app. It simply exists as code on your computer. In fact, the entire Argon blockchain is fully
                 decentralized and anonymous. It's operated by the community, by people like yourself. That's why this app has no
                 signup screen or login screen -- you simply use it. Instead, a special auction bid system is used to

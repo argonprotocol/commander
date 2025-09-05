@@ -14,7 +14,7 @@ export * from './NetworkConfig.js';
 export * from './Accountset.js';
 export * from './AccountMiners.js';
 export * from './AccountRegistry.js';
-export * from './BidPool.js';
+export * from './TreasuryPool.js';
 export * from './BlockWatch.js';
 export * from './CohortBidder.js';
 export * from './MiningBids.js';

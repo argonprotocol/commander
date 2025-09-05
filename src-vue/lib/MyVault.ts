@@ -31,7 +31,7 @@ export class MyVault {
     creatingVaultPromise?: Promise<{ vault: Vault; txResult: TxResult }>;
     metadata: IVaultRecord | null;
     stats: IVaultStats | null;
-    ownLiquidityPoolCapitalDeployed: bigint;
+    ownTreasuryPoolCapitalDeployed: bigint;
     pendingCollectRevenue: bigint;
     pendingCosignUtxoIds: Set<number>;
     nextCollectDueDate: number;
@@ -66,7 +66,7 @@ export class MyVault {
       createdVault: null,
       metadata: null,
       stats: null,
-      ownLiquidityPoolCapitalDeployed: 0n,
+      ownTreasuryPoolCapitalDeployed: 0n,
       pendingCollectRevenue: 0n,
       pendingCosignUtxoIds: new Set(),
       nextCollectDueDate: 0,
@@ -281,7 +281,7 @@ export class MyVault {
     if (progressCallback) {
       progressCallback(100, 100, steps);
     }
-    // TODO: redistribute to the liquidity pool and vaults
+    // TODO: redistribute to the treasury pool and vaults
   }
 
   public async create(args: {
@@ -350,10 +350,10 @@ export class MyVault {
     this.vaults.vaultsById[vaultId] = this.createdVault;
 
     await this.vaults.updateVaultRevenue(vaultId, frameRevenues);
-    this.data.ownLiquidityPoolCapitalDeployed = 0n;
+    this.data.ownTreasuryPoolCapitalDeployed = 0n;
     this.data.pendingCollectRevenue = 0n;
     for (const frameRevenue of frameRevenues) {
-      this.data.ownLiquidityPoolCapitalDeployed += frameRevenue.liquidityPoolVaultCapital.toBigInt();
+      this.data.ownTreasuryPoolCapitalDeployed += frameRevenue.liquidityPoolVaultCapital.toBigInt();
       this.data.pendingCollectRevenue += frameRevenue.uncollectedRevenue.toBigInt();
     }
     const data = this.vaults.stats?.vaultsById?.[vaultId];
@@ -369,22 +369,22 @@ export class MyVault {
     this.#subscriptions.length = 0;
   }
 
-  public async activeMicrogonsForLiquidity(): Promise<{ maxAmountPerFrame?: bigint; active: bigint }> {
+  public async activeMicrogonsForTreasuryPool(): Promise<{ maxAmountPerFrame?: bigint; active: bigint }> {
     if (!this.createdVault) {
-      throw new Error('No vault created to get active liquidity funds');
+      throw new Error('No vault created to get active treasury pool funds');
     }
     const client = await getMainchainClient(false);
     const vaultId = this.createdVault.vaultId;
-    const prebondedLiquidity = await client.query.liquidityPools.prebondedByVaultId(vaultId);
-    const activeLiquidity =
+    const prebondedToPool = await client.query.liquidityPools.prebondedByVaultId(vaultId);
+    const activePoolFunds =
       this.data.stats?.changesByFrame
         .slice(0, 10)
-        .reduce((total, change) => total + change.liquidityPool.vaultCapital, 0n) ?? 0n;
+        .reduce((total, change) => total + change.treasuryPool.vaultCapital, 0n) ?? 0n;
 
-    const maxAmountPerFrame = prebondedLiquidity.isSome
-      ? prebondedLiquidity.unwrap().maxAmountPerFrame.toBigInt()
+    const maxAmountPerFrame = prebondedToPool.isSome
+      ? prebondedToPool.unwrap().maxAmountPerFrame.toBigInt()
       : undefined;
-    return { active: activeLiquidity, maxAmountPerFrame };
+    return { active: activePoolFunds, maxAmountPerFrame };
   }
 
   public async saveVaultRules(args: {
@@ -397,14 +397,14 @@ export class MyVault {
   }) {
     const vaultId = this.createdVault?.vaultId;
     if (!vaultId) {
-      throw new Error('No vault created to prebond liquidity pool');
+      throw new Error('No vault created to prebond treasury pool');
     }
     const vault = this.createdVault;
     const { bip39Seed, bitcoinLocksStore, argonKeyring, rules, tip = 0n, txProgressCallback } = args;
     const client = await getMainchainClient(false);
 
     // need to leave enough for the BTC fees
-    const { microgonsForLiquidity, microgonsForSecuritization } = MyVault.getMicrogoonSplit(
+    const { microgonsForTreasury, microgonsForSecuritization } = MyVault.getMicrogoonSplit(
       rules,
       this.metadata?.operationalFeeMicrogons ?? 0n,
     );
@@ -419,15 +419,15 @@ export class MyVault {
       );
       txs.push(tx);
     }
-    const { maxAmountPerFrame, active } = await this.activeMicrogonsForLiquidity();
+    const { maxAmountPerFrame, active } = await this.activeMicrogonsForTreasuryPool();
     let needsPrebondIncrease;
     if (maxAmountPerFrame !== undefined) {
-      needsPrebondIncrease = maxAmountPerFrame < microgonsForLiquidity / 10n;
+      needsPrebondIncrease = maxAmountPerFrame < microgonsForTreasury / 10n;
     } else {
-      needsPrebondIncrease = active < microgonsForLiquidity;
+      needsPrebondIncrease = active < microgonsForTreasury;
     }
     if (needsPrebondIncrease) {
-      const tx = client.tx.liquidityPools.vaultOperatorPrebond(vaultId, microgonsForLiquidity / 10n);
+      const tx = client.tx.liquidityPools.vaultOperatorPrebond(vaultId, microgonsForTreasury / 10n);
       txs.push(tx);
     }
     let bitcoinArgs: { satoshis: bigint; hdPath: string; securityFee: bigint } | undefined;
@@ -437,7 +437,7 @@ export class MyVault {
         bip39Seed,
         vault,
         addingVaultSpace: BigInt(Number(addedSecuritization) / vault.securitizationRatio),
-        microgonLiquidity: microgonsForLiquidity,
+        microgonLiquidity: microgonsForTreasury,
         tip,
       });
       bitcoinArgs = { satoshis, hdPath, securityFee };
@@ -457,12 +457,12 @@ export class MyVault {
     const tick = await api.query.ticks.currentTick();
 
     console.log('Saving vault updates', {
-      microgonsForLiquidity,
+      microgonsForTreasury,
       microgonsForSecuritization,
       tip,
       meta: this.metadata,
     });
-    this.metadata!.prebondedMicrogons = microgonsForLiquidity;
+    this.metadata!.prebondedMicrogons = microgonsForTreasury;
     this.metadata!.prebondedMicrogonsAtTick = tick.toNumber();
     this.metadata!.operationalFeeMicrogons ??= 0n;
     this.metadata!.operationalFeeMicrogons += txResult.finalFee ?? 0n;
@@ -487,13 +487,13 @@ export class MyVault {
       BigNumber(rules.capitalForSecuritizationPct).div(100).times(microgonsForVaulting).toFixed(),
     );
 
-    const microgonsForLiquidity = BigInt(
-      BigNumber(rules.capitalForLiquidityPct).div(100).times(microgonsForVaulting).toFixed(),
+    const microgonsForTreasury = BigInt(
+      BigNumber(rules.capitalForTreasuryPct).div(100).times(microgonsForVaulting).toFixed(),
     );
     return {
       microgonsForVaulting,
       microgonsForSecuritization,
-      microgonsForLiquidity,
+      microgonsForTreasury,
       estimatedOperationalFees,
     };
   }

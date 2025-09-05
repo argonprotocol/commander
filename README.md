@@ -22,33 +22,18 @@ The workflow will help you:
 - Configure a bidding "bot" to win 1 or more mining seats
 - Monitor your bids and earnings
 
-### Liquid Locking
-
-Liquid Locking is a way to lock Bitcoin into a vault, and receive Argon tokens in return. This is a way to unlock the
-liquidity of your Bitcoin, while still maintaining custody. Your Bitcoin Lock produces an option against the Argon
-network that can be called by burning Argons to release your Bitcoin. If the Argon price is below target, this can
-result in arbitrage opportunities.
-
-Activities:
-
-- Create a Bitcoin Lock
-- Wait for a vault to have enough capacity to accept your Bitcoin
-- Ratchet or Release your Bitcoin Lock
-- Bond argons to a liquidity pool to provide liquidity to new Bitcoin "lock-ers"
-
-> This part of the tool is still under construction
-
 ### Vaults
 
 Vaults provide collateralization security to Bitcoin Lockers. As a Vault operator, you are able to set the APR per Argon
-for Bitcoin Locks, as well as the percent you're willing to share with Liquidity Pool providers (for more details, refer
+for Bitcoin Locks, as well as the percent you're willing to share with Treasury Pool providers (for more details, refer
 to the Argon documentation amd white-papers).
 
 Activities:
 
 - Create a Vault
 - Cosign Bitcoin Lock release-requests
-- Monitor Liquidity Pool returns
+- Monitor Treasury Pool returns
+- Liquid Lock BTC in your Vault
 
 #### Testing Vaults
 You can run the docker-compose file that's in the mainchain repository to access bitcoin liquidity to test with (locally). Run the docker per instructions in the [Argon Mainchain repository](https://github.com/argon-network/mainchain/tree/main/README.md#running-from-docker).

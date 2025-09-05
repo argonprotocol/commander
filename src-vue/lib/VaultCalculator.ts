@@ -18,7 +18,7 @@ export class VaultCalculator {
 
   async load(rules: Config['vaultingRules']) {
     this.rules = rules;
-    const { totalPoolRewards, totalActivatedCapital } = await Vaults.getLiquidityPoolPayout(this.clients);
+    const { totalPoolRewards, totalActivatedCapital } = await Vaults.getTreasuryPoolPayout(this.clients);
     this.totalPoolRewards = totalPoolRewards;
     this.existingPoolCapital = totalActivatedCapital;
   }
@@ -120,35 +120,35 @@ export class VaultCalculator {
     const totalPoolSpace = this.calculateTotalPoolSpace(utilization);
     const maxPoolCapitalBn = BigNumber(totalPoolSpace).multipliedBy(this.rules.poolUtilizationPctMin / 100);
     const maxPoolCapital = bigNumberToBigInt(maxPoolCapitalBn);
-    const internalPoolCapital = this.caculateInternalPoolCapital();
+    const internalPoolCapital = this.calculateInternalPoolCapital();
 
     return bigIntMax(internalPoolCapital, maxPoolCapital);
   }
 
-  private caculateInternalPoolCapital(): bigint {
-    const { baseMicrogonCommitment: internalCapital, capitalForLiquidityPct } = this.rules;
+  private calculateInternalPoolCapital(): bigint {
+    const { baseMicrogonCommitment: internalCapital, capitalForTreasuryPct } = this.rules;
 
     const internalCapitalBn = BigNumber(internalCapital);
-    const internalPoolCapitalBn = internalCapitalBn.multipliedBy(capitalForLiquidityPct / 100);
+    const internalPoolCapitalBn = internalCapitalBn.multipliedBy(capitalForTreasuryPct / 100);
     return bigNumberToBigInt(internalPoolCapitalBn);
   }
 
   public calculateExternalPoolCapital(utilization: 'Low' | 'High'): bigint {
     const totalPoolSpace = this.calculateTotalPoolSpace(utilization);
-    const internalPoolCapital = this.caculateInternalPoolCapital();
+    const internalPoolCapital = this.calculateInternalPoolCapital();
     const maxPoolCapitalBn = BigNumber(totalPoolSpace).multipliedBy(this.rules.poolUtilizationPctMin / 100);
     const maxPoolCapital = bigIntMax(internalPoolCapital, bigNumberToBigInt(maxPoolCapitalBn));
 
     return maxPoolCapital - internalPoolCapital;
   }
 
-  private calculateGobalPoolCapital(utilization: 'Low' | 'High'): bigint {
+  private calculateGlobalPoolCapital(utilization: 'Low' | 'High'): bigint {
     return this.existingPoolCapital + this.calculateTotalPoolCapital(utilization);
   }
 
   private calculateTotalPoolRevenue(utilization: 'Low' | 'High'): bigint {
     const totalPoolCapital = this.calculateTotalPoolCapital(utilization);
-    const globalPoolCapital = this.calculateGobalPoolCapital(utilization);
+    const globalPoolCapital = this.calculateGlobalPoolCapital(utilization);
     const pctOfGlobalPool = BigNumber(totalPoolCapital).dividedBy(globalPoolCapital).toNumber();
     const revenueFromPoolBn = BigNumber(this.totalPoolRewards).multipliedBy(pctOfGlobalPool);
     return bigNumberToBigInt(revenueFromPoolBn);
