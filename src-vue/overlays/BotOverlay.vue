@@ -46,15 +46,17 @@
                       </header>
                       <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
                         <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
-                          You need {{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') }} argonot{{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') === '1' ? '' : 's' }} and {{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') }} argon{{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') === '0,0' ? '' : 's' }}, which are valued at
+                          To secure your goal of {{getEpochSeatGoalCount()}} mining seats per epoch, you need
                         </div>
                         <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
                           <NeedMoreCapitalHover v-if="probableMinSeats < getEpochSeatGoalCount()" :calculator="calculator" :seat-goal-count="getEpochSeatGoalCount()" :ideal-capital-commitment="getMinimumCapitalCommitment()" @increase-capital-commitment="updateMinimumCapital()" />
                           <InputArgon v-model="capitalToCommitMicrogons" :min="10_000_000n" :minDecimals="0" />
                         </div>
                         <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
-                          This is the amount of capital needed to secure a good<br/>
-                          chance of achieving your minimum goal of {{getEpochSeatGoalCount()}} seats per epoch.
+                          This is the amount of capital you'll need to acquire<br/>
+                          {{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') }} argonot{{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') === '1' ? '' : 's' }} 
+                          and {{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') }} argon{{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') === '0,0' ? '' : 's' }} 
+                          at current market rates.
                         </div>
                       </div>
                     </div>
@@ -73,16 +75,14 @@
                       </header>
                       <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
                         <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
-                          You are expected to earn {{ currency.symbol }}{{ microgonToMoneyNm(averageEarnings).format('0,0.00') }} per epoch with an APY of
+                          Your capital is estimated to return {{ numeral(epochPercentageYield).formatCapped('0,0.00', 999_999) }}% per epoch at an APY of
                         </div>
                         <div class="flex flex-row items-center justify-center grow relative h-26 text-6xl font-bold font-mono text-argon-600">
                           {{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
                         </div>
                         <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full">
-                        This represents an average of your estimated mining<br/>
-                        returns, which range between
-                        {{ numeral(maximumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}%
-                        and {{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}% APY.
+                        This represents the average return between your starting<br />
+                        bid and maximum bid, between slow growth and fast growth.
                       </div>
                       </div>
                     </div>
@@ -94,32 +94,32 @@
                 <section class="flex flex-row h-1/2 my-2">
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.minimumBid, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'minimumBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.startingBid, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'startingBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
                       <div StatHeader>Starting Bid</div>
-                      <div v-if="minimumBidAmountOverride" MainRule class="w-full flex flex-row items-center justify-center space-x-2">
+                      <div v-if="startingBidAmountOverride" MainRule class="w-full flex flex-row items-center justify-center space-x-2">
                         <AlertIcon class="w-5 h-5 text-yellow-700 inline-block relative -top-0.5" />
-                        <span class="line-through text-gray-500/60">{{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }}</span>
-                        <span>{{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmountOverride).format('0,0.00') }}</span>
+                        <span class="line-through text-gray-500/60">{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}</span>
+                        <span>{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmountOverride).format('0,0.00') }}</span>
                       </div>
                       <div v-else MainRule class="w-full">
-                        {{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }}
+                        {{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}
                       </div>
                       <div class="text-gray-500/60 text-md">
-                        <span v-if="rules.minimumBidFormulaType === BidAmountFormulaType.Custom">Custom Value</span>
+                        <span v-if="rules.startingBidFormulaType === BidAmountFormulaType.Custom">Custom Value</span>
                         <template v-else>
-                          <span>{{ rules.minimumBidFormulaType }}</span>
-                          <span v-if="rules.minimumBidAdjustmentType === BidAmountAdjustmentType.Absolute && rules.minimumBidAdjustAbsolute">
-                            {{ rules.minimumBidAdjustAbsolute > 0 ? '+' : '-'
+                          <span>{{ rules.startingBidFormulaType }}</span>
+                          <span v-if="rules.startingBidAdjustmentType === BidAmountAdjustmentType.Absolute && rules.startingBidAdjustAbsolute">
+                            {{ rules.startingBidAdjustAbsolute > 0 ? '+' : '-'
                             }}{{ currency.symbol
                             }}{{
                               microgonToMoneyNm(
-                                rules.minimumBidAdjustAbsolute < 0n ? -rules.minimumBidAdjustAbsolute : rules.minimumBidAdjustAbsolute,
+                                rules.startingBidAdjustAbsolute < 0n ? -rules.startingBidAdjustAbsolute : rules.startingBidAdjustAbsolute,
                               ).format('0.00')
                             }}
                           </span>
-                          <span v-else-if="rules.minimumBidAdjustRelative">
-                            &nbsp;{{ rules.minimumBidAdjustRelative > 0 ? '+' : '-'
-                            }}{{ numeral(Math.abs(rules.minimumBidAdjustRelative)).format('0.[00]') }}%
+                          <span v-else-if="rules.startingBidAdjustRelative">
+                            &nbsp;{{ rules.startingBidAdjustRelative > 0 ? '+' : '-'
+                            }}{{ numeral(Math.abs(rules.startingBidAdjustRelative)).format('0.[00]') }}%
                           </span>
                         </template>
                       </div>
@@ -329,26 +329,27 @@ const dialogPanel = Vue.ref(null);
 const probableMinSeats = Vue.ref(0);
 const probableMaxSeats = Vue.ref(0);
 
-const minimumBidAmount = Vue.ref(0n);
-const minimumBidAmountOverride = Vue.ref<bigint | null>(null);
+const startingBidAmount = Vue.ref(0n);
+const startingBidAmountOverride = Vue.ref<bigint | null>(null);
 const maximumBidAmount = Vue.ref(0n);
 const maximumBidAmountOverride = Vue.ref<bigint | null>(null);
 
-const minimumBidAtSlowGrowthAPY = Vue.ref(0);
-const minimumBidAtFastGrowthAPY = Vue.ref(0);
+const startingBidAtSlowGrowthAPY = Vue.ref(0);
+const startingBidAtFastGrowthAPY = Vue.ref(0);
 const maximumBidAtSlowGrowthAPY = Vue.ref(0);
 const maximumBidAtFastGrowthAPY = Vue.ref(0);
 const capitalToCommitMicrogons = Vue.ref(0n);
 
 const averageAPY = Vue.ref(0);
 const averageEarnings = Vue.ref(0n);
+const epochPercentageYield = Vue.ref(0);
 
 const tooltip = {
   capitalToCommit:
     'The more capital you put in, the more seats you have a chance to win and therefore the higher your earning potential.',
   estimatedAPYRange:
     'These estimates are based on the guaranteed block rewards locked on-chain combined with the bidding variables shown on this page.',
-  minimumBid: `This is your starting bid price. Don't put it too low or you'll be forced to pay unneeded transaction fees in order to submit a rebid.`,
+  startingBid: `This is your starting bid price. Don't put it too low or you'll be forced to pay unneeded transaction fees in order to submit a rebid.`,
   rebiddingStrategy: Vue.computed(
     () =>
       `If your bids get knocked out of contention, your bot will wait ${rules.value.rebiddingDelay} minute${rules.value.rebiddingDelay === 1 ? '' : 's'} before submitting a new bid at ${currency.symbol}${microgonToMoneyNm(rules.value.rebiddingIncrementBy).format('0.00')} above the current winning bid.`,
@@ -444,18 +445,25 @@ function updateAPYs() {
   calculator.updateBiddingRules(rules.value);
   calculator.calculateBidAmounts();
 
-  minimumBidAmount.value = calculator.minimumBidAmount;
-  minimumBidAmountOverride.value = calculator.minimumBidAmountOverride;
+  startingBidAmount.value = calculator.startingBidAmount;
+  startingBidAmountOverride.value = calculator.startingBidAmountOverride;
 
   maximumBidAmount.value = calculator.maximumBidAmount;
   maximumBidAmountOverride.value = calculator.maximumBidAmountOverride;
 
-  minimumBidAtSlowGrowthAPY.value = calculator.minimumBidAtSlowGrowthAPY;
-  minimumBidAtFastGrowthAPY.value = calculator.minimumBidAtFastGrowthAPY;
+  startingBidAtSlowGrowthAPY.value = calculator.startingBidAtSlowGrowthAPY;
+  startingBidAtFastGrowthAPY.value = calculator.startingBidAtFastGrowthAPY;
   maximumBidAtSlowGrowthAPY.value = calculator.maximumBidAtSlowGrowthAPY;
   maximumBidAtFastGrowthAPY.value = calculator.maximumBidAtFastGrowthAPY;
 
   averageAPY.value = calculator.averageAPY;
+
+  const epochMinimumSlowYield = calculator.calculateTenDayYield('minimum', 'slow');
+  const epochMinimumFastYield = calculator.calculateTenDayYield('minimum', 'fast');
+  const epochMaximumSlowYield = calculator.calculateTenDayYield('maximum', 'slow');
+  const epochMaximumFastYield = calculator.calculateTenDayYield('maximum', 'fast');
+  epochPercentageYield.value =
+    (epochMinimumSlowYield + epochMinimumFastYield + epochMaximumSlowYield + epochMaximumFastYield) / 4;
 
   const maxAffordableSeats = rules.value.baseMicronotCommitment / calculatorData.micronotsRequiredForBid;
 
@@ -465,7 +473,7 @@ function updateAPYs() {
     probableMinSeats.value = Number(maxAffordableSeats);
   }
 
-  const probableMaxSeatsBn = BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculator.minimumBidAmount);
+  const probableMaxSeatsBn = BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculator.startingBidAmount);
   probableMaxSeats.value = Math.min(bigNumberToInteger(probableMaxSeatsBn), calculatorData.maxPossibleMiningSeatCount);
   if (probableMaxSeats.value > maxAffordableSeats) {
     probableMaxSeats.value = Number(maxAffordableSeats);
@@ -514,6 +522,17 @@ basicEmitter.on('openBotOverlay', async () => {
     previousBiddingRules = JsonExt.stringify(config.biddingRules);
     capitalToCommitMicrogons.value = getMinimumCapitalCommitment();
     updateAPYs();
+    if (isBrandNew.value && startingBidAtFastGrowthAPY.value > 20_000) {
+      /*
+        The default startingBidFormulaType is set at PreviousDayLow, which at least on testnet, is creating a
+        situation where the projected returns are astronomically high (and seemingly unrealistic). In order to
+        create a more realistic projected return, we're setting the startingBidFormulaType to 12% below BreakevenAtSlowGrowth.
+        We might remove this IF block in the future, but it seems a good safety fix for now.
+      */
+      config.biddingRules.startingBidFormulaType = BidAmountFormulaType.BreakevenAtSlowGrowth;
+      config.biddingRules.startingBidAdjustmentType = BidAmountAdjustmentType.Relative;
+      config.biddingRules.startingBidAdjustRelative = -12.0;
+    }
     isLoaded.value = true;
   });
 });

@@ -23,12 +23,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { useConfig } from '../../stores/config';
-import { useCurrency } from '../../stores/currency';
-import { createNumeralHelpers } from '../../lib/numeral';
 import { TooltipArrow, TooltipContent, TooltipPortal, TooltipProvider, TooltipRoot, TooltipTrigger } from 'reka-ui';
-import { IBiddingRules } from '@argonprotocol/commander-core';
-import { getCalculator, getCalculatorData } from '../../stores/mainchain';
 
 const props = withDefaults(
   defineProps<{
@@ -40,46 +35,6 @@ const props = withDefaults(
     width: '700px',
   },
 );
-
-const calculator = getCalculator();
-const calculatorData = getCalculatorData();
-
-const config = useConfig();
-const currency = useCurrency();
-const { microgonToMoneyNm, microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
-
-const rules = Vue.computed(() => config.biddingRules as IBiddingRules);
-
-const maximumBidAtSlowGrowthAPY = Vue.ref(0);
-const maximumBidAtMediumGrowthAPY = Vue.ref(0);
-const maximumBidAtFastGrowthAPY = Vue.ref(0);
-const minimumBidAtSlowGrowthAPY = Vue.ref(0);
-const minimumBidAtMediumGrowthAPY = Vue.ref(0);
-const minimumBidAtFastGrowthAPY = Vue.ref(0);
-
-const maximumBidAmount = Vue.ref(0n);
-const minimumBidAmount = Vue.ref(0n);
-
-function updateAPYs() {
-  calculator.updateBiddingRules(rules.value);
-  calculator.calculateBidAmounts();
-
-  maximumBidAmount.value = calculator.maximumBidAmount;
-  minimumBidAmount.value = calculator.minimumBidAmount;
-
-  maximumBidAtSlowGrowthAPY.value = calculator.maximumBidAtSlowGrowthAPY;
-  maximumBidAtMediumGrowthAPY.value = (calculator.maximumBidAtSlowGrowthAPY + calculator.maximumBidAtFastGrowthAPY) / 2;
-  maximumBidAtFastGrowthAPY.value = calculator.maximumBidAtFastGrowthAPY;
-  minimumBidAtSlowGrowthAPY.value = calculator.minimumBidAtSlowGrowthAPY;
-  minimumBidAtMediumGrowthAPY.value = (calculator.minimumBidAtSlowGrowthAPY + calculator.minimumBidAtFastGrowthAPY) / 2;
-  minimumBidAtFastGrowthAPY.value = calculator.minimumBidAtFastGrowthAPY;
-}
-
-Vue.onMounted(() => {
-  calculatorData.isInitializedPromise.then(() => {
-    updateAPYs();
-  });
-});
 </script>
 
 <style scoped>

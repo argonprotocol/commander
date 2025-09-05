@@ -14,17 +14,17 @@
           :style="{ width: props.width }"
         >
           <p>
-            Calculating your future return is complex since it's impossible to predict what will happen at auction. For
+            Calculating your future return is complex since it's difficult to predict what will happen at auction. For
             example, you could win mining seats at your Starting Bid price of {{ currency.symbol
-            }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }}, or at your Maximum Bid of {{ currency.symbol
+            }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}, or at your Maximum Bid of {{ currency.symbol
             }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}, or any price in-between.
           </p>
 
           <p>
-            Regardles of price, each seat in today's auction is guaranteed to earn an average of
+            Regardless of price, each seat in today's auction is guaranteed to earn an average of
             {{ microgonToArgonNm(calculatorData.microgonsToMineThisSeat).format('0,0') }} argons and
             {{ micronotToArgonotNm(calculatorData.micronotsToMineThisSeat).format('0,0') }} argonots. This provides the
-            safety of a minimum profit.
+            safety of a profit minimum.
           </p>
 
           <p>
@@ -65,16 +65,16 @@
                 <td
                   class="text-argon-800/40 border-t border-dashed border-slate-300 pr-10 pl-2 text-left font-sans font-light"
                 >
-                  Starting Bid ({{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }})
+                  Starting Bid ({{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }})
                 </td>
                 <td class="border-t border-dashed border-slate-300 text-right">
-                  {{ numeral(minimumBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                  {{ numeral(startingBidAtSlowGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
                 </td>
                 <td class="border-t border-dashed border-slate-300 text-right">
-                  {{ numeral(minimumBidAtMediumGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                  {{ numeral(startingBidAtMediumGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
                 </td>
                 <td class="border-t border-dashed border-slate-300 text-right">
-                  {{ numeral(minimumBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
+                  {{ numeral(startingBidAtFastGrowthAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
                 </td>
               </tr>
             </tbody>
@@ -119,26 +119,27 @@ const rules = Vue.computed(() => config.biddingRules as IBiddingRules);
 const maximumBidAtSlowGrowthAPY = Vue.ref(0);
 const maximumBidAtMediumGrowthAPY = Vue.ref(0);
 const maximumBidAtFastGrowthAPY = Vue.ref(0);
-const minimumBidAtSlowGrowthAPY = Vue.ref(0);
-const minimumBidAtMediumGrowthAPY = Vue.ref(0);
-const minimumBidAtFastGrowthAPY = Vue.ref(0);
+const startingBidAtSlowGrowthAPY = Vue.ref(0);
+const startingBidAtMediumGrowthAPY = Vue.ref(0);
+const startingBidAtFastGrowthAPY = Vue.ref(0);
 
 const maximumBidAmount = Vue.ref(0n);
-const minimumBidAmount = Vue.ref(0n);
+const startingBidAmount = Vue.ref(0n);
 
 function updateAPYs() {
   calculator.updateBiddingRules(rules.value);
   calculator.calculateBidAmounts();
 
   maximumBidAmount.value = calculator.maximumBidAmount;
-  minimumBidAmount.value = calculator.minimumBidAmount;
+  startingBidAmount.value = calculator.startingBidAmount;
 
   maximumBidAtSlowGrowthAPY.value = calculator.maximumBidAtSlowGrowthAPY;
   maximumBidAtMediumGrowthAPY.value = (calculator.maximumBidAtSlowGrowthAPY + calculator.maximumBidAtFastGrowthAPY) / 2;
   maximumBidAtFastGrowthAPY.value = calculator.maximumBidAtFastGrowthAPY;
-  minimumBidAtSlowGrowthAPY.value = calculator.minimumBidAtSlowGrowthAPY;
-  minimumBidAtMediumGrowthAPY.value = (calculator.minimumBidAtSlowGrowthAPY + calculator.minimumBidAtFastGrowthAPY) / 2;
-  minimumBidAtFastGrowthAPY.value = calculator.minimumBidAtFastGrowthAPY;
+  startingBidAtSlowGrowthAPY.value = calculator.startingBidAtSlowGrowthAPY;
+  startingBidAtMediumGrowthAPY.value =
+    (calculator.startingBidAtSlowGrowthAPY + calculator.startingBidAtFastGrowthAPY) / 2;
+  startingBidAtFastGrowthAPY.value = calculator.startingBidAtFastGrowthAPY;
 }
 
 Vue.onMounted(() => {

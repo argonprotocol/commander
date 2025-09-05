@@ -22,29 +22,29 @@
     Formula Type
   </div>
   <div v-if="options.length" class="flex flex-row items-center justify-between">
-    <InputMenu v-model="config.biddingRules.minimumBidFormulaType" :options="options" :selectFirst="true" class="w-full" />
+    <InputMenu v-model="config.biddingRules.startingBidFormulaType" :options="options" :selectFirst="true" class="w-full" />
   </div>
 
-  <template v-if="config.biddingRules.minimumBidFormulaType === BidAmountFormulaType.Custom">
+  <template v-if="config.biddingRules.startingBidFormulaType === BidAmountFormulaType.Custom">
     <div class="mt-3 font-bold opacity-60 mb-0.5">
       Value
     </div>
-    <InputArgon v-model="config.biddingRules.minimumBidCustom" :min="0n" class="min-w-60" />
+    <InputArgon v-model="config.biddingRules.startingBidCustom" :min="0n" class="min-w-60" />
   </template>
   <div v-else class="mt-3">
     <div class="mt-3 font-bold opacity-60 mb-0.5">
       Additional Adjustment
     </div>
     <div v-if="options.length" class="flex flex-row items-center justify-between space-x-2">
-      <InputMenu v-model="config.biddingRules.minimumBidAdjustmentType" :options="[
+      <InputMenu v-model="config.biddingRules.startingBidAdjustmentType" :options="[
         { name: BidAmountAdjustmentType.Absolute, value: BidAmountAdjustmentType.Absolute },
         { name: BidAmountAdjustmentType.Relative, value: BidAmountAdjustmentType.Relative }
       ]" :selectFirst="true" class="w-1/3" />
-      <InputArgon v-if="isAbsoluteType" v-model="config.biddingRules.minimumBidAdjustAbsolute" class="w-1/3" />
-      <InputNumber v-else v-model="config.biddingRules.minimumBidAdjustRelative" :min="-100" :dragBy="0.01" format="percent" class="w-1/3" />
+      <InputArgon v-if="isAbsoluteType" v-model="config.biddingRules.startingBidAdjustAbsolute" class="w-1/3" />
+      <InputNumber v-else v-model="config.biddingRules.startingBidAdjustRelative" :min="-100" :dragBy="0.01" format="percent" class="w-1/3" />
       <div> = </div>
       <div class="border border-slate-400 rounded-md px-2 py-1 h-[32px] border-dashed w-1/3 font-mono text-sm text-gray-800">
-        {{ currency.symbol }}{{ microgonToMoneyNm(calculator.minimumBidAmount).format('0,0.00') }}
+        {{ currency.symbol }}{{ microgonToMoneyNm(calculator.startingBidAmount).format('0,0.00') }}
       </div>
     </div>
   </div>
@@ -73,7 +73,7 @@ const bidAmount = Vue.ref<bigint>(0n);
 const options = Vue.ref<IOption[]>([]);
 
 const isAbsoluteType = Vue.computed(
-  () => config.biddingRules.minimumBidAdjustmentType === BidAmountAdjustmentType.Absolute,
+  () => config.biddingRules.startingBidAdjustmentType === BidAmountAdjustmentType.Absolute,
 );
 
 const showBidAmountAlert = Vue.ref(false);
@@ -81,7 +81,7 @@ const showBidAmountAlert = Vue.ref(false);
 Vue.watch(
   config.biddingRules,
   () => {
-    if (calculator.maximumBidAmountFromMinimumBid) {
+    if (calculator.maximumBidAmountFromStartingBid) {
       showBidAmountAlert.value = true;
     } else {
       showBidAmountAlert.value = false;
@@ -92,7 +92,7 @@ Vue.watch(
 
 Vue.onBeforeMount(async () => {
   await calculator.isInitializedPromise;
-  calculator.setPivotPoint('MinimumBid');
+  calculator.setPivotPoint('StartingBid');
   bidAmount.value = calculator.data.previousDayLowBid;
   options.value = [
     {

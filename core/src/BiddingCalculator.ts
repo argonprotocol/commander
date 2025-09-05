@@ -22,25 +22,25 @@ export default class BiddingCalculator {
 
   public biddingRules: IBiddingRules;
 
-  public minimumBidAmount!: bigint;
-  public minimumBidAmountAtPivot: null | bigint = null;
-  public minimumBidAmountFromMaximumBid: null | bigint = null;
-  public minimumBidAmountFromExpectedGrowth: null | bigint = null;
+  public startingBidAmount!: bigint;
+  public startingBidAmountAtPivot: null | bigint = null;
+  public startingBidAmountFromMaximumBid: null | bigint = null;
+  public startingBidAmountFromExpectedGrowth: null | bigint = null;
 
   public maximumBidAmount!: bigint;
   public maximumBidAmountAtPivot: null | bigint = null;
-  public maximumBidAmountFromMinimumBid: null | bigint = null;
+  public maximumBidAmountFromStartingBid: null | bigint = null;
   public maximumBidAmountFromExpectedGrowth: null | bigint = null;
 
-  public minimumBidAtSlowGrowthAPY!: number;
-  public minimumBidAtFastGrowthAPY!: number;
+  public startingBidAtSlowGrowthAPY!: number;
+  public startingBidAtFastGrowthAPY!: number;
 
   public maximumBidAtSlowGrowthAPY!: number;
   public maximumBidAtFastGrowthAPY!: number;
 
   public averageAPY!: number;
 
-  public pivotPoint: null | 'ExpectedGrowth' | 'MinimumBid' | 'MaximumBid' = null;
+  public pivotPoint: null | 'ExpectedGrowth' | 'StartingBid' | 'MaximumBid' = null;
 
   public isInitializedPromise: Promise<void>;
 
@@ -56,16 +56,16 @@ export default class BiddingCalculator {
       });
   }
 
-  public get minimumBidAmountOverride(): bigint | null {
-    if (this.minimumBidAmountFromMaximumBid || this.minimumBidAmountFromExpectedGrowth) {
-      return bigIntMin(this.minimumBidAmountFromMaximumBid, this.minimumBidAmountFromExpectedGrowth);
+  public get startingBidAmountOverride(): bigint | null {
+    if (this.startingBidAmountFromMaximumBid || this.startingBidAmountFromExpectedGrowth) {
+      return bigIntMin(this.startingBidAmountFromMaximumBid, this.startingBidAmountFromExpectedGrowth);
     }
     return null;
   }
 
   public get maximumBidAmountOverride(): bigint | null {
-    if (this.maximumBidAmountFromMinimumBid || this.maximumBidAmountFromExpectedGrowth) {
-      return bigIntMax(this.maximumBidAmountFromMinimumBid, this.maximumBidAmountFromExpectedGrowth);
+    if (this.maximumBidAmountFromStartingBid || this.maximumBidAmountFromExpectedGrowth) {
+      return bigIntMax(this.maximumBidAmountFromStartingBid, this.maximumBidAmountFromExpectedGrowth);
     }
     return null;
   }
@@ -82,35 +82,35 @@ export default class BiddingCalculator {
     this.biddingRules = biddingRules;
   }
 
-  public setPivotPoint(pivotPoint: null | 'ExpectedGrowth' | 'MinimumBid' | 'MaximumBid') {
+  public setPivotPoint(pivotPoint: null | 'ExpectedGrowth' | 'StartingBid' | 'MaximumBid') {
     if (pivotPoint === 'ExpectedGrowth') {
-      this.minimumBidAmountAtPivot = this.minimumBidAmountAtPivot || this.minimumBidAmount;
+      this.startingBidAmountAtPivot = this.startingBidAmountAtPivot || this.startingBidAmount;
       this.maximumBidAmountAtPivot = this.maximumBidAmountAtPivot || this.maximumBidAmount;
     }
     this.pivotPoint = pivotPoint;
   }
 
   public calculateBidAmounts() {
-    this.minimumBidAmount = this.calculateBidAmount('minimum');
+    this.startingBidAmount = this.calculateBidAmount('minimum');
     this.maximumBidAmount = this.calculateBidAmount('maximum');
 
-    if (this.pivotPoint === 'MinimumBid') {
-      if (this.minimumBidAmount > this.maximumBidAmount) {
-        this.maximumBidAmountFromMinimumBid = this.minimumBidAmount;
+    if (this.pivotPoint === 'StartingBid') {
+      if (this.startingBidAmount > this.maximumBidAmount) {
+        this.maximumBidAmountFromStartingBid = this.startingBidAmount;
       } else {
-        this.maximumBidAmountFromMinimumBid = null;
+        this.maximumBidAmountFromStartingBid = null;
       }
     } else if (this.pivotPoint === 'MaximumBid') {
-      if (this.maximumBidAmount < this.minimumBidAmount) {
-        this.minimumBidAmountFromMaximumBid = this.maximumBidAmount;
+      if (this.maximumBidAmount < this.startingBidAmount) {
+        this.startingBidAmountFromMaximumBid = this.maximumBidAmount;
       } else {
-        this.minimumBidAmountFromMaximumBid = null;
+        this.startingBidAmountFromMaximumBid = null;
       }
     } else if (this.pivotPoint === 'ExpectedGrowth') {
-      if (this.minimumBidAmountAtPivot !== this.minimumBidAmount) {
-        this.minimumBidAmountFromExpectedGrowth = this.minimumBidAmountAtPivot;
+      if (this.startingBidAmountAtPivot !== this.startingBidAmount) {
+        this.startingBidAmountFromExpectedGrowth = this.startingBidAmountAtPivot;
       } else {
-        this.minimumBidAmountFromExpectedGrowth = null;
+        this.startingBidAmountFromExpectedGrowth = null;
       }
       if (this.maximumBidAmountAtPivot !== this.maximumBidAmount) {
         this.maximumBidAmountFromExpectedGrowth = this.maximumBidAmountAtPivot;
@@ -119,14 +119,14 @@ export default class BiddingCalculator {
       }
     }
 
-    this.minimumBidAtSlowGrowthAPY = this.calculateAPY('minimum', 'slow');
-    this.minimumBidAtFastGrowthAPY = this.calculateAPY('minimum', 'fast');
+    this.startingBidAtSlowGrowthAPY = this.calculateAPY('minimum', 'slow');
+    this.startingBidAtFastGrowthAPY = this.calculateAPY('minimum', 'fast');
     this.maximumBidAtSlowGrowthAPY = this.calculateAPY('maximum', 'slow');
     this.maximumBidAtFastGrowthAPY = this.calculateAPY('maximum', 'fast');
 
     this.averageAPY =
-      (Math.min(this.minimumBidAtSlowGrowthAPY, 999_999) +
-        Math.min(this.minimumBidAtFastGrowthAPY, 999_999) +
+      (Math.min(this.startingBidAtSlowGrowthAPY, 999_999) +
+        Math.min(this.startingBidAtFastGrowthAPY, 999_999) +
         Math.min(this.maximumBidAtSlowGrowthAPY, 999_999) +
         Math.min(this.maximumBidAtFastGrowthAPY, 999_999)) /
       4;
@@ -201,10 +201,10 @@ export default class BiddingCalculator {
     return bigIntMax(0n, lossInMicrogons);
   }
 
-  private calculateAPY(bidType: IBidType, growthType: IGrowthType): number {
-    const minimumBidAmount = this.minimumBidAmountOverride ?? this.minimumBidAmount;
+  public calculateTenDayYield(bidType: IBidType, growthType: IGrowthType): number {
+    const startingBidAmount = this.startingBidAmountOverride ?? this.startingBidAmount;
     const maximumBidAmount = this.maximumBidAmountOverride ?? this.maximumBidAmount;
-    const microgonsBid = bidType === 'minimum' ? minimumBidAmount : maximumBidAmount;
+    const microgonsBid = bidType === 'minimum' ? startingBidAmount : maximumBidAmount;
 
     const transactionFee = this.data.estimatedTransactionFee;
 
@@ -220,16 +220,21 @@ export default class BiddingCalculator {
     const micronotsMinedAsMicrogons = this.micronotMinedAsMicrogonValue(argonotPriceChangePct);
     const totalRewardsBn = BigNumber(microgonsToMine + micronotsMinedAsMicrogons + microgonsToMint);
 
-    let totalPercentReturn = totalRewardsBn.minus(totalCostBn).dividedBy(totalCostBn).multipliedBy(100).toNumber();
+    let tenDayYield = totalRewardsBn.minus(totalCostBn).dividedBy(totalCostBn).multipliedBy(100).toNumber();
 
-    if (totalPercentReturn < 1000) {
-      totalPercentReturn = Math.round(totalPercentReturn * 100) / 100;
+    if (tenDayYield < 1000) {
+      tenDayYield = Math.round(tenDayYield * 100) / 100;
     } else {
-      totalPercentReturn = Math.round(totalPercentReturn);
+      tenDayYield = Math.round(tenDayYield);
     }
-    totalPercentReturn = Math.max(totalPercentReturn, -100);
+    tenDayYield = Math.max(tenDayYield, -100);
 
-    const apy = Math.pow(1 + totalPercentReturn / 100, 36.5) * 100 - 100;
+    return tenDayYield;
+  }
+
+  private calculateAPY(bidType: IBidType, growthType: IGrowthType): number {
+    const tenDayYield = this.calculateTenDayYield(bidType, growthType);
+    const apy = Math.pow(1 + tenDayYield / 100, 36.5) * 100 - 100;
 
     return Math.max(apy, -100);
   }
@@ -286,11 +291,11 @@ export default class BiddingCalculator {
   private extractBidDetails(bidType: IBidType): IBidDetails {
     if (bidType === 'minimum') {
       return {
-        formulaType: this.biddingRules.minimumBidFormulaType,
-        adjustmentType: this.biddingRules.minimumBidAdjustmentType,
-        adjustAbsolute: this.biddingRules.minimumBidAdjustAbsolute,
-        adjustRelative: this.biddingRules.minimumBidAdjustRelative,
-        custom: this.biddingRules.minimumBidCustom,
+        formulaType: this.biddingRules.startingBidFormulaType,
+        adjustmentType: this.biddingRules.startingBidAdjustmentType,
+        adjustAbsolute: this.biddingRules.startingBidAdjustAbsolute,
+        adjustRelative: this.biddingRules.startingBidAdjustRelative,
+        custom: this.biddingRules.startingBidCustom,
       };
     } else if (bidType === 'maximum') {
       return {

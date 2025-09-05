@@ -64,7 +64,7 @@ function handlePoolChange(value: number) {
 Vue.watch(
   config.biddingRules,
   () => {
-    if (calculator.minimumBidAmountFromExpectedGrowth || calculator.maximumBidAmountFromExpectedGrowth) {
+    if (calculator.startingBidAmountFromExpectedGrowth || calculator.maximumBidAmountFromExpectedGrowth) {
       showBidAmountAlert.value = true;
     } else {
       showBidAmountAlert.value = false;
