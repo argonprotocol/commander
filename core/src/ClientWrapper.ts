@@ -173,7 +173,7 @@ export function wrapApi<T extends ArgonClient>(api: T, logid: string, callbacks:
     return api; // Already wrapped
   }
   const result = deepProxy(api, logid, '', callbacks);
-  Object.defineProperty(api as any, installedSymbol, {
+  Object.defineProperty(api, installedSymbol, {
     value: true,
     enumerable: false,
     configurable: false,

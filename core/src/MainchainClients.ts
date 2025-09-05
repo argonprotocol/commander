@@ -93,7 +93,7 @@ export class MainchainClients {
       },
     });
     api.on('disconnected', () => {
-      this.events.emit('degraded', undefined, 'archive');
+      this.events.emit('degraded', undefined, clientType);
     });
     api.on('connected', () => {
       if (!apiError) this.events.emit('working', '', clientType);

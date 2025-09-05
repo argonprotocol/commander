@@ -6,7 +6,7 @@
     class="group alert-bar error"
     style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
   >
-    <AlertIcon class="inline-block h-4 w-4" />
+    <AlertIcon />
     <div class="font-bold grow">DATABASE CORRUPTION. Your database has become corrupted, and requires a hard reset.</div>
     <button
       @click="restartDatabase"
@@ -21,7 +21,7 @@
     class="group alert-bar error"
     style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
   >
-    <AlertIcon/>
+    <AlertIcon />
     <div class="grow"><span class="font-bold">Installer Is Running In Background</span>. You can close this app and the installer will continue without interruption.</div>
     <button
       @click="hideInstallerInBackgroundAlert = true"
@@ -34,7 +34,7 @@
     v-else-if="bot.isBroken"
     class="group alert-bar error"
   >
-    <AlertIcon/>
+    <AlertIcon />
     <div class="grow"><span class="font-bold">Server Error</span> Your server has encountered an unknown error. Restarting might resolve it.</div>
     <button
       @click="restartBot"
