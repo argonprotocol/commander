@@ -192,7 +192,7 @@
                     <span>{{ currentFrame.seatCountActive }}</span>
                     <label class="relative block w-full">
                       Active Mining Seat{{ currentFrame.seatCountActive === 1 ? '' : 's' }}
-                      <p class="absolute -bottom-4 uppercase h-[10px] text-center w-full text-xs text-gray-400">of {{ currentFrame.allMinersCount }} total network seats</p>
+                      <p class="absolute -bottom-4 uppercase h-[10px] text-center w-full text-xs text-gray-400">Out of {{ currentFrame.allMinersCount }} in network</p>
                     </label>
                   </div>
 

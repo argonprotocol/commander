@@ -85,11 +85,11 @@ const isAbsoluteType = Vue.computed(
 const showHasOverrideAlert = Vue.ref(false);
 const formulaChangeAmount = Vue.ref<bigint>(0n);
 
-let maximumBidAmountFromMinimumBid = calculator.maximumBidAmountFromMinimumBid;
+let maximumBidAmountFromStartingBid = calculator.maximumBidAmountFromStartingBid;
 let maximumBidAmountFromExpectedGrowth = calculator.maximumBidAmountFromExpectedGrowth;
 
 function applyChanges() {
-  calculator.maximumBidAmountFromMinimumBid = null;
+  calculator.maximumBidAmountFromStartingBid = null;
   calculator.maximumBidAmountFromExpectedGrowth = null;
   emit('update:data');
   calculateOverrideAlert();
@@ -98,7 +98,7 @@ function applyChanges() {
 function beforeSave() {}
 
 function beforeCancel() {
-  calculator.maximumBidAmountFromMinimumBid = maximumBidAmountFromMinimumBid;
+  calculator.maximumBidAmountFromStartingBid = maximumBidAmountFromStartingBid;
   calculator.maximumBidAmountFromExpectedGrowth = maximumBidAmountFromExpectedGrowth;
   calculateOverrideAlert();
 }

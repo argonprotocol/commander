@@ -11,7 +11,7 @@
       </div>
 
       <div class="flex flex-col grow text-md px-5 mt-4">
-        <BotStartingBid v-if="id === 'minimumBid'" @update:data="updateData" ref="editorInstance" />
+        <BotStartingBid v-if="id === 'startingBid'" @update:data="updateData" ref="editorInstance" />
         <BotMaximumBid v-else-if="id === 'maximumBid'" @update:data="updateData" ref="editorInstance" />
         <BotRebiddingStrategy v-else-if="id === 'rebiddingStrategy'" @update:data="updateData" ref="editorInstance" />
         <BotCapitalAllocation v-else-if="id === 'capitalAllocation'" @update:data="updateData" ref="editorInstance" />
@@ -49,7 +49,7 @@ export interface IEditBoxChildExposed {
 
 export type IEditBoxOverlayTypeForMining =
   | 'maximumBid'
-  | 'minimumBid'
+  | 'startingBid'
   | 'rebiddingStrategy'
   | 'capitalAllocation'
   | 'expectedGrowth'
@@ -104,7 +104,7 @@ let lastBoundingClientRect: DOMRect | null = null;
 
 const titles = {
   maximumBid: 'Maximum Bid',
-  minimumBid: 'Starting Bid',
+  startingBid: 'Starting Bid',
   rebiddingStrategy: 'Rebidding Strategy',
   capitalAllocation: 'Capital Allocation',
   expectedGrowth: 'Expected Growth',

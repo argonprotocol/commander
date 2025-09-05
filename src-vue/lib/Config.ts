@@ -695,17 +695,17 @@ const defaults: IConfigDefaults = {
   biddingRules: () => {
     return {
       argonCirculationGrowthPctMin: 0,
-      argonCirculationGrowthPctMax: 50,
+      argonCirculationGrowthPctMax: 10,
 
       argonotPriceChangeType: MicronotPriceChangeType.Between,
       argonotPriceChangePctMin: -10,
-      argonotPriceChangePctMax: +100,
+      argonotPriceChangePctMax: +10,
 
-      minimumBidFormulaType: BidAmountFormulaType.PreviousDayLow,
-      minimumBidAdjustmentType: BidAmountAdjustmentType.Relative,
-      minimumBidCustom: 0n * BigInt(MICROGONS_PER_ARGON),
-      minimumBidAdjustAbsolute: 0n * BigInt(MICROGONS_PER_ARGON),
-      minimumBidAdjustRelative: 0,
+      startingBidFormulaType: BidAmountFormulaType.PreviousDayLow,
+      startingBidAdjustmentType: BidAmountAdjustmentType.Relative,
+      startingBidCustom: 0n * BigInt(MICROGONS_PER_ARGON),
+      startingBidAdjustAbsolute: 0n * BigInt(MICROGONS_PER_ARGON),
+      startingBidAdjustRelative: 0,
 
       rebiddingDelay: 1,
       rebiddingIncrementBy: 1n * BigInt(MICROGONS_PER_ARGON),

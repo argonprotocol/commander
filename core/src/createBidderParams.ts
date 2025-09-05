@@ -19,7 +19,7 @@ export default async function createBidderParams(
 
   const helper = new Helper(biddingRules, calculator);
 
-  const minBid = calculator.minimumBidAmount;
+  const minBid = calculator.startingBidAmount;
   const maxBid = calculator.maximumBidAmount;
 
   const maxSeats = await helper.getMaxSeats();

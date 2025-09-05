@@ -58,7 +58,7 @@
                 <td
                   class="text-argon-800/40 border-t border-dashed border-slate-300 pr-10 pl-2 text-left font-sans font-light"
                 >
-                  Starting Bid ({{ currency.symbol }}{{ microgonToMoneyNm(minimumBidAmount).format('0,0.00') }})
+                  Starting Bid ({{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }})
                 </td>
                 <td class="border-t border-dashed border-slate-300 text-right">
                   {{ seatGoalCount }}
@@ -67,10 +67,10 @@
                   {{ probableMaxSeats }}
                 </td>
                 <td class="border-t border-dashed border-slate-300 text-right">
-                  {{ currency.symbol }}{{ microgonToMoneyNm(minimumBidSeatsCost).format('0,0.00') }}
+                  {{ currency.symbol }}{{ microgonToMoneyNm(startingBidSeatsCost).format('0,0.00') }}
                 </td>
                 <td class="border-t border-dashed border-slate-300 text-right">
-                  {{ currency.symbol }}{{ microgonToMoneyNm(minimumBidSeatsEarnings).format('0,0.00') }}
+                  {{ currency.symbol }}{{ microgonToMoneyNm(startingBidSeatsEarnings).format('0,0.00') }}
                 </td>
               </tr>
             </tbody>
@@ -118,11 +118,11 @@ const probableMaxSeats = Vue.ref(0);
 
 const maximumBidSeatsCost = Vue.ref(0n);
 const maximumBidSeatsEarnings = Vue.ref(0n);
-const minimumBidSeatsCost = Vue.ref(0n);
-const minimumBidSeatsEarnings = Vue.ref(0n);
+const startingBidSeatsCost = Vue.ref(0n);
+const startingBidSeatsEarnings = Vue.ref(0n);
 
 const maximumBidAmount = Vue.ref(0n);
-const minimumBidAmount = Vue.ref(0n);
+const startingBidAmount = Vue.ref(0n);
 const seatGoalCount = Vue.ref(rules.value.seatGoalCount);
 
 function updateAPYs() {
@@ -138,12 +138,12 @@ function updateAPYs() {
     }
   }
   maximumBidAmount.value = calculator.maximumBidAmount;
-  minimumBidAmount.value = calculator.minimumBidAmount;
+  startingBidAmount.value = calculator.startingBidAmount;
 
   const probableMinSeatsBn = BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculator.maximumBidAmount);
   probableMinSeats.value = Math.max(probableMinSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(), 0);
 
-  const probableMaxSeatsBn = BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculator.minimumBidAmount);
+  const probableMaxSeatsBn = BigNumber(rules.value.baseMicrogonCommitment).dividedBy(calculator.startingBidAmount);
   probableMaxSeats.value = Math.min(
     probableMaxSeatsBn.integerValue(BigNumber.ROUND_FLOOR).toNumber(),
     calculatorData.maxPossibleMiningSeatCount,
@@ -156,8 +156,8 @@ function updateAPYs() {
   maximumBidSeatsEarnings.value = minSeats * averageEarningsPerSeat;
 
   const maxSeats = BigInt(probableMaxSeats.value);
-  minimumBidSeatsCost.value = maxSeats * (calculator.minimumBidAmount + calculatorData.micronotsRequiredForBid);
-  minimumBidSeatsEarnings.value = maxSeats * averageEarningsPerSeat;
+  startingBidSeatsCost.value = maxSeats * (calculator.startingBidAmount + calculatorData.micronotsRequiredForBid);
+  startingBidSeatsEarnings.value = maxSeats * averageEarningsPerSeat;
 }
 
 Vue.onMounted(() => {
