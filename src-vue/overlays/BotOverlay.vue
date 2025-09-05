@@ -523,6 +523,12 @@ basicEmitter.on('openBotOverlay', async () => {
     capitalToCommitMicrogons.value = getMinimumCapitalCommitment();
     updateAPYs();
     if (isBrandNew.value && startingBidAtFastGrowthAPY.value > 20_000) {
+      /*
+        The default startingBidFormulaType is set at PreviousDayLow, which at least on testnet, is creating a
+        situation where the projected returns are astronomically high (and seemingly unrealistic). In order to
+        create a more realistic projected return, we're setting the startingBidFormulaType to 12% below BreakevenAtSlowGrowth.
+        We might remove this IF block in the future, but it seems a good safety fix for now.
+      */
       config.biddingRules.startingBidFormulaType = BidAmountFormulaType.BreakevenAtSlowGrowth;
       config.biddingRules.startingBidAdjustmentType = BidAmountAdjustmentType.Relative;
       config.biddingRules.startingBidAdjustRelative = -12.0;
