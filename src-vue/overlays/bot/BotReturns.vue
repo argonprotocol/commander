@@ -21,7 +21,7 @@
           </p>
 
           <p>
-            Regardles of price, each seat in today's auction is guaranteed to earn an average of
+            Regardless of price, each seat in today's auction is guaranteed to earn an average of
             {{ microgonToArgonNm(calculatorData.microgonsToMineThisSeat).format('0,0') }} argons and
             {{ micronotToArgonotNm(calculatorData.micronotsToMineThisSeat).format('0,0') }} argonots. This provides the
             safety of a profit minimum.
