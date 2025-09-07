@@ -48,10 +48,10 @@
               Decide how much capital you want to commit, your starting bid, maximum bid, and other basic settings.
             </p>
             <p v-else>
-              You set up bidding rules and 
+              You set up bidding rules and
               <BotCapital align="start" :alignOffset="alignOffsetForBotCapital">
                 <span @mouseenter="alignOffsetForBotCapital = calculateAlignOffset($event, botOverlayReferenceElement, 'start')" class="underline decoration-dashed underline-offset-4 decoration-slate-600/80 cursor-pointer">
-                  committed 
+                  committed
                   {{ currency.symbol }}{{ microgonToArgonNm(config.biddingRules?.baseMicrogonCommitment || 0n).format('0,0.[00]') }} in capital
                 </span>
               </BotCapital>
@@ -178,7 +178,7 @@ import { useInstaller } from '../../stores/installer';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
 import { bigIntMax } from '@argonprotocol/commander-core/src/utils';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
-import { getCalculator, getCalculatorData } from '../../stores/mainchain';
+import { getBiddingCalculator, getBiddingCalculatorData } from '../../stores/mainchain';
 import BotReturns from '../../overlays/bot/BotReturns.vue';
 import BotCapital from '../../overlays/bot/BotCapital.vue';
 
@@ -188,8 +188,8 @@ const config = useConfig();
 const installer = useInstaller();
 const wallets = useWallets();
 const currency = useCurrency();
-const calculator = getCalculator();
-const calculatorData = getCalculatorData();
+const calculator = getBiddingCalculator();
+const calculatorData = getBiddingCalculatorData();
 
 const { microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
 

@@ -109,7 +109,7 @@
                         </tr>
                         <tr>
                           <td class="border-t border-slate-600/20 pl-1 font-bold text-sm text-slate-600/50">
-                            Treasury Pools
+                            Treasury
                           </td>
                           <td class="border-t border-slate-600/20 w-full pr-1">
                             <div class="relative w-full bg-slate-500/10 border border-slate-400 rounded h-5">

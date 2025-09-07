@@ -37,17 +37,18 @@ import * as Vue from 'vue';
 import BigNumber from 'bignumber.js';
 import { ExclamationTriangleIcon } from '@heroicons/vue/20/solid';
 import InputNumber from '../../components/InputNumber.vue';
-import { getCalculator } from '../../stores/mainchain';
+import { getBiddingCalculator } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
 
 const config = useConfig();
-const calculator = getCalculator();
+const calculator = getBiddingCalculator();
 const showBidAmountAlert = Vue.ref(false);
 
-const collateralProvided = Vue.ref(config.vaultingRules.securitizationRatio * 100);
+const collateralProvided = Vue.computed(() => config.vaultingRules.securitizationRatio * 100);
 
 function updateCollateral(value: number) {
   config.vaultingRules.securitizationRatio = BigNumber(value).dividedBy(100).toNumber();
+  console.log('Updated securitization ratio to', config.vaultingRules.securitizationRatio);
 }
 
 Vue.watch(

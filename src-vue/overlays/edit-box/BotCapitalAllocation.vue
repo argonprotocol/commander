@@ -40,10 +40,10 @@
 <script setup lang="ts">
 import InputNumber from '../../components/InputNumber.vue';
 import InputMenu from '../../components/InputMenu.vue';
-import { getCalculator } from '../../stores/mainchain';
+import { getBiddingCalculator } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
 import { SeatGoalInterval, SeatGoalType, ProfitUsage } from '@argonprotocol/commander-core/src/IBiddingRules';
 
 const config = useConfig();
-const calculator = getCalculator();
+const calculator = getBiddingCalculator();
 </script>

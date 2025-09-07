@@ -37,7 +37,7 @@
 
               <section class="flex flex-row border-t border-b border-slate-500/30 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
                 <div class="w-1/2 flex flex-col grow">
-                  <CapitalOverlay align="start" :width="capitalBoxWidth">
+                  <VaultCapital align="start" :width="capitalBoxWidth" :from-overlay="true">
                     <div PrimaryStat @mouseenter="capitalBoxWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
                       <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
                         Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
@@ -55,7 +55,7 @@
                         </div>
                       </div>
                     </div>
-                  </CapitalOverlay>
+                  </VaultCapital>
                 </div>
 
                 <div class="flex flex-col items-center justify-center text-3xl mx-2 text-center">
@@ -65,7 +65,7 @@
                 </div>
 
                 <div class="w-1/2 flex flex-col grow">
-                  <ReturnsOverlay align="end" :width="returnsBoxWidth">
+                  <VaultReturns align="end" :width="returnsBoxWidth">
                     <div PrimaryStat @mouseenter="returnsBoxWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
                       <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
                         Return on Capital
@@ -91,7 +91,7 @@
                       </div>
                       </div>
                     </div>
-                  </ReturnsOverlay>
+                  </VaultReturns>
                 </div>
               </section>
 
@@ -115,25 +115,15 @@
                   <div class="w-[1px] bg-slate-300 mx-2"></div>
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.capitalDistribution, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'capitalDistribution')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
-                      <div StatHeader>Capital Distribution</div>
+                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.poolPrefund, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'poolPrefund')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
+                      <div StatHeader>Treasury Pool Seed</div>
                       <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
-                        <div MainRule class="flex flex-row items-center justify-center w-5/12">
-                          <span>{{ numeral(rules.capitalForSecuritizationPct).format('0.[00]') }}%</span>
-                        </div>
-                        <span class="text-md w-2/12 text-gray-500/60">&nbsp;vs&nbsp;</span>
-                        <div MainRule class="flex flex-row items-center justify-center w-5/12">
-                          <span>{{ numeral(rules.capitalForTreasuryPct).format('0.[00]') }}%</span>
+                        <div MainRule class="w-full">
+                          <span>{{ numeral(rules.capitalForTreasuryPct * 2).format('0.[00]') }}%</span>
                         </div>
                       </div>
-                      <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono ">
-                        <div class="flex flex-row items-center justify-center text-md px-1 text-gray-500/60 w-5/12 whitespace-nowrap">
-                          BTC Security
-                        </div>
-                        <span class="text-md w-2/12 text-gray-500/60">&nbsp;</span>
-                        <div class="flex flex-row items-center justify-center text-md text-gray-500/60 w-5/12 whitespace-nowrap">
-                          Treasury Pool
-                        </div>
+                      <div class="text-gray-500/60 text-md font-mono">
+                          Internal Treasury Commitment
                       </div>
                     </div>
                   </div>
@@ -141,10 +131,13 @@
                   <div class="w-[1px] bg-slate-300 mx-2"></div>
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.poolRevenueShare, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'poolRevenueShare')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
+                    <div MainWrapper @mouseenter="showTooltip($event,  rules.capitalForTreasuryPct === 50 ? tooltip.poolRevenueShareNa: tooltip.poolRevenueShare, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'poolRevenueShare')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
                       <div StatHeader>Pool Revenue Share</div>
                       <div MainRule class="w-full">
+                        <span v-if="rules.capitalForTreasuryPct === 50" class="opacity-40">N/A</span>
+                        <template v-else>
                         {{ numeral(100 - rules.profitSharingPct).format('0.[00]') }}% <span class="opacity-40 font-light">/</span> {{ numeral(rules.profitSharingPct).format('0.[00]') }}%
+                        </template>
                       </div>
                       <div class="text-gray-500/60 text-md font-mono">
                         Internal to External Split
@@ -163,10 +156,13 @@
 
                 <section class="flex flex-row h-1/2 my-2">
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.btcLockingFees, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'btcLockingFees')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
+                    <div MainWrapper @mouseenter="showTooltip($event, rules.personalBtcPct === 100 ? tooltip.btcLockingNoSpace : tooltip.btcLockingFees, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'btcLockingFees')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
                       <div StatHeader>BTC Locking Fee</div>
                       <div MainRule class="w-full">
+                        <span v-if="rules.personalBtcPct === 100" class="opacity-40">N/A</span>
+                        <template v-else>
                         {{ currency.symbol }}{{ microgonToMoneyNm(rules.btcFlatFee).format('0,0.00') }} + {{ numeral(rules.btcPctFee).format('0.[00]') }}%
+                        </template>
                       </div>
                       <div class="text-gray-500/60 text-md font-mono">
                         Per Transaction
@@ -208,12 +204,12 @@
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
                     <div MainWrapper @mouseenter="showTooltip($event, tooltip.personalBtc, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'personalBtc')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
-                      <div StatHeader>Personal BTC to Lock</div>
+                      <div StatHeader>Bitcoin Locks Seed</div>
                       <div MainRule class="w-full">
-                        {{ currency.symbol }}{{ microgonToMoneyNm(rules.personalBtcInMicrogons).format('0,0.00') }}
+                        {{ rules.personalBtcPct }}%
                       </div>
                       <div class="text-gray-500/60 text-md font-mono">
-                        At Current Market Price
+                        Bootstrap Funding of BTC
                       </div>
                     </div>
                   </div>
@@ -248,7 +244,7 @@ import BigNumber from 'bignumber.js';
 import basicEmitter from '../emitters/basicEmitter';
 import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui';
 import { useConfig } from '../stores/config';
-import { getMainchainClients, getMining } from '../stores/mainchain';
+import { getMainchainClients, getVaultCalculator } from '../stores/mainchain';
 import { useCurrency } from '../stores/currency';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
 import BgOverlay from '../components/BgOverlay.vue';
@@ -261,8 +257,8 @@ import { MyVault } from '../lib/MyVault.ts';
 import InputArgon from '../components/InputArgon.vue';
 import ExistingNetworkVaultsOverlayButton from './ExistingNetworkVaultsOverlayButton.vue';
 import { VaultCalculator } from '../lib/VaultCalculator.ts';
-import CapitalOverlay from './vault/VaultCapital.vue';
-import ReturnsOverlay from './vault/VaultReturns.vue';
+import VaultCapital from './vault/VaultCapital.vue';
+import VaultReturns from './vault/VaultReturns.vue';
 
 const mainchainClients = getMainchainClients();
 const config = useConfig();
@@ -275,7 +271,7 @@ const rules = Vue.computed(() => {
   return config.vaultingRules as IVaultingRules;
 });
 
-const calculator = new VaultCalculator(mainchainClients);
+const calculator = getVaultCalculator();
 
 const isBrandNew = Vue.ref(true);
 const isOpen = Vue.ref(false);
@@ -308,15 +304,19 @@ const tooltip = {
     'The more capital you commit, the more liquidity you provides to the network and therefore the higher your potential returns.',
   estimatedAPYRange:
     'These estimates are based on a combination of current pool rewards and the vault parameters you have configured below.',
-  capitalDistribution:
-    'This is how your capital will be split between securitization and treasury pools. Each delivers different return rates and yet both work together.',
+  poolPrefund:
+    "This is how much of the Treasury Pool you want to seed with your own capital. If you set to less than 100%, you're relying on the community to fund the rest.",
   securitizationRatio:
     'This is the ratio of argons to bitcoins that you are committing. These argons guarantee the bitcoin holders that their assets are safe.',
   poolRevenueShare:
-    'Outside funders can contribute to your liquidity capital, and in return you agree to share a portion of your profits with them.',
+    'Outside funders can contribute to your Treasury Pool, and in return you agree to share a portion of your profits with them.',
+  poolRevenueShareNa:
+    'Since you are personally funding 100% of the Treasury Pool, there is no external capital to share profits with.',
   btcLockingFees: 'Each bitcoin transaction that locks in your vault must pay this flat fee for doing so.',
-  projectedUtilization: `In addition to the flat fee, each bitcoin transaction must pay this percentage of their bitcoin's current market value.`,
-  personalBtc: `You'll probably want to bootstrap your vault with some of your own bitcoin. The more bitcoin, the faster you'll start earning returns.`,
+  btcLockingNoSpace:
+    'You have committed 100% of the bitcoin needed to fill your vault, so no locking fees are possible.',
+  projectedUtilization: `Your vault's utilization will determine how much revenue you earn and how much of the Treasury Pool can be activated. You can use this box to project various scenarios.`,
+  personalBtc: `You'll probably want to seed your vault with some of your own bitcoin. The more bitcoin, the sooner you'll start earning returns.`,
   saveRules: 'You can update these settings later.',
 };
 
@@ -355,16 +355,6 @@ async function saveRules() {
     const availableBtcSpace = BigInt(
       BigNumber(microgonsForSecuritization).dividedBy(rules.value.securitizationRatio).integerValue().toNumber(),
     );
-    // TODO: determine how the UI should handle things like this
-    // TODO: don't allow personal btc to exceed the liquidity space either
-    if (rules.value.personalBtcInMicrogons > availableBtcSpace) {
-      alert(
-        `Your personal BTC value (${currency.symbol}${microgonToMoneyNm(rules.value.personalBtcInMicrogons).format('0,0.[00000000]')}) exceeds the available securitization space (${currency.symbol}${microgonToMoneyNm(microgonsForSecuritization).format('0,0.[00000000]')}). Please adjust your settings.`,
-      );
-      rules.value.personalBtcInMicrogons = availableBtcSpace;
-
-      return;
-    }
 
     await config.saveVaultingRules();
   }
@@ -378,18 +368,18 @@ function updateAPYs() {
   const btcSpaceInMicrogons = calculator.calculateBtcSpaceInMicrogons();
   btcSpaceAvailable.value = currency.microgonToBtc(btcSpaceInMicrogons);
 
-  vaultLowUtilizationAPY.value = calculator.calculateInternalAPY('Low');
-  vaultHighUtilizationAPY.value = calculator.calculateInternalAPY('High');
-  externalLowUtilizationAPY.value = calculator.calculateExternalAPY('Low');
-  externalHighUtilizationAPY.value = calculator.calculateExternalAPY('High');
+  vaultLowUtilizationAPY.value = calculator.calculateInternalAPY('Low', 'Low');
+  vaultHighUtilizationAPY.value = calculator.calculateInternalAPY('High', 'High');
+  externalLowUtilizationAPY.value = calculator.calculateExternalAPY('Low', 'Low');
+  externalHighUtilizationAPY.value = calculator.calculateExternalAPY('High', 'High');
 
   hasExternalPoolCapitalLow.value = calculator.calculateExternalPoolCapital('Low') > 0;
   hasExternalPoolCapitalHigh.value = calculator.calculateExternalPoolCapital('High') > 0;
 
   averageAPY.value = (vaultLowUtilizationAPY.value + vaultHighUtilizationAPY.value) / 2;
 
-  const highVaultRevenue = calculator.calculateInternalRevenue('High');
-  const lowVaultRevenue = calculator.calculateInternalRevenue('Low');
+  const highVaultRevenue = calculator.calculateInternalRevenue('High', 'High');
+  const lowVaultRevenue = calculator.calculateInternalRevenue('Low', 'Low');
   averageEarnings.value = (highVaultRevenue + lowVaultRevenue) / 2n;
 
   poolSpace.value = calculator.calculateTotalPoolSpace('High');

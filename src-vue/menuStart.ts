@@ -129,8 +129,8 @@ export default async function menuStart() {
             .then(() => {
               window.location.reload();
             })
-            .catch(() => {
-              console.log('Failed to save config before reload');
+            .catch(e => {
+              console.log('Failed to save config before reload', e);
             });
         },
       },

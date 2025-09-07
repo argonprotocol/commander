@@ -24,15 +24,19 @@ import { CurrencyKey } from './Currency';
 import { bip39 } from '@argonprotocol/bitcoin';
 import { getUserJurisdiction } from './Countries';
 import ISecurity from '../interfaces/ISecurity';
-import { getMainchainClients, getMining } from '../stores/mainchain';
+import { getMainchainClients } from '../stores/mainchain';
 import { WalletBalances } from './WalletBalances';
 import { SECURITY } from './Env.ts';
 
 export class Config {
   public readonly version: string = packageJson.version;
 
-  public isLoaded: boolean;
-  public isLoadedPromise: Promise<void>;
+  public get isLoaded(): boolean {
+    return this._loadedDeferred.isSettled;
+  }
+  public get isLoadedPromise(): Promise<void> {
+    return this._loadedDeferred.promise;
+  }
   public hasDbMigrationError: boolean;
 
   private _loadedDeferred!: IDeferred<void>;
@@ -51,9 +55,7 @@ export class Config {
 
   constructor(dbPromise: Promise<Db>) {
     ensureOnlyOneInstance(this.constructor);
-    this._loadedDeferred = createDeferred<void>();
-    this.isLoadedPromise = this._loadedDeferred.promise;
-    this.isLoaded = false;
+    this._loadedDeferred = createDeferred<void>(false);
     this.hasDbMigrationError = false;
 
     this._dbPromise = dbPromise;
@@ -109,62 +111,75 @@ export class Config {
   }
 
   public async load() {
-    const db = await this._dbPromise;
-    const fieldsToSave: Set<string> = new Set();
-    const loadedData: any = {};
-    const rawData = {} as IConfigStringified & { miningAccountAddress: string };
-
-    const dbRawData = await db.configTable.fetchAllAsObject();
-
-    if (db.hasMigrationError) {
-      this.hasDbMigrationError = true;
+    console.log(
+      'Config: Loading configuration from database...',
+      new Error(),
+      this._loadedDeferred.isSettled || this._loadedDeferred.isRunning,
+    );
+    if (this._loadedDeferred.isSettled || this._loadedDeferred.isRunning) {
+      return this._loadedDeferred.promise;
     }
+    console.log('Config actual: Loading configuration from database...', new Error());
+    this._loadedDeferred.setIsRunning(true);
+    try {
+      const db = await this._dbPromise;
+      const fieldsToSave: Set<string> = new Set();
+      const loadedData: any = {};
+      const rawData = {} as IConfigStringified & { miningAccountAddress: string };
 
-    this._security = SECURITY;
+      const dbRawData = await db.configTable.fetchAllAsObject();
 
-    for (const [key, value] of Object.entries(defaults)) {
-      const rawValue = dbRawData[key as keyof typeof dbRawData];
-      if (rawValue === undefined || rawValue === '') {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        const defaultValue = await value();
-        loadedData[key] = defaultValue;
-        if (key !== dbFields.biddingRules && key !== dbFields.vaultingRules) {
-          fieldsToSave.add(key);
-          rawData[key as keyof typeof rawData] = JsonExt.stringify(defaultValue, 2);
-        }
-        continue;
+      if (db.hasMigrationError) {
+        this.hasDbMigrationError = true;
       }
 
-      loadedData[key] = JsonExt.parse(rawValue as string);
-      rawData[key as keyof typeof rawData] = rawValue as string;
-    }
+      this._security = SECURITY;
 
-    const isFirstTimeAppLoad = Object.keys(dbRawData).length === 0;
-    if (isFirstTimeAppLoad) {
-      await this._injectFirstTimeAppData(loadedData, rawData, fieldsToSave);
-    }
+      for (const [key, value] of Object.entries(defaults)) {
+        const rawValue = dbRawData[key as keyof typeof dbRawData];
+        if (rawValue === undefined || rawValue === '') {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+          const defaultValue = await value();
+          loadedData[key] = defaultValue;
+          if (key !== dbFields.biddingRules && key !== dbFields.vaultingRules) {
+            fieldsToSave.add(key);
+            rawData[key as keyof typeof rawData] = JsonExt.stringify(defaultValue, 2);
+          }
+          continue;
+        }
 
-    const dataToSave = Config.extractDataToSave(fieldsToSave, rawData);
-    await db.configTable.insertOrReplace(dataToSave);
+        loadedData[key] = JsonExt.parse(rawValue as string);
+        rawData[key as keyof typeof rawData] = rawValue as string;
+      }
 
-    if (this.miningAccount.address !== loadedData.miningAccountAddress) {
-      await tauriMessage(
-        'Your database does not match your current mining account address. Something has corrupted your data.',
-        {
-          title: 'Mining Account Inconsistency',
-          kind: 'error',
-        },
-      );
-    }
+      const isFirstTimeAppLoad = Object.keys(dbRawData).length === 0;
+      if (isFirstTimeAppLoad) {
+        await this._injectFirstTimeAppData(loadedData, rawData, fieldsToSave);
+      }
 
-    this.isLoaded = true;
-    this._db = db;
-    this._loadedData = loadedData as IConfig;
-    this._rawData = rawData;
-    this._loadedDeferred.resolve();
+      const dataToSave = Config.extractDataToSave(fieldsToSave, rawData);
+      await db.configTable.insertOrReplace(dataToSave);
 
-    if (this.miningAccountHadPreviousLife && !this.miningAccountPreviousHistory) {
-      await this._bootupFromMiningAccountPreviousHistory();
+      if (this.miningAccount.address !== loadedData.miningAccountAddress) {
+        await tauriMessage(
+          'Your database does not match your current mining account address. Something has corrupted your data.',
+          {
+            title: 'Mining Account Inconsistency',
+            kind: 'error',
+          },
+        );
+      }
+
+      this._db = db;
+      this._loadedData = loadedData as IConfig;
+      this._rawData = rawData;
+      this._loadedDeferred.resolve();
+      console.log('Config: Loaded configuration from database', this._loadedData);
+      if (this.miningAccountHadPreviousLife && !this.miningAccountPreviousHistory) {
+        await this._bootupFromMiningAccountPreviousHistory();
+      }
+    } catch (e) {
+      this._loadedDeferred.reject(e);
     }
   }
 
@@ -740,7 +755,7 @@ const defaults: IConfigDefaults = {
       poolUtilizationPctMin: 50,
       poolUtilizationPctMax: 100,
 
-      personalBtcInMicrogons: 1_000n * BigInt(MICROGONS_PER_ARGON),
+      personalBtcPct: 100,
 
       baseMicrogonCommitment: 2_000n * BigInt(MICROGONS_PER_ARGON),
       baseMicronotCommitment: 0n,
