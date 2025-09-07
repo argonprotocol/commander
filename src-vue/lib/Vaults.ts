@@ -335,12 +335,20 @@ export class Vaults {
     return stats;
   }
 
-  public static async getTotalActivatedCapital(
+  public static async getTreasuryPoolPayout(
     clients: MainchainClients,
-  ): Promise<{ totalActivatedCapital: bigint; participatingVaults: number }> {
+  ): Promise<{ totalPoolRewards: bigint; totalActivatedCapital: bigint; participatingVaults: number }> {
     const client = await clients.prunedClientOrArchivePromise;
+    const minersAtFrame = await client.query.miningSlot.minersByCohort.entries();
     const vaultRevenue = await client.query.vaults.revenuePerFrameByVault.entries();
+    let totalMicrogonsBid = 0n;
     let totalActivatedCapital = 0n;
+    for (const [_cohort, miners] of minersAtFrame) {
+      for (const miner of miners) {
+        totalMicrogonsBid += miner.bid.toBigInt();
+      }
+    }
+
     let participatingVaults = 0;
     for (const [_vaultId, revenue] of vaultRevenue) {
       for (const entry of revenue) {
@@ -349,37 +357,6 @@ export class Vaults {
           participatingVaults++;
           totalActivatedCapital += capital;
         }
-      }
-    }
-
-    return {
-      totalActivatedCapital,
-      participatingVaults,
-    };
-  }
-
-  public static async getTreasuryPoolPayout(
-    clients: MainchainClients,
-  ): Promise<{ totalPoolRewards: bigint; totalActivatedCapital: bigint; participatingVaults: number }> {
-    const client = await clients.prunedClientOrArchivePromise;
-    const currentFrameId = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
-    const minersAtFrame = await client.query.miningSlot.minersByCohort(currentFrameId);
-    const vaultRevenue = await client.query.vaults.revenuePerFrameByVault.entries();
-    let totalMicrogonsBid = 0n;
-    let totalActivatedCapital = 0n;
-    for (const miner of minersAtFrame) {
-      totalMicrogonsBid += miner.bid.toBigInt();
-    }
-
-    let participatingVaults = 0;
-    for (const [_vaultId, revenue] of vaultRevenue) {
-      const revenueForFrame = revenue.find(x => x.frameId.toNumber() === currentFrameId);
-      if (!revenueForFrame) continue;
-      const entry = revenueForFrame;
-      const capital = entry.liquidityPoolVaultCapital.toBigInt() + entry.liquidityPoolExternalCapital.toBigInt();
-      if (capital > 0n) {
-        participatingVaults++;
-        totalActivatedCapital += capital;
       }
     }
 

@@ -90,8 +90,7 @@ import { useConfig } from '../../stores/config';
 import { useCurrency } from '../../stores/currency';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
 import { TooltipArrow, TooltipContent, TooltipPortal, TooltipProvider, TooltipRoot, TooltipTrigger } from 'reka-ui';
-import { getMainchainClients, getVaultCalculator } from '../../stores/mainchain.ts';
-import { Vaults } from '../../lib/Vaults.ts';
+import { getVaultCalculator } from '../../stores/mainchain.ts';
 import BigNumber from 'bignumber.js';
 
 const props = withDefaults(
@@ -117,10 +116,9 @@ const apyGrid = new Map<string, number>();
 
 const btcSpaceAvailable = Vue.ref(0n);
 const poolSpace = Vue.ref(0n);
-const existingPoolCapital = Vue.ref(0n);
 const poolProrata = Vue.computed(() => {
   const prorata = BigNumber(poolSpace.value)
-    .div(poolSpace.value + existingPoolCapital.value)
+    .div(poolSpace.value + calculator.epochPoolCapitalTotal)
     .times(100);
   return Number(prorata.toFixed(2));
 });
@@ -140,10 +138,6 @@ function updateAPYs() {
 
 Vue.onMounted(async () => {
   calculator.load(rules.value).then(updateAPYs);
-  const clients = getMainchainClients();
-  Vaults.getTotalActivatedCapital(clients).then(x => {
-    existingPoolCapital.value = x.totalActivatedCapital;
-  });
 });
 Vue.watch(
   rules,

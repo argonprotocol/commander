@@ -10,8 +10,8 @@ export class VaultCalculator {
   private readonly clients: MainchainClients;
   private isLoaded = createDeferred(false);
 
-  private totalPoolRewards!: bigint;
-  private existingPoolCapital!: bigint;
+  public epochPoolRewards!: bigint;
+  public epochPoolCapitalTotal!: bigint;
 
   constructor(mainchainClients: MainchainClients) {
     this.clients = mainchainClients;
@@ -27,8 +27,8 @@ export class VaultCalculator {
     this.rules = rules;
     try {
       const { totalPoolRewards, totalActivatedCapital } = await Vaults.getTreasuryPoolPayout(this.clients);
-      this.totalPoolRewards = totalPoolRewards;
-      this.existingPoolCapital = totalActivatedCapital;
+      this.epochPoolRewards = totalPoolRewards;
+      this.epochPoolCapitalTotal = totalActivatedCapital;
       this.isLoaded.resolve();
     } catch (e) {
       this.isLoaded.reject(e);
@@ -172,15 +172,15 @@ export class VaultCalculator {
   }
 
   private calculateGlobalPoolCapital(btcUtilization: 'Low' | 'High', poolUtilization: 'Low' | 'High'): bigint {
-    return this.existingPoolCapital + this.calculateTotalPoolCapital(btcUtilization, poolUtilization);
+    return this.epochPoolCapitalTotal + this.calculateTotalPoolCapital(btcUtilization, poolUtilization);
   }
 
   private calculateTotalPoolRevenue(btcUtilization: 'Low' | 'High', poolUtilization: 'Low' | 'High'): bigint {
     const totalPoolCapital = this.calculateTotalPoolCapital(btcUtilization, poolUtilization);
     const globalPoolCapital = this.calculateGlobalPoolCapital(btcUtilization, poolUtilization);
     const pctOfGlobalPool = BigNumber(totalPoolCapital).dividedBy(globalPoolCapital).toNumber();
-    const revenueFromPoolBn = BigNumber(this.totalPoolRewards).multipliedBy(pctOfGlobalPool);
-    return bigNumberToBigInt(revenueFromPoolBn);
+    const epochRevenueFromPoolBn = BigNumber(this.epochPoolRewards).multipliedBy(pctOfGlobalPool).multipliedBy(36.5);
+    return bigNumberToBigInt(epochRevenueFromPoolBn);
   }
 
   private extractRulesFor(utilization: 'Low' | 'High' | 'Full') {
