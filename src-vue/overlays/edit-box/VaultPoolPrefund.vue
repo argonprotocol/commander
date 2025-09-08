@@ -1,7 +1,7 @@
 <!-- prettier-ignore -->
 <template>
   <p class="text-md mb-3">
-    Choose how much of the Treasury Pool you want to seed with your own capital versus allowing external parties to fund it.
+    Choose how much of the Treasury Pool you want to fund with your own capital versus allowing external parties to fund it.
   </p>
 
   <div class="flex flex-row items-end gap-2 w-full">

@@ -112,10 +112,10 @@ const titles = {
 
   projectedUtilization: 'Projected Utilization',
   btcLockingFees: 'Bitcoin Locking Fees',
-  poolRevenueShare: 'Pool Revenue Share',
-  poolPrefund: 'Treasury Pool Seed',
+  poolRevenueShare: 'Treasury Revenue Split',
+  poolPrefund: 'Internal Treasury Funding',
   securitizationRatio: 'Securitization Ratio',
-  personalBtc: 'Bitcoin Locks Seed',
+  personalBtc: 'Internal Bitcoin Locking',
 };
 
 // --- Draggable Modal Logic ---

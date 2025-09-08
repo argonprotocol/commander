@@ -360,6 +360,7 @@ export class Vaults {
       }
     }
 
+    // treasury burns 20% of total bids
     const totalPoolRewardsBn = BigNumber(totalMicrogonsBid).multipliedBy(0.8);
     const totalPoolRewards = bigNumberToBigInt(totalPoolRewardsBn);
 

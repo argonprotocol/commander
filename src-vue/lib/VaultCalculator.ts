@@ -15,14 +15,12 @@ export class VaultCalculator {
 
   constructor(mainchainClients: MainchainClients) {
     this.clients = mainchainClients;
-    console.log('new VaultCalculator()');
   }
 
   async load(rules: Config['vaultingRules']) {
     if (this.isLoaded.isRunning || this.isLoaded.isSettled) {
       return this.isLoaded.promise;
     }
-    console.log('Loading vault calculator');
     this.isLoaded.setIsRunning(true);
     this.rules = rules;
     try {
@@ -113,16 +111,7 @@ export class VaultCalculator {
     return bigNumberToBigInt(personalBtcInMicrogonsBn);
   }
 
-  private calculateBtcUtilizedInMicrogons(utilization: 'Low' | 'High' | 'Full'): bigint {
-    const { btcUtilizationPct } = this.extractRulesFor(utilization);
-    const btcSpaceInMicrogons = this.calculateBtcSpaceInMicrogons();
-    const btcUtilizedInMicrogonsBn = BigNumber(btcSpaceInMicrogons).multipliedBy(btcUtilizationPct / 100);
-    const btcUtilizedInMicrogons = bigNumberToBigInt(btcUtilizedInMicrogonsBn);
-
-    return bigIntMax(btcUtilizedInMicrogons, this.personalBtcInMicrogons());
-  }
-
-  private calculateInternalBtcRevenue(utilization: 'Low' | 'High'): bigint {
+  public calculateInternalBtcRevenue(utilization: 'Low' | 'High'): bigint {
     const personalBtcInMicrogons = this.personalBtcInMicrogons();
     const btcUtilizedInMicrogons = this.calculateBtcUtilizedInMicrogons(utilization);
     const btcSellableInMicrogons = BigNumber(btcUtilizedInMicrogons).minus(personalBtcInMicrogons).toNumber();
@@ -136,11 +125,22 @@ export class VaultCalculator {
     return bigNumberToBigInt(totalRevenueFromBtcBn.dividedBy(36.5));
   }
 
+  private calculateBtcUtilizedInMicrogons(utilization: 'Low' | 'High' | 'Full'): bigint {
+    const { btcUtilizationPct } = this.extractRulesFor(utilization);
+    const btcSpaceInMicrogons = this.calculateBtcSpaceInMicrogons();
+    const btcUtilizedInMicrogonsBn = BigNumber(btcSpaceInMicrogons).multipliedBy(btcUtilizationPct / 100);
+    const btcUtilizedInMicrogons = bigNumberToBigInt(btcUtilizedInMicrogonsBn);
+
+    return bigIntMax(btcUtilizedInMicrogons, this.personalBtcInMicrogons());
+  }
+
   public calculateTotalPoolSpace(utilization: 'Low' | 'High' | 'Full'): bigint {
     // Ultimately the pool space is dependent on how much BTC is in the vault
     const btcUtilizedInMicrogons = this.calculateBtcUtilizedInMicrogons(utilization);
-
-    return bigIntMax(btcUtilizedInMicrogons, this.personalBtcInMicrogons());
+    const securitizationRatio = Math.max(this.rules.securitizationRatio, 200);
+    const securitizationRatioBn = BigNumber(securitizationRatio).div(100);
+    const activatedSecuritizationBn = BigNumber(btcUtilizedInMicrogons).multipliedBy(securitizationRatioBn);
+    return bigNumberToBigInt(activatedSecuritizationBn);
   }
 
   public calculateTotalPoolCapital(btcUtilization: 'Low' | 'High', poolUtilization: 'Low' | 'High'): bigint {
@@ -179,7 +179,7 @@ export class VaultCalculator {
     const totalPoolCapital = this.calculateTotalPoolCapital(btcUtilization, poolUtilization);
     const globalPoolCapital = this.calculateGlobalPoolCapital(btcUtilization, poolUtilization);
     const pctOfGlobalPool = BigNumber(totalPoolCapital).dividedBy(globalPoolCapital).toNumber();
-    const epochRevenueFromPoolBn = BigNumber(this.epochPoolRewards).multipliedBy(pctOfGlobalPool).multipliedBy(36.5);
+    const epochRevenueFromPoolBn = BigNumber(this.epochPoolRewards).multipliedBy(pctOfGlobalPool);
     return bigNumberToBigInt(epochRevenueFromPoolBn);
   }
 
