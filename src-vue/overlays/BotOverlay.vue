@@ -54,8 +54,8 @@
                         </div>
                         <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
                           This is the amount of capital you'll need to acquire<br/>
-                          {{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') }} argonot{{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') === '1' ? '' : 's' }} 
-                          and {{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') }} argon{{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') === '0,0' ? '' : 's' }} 
+                          {{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') }} argonot{{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') === '1' ? '' : 's' }}
+                          and {{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') }} argon{{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') === '0,0' ? '' : 's' }}
                           at current market rates.
                         </div>
                       </div>
@@ -273,7 +273,7 @@ import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRo
 import basicEmitter from '../emitters/basicEmitter';
 import { useConfig } from '../stores/config';
 import { useCurrency } from '../stores/currency';
-import { getCalculator, getCalculatorData } from '../stores/mainchain';
+import { getBiddingCalculator, getBiddingCalculatorData } from '../stores/mainchain';
 import { getDbPromise } from '../stores/helpers/dbPromise';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
 import BgOverlay from '../components/BgOverlay.vue';
@@ -297,8 +297,8 @@ import CapitalOverlay from './bot/BotCapital.vue';
 import { useInstaller } from '../stores/installer.ts';
 import { useBot } from '../stores/bot.ts';
 
-const calculator = getCalculator();
-const calculatorData = getCalculatorData();
+const calculator = getBiddingCalculator();
+const calculatorData = getBiddingCalculatorData();
 
 let previousBiddingRules: string | null = null;
 

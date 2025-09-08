@@ -23,7 +23,7 @@ import { Vaults } from './Vaults.ts';
 import { IVaultStats } from '../interfaces/IVaultStats.ts';
 import { toRaw } from 'vue';
 import BitcoinLocksStore from './BitcoinLocksStore.ts';
-import { MiningFrames } from '@argonprotocol/commander-core';
+import { bigNumberToBigInt, MiningFrames } from '@argonprotocol/commander-core';
 
 export class MyVault {
   public data: {
@@ -431,13 +431,16 @@ export class MyVault {
       txs.push(tx);
     }
     let bitcoinArgs: { satoshis: bigint; hdPath: string; securityFee: bigint } | undefined;
-    if (!this.metadata?.personalUtxoId && rules.personalBtcInMicrogons > 0n) {
+    if (!this.metadata?.personalUtxoId && rules.personalBtcPct > 0n) {
+      const personalBtcInMicrogons = bigNumberToBigInt(
+        BigNumber(rules.personalBtcPct).div(100).times(microgonsForSecuritization),
+      );
       const { tx, satoshis, hdPath, securityFee } = await bitcoinLocksStore.createInitializeTx({
         argonKeyring,
         bip39Seed,
         vault,
         addingVaultSpace: BigInt(Number(addedSecuritization) / vault.securitizationRatio),
-        microgonLiquidity: microgonsForTreasury,
+        microgonLiquidity: personalBtcInMicrogons,
         tip,
       });
       bitcoinArgs = { satoshis, hdPath, securityFee };

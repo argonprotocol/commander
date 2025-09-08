@@ -337,33 +337,37 @@ export class Vaults {
 
   public static async getTreasuryPoolPayout(
     clients: MainchainClients,
-  ): Promise<{ totalPoolRewards: bigint; totalActivatedCapital: bigint }> {
-    const client = await (clients.prunedClientPromise ?? clients.archiveClientPromise);
-    const currentFrameId = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
-    const minersAtFrame = await client.query.miningSlot.minersByCohort(currentFrameId);
-    const vaultPools = await client.query.liquidityPools.vaultPoolsByFrame(currentFrameId);
+  ): Promise<{ totalPoolRewards: bigint; totalActivatedCapital: bigint; participatingVaults: number }> {
+    const client = await clients.prunedClientOrArchivePromise;
+    const minersAtFrame = await client.query.miningSlot.minersByCohort.entries();
+    const vaultRevenue = await client.query.vaults.revenuePerFrameByVault.entries();
     let totalMicrogonsBid = 0n;
     let totalActivatedCapital = 0n;
-    for (const miner of minersAtFrame) {
-      totalMicrogonsBid += miner.bid.toBigInt();
-    }
-    console.log('Treasury pool at current frame', { totalMicrogonsBid, frameId: currentFrameId });
-    for (const [_vaultId, entry] of vaultPools) {
-      console.log('Capital activated', entry.toJSON());
-      for (const [_, balance] of entry.contributorBalances) {
-        totalActivatedCapital += balance.toBigInt();
-      }
-      if (entry.distributedProfits.isSome) {
-        totalActivatedCapital -= entry.distributedProfits.value.toBigInt();
+    for (const [_cohort, miners] of minersAtFrame) {
+      for (const miner of miners) {
+        totalMicrogonsBid += miner.bid.toBigInt();
       }
     }
 
+    let participatingVaults = 0;
+    for (const [_vaultId, revenue] of vaultRevenue) {
+      for (const entry of revenue) {
+        const capital = entry.liquidityPoolVaultCapital.toBigInt() + entry.liquidityPoolExternalCapital.toBigInt();
+        if (capital > 0n) {
+          participatingVaults++;
+          totalActivatedCapital += capital;
+        }
+      }
+    }
+
+    // treasury burns 20% of total bids
     const totalPoolRewardsBn = BigNumber(totalMicrogonsBid).multipliedBy(0.8);
     const totalPoolRewards = bigNumberToBigInt(totalPoolRewardsBn);
 
     return {
-      totalPoolRewards, //: 100_000 * MICROGONS_PER_ARGON,
-      totalActivatedCapital, //: 998_000 * MICROGONS_PER_ARGON,
+      totalPoolRewards,
+      totalActivatedCapital,
+      participatingVaults,
     };
   }
 }

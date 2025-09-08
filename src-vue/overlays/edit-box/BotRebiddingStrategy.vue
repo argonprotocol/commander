@@ -19,9 +19,9 @@
 import * as Vue from 'vue';
 import InputNumber from '../../components/InputNumber.vue';
 import InputArgon from '../../components/InputArgon.vue';
-import { getCalculator } from '../../stores/mainchain';
+import { getBiddingCalculator } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
 
 const config = useConfig();
-const calculator = getCalculator();
+const calculator = getBiddingCalculator();
 </script>

@@ -57,13 +57,13 @@ import { ExclamationTriangleIcon } from '@heroicons/vue/20/solid';
 import InputMenu, { type IOption } from '../../components/InputMenu.vue';
 import InputNumber from '../../components/InputNumber.vue';
 import InputArgon from '../../components/InputArgon.vue';
-import { getCalculator } from '../../stores/mainchain';
+import { getBiddingCalculator } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
 import { useCurrency } from '../../stores/currency';
 import { createNumeralHelpers } from '../../lib/numeral';
 
 const config = useConfig();
-const calculator = getCalculator();
+const calculator = getBiddingCalculator();
 const currency = useCurrency();
 
 const { microgonToMoneyNm } = createNumeralHelpers(currency);

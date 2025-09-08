@@ -21,11 +21,7 @@ export function calculateProfitPct(costs: bigint, rewards: bigint): number {
 
 export function compoundTenDayRateToAnnual(tenDayRate: number): number {
   // Compound over 36.5 cycles (10-day periods in a year)
-  const apy = (Math.pow(1 + tenDayRate, 36.5) - 1) * 100;
-  if (apy > 100_000_000) {
-    return 100_000_000;
-  }
-  return apy;
+  return (Math.pow(1 + tenDayRate, 36.5) - 1) * 100;
 }
 
 export function calculateAPR(costs: bigint, rewards: bigint): number {

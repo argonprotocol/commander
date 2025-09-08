@@ -13,12 +13,14 @@ import { ApiDecoration } from '@polkadot/api/types';
 import { botEmitter } from '../lib/Bot.ts';
 import { BotStatus } from '../lib/BotSyncer.ts';
 import { useBot } from './bot.ts';
+import { VaultCalculator } from '../lib/VaultCalculator.ts';
 
 let mainchainClients: MainchainClients;
 let mining: Mining;
 let priceIndex: PriceIndex;
-let calculator: BiddingCalculator;
-let calculatorData: BiddingCalculatorData;
+let biddingCalculator: BiddingCalculator;
+let biddingCalculatorData: BiddingCalculatorData;
+let vaultCalculator: VaultCalculator;
 
 export async function getMainchainClientAt(
   height: number,
@@ -80,18 +82,30 @@ export function getPriceIndex(): PriceIndex {
   return priceIndex;
 }
 
-export function getCalculator(): BiddingCalculator {
-  if (!calculator) {
+export function getBiddingCalculator(): BiddingCalculator {
+  if (!biddingCalculator) {
     const config = useConfig();
     if (!config.isLoaded) {
       throw new Error('Config must be loaded before BiddingCalculator can be initialized');
     }
-    calculator = new BiddingCalculator(getCalculatorData(), config.biddingRules as IBiddingRules);
+    biddingCalculator = new BiddingCalculator(getBiddingCalculatorData(), config.biddingRules as IBiddingRules);
   }
-  return calculator;
+  return biddingCalculator;
 }
 
-export function getCalculatorData(): BiddingCalculatorData {
-  calculatorData ??= new BiddingCalculatorData(getMining());
-  return calculatorData;
+export function getBiddingCalculatorData(): BiddingCalculatorData {
+  biddingCalculatorData ??= new BiddingCalculatorData(getMining());
+  return biddingCalculatorData;
+}
+
+export function getVaultCalculator(): VaultCalculator {
+  if (!vaultCalculator) {
+    const config = useConfig();
+    if (!config.isLoaded) {
+      throw new Error('Config must be loaded before VaultCalculator can be initialized');
+    }
+    vaultCalculator = new VaultCalculator(getMainchainClients());
+    void vaultCalculator.load(config.vaultingRules);
+  }
+  return vaultCalculator;
 }

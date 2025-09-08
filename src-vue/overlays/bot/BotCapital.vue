@@ -89,7 +89,7 @@ import { useCurrency } from '../../stores/currency';
 import BigNumber from 'bignumber.js';
 import { createNumeralHelpers } from '../../lib/numeral';
 import { TooltipArrow, TooltipContent, TooltipPortal, TooltipProvider, TooltipRoot, TooltipTrigger } from 'reka-ui';
-import { getCalculator, getCalculatorData } from '../../stores/mainchain';
+import { getBiddingCalculator, getBiddingCalculatorData } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
 import { IBiddingRules, SeatGoalInterval, SeatGoalType } from '@argonprotocol/commander-core';
 
@@ -104,8 +104,8 @@ const props = withDefaults(
   },
 );
 
-const calculator = getCalculator();
-const calculatorData = getCalculatorData();
+const calculator = getBiddingCalculator();
+const calculatorData = getBiddingCalculatorData();
 
 const config = useConfig();
 const currency = useCurrency();

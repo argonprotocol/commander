@@ -21,7 +21,7 @@
         <VaultProjectedUtilization v-else-if="id === 'projectedUtilization'" @update:data="updateData" ref="editorInstance" />
         <VaultBtcLockingFees v-else-if="id === 'btcLockingFees'" @update:data="updateData" ref="editorInstance" />
         <VaultPoolRevenueShare v-else-if="id === 'poolRevenueShare'" @update:data="updateData" ref="editorInstance" />
-        <VaultCapitalDistribution v-else-if="id === 'capitalDistribution'" @update:data="updateData" ref="editorInstance" />
+        <VaultPoolPrefund v-else-if="id === 'poolPrefund'" @update:data="updateData" ref="editorInstance" />
         <VaultSecuritizationRatio v-else-if="id === 'securitizationRatio'" @update:data="updateData" ref="editorInstance" />
         <VaultPersonalBtc v-else-if="id === 'personalBtc'" @update:data="updateData" ref="editorInstance" />
       </div>
@@ -56,7 +56,7 @@ export type IEditBoxOverlayTypeForMining =
   | 'cloudMachine';
 
 export type IEditBoxOverlayTypeForVaulting =
-  | 'capitalDistribution'
+  | 'poolPrefund'
   | 'securitizationRatio'
   | 'poolRevenueShare'
   | 'btcLockingFees'
@@ -76,12 +76,12 @@ import BotCloudMachine from './edit-box/BotCloudMachine.vue';
 import VaultProjectedUtilization from './edit-box/VaultProjectedUtilization.vue';
 import VaultBtcLockingFees from './edit-box/VaultBtcLockingFees.vue';
 import VaultPoolRevenueShare from './edit-box/VaultPoolRevenueShare.vue';
-import VaultCapitalDistribution from './edit-box/VaultCapitalDistribution.vue';
 import VaultSecuritizationRatio from './edit-box/VaultSecuritizationRatio.vue';
 import VaultPersonalBtc from './edit-box/VaultPersonalBtc.vue';
 import { useConfig } from '../stores/config';
 import { JsonExt } from '@argonprotocol/commander-core';
 import { IBiddingRules } from '@argonprotocol/commander-core';
+import VaultPoolPrefund from './edit-box/VaultPoolPrefund.vue';
 
 const props = defineProps<{
   id: IEditBoxOverlayType;
@@ -112,10 +112,10 @@ const titles = {
 
   projectedUtilization: 'Projected Utilization',
   btcLockingFees: 'Bitcoin Locking Fees',
-  poolRevenueShare: 'Pool Revenue Share',
-  capitalDistribution: 'Capital Distribution',
+  poolRevenueShare: 'Treasury Revenue Split',
+  poolPrefund: 'Internal Treasury Funding',
   securitizationRatio: 'Securitization Ratio',
-  personalBtc: 'Personal BTC to Lock',
+  personalBtc: 'Internal Bitcoin Locking',
 };
 
 // --- Draggable Modal Logic ---

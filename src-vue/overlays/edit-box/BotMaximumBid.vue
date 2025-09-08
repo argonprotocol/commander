@@ -61,7 +61,7 @@ import AlertIcon from '../../assets/alert.svg?component';
 import InputMenu, { type IOption } from '../../components/InputMenu.vue';
 import InputNumber from '../../components/InputNumber.vue';
 import InputArgon from '../../components/InputArgon.vue';
-import { getCalculator } from '../../stores/mainchain';
+import { getBiddingCalculator } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
 import { useCurrency } from '../../stores/currency';
 import { createNumeralHelpers } from '../../lib/numeral';
@@ -71,7 +71,7 @@ const emit = defineEmits<{
 }>();
 
 const config = useConfig();
-const calculator = getCalculator();
+const calculator = getBiddingCalculator();
 const currency = useCurrency();
 const { microgonToMoneyNm } = createNumeralHelpers(currency);
 

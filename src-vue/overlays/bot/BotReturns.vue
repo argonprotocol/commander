@@ -94,7 +94,7 @@ import { useCurrency } from '../../stores/currency';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
 import { TooltipArrow, TooltipContent, TooltipPortal, TooltipProvider, TooltipRoot, TooltipTrigger } from 'reka-ui';
 import { IBiddingRules } from '@argonprotocol/commander-core';
-import { getCalculator, getCalculatorData } from '../../stores/mainchain';
+import { getBiddingCalculator, getBiddingCalculatorData } from '../../stores/mainchain';
 
 const props = withDefaults(
   defineProps<{
@@ -107,8 +107,8 @@ const props = withDefaults(
   },
 );
 
-const calculator = getCalculator();
-const calculatorData = getCalculatorData();
+const calculator = getBiddingCalculator();
+const calculatorData = getBiddingCalculatorData();
 
 const config = useConfig();
 const currency = useCurrency();

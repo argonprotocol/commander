@@ -42,11 +42,11 @@
 import * as Vue from 'vue';
 import { ExclamationTriangleIcon } from '@heroicons/vue/20/solid';
 import InputNumber from '../../components/InputNumber.vue';
-import { getCalculator } from '../../stores/mainchain';
+import { getBiddingCalculator } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
 
 const config = useConfig();
-const calculator = getCalculator();
+const calculator = getBiddingCalculator();
 const showBidAmountAlert = Vue.ref(false);
 
 Vue.watch(

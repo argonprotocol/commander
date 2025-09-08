@@ -8,7 +8,7 @@ export const VaultingRulesSchema = z.object({
   profitSharingPct: z.number(),
   btcFlatFee: z.bigint(),
   btcPctFee: z.number(),
-  personalBtcInMicrogons: z.bigint(),
+  personalBtcPct: z.number(),
 
   btcUtilizationPctMin: z.number().min(0).max(100),
   btcUtilizationPctMax: z.number().min(0).max(100),
