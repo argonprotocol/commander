@@ -137,8 +137,8 @@ export class VaultCalculator {
   public calculateTotalPoolSpace(utilization: 'Low' | 'High' | 'Full'): bigint {
     // Ultimately the pool space is dependent on how much BTC is in the vault
     const btcUtilizedInMicrogons = this.calculateBtcUtilizedInMicrogons(utilization);
-    const securitizationRatio = Math.max(this.rules.securitizationRatio, 200);
-    const securitizationRatioBn = BigNumber(securitizationRatio).div(100);
+    const securitizationRatio = Math.min(this.rules.securitizationRatio, 2);
+    const securitizationRatioBn = BigNumber(securitizationRatio);
     const activatedSecuritizationBn = BigNumber(btcUtilizedInMicrogons).multipliedBy(securitizationRatioBn);
     return bigNumberToBigInt(activatedSecuritizationBn);
   }

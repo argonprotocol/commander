@@ -111,15 +111,10 @@ export class Config {
   }
 
   public async load() {
-    console.log(
-      'Config: Loading configuration from database...',
-      new Error(),
-      this._loadedDeferred.isSettled || this._loadedDeferred.isRunning,
-    );
+    console.log('Config: Loading configuration from database...');
     if (this._loadedDeferred.isSettled || this._loadedDeferred.isRunning) {
       return this._loadedDeferred.promise;
     }
-    console.log('Config actual: Loading configuration from database...', new Error());
     this._loadedDeferred.setIsRunning(true);
     try {
       const db = await this._dbPromise;
@@ -174,7 +169,6 @@ export class Config {
       this._loadedData = loadedData as IConfig;
       this._rawData = rawData;
       this._loadedDeferred.resolve();
-      console.log('Config: Loaded configuration from database', this._loadedData);
       if (this.miningAccountHadPreviousLife && !this.miningAccountPreviousHistory) {
         await this._bootupFromMiningAccountPreviousHistory();
       }

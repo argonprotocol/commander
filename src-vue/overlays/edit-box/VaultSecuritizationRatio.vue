@@ -44,11 +44,10 @@ const config = useConfig();
 const calculator = getBiddingCalculator();
 const showBidAmountAlert = Vue.ref(false);
 
-const collateralProvided = Vue.computed(() => config.vaultingRules.securitizationRatio * 100);
+const collateralProvided = Vue.ref(config.vaultingRules.securitizationRatio * 100);
 
 function updateCollateral(value: number) {
   config.vaultingRules.securitizationRatio = BigNumber(value).dividedBy(100).toNumber();
-  console.log('Updated securitization ratio to', config.vaultingRules.securitizationRatio);
 }
 
 Vue.watch(
@@ -63,7 +62,7 @@ Vue.watch(
   { deep: true, immediate: true },
 );
 
-Vue.onMounted(() => {
+Vue.onMounted(async () => {
   calculator.setPivotPoint('ExpectedGrowth');
 });
 
