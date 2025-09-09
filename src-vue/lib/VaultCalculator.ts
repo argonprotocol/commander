@@ -151,9 +151,9 @@ export class VaultCalculator {
     const maxTreasuryRatio = Math.min(securitizationRatio, 2);
     const treasuryPoolFundedPct = percent / 100;
 
-    const capitalPtc =
+    const capitalPct =
       (treasuryPoolFundedPct * maxTreasuryRatio) / (securitizationRatio + treasuryPoolFundedPct * maxTreasuryRatio);
-    this.rules.capitalForTreasuryPct = roundTo(capitalPtc, 2);
+    this.rules.capitalForTreasuryPct = roundTo(capitalPct, 2);
     this.updateCapitalSplit();
   }
 

@@ -122,8 +122,6 @@ import { createNumeralHelpers } from '../../lib/numeral';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { getVaultCalculator } from '../../stores/mainchain.ts';
 import numeral from 'numeral';
-import BotReturns from '../../overlays/bot/BotReturns.vue';
-import BotCapital from '../../overlays/bot/BotCapital.vue';
 import VaultCapital from '../../overlays/vault/VaultCapital.vue';
 import VaultReturns from '../../overlays/vault/VaultReturns.vue';
 
@@ -171,7 +169,6 @@ function calculateAlignOffset(event: MouseEvent, parentElement: HTMLElement | nu
   const elementRect = element.getBoundingClientRect();
   const parentRect = parentElement.getBoundingClientRect();
 
-  // Calculate the difference between the right edge of element and the right edge of botOverlayReferenceElement
   const elementRightEdge = elementRect.left + (align === 'start' ? 0 : elementRect.width);
   const parentRightEdge = parentRect.left + (align === 'start' ? 0 : parentRect.width);
   const offset = elementRightEdge - parentRightEdge;

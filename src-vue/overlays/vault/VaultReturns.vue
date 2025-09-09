@@ -166,7 +166,6 @@ import { useCurrency } from '../../stores/currency';
 import numeral, { createNumeralHelpers } from '../../lib/numeral';
 import { TooltipArrow, TooltipContent, TooltipPortal, TooltipProvider, TooltipRoot, TooltipTrigger } from 'reka-ui';
 import { getVaultCalculator } from '../../stores/mainchain.ts';
-import { bigIntMax, bigIntMin } from '@argonprotocol/commander-core/src/utils.ts';
 
 const props = withDefaults(
   defineProps<{

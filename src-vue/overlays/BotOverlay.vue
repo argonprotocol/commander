@@ -513,7 +513,6 @@ Vue.watch(
 );
 
 basicEmitter.on('openBotOverlay', async () => {
-  console.log('opening bot overlay');
   if (isOpen.value) return;
   isLoaded.value = false;
   isOpen.value = true;
