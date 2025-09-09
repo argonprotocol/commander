@@ -244,63 +244,6 @@ export default class Installer {
     void this.run();
   }
 
-  public async runUpgrade(): Promise<void> {
-    await this.isLoadedPromise;
-
-    if ((this.isRunning ||= await this.calculateIsRunning())) {
-      console.log('CANNOT runFailedStep because install is already running');
-      return;
-    }
-
-    this.hasApprovedUpgrade = true;
-
-    console.info('Clearing step files');
-    const stepsToClear = [
-      InstallStepErrorType.FileUpload,
-      InstallStepErrorType.BitcoinInstall,
-      InstallStepErrorType.ArgonInstall,
-      InstallStepErrorType.MiningLaunch,
-    ];
-    await this.clearStepFiles(stepsToClear, { setFirstStepToWorking: true });
-
-    this.installerCheck.clearCachedFilenames();
-    this.installerCheck.shouldUseCachedInstallSteps = true;
-
-    this.removeReasonsToSkipInstall();
-    this.config.resetField('installDetails');
-    this.config.isMinerWaitingForUpgradeApproval = false;
-    this.config.isMinerUpToDate = false;
-    await this.config.save();
-
-    void this.run();
-  }
-
-  public async upgradeBiddingBotFiles(): Promise<void> {
-    await this.isLoadedPromise;
-    console.log('Upgrading bidding bot files');
-
-    if ((this.isRunning ||= await this.calculateIsRunning())) {
-      console.log('CANNOT runFailedStep because install is already running');
-      return;
-    }
-
-    this.isRunning = true;
-    try {
-      const server = await this.getServer();
-      await this.uploadBotConfigFiles();
-      await server.stopBotDocker();
-      await server.startBotDocker();
-    } catch (e) {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-      console.error(`Failed to upgrade bidding bot files: ${e}`);
-      throw e;
-    } finally {
-      this.isRunning = false;
-    }
-
-    await this.config.save();
-  }
-
   private async getServer(): Promise<Server> {
     // We were getting into issues where server hadn't been created yet. I decided to just force
     // getting it in every function that needs it.
@@ -350,29 +293,20 @@ export default class Installer {
       return false;
     }
 
-    const requiresExplicitUpgradeApproval = isServerInstallComplete && !isFreshInstall && remoteFilesNeedUpdating;
-    console.info('requiresExplicitUpgradeApproval =', requiresExplicitUpgradeApproval, {
-      isServerInstallComplete,
-      isFreshInstall,
-      remoteFilesNeedUpdating,
-      hasApprovedUpgrade: this.hasApprovedUpgrade,
-    });
+    if (remoteFilesNeedUpdating) {
+      this.hasApprovedUpgrade = true;
 
-    if (requiresExplicitUpgradeApproval && !this.hasApprovedUpgrade) {
-      this.isReadyToRun = false;
-      this.reasonToSkipInstall = ReasonsToSkipInstall.UpgradeRequiresApproval;
-      this.reasonToSkipInstallData = {
-        isServerInstallComplete,
-        isFreshInstall,
-        isMinerUpToDate: false,
-      };
+      console.info('Clearing step files');
+      const stepsToClear = [InstallStepErrorType.FileUpload, InstallStepErrorType.MiningLaunch];
+      await this.clearStepFiles(stepsToClear, { setFirstStepToWorking: true });
+
+      this.installerCheck.clearCachedFilenames();
+      this.installerCheck.shouldUseCachedInstallSteps = true;
+      this.config.isMinerInstalled = false;
       this.config.isMinerUpToDate = false;
-      this.config.isMinerWaitingForUpgradeApproval = true;
-      await this.config.save();
-      return false;
     }
 
-    if (isFreshInstall) {
+    if (isFreshInstall || remoteFilesNeedUpdating) {
       // If the server is fresh, we need to reset the install details, and we can't skip the install process
       // even if next two conditions are met.
       this.isReadyToRun = true;
