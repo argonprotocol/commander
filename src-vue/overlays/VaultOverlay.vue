@@ -17,7 +17,7 @@
         <div
           ref="dialogPanel"
           class="VaultOverlay absolute top-[40px] left-3 right-3 bottom-3 flex flex-col rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left z-20 transition-all focus:outline-none"
-          style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255, 255, 255, 1);">
+          style="box-shadow: 0 -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255, 255, 255, 1);">
           <BgOverlay v-if="editBoxOverlayId" @close="editBoxOverlayId = null" :showWindowControls="false" rounded="md" class="z-100" />
           <div class="flex flex-col h-full w-full">
             <h2
@@ -130,11 +130,11 @@
                   <div class="w-[1px] bg-slate-300 mx-2"></div>
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.poolFunding, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'poolPrefund')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
+                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.poolFunding, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'treasuryFunding')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
                       <div StatHeader>Internal Treasury Funding</div>
                       <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
                         <div MainRule class="w-full">
-                          <span>{{ numeral(rules.capitalForTreasuryPct * 2).format('0.[00]') }}%</span>
+                          <span>{{ numeral(calculator.calculatePercentOfTreasuryClaimed()).format('0.[00]') }}%</span>
                         </div>
                       </div>
                       <div class="text-gray-500/60 text-md font-mono">
@@ -244,11 +244,10 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import BigNumber from 'bignumber.js';
 import basicEmitter from '../emitters/basicEmitter';
 import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui';
 import { useConfig } from '../stores/config';
-import { getMainchainClients, getVaultCalculator } from '../stores/mainchain';
+import { getVaultCalculator } from '../stores/mainchain';
 import { useCurrency } from '../stores/currency';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
 import BgOverlay from '../components/BgOverlay.vue';
@@ -257,14 +256,11 @@ import { hideTooltip, showTooltip } from '../lib/TooltipUtils';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForVaulting } from './EditBoxOverlay.vue';
 import { JsonExt } from '@argonprotocol/commander-core';
 import IVaultingRules from '../interfaces/IVaultingRules';
-import { MyVault } from '../lib/MyVault.ts';
 import InputArgon from '../components/InputArgon.vue';
 import ExistingNetworkVaultsOverlayButton from './ExistingNetworkVaultsOverlayButton.vue';
-import { VaultCalculator } from '../lib/VaultCalculator.ts';
 import VaultCapital from './vault/VaultCapital.vue';
 import VaultReturns from './vault/VaultReturns.vue';
 
-const mainchainClients = getMainchainClients();
 const config = useConfig();
 const currency = useCurrency();
 const { microgonToMoneyNm, microgonToArgonNm } = createNumeralHelpers(currency);
@@ -354,12 +350,6 @@ async function saveRules() {
   isSaving.value = true;
 
   if (rules.value) {
-    // validate the personal btc fits into the securitization space
-    const { microgonsForSecuritization } = MyVault.getMicrogoonSplit(rules.value);
-    const availableBtcSpace = BigInt(
-      BigNumber(microgonsForSecuritization).dividedBy(rules.value.securitizationRatio).integerValue().toNumber(),
-    );
-
     await config.saveVaultingRules();
   }
 
@@ -377,8 +367,8 @@ function updateAPYs() {
   externalLowUtilizationAPY.value = calculator.calculateExternalAPY('Low', 'Low');
   externalHighUtilizationAPY.value = calculator.calculateExternalAPY('High', 'High');
 
-  hasExternalPoolCapitalLow.value = calculator.calculateExternalPoolCapital('Low') > 0;
-  hasExternalPoolCapitalHigh.value = calculator.calculateExternalPoolCapital('High') > 0;
+  hasExternalPoolCapitalLow.value = calculator.calculateExternalPoolCapital('Low', 'Low') > 0;
+  hasExternalPoolCapitalHigh.value = calculator.calculateExternalPoolCapital('High', 'High') > 0;
 
   averageAPY.value = (vaultLowUtilizationAPY.value + vaultHighUtilizationAPY.value) / 2;
 

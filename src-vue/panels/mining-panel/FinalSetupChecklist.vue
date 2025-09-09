@@ -286,6 +286,15 @@ async function launchMiningBot() {
   isLaunchingMiningBot.value = false;
 }
 
+Vue.watch(
+  config.vaultingRules,
+  () => {
+    calculator.calculateBidAmounts();
+    averageAPY.value = calculator.averageAPY;
+  },
+  { deep: true },
+);
+
 Vue.onMounted(async () => {
   calculatorData.isInitializedPromise.then(() => {
     calculator.updateBiddingRules(config.biddingRules);

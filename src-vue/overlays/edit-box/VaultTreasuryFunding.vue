@@ -35,24 +35,22 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import InputNumber from '../../components/InputNumber.vue';
-import { getMainchainClients, getVaultCalculator } from '../../stores/mainchain';
+import { getVaultCalculator } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
 import { useCurrency } from '../../stores/currency.ts';
 import { createNumeralHelpers } from '../../lib/numeral.ts';
 
 const config = useConfig();
-const mainchainClients = getMainchainClients();
 const calculator = getVaultCalculator();
 const currency = useCurrency();
-const capitalForTreasuryPct = Vue.ref(config.vaultingRules.capitalForTreasuryPct * 2);
+const capitalForTreasuryPct = Vue.ref(calculator.calculatePercentOfTreasuryClaimed());
 
 const { microgonToMoneyNm } = createNumeralHelpers(currency);
 
 const externalFundingArgons = Vue.ref(0n);
 
 function handlePoolChange(value: number) {
-  config.vaultingRules.capitalForTreasuryPct = value / 2;
-  config.vaultingRules.capitalForSecuritizationPct = 100 - config.vaultingRules.capitalForTreasuryPct;
+  calculator.updateTreasuryFundingPercent(value);
   externalFundingArgons.value = calculator.calculateTotalPoolSpace('Full') - calculator.calculateInternalPoolCapital();
 }
 
