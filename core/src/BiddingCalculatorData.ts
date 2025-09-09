@@ -24,6 +24,7 @@ export default class BiddingCalculatorData {
 
   public maxPossibleMiningSeatCount: number = 0;
   public nextCohortSize: number = 0;
+  public allowedBidIncrementMicrogons = 10_000n;
 
   constructor(mining: Mining) {
     this.isInitializedPromise = this.initialize(mining);
@@ -61,6 +62,8 @@ export default class BiddingCalculatorData {
 
       this.microgonExchangeRateTo = await priceIndex.fetchMicrogonExchangeRatesTo();
       this.maxPossibleMiningSeatCount = maxPossibleMinersInNextEpoch;
+      const client = await mining.clients.prunedClientOrArchivePromise;
+      this.allowedBidIncrementMicrogons = client.consts.miningSlot.bidIncrements.toBigInt();
     } catch (e) {
       console.error('Error initializing BiddingCalculatorData', e);
       throw e;

@@ -191,6 +191,11 @@ export default class BiddingCalculator {
       price += bigNumberToBigInt(adjustmentAmountBn);
     }
 
+    const remainder = price % this.data.allowedBidIncrementMicrogons;
+    if (remainder !== 0n) {
+      price -= remainder;
+    }
+
     return price;
   }
 
