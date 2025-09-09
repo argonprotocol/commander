@@ -2,7 +2,7 @@ import BigNumber from 'bignumber.js';
 import { bigNumberToBigInt, MainchainClients } from '@argonprotocol/commander-core';
 import { Config } from './Config';
 import { calculateAPY, createDeferred } from './Utils';
-import { bigIntMax } from '@argonprotocol/commander-core/src/utils';
+import { bigIntMax, roundTo } from '@argonprotocol/commander-core/src/utils';
 import { Vaults } from './Vaults.ts';
 
 export class VaultCalculator {
@@ -48,7 +48,7 @@ export class VaultCalculator {
     const totalPoolRevenue = this.calculateTotalPoolRevenue(btcUtilization, poolUtilization);
     const internalBtcRevenue = this.calculateInternalBtcRevenue(btcUtilization);
 
-    const externalPoolCapital = this.calculateExternalPoolCapital(btcUtilization);
+    const externalPoolCapital = this.calculateExternalPoolCapital(btcUtilization, poolUtilization);
 
     const externalFactorBn = totalPoolCapital
       ? BigNumber(externalPoolCapital).dividedBy(totalPoolCapital)
@@ -66,21 +66,24 @@ export class VaultCalculator {
     return revenueFromInternal + revenueFromExternal + internalBtcRevenue;
   }
 
-  public calculateExternalAPY(btcUtilization: 'Low' | 'High', poolUtilization: 'Low' | 'High'): number {
+  public calculateExternalRevenue(btcUtilization: 'Low' | 'High', poolUtilization: 'Low' | 'High'): bigint {
     const { profitSharingPct } = this.rules;
     const totalPoolCapital = this.calculateTotalPoolCapital(btcUtilization, poolUtilization);
-    const externalPoolCapital = this.calculateExternalPoolCapital(btcUtilization);
+    const externalPoolCapital = this.calculateExternalPoolCapital(btcUtilization, poolUtilization);
 
-    const externalFactorBn = totalPoolCapital
-      ? BigNumber(externalPoolCapital).dividedBy(totalPoolCapital)
-      : BigNumber(0);
-
+    if (totalPoolCapital <= 0n) return 0n;
     const totalPoolRevenue = this.calculateTotalPoolRevenue(btcUtilization, poolUtilization);
+    const externalFundingRatio = BigNumber(externalPoolCapital).div(totalPoolCapital);
 
     const externalPoolRevenueBn = BigNumber(totalPoolRevenue)
-      .multipliedBy(externalFactorBn)
+      .multipliedBy(externalFundingRatio)
       .multipliedBy(profitSharingPct / 100);
-    const externalPoolRevenue = bigNumberToBigInt(externalPoolRevenueBn);
+    return bigNumberToBigInt(externalPoolRevenueBn);
+  }
+
+  public calculateExternalAPY(btcUtilization: 'Low' | 'High', poolUtilization: 'Low' | 'High'): number {
+    const externalPoolCapital = this.calculateExternalPoolCapital(btcUtilization, poolUtilization);
+    const externalPoolRevenue = this.calculateExternalRevenue(btcUtilization, poolUtilization);
 
     return calculateAPY(externalPoolCapital, externalPoolCapital + externalPoolRevenue);
   }
@@ -125,8 +128,53 @@ export class VaultCalculator {
     return bigNumberToBigInt(totalRevenueFromBtcBn.dividedBy(36.5));
   }
 
-  private calculateBtcUtilizedInMicrogons(utilization: 'Low' | 'High' | 'Full'): bigint {
-    const { btcUtilizationPct } = this.extractRulesFor(utilization);
+  public updateCapitalSplit() {
+    const maxTreasuryRatio = BigNumber(Math.min(this.rules.securitizationRatio, 2));
+    const capital = BigNumber(this.rules.baseMicrogonCommitment);
+    const securitizationRatio = BigNumber(this.rules.securitizationRatio);
+    const treasuryPct = BigNumber(this.calculatePercentOfTreasuryClaimed()).dividedBy(100);
+    const btcInMicrogons = capital.dividedBy(securitizationRatio.plus(maxTreasuryRatio.times(treasuryPct)));
+
+    const securitizationPct = btcInMicrogons.multipliedBy(securitizationRatio).dividedBy(capital);
+
+    this.rules.capitalForSecuritizationPct = Number(securitizationPct.times(100).toFixed(2));
+    this.rules.capitalForTreasuryPct = 100 - this.rules.capitalForSecuritizationPct;
+  }
+
+  /**
+   * Responds to user input of the percent of the treasury pool they want to fund and converts the amount of capital to
+   * allocate to the treasury.
+   * @param percent - percent of the treasury pool the user wants to fund (0-100)
+   */
+  public updateTreasuryFundingPercent(percent: number) {
+    const securitizationRatio = this.rules.securitizationRatio;
+    const maxTreasuryRatio = Math.min(securitizationRatio, 2);
+    const treasuryPoolFundedPct = percent / 100;
+
+    const capitalPct =
+      (treasuryPoolFundedPct * maxTreasuryRatio) / (securitizationRatio + treasuryPoolFundedPct * maxTreasuryRatio);
+    this.rules.capitalForTreasuryPct = roundTo(capitalPct, 2);
+    this.updateCapitalSplit();
+  }
+
+  /**
+   * Converts the percent of total capital spent on treasury to the percent of the treasury pool that can be claimed.
+   */
+  public calculatePercentOfTreasuryClaimed(): number {
+    const securitizationRatio = this.rules.securitizationRatio;
+    const maxTreasuryRatio = Math.min(securitizationRatio, 2);
+    const capitalPct = this.rules.capitalForTreasuryPct / 100;
+
+    const treasuryPoolFundedPct = (capitalPct * securitizationRatio) / (maxTreasuryRatio * (1 - capitalPct));
+    const percentToShow = roundTo(treasuryPoolFundedPct, 2);
+    if (Math.round(percentToShow) - percentToShow < 0.01) {
+      return Math.round(percentToShow);
+    }
+    return percentToShow;
+  }
+
+  private calculateBtcUtilizedInMicrogons(btcUtilization: 'Low' | 'High' | 'Full'): bigint {
+    const { btcUtilizationPct } = this.extractRulesFor(btcUtilization);
     const btcSpaceInMicrogons = this.calculateBtcSpaceInMicrogons();
     const btcUtilizedInMicrogonsBn = BigNumber(btcSpaceInMicrogons).multipliedBy(btcUtilizationPct / 100);
     const btcUtilizedInMicrogons = bigNumberToBigInt(btcUtilizedInMicrogonsBn);
@@ -134,9 +182,9 @@ export class VaultCalculator {
     return bigIntMax(btcUtilizedInMicrogons, this.personalBtcInMicrogons());
   }
 
-  public calculateTotalPoolSpace(utilization: 'Low' | 'High' | 'Full'): bigint {
+  public calculateTotalPoolSpace(btcUtilization: 'Low' | 'High' | 'Full'): bigint {
     // Ultimately the pool space is dependent on how much BTC is in the vault
-    const btcUtilizedInMicrogons = this.calculateBtcUtilizedInMicrogons(utilization);
+    const btcUtilizedInMicrogons = this.calculateBtcUtilizedInMicrogons(btcUtilization);
     const securitizationRatio = Math.min(this.rules.securitizationRatio, 2);
     const securitizationRatioBn = BigNumber(securitizationRatio);
     const activatedSecuritizationBn = BigNumber(btcUtilizedInMicrogons).multipliedBy(securitizationRatioBn);
@@ -148,10 +196,7 @@ export class VaultCalculator {
     const poolUtilizationPct =
       poolUtilization === 'Low' ? this.rules.poolUtilizationPctMin : this.rules.poolUtilizationPctMax;
     const poolCapitalBn = BigNumber(totalPoolSpace).multipliedBy(poolUtilizationPct / 100);
-    const poolCapital = bigNumberToBigInt(poolCapitalBn);
-    const internalPoolCapital = this.calculateInternalPoolCapital();
-
-    return bigIntMax(internalPoolCapital, poolCapital);
+    return bigNumberToBigInt(poolCapitalBn);
   }
 
   public calculateInternalPoolCapital(): bigint {
@@ -162,13 +207,14 @@ export class VaultCalculator {
     return bigNumberToBigInt(internalPoolCapitalBn);
   }
 
-  public calculateExternalPoolCapital(btcUtilization: 'Low' | 'High'): bigint {
+  public calculateExternalPoolCapital(btcUtilization: 'Low' | 'High', poolUtilization: 'Low' | 'High'): bigint {
     const totalPoolSpace = this.calculateTotalPoolSpace(btcUtilization);
     const internalPoolCapital = this.calculateInternalPoolCapital();
-    const maxPoolCapitalBn = BigNumber(totalPoolSpace).multipliedBy(this.rules.poolUtilizationPctMin / 100);
-    const maxPoolCapital = bigIntMax(internalPoolCapital, bigNumberToBigInt(maxPoolCapitalBn));
-
-    return maxPoolCapital - internalPoolCapital;
+    const poolUtilizationPct =
+      poolUtilization === 'Low' ? this.rules.poolUtilizationPctMin : this.rules.poolUtilizationPctMax;
+    const maxExternalCapitalBn = BigNumber(totalPoolSpace - internalPoolCapital).multipliedBy(poolUtilizationPct / 100);
+    const maxExternalCapital = bigNumberToBigInt(maxExternalCapitalBn);
+    return bigIntMax(0n, maxExternalCapital);
   }
 
   private calculateGlobalPoolCapital(btcUtilization: 'Low' | 'High', poolUtilization: 'Low' | 'High'): bigint {

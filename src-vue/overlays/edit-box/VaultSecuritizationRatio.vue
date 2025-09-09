@@ -37,36 +37,17 @@ import * as Vue from 'vue';
 import BigNumber from 'bignumber.js';
 import { ExclamationTriangleIcon } from '@heroicons/vue/20/solid';
 import InputNumber from '../../components/InputNumber.vue';
-import { getBiddingCalculator } from '../../stores/mainchain';
+import { getVaultCalculator } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
 
 const config = useConfig();
-const calculator = getBiddingCalculator();
+const calculator = getVaultCalculator();
 const showBidAmountAlert = Vue.ref(false);
 
 const collateralProvided = Vue.ref(config.vaultingRules.securitizationRatio * 100);
 
 function updateCollateral(value: number) {
   config.vaultingRules.securitizationRatio = BigNumber(value).dividedBy(100).toNumber();
+  calculator.updateCapitalSplit();
 }
-
-Vue.watch(
-  config.biddingRules,
-  () => {
-    if (calculator.startingBidAmountFromExpectedGrowth || calculator.maximumBidAmountFromExpectedGrowth) {
-      showBidAmountAlert.value = true;
-    } else {
-      showBidAmountAlert.value = false;
-    }
-  },
-  { deep: true, immediate: true },
-);
-
-Vue.onMounted(async () => {
-  calculator.setPivotPoint('ExpectedGrowth');
-});
-
-Vue.onBeforeUnmount(() => {
-  calculator.setPivotPoint(null);
-});
 </script>

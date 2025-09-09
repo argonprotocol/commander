@@ -36,6 +36,7 @@
 
         <section
           @click="openVaultOverlay"
+          ref="vaultOverlayReferenceElement"
           class="flex flex-row cursor-pointer border-t border-[#CCCEDA] py-9 hover:bg-argon-menu-hover"
         >
           <Checkbox :isChecked="config.hasSavedVaultingRules" />
@@ -45,9 +46,20 @@
               Decide how much capital to commit, your distribution between securitization and treasury pools, and other basic settings.
             </p>
             <p v-else>
-              You setup your bidding rules and <span class="underline decoration-dashed underline-offset-4 decoration-slate-600/80">committed
-              {{ currency.symbol }}{{ microgonToArgonNm(config.vaultingRules?.baseMicrogonCommitment || 0n).format('0,0.[00]') }}</span>
-              <!-- with an <span class="underline decoration-dashed underline-offset-4 decoration-slate-600/80">average expected APY return of {{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</span>. -->
+              You setup your vaulting rules and <VaultCapital align="start" :alignOffset="alignOffsetForCapital">
+                <span @mouseenter="alignOffsetForCapital = calculateAlignOffset($event, vaultOverlayReferenceElement, 'start')" class="underline decoration-dashed underline-offset-4 decoration-slate-600/80 cursor-pointer">
+                  committed
+                  {{ currency.symbol }}{{ microgonToArgonNm(config.vaultingRules?.baseMicrogonCommitment || 0n).format('0,0.[00]') }} in capital
+                </span>
+            </VaultCapital>
+              with an
+              <VaultReturns align="end" :alignOffset="alignOffsetForReturns">
+                <span @mouseenter="alignOffsetForReturns = calculateAlignOffset($event, vaultOverlayReferenceElement, 'end')" class="inline-block underline decoration-dashed underline-offset-4 decoration-slate-600/80 cursor-pointer">
+                  average expected return of {{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999)
+                  }}%
+                </span>
+              </VaultReturns>
+              (APY).
             </p>
           </div>
         </section>
@@ -108,14 +120,24 @@ import { useCurrency } from '../../stores/currency';
 import Checkbox from '../../components/Checkbox.vue';
 import { createNumeralHelpers } from '../../lib/numeral';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+import { getVaultCalculator } from '../../stores/mainchain.ts';
+import numeral from 'numeral';
+import VaultCapital from '../../overlays/vault/VaultCapital.vue';
+import VaultReturns from '../../overlays/vault/VaultReturns.vue';
 
 dayjs.extend(utc);
 
 const config = useConfig();
 const wallets = useWallets();
 const currency = useCurrency();
+const calculator = getVaultCalculator();
+
+const averageAPY = Vue.ref(0);
 
 const { microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
+const vaultOverlayReferenceElement = Vue.ref<HTMLElement | null>(null);
+const alignOffsetForReturns = Vue.ref(0);
+const alignOffsetForCapital = Vue.ref(0);
 
 const walletIsPartiallyFunded = Vue.computed(() => {
   return (wallets.vaultingWallet.availableMicrogons || wallets.vaultingWallet.availableMicronots) > 0;
@@ -138,9 +160,43 @@ const walletIsFullyFunded = Vue.computed(() => {
   return true;
 });
 
+function calculateAlignOffset(event: MouseEvent, parentElement: HTMLElement | null, align: 'start' | 'end') {
+  const element = event.target as HTMLElement;
+  if (!element || !parentElement) {
+    return 0;
+  }
+
+  const elementRect = element.getBoundingClientRect();
+  const parentRect = parentElement.getBoundingClientRect();
+
+  const elementRightEdge = elementRect.left + (align === 'start' ? 0 : elementRect.width);
+  const parentRightEdge = parentRect.left + (align === 'start' ? 0 : parentRect.width);
+  const offset = elementRightEdge - parentRightEdge;
+
+  return align === 'start' ? -offset : offset;
+}
+
+function updateApy() {
+  const lowApy = calculator.calculateInternalAPY('Low', 'Low');
+  const highApy = calculator.calculateInternalAPY('High', 'High');
+  averageAPY.value = (lowApy + highApy) / 2;
+}
+
 function openVaultOverlay() {
   basicEmitter.emit('openVaultOverlay');
 }
+
+Vue.watch(
+  config.vaultingRules,
+  () => {
+    updateApy();
+  },
+  { deep: true },
+);
+
+Vue.onMounted(async () => {
+  calculator.load(config.vaultingRules).then(() => updateApy());
+});
 
 function openFundMiningAccountOverlay() {
   basicEmitter.emit('openWalletOverlay', { walletId: 'vaulting', screen: 'receive' });

@@ -21,7 +21,7 @@
         <VaultProjectedUtilization v-else-if="id === 'projectedUtilization'" @update:data="updateData" ref="editorInstance" />
         <VaultBtcLockingFees v-else-if="id === 'btcLockingFees'" @update:data="updateData" ref="editorInstance" />
         <VaultPoolRevenueShare v-else-if="id === 'poolRevenueShare'" @update:data="updateData" ref="editorInstance" />
-        <VaultPoolPrefund v-else-if="id === 'poolPrefund'" @update:data="updateData" ref="editorInstance" />
+        <VaultTreasuryFunding v-else-if="id === 'treasuryFunding'" @update:data="updateData" ref="editorInstance" />
         <VaultSecuritizationRatio v-else-if="id === 'securitizationRatio'" @update:data="updateData" ref="editorInstance" />
         <VaultPersonalBtc v-else-if="id === 'personalBtc'" @update:data="updateData" ref="editorInstance" />
       </div>
@@ -56,7 +56,7 @@ export type IEditBoxOverlayTypeForMining =
   | 'cloudMachine';
 
 export type IEditBoxOverlayTypeForVaulting =
-  | 'poolPrefund'
+  | 'treasuryFunding'
   | 'securitizationRatio'
   | 'poolRevenueShare'
   | 'btcLockingFees'
@@ -81,7 +81,7 @@ import VaultPersonalBtc from './edit-box/VaultPersonalBtc.vue';
 import { useConfig } from '../stores/config';
 import { JsonExt } from '@argonprotocol/commander-core';
 import { IBiddingRules } from '@argonprotocol/commander-core';
-import VaultPoolPrefund from './edit-box/VaultPoolPrefund.vue';
+import VaultTreasuryFunding from './edit-box/VaultTreasuryFunding.vue';
 
 const props = defineProps<{
   id: IEditBoxOverlayType;
@@ -113,7 +113,7 @@ const titles = {
   projectedUtilization: 'Projected Utilization',
   btcLockingFees: 'Bitcoin Locking Fees',
   poolRevenueShare: 'Treasury Revenue Split',
-  poolPrefund: 'Internal Treasury Funding',
+  treasuryFunding: 'Internal Treasury Funding',
   securitizationRatio: 'Securitization Ratio',
   personalBtc: 'Internal Bitcoin Locking',
 };

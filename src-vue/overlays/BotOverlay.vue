@@ -49,7 +49,7 @@
                           To secure your goal of {{getEpochSeatGoalCount()}} mining seats per epoch, you need
                         </div>
                         <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
-                          <NeedMoreCapitalHover v-if="probableMinSeats < getEpochSeatGoalCount()" :calculator="calculator" :seat-goal-count="getEpochSeatGoalCount()" :ideal-capital-commitment="getMinimumCapitalCommitment()" @increase-capital-commitment="updateMinimumCapital()" />
+                          <NeedMoreCapitalHover v-if="minimumCapitalCommitment > capitalToCommitMicrogons" :calculator="calculator" :seat-goal-count="getEpochSeatGoalCount()" :ideal-capital-commitment="minimumCapitalCommitment" @increase-capital-commitment="updateMinimumCapital()" />
                           <InputArgon v-model="capitalToCommitMicrogons" :min="10_000_000n" :minDecimals="0" />
                         </div>
                         <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
@@ -490,16 +490,16 @@ Vue.watch(capitalToCommitMicrogons, capital => {
   rules.value.baseMicrogonCommitment = capital - rules.value.baseMicronotCommitment;
 });
 
-function getMinimumCapitalCommitment(): bigint {
+const minimumCapitalCommitment = Vue.computed(() => {
   const epochSeatGoal = BigInt(getEpochSeatGoalCount());
   const minimumCapitalNeeded = calculator.maximumBidAmount * epochSeatGoal;
   const minimumCapitalNeededRoundedUp = ceilTo(minimumCapitalNeeded, 6);
   const micronotsNeeded = epochSeatGoal * calculatorData.micronotsRequiredForBid;
   return currency.micronotToMicrogon(micronotsNeeded) + BigInt(minimumCapitalNeededRoundedUp);
-}
+});
 
 function updateMinimumCapital() {
-  capitalToCommitMicrogons.value = getMinimumCapitalCommitment();
+  capitalToCommitMicrogons.value = minimumCapitalCommitment.value;
 }
 
 Vue.watch(
@@ -520,7 +520,7 @@ basicEmitter.on('openBotOverlay', async () => {
   isBrandNew.value = !config.hasSavedBiddingRules;
   calculatorData.isInitializedPromise.then(() => {
     previousBiddingRules = JsonExt.stringify(config.biddingRules);
-    capitalToCommitMicrogons.value = getMinimumCapitalCommitment();
+    capitalToCommitMicrogons.value = minimumCapitalCommitment.value;
     updateAPYs();
     if (isBrandNew.value && startingBidAtFastGrowthAPY.value > 20_000) {
       /*

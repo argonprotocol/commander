@@ -21,6 +21,11 @@ export function bigIntAbs(x: bigint): bigint {
   return x < 0n ? -x : x;
 }
 
+export function roundTo(x: number | bigint, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(Number(x) * factor) / factor;
+}
+
 export function ceilTo(x: number | bigint, decimals: number): number {
   const factor = 10 ** decimals;
   return Math.ceil(Number(x) * factor) / factor;

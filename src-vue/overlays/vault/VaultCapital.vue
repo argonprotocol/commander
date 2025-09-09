@@ -56,11 +56,11 @@
                   {{ currency.symbol }}{{ microgonToMoneyNm(poolSpace).format('0,0') }}
                 </td>
                 <td class="border-t border-dashed border-slate-300 text-right font-medium">
-                  {{ rules.capitalForTreasuryPct * 2 }}%
+                  {{ calculator.calculatePercentOfTreasuryClaimed() }}%
                 </td>
                 <td class="border-t border-dashed border-slate-300 text-center font-light">vs</td>
                 <td class="border-t border-dashed border-slate-300 text-left font-medium">
-                  {{ 100 - rules.capitalForTreasuryPct * 2 }}%
+                  {{ 100 - calculator.calculatePercentOfTreasuryClaimed() }}%
                 </td>
               </tr>
               <tr class="text-argon-600 h-1/3 font-mono font-bold">
