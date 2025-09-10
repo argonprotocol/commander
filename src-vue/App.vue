@@ -14,8 +14,7 @@
     </div>
     <template v-if="config.isLoaded">
       <template v-if="showMiningPanel">
-        <UpgradeOverlay v-if="isNeedingUpgrade && config.isMinerReadyToInstall" />
-        <SyncingOverlay v-else-if="bot.isSyncing" />
+        <SyncingOverlay v-if="bot.isSyncing" />
         <BootingOverlay v-else-if="config.isBootingUpFromMiningAccountPreviousHistory" />
       </template>
       <ServerConnectOverlay />
@@ -53,7 +52,6 @@ import WalletOverlay from './overlays/WalletOverlay.vue';
 import ServerRemoveOverlay from './overlays/ServerRemoveOverlay.vue';
 import ServerConfigureOverlay from './overlays/ServerConfigureOverlay.vue';
 import SecuritySettingsOverlay from './overlays/SecuritySettingsOverlay.vue';
-import UpgradeOverlay from './overlays/UpgradeOverlay.vue';
 import SyncingOverlay from './overlays/SyncingOverlay.vue';
 import TopBar from './navigation/TopBar.vue';
 import { useController } from './stores/controller';
