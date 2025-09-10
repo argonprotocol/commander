@@ -12,7 +12,7 @@
       <div :class="[isLaunchingMiningBot || !wallets.isLoaded ? 'opacity-30 pointer-events-none' : '']">
 
         <h1 class="text-4xl font-bold text-left mt-24 mb-4 whitespace-nowrap text-argon-text-primary">
-          Four Steps Are Required Before Mining
+          Four Steps Are Required to Begin Mining
         </h1>
 
         <p class="mb-4 text-argon-text-primary leading-7">

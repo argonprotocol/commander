@@ -1,5 +1,25 @@
 <!-- prettier-ignore -->
 <template>
+  <!-- const tooltip = {
+    capitalToCommit:
+      'The more capital you commit, the more liquidity you provides to the network and therefore the higher your potential returns.',
+    estimatedAPYRange:
+      'These estimates are based on a combination of current pool rewards and the vault parameters you have configured below.',
+    poolFunding:
+      "This is how much of the Treasury Pool you want to fund with your own capital. If you set to less than 100%, you're relying on the community to fund the rest.",
+    securitizationRatio:
+      'This is the ratio of argons to bitcoins that you are committing. These argons guarantee the bitcoin holders that their assets are safe.',
+    poolRevenueShare:
+      'Outside funders can contribute to your Treasury Pool, and in return you agree to share a portion of your profits with them.',
+    poolRevenueShareNa:
+      'Since you are personally funding 100% of the Treasury Pool, there is no external capital to share profits with.',
+    btcLockingFees: 'Each bitcoin transaction that locks in your vault must pay this flat fee for doing so.',
+    btcLockingNoSpace:
+      'You have committed 100% of the bitcoin needed to fill your vault, so no locking fees are possible.',
+    projectedUtilization: `Your vault's utilization will determine how much revenue you earn and how much of the Treasury Pool can be activated. You can use this box to project various scenarios.`,
+    personalBtc: `You'll probably want to bootstrap your vault with some of your own bitcoin. The more bitcoin, the sooner you'll start earning returns.`,
+    saveRules: 'You can update these settings later.',
+  }; -->
   <p class="text-md mb-3">
     This panel allows you to set the expected usage rates of your vault. Will the demand for Liquid Locking of Bitcoin be strong enough
     to keep your vault at capacity? Will people contribute to your treasury pool?

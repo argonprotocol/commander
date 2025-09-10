@@ -9,5 +9,6 @@
         "https://github.com/argonprotocol/commander/releases/download/channel-experimental/latest-experimental.json"
       ]
     }
-  }
+  },
+  "version": "1.0.0-rc1"
 }

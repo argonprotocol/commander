@@ -17,6 +17,10 @@ export function bigIntMax(...args: Array<bigint | null>): bigint {
   return args.filter(x => x !== null).reduce((max, current) => (current > max ? current : max));
 }
 
+export function bigIntCeil(x: bigint, unit: bigint): bigint {
+  return ((x + unit - 1n) / unit) * unit;
+}
+
 export function bigIntAbs(x: bigint): bigint {
   return x < 0n ? -x : x;
 }

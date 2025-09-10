@@ -100,7 +100,7 @@
                 <section class="flex flex-row h-1/2 my-2">
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.personalBtc, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'personalBtc')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
+                    <div MainWrapper @click="openEditBoxOverlay($event, 'personalBtc')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
                       <div StatHeader>Internal Bitcoin Locking</div>
                       <div MainRule class="w-full">
                         {{ rules.personalBtcPct }}%
@@ -114,7 +114,7 @@
                   <div class="w-[1px] bg-slate-300 mx-2"></div>
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.securitizationRatio, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'securitizationRatio')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
+                    <div MainWrapper @click="openEditBoxOverlay($event, 'securitizationRatio')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
                       <div StatHeader>Securitization Ratio</div>
                       <div MainRule class="w-full">
                         {{ numeral(rules.securitizationRatio).format('0.[00]') }}
@@ -130,7 +130,7 @@
                   <div class="w-[1px] bg-slate-300 mx-2"></div>
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.poolFunding, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'treasuryFunding')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
+                    <div MainWrapper @click="openEditBoxOverlay($event, 'treasuryFunding')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
                       <div StatHeader>Internal Treasury Funding</div>
                       <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
                         <div MainRule class="w-full">
@@ -156,7 +156,7 @@
 
                 <section class="flex flex-row h-1/2 my-2">
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, rules.personalBtcPct === 100 ? tooltip.btcLockingNoSpace : tooltip.btcLockingFees, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'btcLockingFees')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
+                    <div MainWrapper @click="openEditBoxOverlay($event, 'btcLockingFees')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
                       <div StatHeader>Bitcoin Locking Fee</div>
                       <div MainRule class="w-full">
                         <span v-if="rules.personalBtcPct === 100" class="opacity-40">N/A</span>
@@ -173,7 +173,7 @@
                   <div class="w-[1px] bg-slate-300 mx-2"></div>
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.projectedUtilization, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'projectedUtilization')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
+                    <div MainWrapper @click="openEditBoxOverlay($event, 'projectedUtilization')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
                       <div StatHeader>Projected Utilization</div>
                       <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
                         <div MainRule class="flex flex-row items-center justify-center w-5/12">
@@ -203,7 +203,7 @@
                   <div class="w-[1px] bg-slate-300 mx-2"></div>
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event,  rules.capitalForTreasuryPct === 50 ? tooltip.poolRevenueShareNa: tooltip.poolRevenueShare, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'poolRevenueShare')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
+                    <div MainWrapper @click="openEditBoxOverlay($event, 'poolRevenueShare')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
                       <div StatHeader>Treasury Revenue Split</div>
                       <div MainRule class="w-full">
                         <span v-if="rules.capitalForTreasuryPct === 50" class="opacity-40">N/A</span>
@@ -228,7 +228,7 @@
                 <button @click="cancelOverlay" class="border border-argon-button/50 text-xl font-bold text-gray-500 px-7 py-1 rounded-md cursor-pointer">
                   <span>Cancel</span>
                 </button>
-                <button @click="saveRules" @mouseenter="showTooltip($event, tooltip.saveRules, { width: 'parent' })" @mouseleave="hideTooltip" class="bg-argon-button text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
+                <button @click="saveRules" class="bg-argon-button text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
                   <span v-if="!isSaving">{{ isBrandNew ? 'Initialize' : 'Update' }} Rules</span>
                   <span v-else>{{ isBrandNew ? 'Initializing' : 'Updating' }} Rules...</span>
                 </button>
@@ -252,7 +252,6 @@ import { useCurrency } from '../stores/currency';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
 import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
-import { hideTooltip, showTooltip } from '../lib/TooltipUtils';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForVaulting } from './EditBoxOverlay.vue';
 import { JsonExt } from '@argonprotocol/commander-core';
 import IVaultingRules from '../interfaces/IVaultingRules';
@@ -299,27 +298,6 @@ const poolSpace = Vue.ref(0n);
 const hasExternalPoolCapitalLow = Vue.ref(false);
 const hasExternalPoolCapitalHigh = Vue.ref(false);
 
-const tooltip = {
-  capitalToCommit:
-    'The more capital you commit, the more liquidity you provides to the network and therefore the higher your potential returns.',
-  estimatedAPYRange:
-    'These estimates are based on a combination of current pool rewards and the vault parameters you have configured below.',
-  poolFunding:
-    "This is how much of the Treasury Pool you want to fund with your own capital. If you set to less than 100%, you're relying on the community to fund the rest.",
-  securitizationRatio:
-    'This is the ratio of argons to bitcoins that you are committing. These argons guarantee the bitcoin holders that their assets are safe.',
-  poolRevenueShare:
-    'Outside funders can contribute to your Treasury Pool, and in return you agree to share a portion of your profits with them.',
-  poolRevenueShareNa:
-    'Since you are personally funding 100% of the Treasury Pool, there is no external capital to share profits with.',
-  btcLockingFees: 'Each bitcoin transaction that locks in your vault must pay this flat fee for doing so.',
-  btcLockingNoSpace:
-    'You have committed 100% of the bitcoin needed to fill your vault, so no locking fees are possible.',
-  projectedUtilization: `Your vault's utilization will determine how much revenue you earn and how much of the Treasury Pool can be activated. You can use this box to project various scenarios.`,
-  personalBtc: `You'll probably want to bootstrap your vault with some of your own bitcoin. The more bitcoin, the sooner you'll start earning returns.`,
-  saveRules: 'You can update these settings later.',
-};
-
 function calculateElementWidth(element: HTMLElement) {
   return element.getBoundingClientRect().width + 'px';
 }
@@ -338,7 +316,6 @@ function openEditBoxOverlay($event: MouseEvent, type: IEditBoxOverlayTypeForVaul
 function cancelOverlay() {
   if (editBoxOverlayId.value) return;
 
-  hideTooltip();
   isOpen.value = false;
 
   if (previousVaultingRules) {
@@ -355,7 +332,6 @@ async function saveRules() {
 
   isSaving.value = false;
   isOpen.value = false;
-  hideTooltip();
 }
 
 function updateAPYs() {

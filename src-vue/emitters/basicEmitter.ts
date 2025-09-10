@@ -8,18 +8,6 @@ type IBasicEmitter = {
   openServerRemoveOverlay: void;
   openSecuritySettingsOverlay: void;
   openVaultOverlay: void;
-  showTooltip: {
-    parentLeft: number;
-    parentTop: number;
-    parentWidth: number;
-    parentHeight: number;
-    label: string | ComputedRef<string>;
-    width: 'parent' | 'auto' | 'auto-plus';
-    widthPlus: number;
-    horizontalPosition: 'left' | 'center' | 'right';
-    verticalPosition: 'above' | 'below';
-  };
-  hideTooltip: void;
   openProvisioningCompleteOverlay: void;
   openServerConnectOverlay: void;
   closeAllOverlays: void;
