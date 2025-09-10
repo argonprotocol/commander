@@ -76,7 +76,7 @@ export class MainchainClients {
 
         if (this.enableApiLogging) {
           const argsJson = args.map(getJson);
-          console.error(`[{${name}] ${path}(${JSON.stringify(argsJson)}) Error:`, error);
+          console.error(`[${name}] ${path}(${JSON.stringify(argsJson)}) Error:`, error);
         }
       },
       onSuccess: (path, result, ...args) => {

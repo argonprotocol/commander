@@ -106,6 +106,28 @@ export class CohortBidder {
   }
 
   public async start() {
+    const client = this.client;
+    this.minIncrement = client.consts.miningSlot.bidIncrements.toBigInt();
+    this.bidsForNextSlotCohortKey = client.query.miningSlot.bidsForNextSlotCohort.key();
+    const minBidIncrement = this.options.minBid % this.minIncrement;
+    if (minBidIncrement !== 0n) {
+      this.options.minBid -= minBidIncrement;
+      console.log(
+        `Adjusting min bid to ${formatArgons(this.options.minBid)} to be a multiple of the minimum increment ${formatArgons(
+          this.minIncrement,
+        )}`,
+      );
+    }
+    const maxBidIncrement = this.options.maxBid % this.minIncrement;
+    if (maxBidIncrement !== 0n) {
+      this.options.maxBid -= maxBidIncrement;
+      console.log(
+        `Adjusting max bid to ${formatArgons(this.options.maxBid)} to be a multiple of the minimum increment ${formatArgons(
+          this.minIncrement,
+        )}`,
+      );
+    }
+
     console.log(`Starting cohort ${this.cohortStartingFrameId} bidder`, {
       maxBid: formatArgons(this.options.maxBid),
       minBid: formatArgons(this.options.minBid),
@@ -114,10 +136,6 @@ export class CohortBidder {
       bidDelay: this.options.bidDelay,
       subaccounts: this.subaccounts,
     });
-
-    const client = this.client;
-    this.minIncrement = client.consts.miningSlot.bidIncrements.toBigInt();
-    this.bidsForNextSlotCohortKey = client.query.miningSlot.bidsForNextSlotCohort.key();
 
     this.nextCohortSize = await client.query.miningSlot.nextCohortSize().then(x => x.toNumber());
     if (this.subaccounts.length > this.nextCohortSize) {

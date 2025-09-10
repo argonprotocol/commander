@@ -133,7 +133,8 @@ export class BlockSync {
       blocksByNumber: Object.keys(data.blocksByNumber).length,
     });
 
-    const oldestBlock = data.blocksByNumber[data.syncedToBlockNumber + 1];
+    const oldestBlock =
+      data.blocksByNumber[data.syncedToBlockNumber + 1] ?? data.blocksByNumber[data.syncedToBlockNumber];
     if (!oldestBlock) {
       throw new Error(`No block found to start syncing from at ${data.syncedToBlockNumber + 1}`);
     }
@@ -226,9 +227,13 @@ export class BlockSync {
       let oldestToKeep = Math.min(x.syncedToBlockNumber, x.finalizedBlockNumber);
       oldestToKeep -= 5; // keep some overflow
       for (const key of blockKeys) {
-        if (key < oldestToKeep) {
+        // it is possible that bestBlockNumber is less than the best block if we have a re-org
+        if (key < oldestToKeep || key > x.bestBlockNumber) {
           delete x.blocksByNumber[key];
         }
+      }
+      if (x.syncedToBlockNumber > x.bestBlockNumber) {
+        x.syncedToBlockNumber = x.bestBlockNumber;
       }
       if (x.syncedToBlockNumber < minBlock - 1) {
         x.syncedToBlockNumber = minBlock - 1;
