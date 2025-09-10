@@ -34,33 +34,37 @@
               <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
                 Commander uses an automated bidding bot to maximize your chance of winning seats, and this screen allows you to
                 configure the rules for how this bot should make decisions on your behalf. Use your mouse to explore the various
-                settings and their impact on your potential profits.
+                settings and their impact on your potential profits. <div class="inline-block cursor-pointer text-argon-600 hover:underline decoration-dashed underline-offset-4" @click="openMiningTour">Take the Mining Tour.</div>
               </DialogDescription>
 
               <section class="flex flex-row border-t border-b border-slate-500/30 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
                 <div class="w-1/2 flex flex-col grow">
-                  <CapitalOverlay align="start" :width="capitalBoxWidth">
-                    <div PrimaryStat @mouseenter="capitalBoxWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
-                      <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
-                        Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
-                      </header>
-                      <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
-                        <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
-                          To secure your goal of {{getEpochSeatGoalCount()}} mining seats per epoch, you need
-                        </div>
-                        <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
-                          <NeedMoreCapitalHover v-if="minimumCapitalCommitment > capitalToCommitMicrogons" :calculator="calculator" :seat-goal-count="getEpochSeatGoalCount()" :ideal-capital-commitment="minimumCapitalCommitment" @increase-capital-commitment="updateMinimumCapital()" />
-                          <InputArgon v-model="capitalToCommitMicrogons" :min="10_000_000n" :minDecimals="0" />
-                        </div>
-                        <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
-                          This is the amount of capital you'll need to acquire<br/>
-                          {{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') }} argonot{{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') === '1' ? '' : 's' }}
-                          and {{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') }} argon{{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') === '0,0' ? '' : 's' }}
-                          at current market rates.
-                        </div>
+                  <div PrimaryStat @mouseenter="capitalBoxWidth = calculateElementWidth($event?.target as HTMLElement, 1.3)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                    <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
+                      Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
+                    </header>
+                    <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
+                      <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
+                        To secure <tooltip content="Customize this in the Capital Allocation box below">your goal</tooltip> of 
+                        {{getEpochSeatGoalCount()}} mining seats <tooltip content="An epoch is equivalent to ten days">per epoch</tooltip>, you need
+                      </div>
+                      <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
+                        <NeedMoreCapitalHover v-if="minimumCapitalCommitment > capitalToCommitMicrogons" :calculator="calculator" :seat-goal-count="getEpochSeatGoalCount()" :ideal-capital-commitment="minimumCapitalCommitment" @increase-capital-commitment="updateMinimumCapital()" />
+                        <InputArgon v-model="capitalToCommitMicrogons" :min="10_000_000n" :minDecimals="0" />
+                        <CapitalOverlay align="end" :width="capitalBoxWidth">
+                          <PiechartIcon PiechartIcon class="ml-1 w-10 h-10 text-gray-300 hover:text-argon-600" />
+                        </CapitalOverlay>
+                      </div>
+                      <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
+                        This is the <tooltip content="Click the capital amount listed above to directly change your commitment">amount of capital you'll need</tooltip> for acquiring<br/>
+                        {{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') }} 
+                        <tooltip content="Argonots are the ownership tokens of the network">argonot{{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') === '1' ? '' : 's' }}</tooltip>
+                        and {{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') }} 
+                        <tooltip content="Argons are the stable currency of the network">argon{{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') === '0,0' ? '' : 's' }}</tooltip>
+                        at their <tooltip content="Prices reflect real-time rates on the Uniswap market as closely as possible">current market rates</tooltip>.
                       </div>
                     </div>
-                  </CapitalOverlay>
+                  </div>
                 </div>
                 <div class="flex flex-col items-center justify-center text-3xl mx-2 text-center">
                   <span class="relative -top-1 opacity-50">
@@ -68,25 +72,32 @@
                   </span>
                 </div>
                 <div class="w-1/2 flex flex-col grow">
-                  <ReturnsOverlay align="end" :width="returnsBoxWidth">
-                    <div PrimaryStat @mouseenter="returnsBoxWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
-                      <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
-                        Return on Capital
-                      </header>
-                      <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
-                        <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
-                          Your capital is estimated to return {{ numeral(epochPercentageYield).formatCapped('0,0.00', 999_999) }}% per epoch at an APY of
-                        </div>
-                        <div class="flex flex-row items-center justify-center grow relative h-26 text-6xl font-bold font-mono text-argon-600">
-                          {{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
-                        </div>
-                        <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full">
-                        This represents the average return between your starting<br />
-                        bid and maximum bid, between slow growth and fast growth.
+                  <div PrimaryStat @mouseenter="returnsBoxWidth = calculateElementWidth($event?.target as HTMLElement, 1.3)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                    <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
+                      Return on Capital
+                    </header>
+                    <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
+                      <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
+                        Your capital is <tooltip content="This is not a guarantee, simply an estimate">estimated</tooltip> to return 
+                        {{ numeral(epochPercentageYield).formatCapped('0,0.00', 999_999) }}% <tooltip content="An epoch is equivalent to ten days">per epoch</tooltip> 
+                        at an <tooltip content="Annual Percent Yield">APY</tooltip> of
                       </div>
+                      <div class="flex flex-row items-center justify-center grow relative h-26 text-6xl font-bold font-mono text-argon-600">
+                        <span>~{{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</span>
+                        <ReturnsOverlay align="start" :width="returnsBoxWidth">
+                          <PiechartIcon PiechartIcon class="ml-4 w-10 h-10 text-gray-300 hover:text-argon-600" />
+                        </ReturnsOverlay>
                       </div>
+                      <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full">
+                      This represents the <tooltip content="It's a blend between multiple possibilities">average return</tooltip> between 
+                      your <tooltip content="Your bot's opening bid each day">starting</tooltip> <br />
+                      <tooltip content="Your bot's opening bid each day">bid</tooltip> and 
+                      <tooltip content="The price your bot won't go above">maximum bid</tooltip>, 
+                      between <tooltip content="Customize this in the Ecosystem Growth box below">slow growth</tooltip> and 
+                      <tooltip content="Customize this in the Ecosystem Growth box below">fast growth</tooltip>.
                     </div>
-                  </ReturnsOverlay>
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -94,15 +105,21 @@
                 <section class="flex flex-row h-1/2 my-2">
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.startingBid, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'startingBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
-                      <div StatHeader>Starting Bid</div>
-                      <div v-if="startingBidAmountOverride" MainRule class="w-full flex flex-row items-center justify-center space-x-2">
-                        <AlertIcon class="w-5 h-5 text-yellow-700 inline-block relative -top-0.5" />
-                        <span class="line-through text-gray-500/60">{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}</span>
-                        <span>{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmountOverride).format('0,0.00') }}</span>
+                    <div MainWrapper @click="openEditBoxOverlay($event, 'startingBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                      <tooltip side="top" content="This is your starting bid price. Don't put it too low or you'll be forced to pay unneeded transaction fees in order to submit a rebid.">
+                        <div StatHeader>Starting Bid</div>
+                      </tooltip>
+                      <div v-if="startingBidAmountOverride" MainRule class="w-full flex flex-row items-center justify-center">
+                        <div class="flex flex-row items-center justify-center space-x-2">
+                          <AlertIcon class="w-5 h-5 text-yellow-700 inline-block relative -top-0.5" />
+                          <span class="line-through text-gray-500/60">{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}</span>
+                          <span>{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmountOverride).format('0,0.00') }}</span>
+                        </div>
+                        <EditIcon EditIcon />
                       </div>
-                      <div v-else MainRule class="w-full">
-                        {{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}
+                      <div v-else MainRule class="flex flex-row items-center justify-center w-full">
+                        <span>{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}</span>
+                        <EditIcon EditIcon />
                       </div>
                       <div class="text-gray-500/60 text-md">
                         <span v-if="rules.startingBidFormulaType === BidAmountFormulaType.Custom">Custom Value</span>
@@ -129,15 +146,21 @@
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.maximumBid, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'maximumBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
-                      <div StatHeader>Maximum Bid</div>
-                      <div v-if="maximumBidAmountOverride" MainRule class="w-full flex flex-row items-center justify-center space-x-2">
-                        <AlertIcon class="w-5 h-5 text-yellow-700 inline-block relative -top-0.5" />
-                        <span class="line-through text-gray-500/60">{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}</span>
-                        <span>{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmountOverride).format('0,0.00') }}</span>
+                    <div MainWrapper @click="openEditBoxOverlay($event, 'maximumBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                      <tooltip side="top" content="Your mining bot will never submit a bid above this price. If other bidders go higher than this, you will be knocked out of contention.">
+                        <div StatHeader>Maximum Bid</div>
+                      </tooltip>
+                      <div v-if="maximumBidAmountOverride" MainRule class="w-full flex flex-row items-center justify-center">
+                        <div class="flex flex-row items-center justify-center space-x-2">
+                          <AlertIcon class="w-5 h-5 text-yellow-700 inline-block relative -top-0.5" />
+                          <span class="line-through text-gray-500/60">{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}</span>
+                          <span>{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmountOverride).format('0,0.00') }}</span>
+                        </div>
+                        <EditIcon EditIcon />
                       </div>
-                      <div v-else MainRule class="w-full">
-                        {{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}
+                      <div v-else MainRule class="w-full flex flex-row items-center justify-center">
+                        <span>{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}</span>
+                        <EditIcon EditIcon />
                       </div>
                       <div class="text-gray-500/60 text-md">
                         <span v-if="rules.maximumBidFormulaType === BidAmountFormulaType.Custom">Custom Value</span>
@@ -160,10 +183,13 @@
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.rebiddingStrategy, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'rebiddingStrategy')" class="flex flex-col w-full h-full items-center justify-center px-8">
-                      <div StatHeader>Rebidding Strategy</div>
-                      <div MainRule class="w-full">
-                        +{{ currency.symbol }}{{ microgonToMoneyNm(rules.rebiddingIncrementBy).format('0.00') }}
+                    <div MainWrapper @click="openEditBoxOverlay($event, 'rebiddingStrategy')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                      <tooltip side="top" :content="`If your bids get knocked out of contention, your bot will wait ${rules.rebiddingDelay} minute${rules.rebiddingDelay === 1 ? '' : 's'} before submitting a new bid at ${currency.symbol}${microgonToMoneyNm(rules.rebiddingIncrementBy).format('0.00')} above the current winning bid.`">
+                        <div StatHeader>Rebidding Strategy</div>
+                      </tooltip>
+                      <div MainRule class="w-full flex flex-row items-center justify-center">
+                        <span>+{{ currency.symbol }}{{ microgonToMoneyNm(rules.rebiddingIncrementBy).format('0.00') }}</span>
+                        <EditIcon EditIcon />
                       </div>
                       <div class="text-gray-500/60 text-md">
                         Delay By {{ rules.rebiddingDelay }} Minute{{ rules.rebiddingDelay === 1 ? '' : 's' }}
@@ -183,13 +209,16 @@
 
                 <section class="flex flex-row h-1/2 my-2">
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.capitalAllocation, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'capitalAllocation')" class="flex flex-col w-full h-full items-center justify-center px-8">
-                      <div StatHeader>Capital Allocation</div>
+                    <div MainWrapper @click="openEditBoxOverlay($event, 'capitalAllocation')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                      <tooltip side="top" :content="`This is your bot's goal, not its ceiling. If the bot can snag more than ${seatGoalText()}, it will do so. If it fails to achieve its goal, it will alert you in the app.`">
+                        <div StatHeader>Capital Allocation</div>
+                      </tooltip>
                       <div MainRule v-if="rules.seatGoalType === SeatGoalType.Max && rules.seatGoalCount === 0" class="w-full">
                         Disabled
                       </div>
-                      <div MainRule v-else class="w-full">
-                       {{ rules.seatGoalType }} {{ rules.seatGoalCount }} Seats Per {{ rules.seatGoalInterval }}
+                      <div MainRule v-else class="w-full flex flex-row items-center justify-center">
+                        <span>{{ rules.seatGoalType }} {{ rules.seatGoalCount }} Seats Per {{ rules.seatGoalInterval }}</span>
+                        <EditIcon EditIcon />
                       </div>
                       <div class="text-gray-500/60 text-md">
                         {{ rules.seatGoalType === SeatGoalType.Max ? 'Stop After Goal Reached' : 'Reinvest Profits from Operation' }}
@@ -200,19 +229,23 @@
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.expectedGrowth, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'expectedGrowth')" class="flex flex-col w-full h-full items-center justify-center">
-                      <div StatHeader>Ecosystem Growth</div>
+                    <div MainWrapper @click="openEditBoxOverlay($event, 'expectedGrowth')" class="flex flex-col w-full h-full items-center justify-center">
+                      <tooltip side="top" content="These numbers don't affect your bot's decisions; they only factor into the Estimated APY shown above. Argons is growth in circulation; Argonots is change in token price. Both are factored annually.">
+                        <div StatHeader>Ecosystem Growth</div>
+                      </tooltip>
                       <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
                         <div MainRule class="flex flex-row items-center justify-center w-5/12">
                           <span>{{ numeral(rules.argonCirculationGrowthPctMin).formatIfElse('0', '0', '+0.[0]') }}%</span>
                           <span class="text-md px-1.5 text-gray-500/60">to</span>
                           <span>{{ numeral(rules.argonCirculationGrowthPctMax).formatIfElse('0', '0', '+0.[0]')}}%</span>
+                          <EditIcon EditIcon />
                         </div>
                         <span class="text-md w-2/12 text-gray-500/60">&nbsp;and&nbsp;</span>
                         <div MainRule class="flex flex-row items-center justify-center w-5/12">
                           <span>{{ numeral(rules.argonotPriceChangePctMin).formatIfElse('0', '0', '+0.[0]') }}%</span>
                           <span class="text-md px-1.5 text-gray-500/60">to</span>
                           <span>{{ numeral(rules.argonotPriceChangePctMax).formatIfElse('0', '0', '+0.[0]')}}%</span>
+                          <EditIcon EditIcon />
                         </div>
                       </div>
                       <div class="flex flex-row items-center justify-center px-10 w-full text-center font-mono ">
@@ -230,10 +263,13 @@
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
                   <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @mouseenter="showTooltip($event, tooltip.cloudMachine, { width: 'parent', widthPlus: 16 })" @mouseleave="hideTooltip" @click="openEditBoxOverlay($event, 'cloudMachine')" class="flex flex-col w-full h-full items-center justify-center px-8">
-                      <div StatHeader>Cloud Machine</div>
-                      <div MainRule class="tracking-widest w-full">
-                        {{ config.serverDetails.ipAddress || '0.0.0.0' }}
+                    <div MainWrapper @click="openEditBoxOverlay($event, 'cloudMachine')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                      <tooltip side="top" content="You can leave this server configuration box as-is for now. Later in the process, we'll guide you through the step-by-step flow of how to set up a new Cloud Machine. Don't worry, it's easy.">
+                        <div StatHeader>Cloud Machine</div>
+                      </tooltip>
+                      <div MainRule class="tracking-widest w-full flex flex-row items-center justify-center">
+                        <span>{{ config.serverDetails.ipAddress || '0.0.0.0' }}</span>
+                        <EditIcon EditIcon />
                       </div>
                       <div class="text-gray-500/60 text-md font-mono">
                         {{ config.isMinerInstalled ? 'Existing Server' : 'New Server' }}
@@ -243,17 +279,17 @@
                 </section>
               </div>
             </div>
-            <div v-else>Loading...</div>
+            <div v-else class="grow flex items-center justify-center">Loading...</div>
 
             <div class="flex flex-row justify-end border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
               <div class="flex flex-row space-x-4 justify-center items-center">
                 <ActiveBidsOverlayButton :loadFromMainchain="true" class="mr-10">
                   <span class="text-argon-600/70 cursor-pointer">Show Existing Mining Bids</span>
                 </ActiveBidsOverlayButton>
-                <button @click="cancelOverlay" class="border border-argon-button/50 hover:border-argon-button text-xl font-bold text-gray-500 px-7 py-1 rounded-md cursor-pointer">
+                <button @click="cancelOverlay" tabindex="-1" class="border border-argon-button/50 hover:border-argon-button text-xl font-bold text-gray-500 px-7 py-1 rounded-md cursor-pointer">
                   <span>Cancel</span>
                 </button>
-                <button @click="saveRules" @mouseenter="showTooltip($event, tooltip.saveRules, { width: 'parent' })" @mouseleave="hideTooltip" class="bg-argon-button hover:border-argon-800 text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
+                <button @click="saveRules" tabindex="0" class="bg-argon-button hover:border-argon-800 text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
                   <span v-if="!isSaving">{{ isBrandNew ? 'Initialize' : 'Update' }} Rules</span>
                   <span v-else>{{ isBrandNew ? 'Initializing' : 'Updating' }} Rules...</span>
                 </button>
@@ -279,7 +315,6 @@ import numeral, { createNumeralHelpers } from '../lib/numeral';
 import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import AlertIcon from '../assets/alert.svg?component';
-import { hideTooltip, showTooltip as showTooltipOriginal } from '../lib/TooltipUtils';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForMining } from './EditBoxOverlay.vue';
 import { type IBiddingRules, JsonExt } from '@argonprotocol/commander-core';
 import ActiveBidsOverlayButton from './ActiveBidsOverlayButton.vue';
@@ -289,13 +324,16 @@ import {
   SeatGoalInterval,
   SeatGoalType,
 } from '@argonprotocol/commander-core/src/IBiddingRules.ts';
-import { bigIntAbs, bigNumberToInteger, ceilTo } from '@argonprotocol/commander-core/src/utils';
+import { bigIntAbs, bigIntCeil, bigNumberToInteger, ceilTo } from '@argonprotocol/commander-core/src/utils';
 import InputArgon from '../components/InputArgon.vue';
 import NeedMoreCapitalHover from './bot/NeedMoreCapitalHover.vue';
 import ReturnsOverlay from './bot/BotReturns.vue';
 import CapitalOverlay from './bot/BotCapital.vue';
 import { useInstaller } from '../stores/installer.ts';
 import { useBot } from '../stores/bot.ts';
+import PiechartIcon from '../assets/piechart.svg?component';
+import EditIcon from '../assets/edit.svg?component';
+import Tooltip from '../components/Tooltip.vue';
 
 const calculator = getBiddingCalculator();
 const calculatorData = getBiddingCalculatorData();
@@ -344,31 +382,9 @@ const averageAPY = Vue.ref(0);
 const averageEarnings = Vue.ref(0n);
 const epochPercentageYield = Vue.ref(0);
 
-const tooltip = {
-  capitalToCommit:
-    'The more capital you put in, the more seats you have a chance to win and therefore the higher your earning potential.',
-  estimatedAPYRange:
-    'These estimates are based on the guaranteed block rewards locked on-chain combined with the bidding variables shown on this page.',
-  startingBid: `This is your starting bid price. Don't put it too low or you'll be forced to pay unneeded transaction fees in order to submit a rebid.`,
-  rebiddingStrategy: Vue.computed(
-    () =>
-      `If your bids get knocked out of contention, your bot will wait ${rules.value.rebiddingDelay} minute${rules.value.rebiddingDelay === 1 ? '' : 's'} before submitting a new bid at ${currency.symbol}${microgonToMoneyNm(rules.value.rebiddingIncrementBy).format('0.00')} above the current winning bid.`,
-  ),
-  maximumBid: `Your mining bot will never submit a bid above this price. If other bidders go higher than this, you will be knocked out of contention.`,
-  capitalAllocation: Vue.computed(() => {
-    let interval =
-      rules.value.seatGoalInterval === SeatGoalInterval.Epoch
-        ? `An "epoch" is equivalent to 10 days`
-        : `A "frame" is equivalent to 1 day`;
-    return `This is your bot's goal, not its ceiling. ${interval}. If the bot can snag more than ${seatGoalText()}, it will do so. If it fails to achieve its goal, it will alert you in the app.`;
-  }),
-  expectedGrowth: `These numbers don't affect your bot's decisions; they only factor into the Estimated APY shown above. Argons is growth in circulation; Argonots is change in token price. Both are factored annually.`,
-  cloudMachine: `You can leave this server configuration box as-is for now. Later in the process, we'll guide you through the step-by-step flow of how to set up a new Cloud Machine. Don't worry, it's easy.`,
-  saveRules: `Let's go! You can modify the rules later.`,
-};
-
-function calculateElementWidth(element: HTMLElement) {
-  return element.getBoundingClientRect().width + 'px';
+function calculateElementWidth(element: HTMLElement, multiplier: number = 1) {
+  const elementWidth = element.getBoundingClientRect().width;
+  return elementWidth * multiplier + 'px';
 }
 
 function getEpochSeatGoalCount() {
@@ -404,7 +420,6 @@ function openEditBoxOverlay($event: MouseEvent, type: IEditBoxOverlayTypeForMini
 function cancelOverlay() {
   if (editBoxOverlayId.value) return;
   isOpen.value = false;
-  hideTooltip();
 
   if (previousBiddingRules) {
     config.biddingRules = JsonExt.parse<IBiddingRules>(previousBiddingRules);
@@ -429,16 +444,6 @@ async function saveRules() {
       console.error('Failed to reload server bidding rules:', error);
     }
   }
-  hideTooltip();
-}
-
-function showTooltip(
-  event: MouseEvent,
-  label: string | Vue.ComputedRef<string>,
-  flags: { width?: 'parent'; widthPlus?: number } = {},
-) {
-  if (editBoxOverlayId.value) return;
-  showTooltipOriginal(event, label, flags);
 }
 
 function updateAPYs() {
@@ -495,11 +500,16 @@ const minimumCapitalCommitment = Vue.computed(() => {
   const minimumCapitalNeeded = calculator.maximumBidAmount * epochSeatGoal;
   const minimumCapitalNeededRoundedUp = ceilTo(minimumCapitalNeeded, 6);
   const micronotsNeeded = epochSeatGoal * calculatorData.micronotsRequiredForBid;
-  return currency.micronotToMicrogon(micronotsNeeded) + BigInt(minimumCapitalNeededRoundedUp);
+  const commitment = currency.micronotToMicrogon(micronotsNeeded) + BigInt(minimumCapitalNeededRoundedUp);
+  return bigIntCeil(commitment, 1_000_000n);
 });
 
 function updateMinimumCapital() {
   capitalToCommitMicrogons.value = minimumCapitalCommitment.value;
+}
+
+function openMiningTour() {
+  // TODO: Implement
 }
 
 Vue.watch(
@@ -575,11 +585,24 @@ basicEmitter.on('openBotOverlay', async () => {
   [PrimaryStat] {
     @apply relative;
 
-    div[InputFieldWrapper] {
+    [tooltip]:focus {
+      @apply text-argon-600;
+    }
+
+    &:hover {
+      [tooltip] {
+        @apply text-argon-600;
+      }
+      [PiechartIcon] {
+        animation: fadeToArgon 2s ease-in-out 1;
+      }
+    }
+
+    [InputFieldWrapper] {
       @apply text-argon-600 border-none font-mono text-6xl font-bold !outline-none hover:bg-transparent focus:!outline-none;
       box-shadow: none;
     }
-    div[NumArrows] {
+    [NumArrows] {
       @apply relative top-2;
     }
     svg[NumArrowUp],
@@ -592,10 +615,6 @@ basicEmitter.on('openBotOverlay', async () => {
       background: linear-gradient(to bottom, oklch(0.88 0.09 320 / 0.2) 0%, transparent 100%);
       text-shadow: 1px 1px 0 white;
     }
-  }
-
-  section div[StatHeader] {
-    @apply pt-1;
   }
 
   section div[MainWrapper] {
@@ -612,10 +631,21 @@ basicEmitter.on('openBotOverlay', async () => {
       [StatHeader] {
         @apply text-argon-600/70;
       }
+      [EditIcon] {
+        @apply inline-block;
+      }
+    }
+
+    [StatHeader] {
+      @apply pt-1;
+    }
+
+    [EditIcon] {
+      @apply text-argon-600/50 relative z-10 -mt-0.5 ml-2 hidden h-4.5 min-h-4.5 w-4.5 min-w-4.5;
     }
 
     [MainRule] {
-      @apply text-argon-700/80 relative mt-1 mb-1 border-t border-b border-dashed border-slate-500/30 py-1 text-center font-mono font-bold;
+      @apply text-argon-700/80 relative mt-1.5 mb-1.5 border-t border-b border-dashed border-slate-500/30 py-1 text-center font-mono font-bold;
       &::before {
         content: '';
         display: block;
@@ -640,6 +670,18 @@ basicEmitter.on('openBotOverlay', async () => {
         @apply relative z-10;
       }
     }
+  }
+}
+
+@keyframes fadeToArgon {
+  0% {
+    color: rgb(209 213 219); /* text-gray-300 */
+  }
+  10% {
+    color: oklch(0.48 0.24 320); /* text-argon-600 */
+  }
+  100% {
+    color: rgb(209 213 219); /* text-gray-300 */
   }
 }
 </style>

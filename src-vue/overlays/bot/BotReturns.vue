@@ -6,10 +6,12 @@
       </TooltipTrigger>
       <TooltipPortal>
         <TooltipContent
+          :side="`bottom`"
           :side-offset="-5"
-          :align-offset="alignOffset ?? 0"
-          side="bottom"
           :align="props.align ?? 'center'"
+          :align-offset="alignOffset ?? 0"
+          :avoid-collisions="true"
+          :collisionPadding="30"
           class="text-md data-[state=delayed-open]:data-[side=top]:animate-slideDownAndFade data-[state=delayed-open]:data-[side=right]:animate-slideLeftAndFade data-[state=delayed-open]:data-[side=left]:animate-slideRightAndFade data-[state=delayed-open]:data-[side=bottom]:animate-slideUpAndFade pointer-events-none z-100 rounded-lg border border-gray-800/20 bg-white px-5 pt-4 pb-2 text-left leading-5.5 text-gray-600 shadow-xl will-change-[transform,opacity]"
           :style="{ width: props.width }"
         >

@@ -11,7 +11,7 @@
     <div class="relative px-[15%] pt-2">
       <div>
         <h1 class="text-4xl font-bold text-left mt-24 mb-4 whitespace-nowrap text-argon-text-primary">
-          Three Steps Are Required Before Vaulting
+          Three Steps Are Required to Begin Vaulting
         </h1>
 
         <p class="mb-4 text-argon-text-primary leading-7">

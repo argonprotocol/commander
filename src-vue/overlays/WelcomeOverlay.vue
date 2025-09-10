@@ -29,7 +29,7 @@
               </h2>
               <div class="mx-2 pl-5 pr-10 pt-5 space-y-3 font-light leading-6">
                 <p>
-                  You may already be familiar with Argon since you downloaded this app, but in case you're not: Argon is the first crypto asset 
+                  You might already be familiar with Argon, but in case you're not: Argon is the first crypto asset 
                   designed to remain truly stable. It achieves this with zero off-chain collateral and zero centralized control. Argon is a 
                   breakthrough in the quest for a global currency that's free from inflation and the debt-ridden nature of fiat money.
                 </p>

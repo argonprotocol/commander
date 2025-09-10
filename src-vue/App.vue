@@ -25,7 +25,6 @@
       <BotOverlay />
       <VaultOverlay />
       <!-- <ProvisioningCompleteOverlay /> -->
-      <TooltipOverlay />
       <AboutOverlay />
       <ComplianceOverlay />
       <WelcomeTour v-if="tour.currentStep" />
@@ -59,8 +58,6 @@ import { useConfig } from './stores/config';
 import { useTour } from './stores/tour';
 import { useBot } from './stores/bot';
 import { waitForLoad } from '@argonprotocol/mainchain';
-import TooltipOverlay from './overlays/TooltipOverlay.vue';
-import { hideTooltip } from './lib/TooltipUtils';
 import AboutOverlay from './overlays/AboutOverlay.vue';
 import ComplianceOverlay from './overlays/ComplianceOverlay.vue';
 import TroubleshootingOverlay from './overlays/Troubleshooting.vue';
@@ -87,10 +84,6 @@ const showMiningPanel = Vue.computed(() => {
   return controller.panelKey === PanelKey.Mining;
 });
 
-function clickHandler() {
-  hideTooltip();
-}
-
 function keydownHandler(event: KeyboardEvent) {
   // Check for CMD+Shift+[ (mining panel)
   if (event.metaKey && event.shiftKey && event.key === '[') {
@@ -109,16 +102,11 @@ Vue.onBeforeMount(async () => {
 });
 
 Vue.onMounted(async () => {
-  // Use capture phase to ensure this handler runs before other handlers
-  document.addEventListener('click', clickHandler, true);
-  hideTooltip();
-
   // Add keyboard shortcuts for panel switching
   document.addEventListener('keydown', keydownHandler);
 });
 
 Vue.onBeforeUnmount(() => {
-  document.removeEventListener('click', clickHandler, true);
   document.removeEventListener('keydown', keydownHandler);
 });
 
