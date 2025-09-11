@@ -21,7 +21,7 @@
         <div
           ref="dialogPanel"
           class="BotOverlay absolute top-[40px] left-3 right-3 bottom-3 flex flex-col rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left z-20 transition-all focus:outline-none"
-          style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255, 255, 255, 1);">
+          style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255, 255, 255, 1)">
           <BgOverlay v-if="editBoxOverlayId" @close="editBoxOverlayId = null" :showWindowControls="false" rounded="md" class="z-100" />
           <div v-if="isSuggestingTour" class="absolute inset-0 bg-black/20 z-20 rounded-md"></div>
           <div class="flex flex-col h-full w-full">
@@ -43,7 +43,7 @@
                 <PopoverRoot :open="isSuggestingTour">
                   <PopoverTrigger asChild>
                     <div :class="[isSuggestingTour ? '' : 'hover:underline']" class="inline-block relative cursor-pointer text-argon-600/80 hover:text-argon-800 decoration-dashed underline-offset-4 z-30" @click="startTour">
-                      <span class="relative z-10 font-semibold">Take our quick Mining Tour</span>
+                      <span class="relative z-10 font-semibold">Take the quick Mining Tour</span>
                       <div v-if="isSuggestingTour" class="border rounded-full border-argon-600/30 bg-white/50 absolute -top-0 -left-2 -right-2 -bottom-0"></div>
                     </div>
                   </PopoverTrigger>
@@ -64,7 +64,9 @@
                 <div class="w-1/2 flex flex-col grow">
                   <div PrimaryStat :isTouring="currentTourStep === 1" ref="capitalToCommitElement" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
                     <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
-                      Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
+                      <tooltip side="top" content="The amount you're willing to invest in mining seats">
+                        Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
+                      </tooltip>
                     </header>
                     <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
                       <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
@@ -75,9 +77,7 @@
                         <NeedMoreCapitalHover v-if="minimumCapitalCommitment > capitalToCommitMicrogons" :calculator="calculator" :seat-goal-count="getEpochSeatGoalCount()" :ideal-capital-commitment="minimumCapitalCommitment" @increase-capital-commitment="updateMinimumCapital()" />
                         <InputArgon v-model="capitalToCommitMicrogons" :min="10_000_000n" :minDecimals="0" />
                         <CapitalOverlay align="end">
-                          <div class="relative ml-1 w-10 h-10">
-                            <PiechartIcon PiechartIcon class="absolute top-0 left-0 w-10 h-10 text-gray-300 hover:!text-argon-600 pointer-events-none" />
-                          </div>
+                          <PiechartIcon PiechartIcon class="ml-1 w-10 h-10 text-gray-300 hover:!text-argon-600" />
                         </CapitalOverlay>
                       </div>
                       <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
@@ -99,7 +99,9 @@
                 <div class="w-1/2 flex flex-col grow">
                   <div PrimaryStat :isTouring="currentTourStep === 2" ref="returnOnCapitalElement" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
                     <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
-                      Return on Capital
+                      <tooltip side="top" content="The amount you might earn on your capital">
+                        Return on Capital
+                      </tooltip>
                     </header>
                     <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
                       <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
@@ -133,7 +135,7 @@
                     <tooltip asChild :calculateWidth="() => calculateElementWidth(startingBidParent)" side="top" content="This is your starting bid price. Don't put it too low or you'll be forced to pay unneeded transaction fees in order to submit a rebid.">
                       <div MainWrapper @click="openEditBoxOverlay('startingBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
                         <div StatHeader>Starting Bid</div>
-                        <div v-if="startingBidAmountOverride" MainRule class="w-full flex flex-row items-center justify-center">
+                        <div v-if="startingBidAmountOverride" MainRule class="flex flex-row items-center justify-center w-full">
                           <div class="flex flex-row items-center justify-center space-x-2">
                             <AlertIcon class="w-5 h-5 text-yellow-700 inline-block relative -top-0.5" />
                             <span class="line-through text-gray-500/60">{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}</span>
@@ -182,7 +184,7 @@
                           </div>
                           <EditIcon EditIcon />
                         </div>
-                        <div v-else MainRule class="w-full flex flex-row items-center justify-center">
+                        <div v-else MainRule class="flex flex-row items-center justify-center w-full">
                           <span>{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}</span>
                           <EditIcon EditIcon />
                         </div>
@@ -211,7 +213,7 @@
                     <tooltip asChild :calculateWidth="() => calculateElementWidth(rebiddingStrategyParent)" side="top" :content="`If your bids get knocked out of contention, your bot will wait ${rules.rebiddingDelay} minute${rules.rebiddingDelay === 1 ? '' : 's'} before submitting a new bid at ${currency.symbol}${microgonToMoneyNm(rules.rebiddingIncrementBy).format('0.00')} above the current winning bid.`">
                       <div MainWrapper @click="openEditBoxOverlay('rebiddingStrategy')" class="flex flex-col w-full h-full items-center justify-center px-8">
                         <div StatHeader>Rebidding Strategy</div>
-                        <div MainRule class="w-full flex flex-row items-center justify-center">
+                        <div MainRule class="flex flex-row items-center justify-center w-full">
                           <span>+{{ currency.symbol }}{{ microgonToMoneyNm(rules.rebiddingIncrementBy).format('0.00') }}</span>
                           <EditIcon EditIcon />
                         </div>
@@ -240,7 +242,7 @@
                         <div MainRule v-if="rules.seatGoalType === SeatGoalType.Max && rules.seatGoalCount === 0" class="w-full">
                           Disabled
                         </div>
-                        <div MainRule v-else class="w-full flex flex-row items-center justify-center">
+                        <div MainRule v-else class="flex flex-row items-center justify-center w-full">
                           <span>{{ rules.seatGoalType }} {{ rules.seatGoalCount }} Seats Per {{ rules.seatGoalInterval }}</span>
                           <EditIcon EditIcon />
                         </div>
@@ -254,7 +256,7 @@
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
                   <div MainWrapperParent ref="expectedGrowthParent" class="flex flex-col items-center justify-center relative w-1/3">
-                    <tooltip asChild :calculateWidth="() => calculateElementWidth(expectedGrowthParent)" side="top" content="These numbers don't affect your bot's decisions; they only factor into the Estimated APY shown above. Argons is growth in circulation; Argonots is change in token price. Both are factored annually.">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(expectedGrowthParent)" side="top" content="Your vault's utilization will determine how much revenue you earn and how much of the Treasury Pool can be activated. You can use this box to project various scenarios.">
                       <div MainWrapper @click="openEditBoxOverlay('expectedGrowth')" class="flex flex-col w-full h-full items-center justify-center">
                         <div StatHeader>Ecosystem Growth</div>
                         <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
@@ -314,10 +316,12 @@
                 <button @click="cancelOverlay" tabindex="-1" class="border border-argon-button/50 hover:border-argon-button text-xl font-bold text-gray-500 px-7 py-1 rounded-md cursor-pointer">
                   <span>Cancel</span>
                 </button>
-                <button @click="saveRules" tabindex="0" ref="saveButtonElement" class="bg-argon-button hover:border-argon-800 text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
-                  <span v-if="!isSaving">{{ isBrandNew ? 'Initialize' : 'Update' }} Rules</span>
-                  <span v-else>{{ isBrandNew ? 'Initializing' : 'Updating' }} Rules...</span>
-                </button>
+                <tooltip asChild :calculateWidth="() => calculateElementWidth(saveButtonElement)" side="top" content="Clicking this button does not commit you to anything.">
+                  <button @click="saveRules" tabindex="0" ref="saveButtonElement" class="bg-argon-button hover:border-argon-800 text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
+                    <span v-if="!isSaving">{{ isBrandNew ? 'Initialize' : 'Update' }} Rules</span>
+                    <span v-else>{{ isBrandNew ? 'Initializing' : 'Updating' }} Rules...</span>
+                  </button>
+                </tooltip>
               </div>
             </div>
           </div>
@@ -473,10 +477,10 @@ function getTourPositionCheck(name: string): ITourPos {
   }
 }
 
-function calculateElementWidth(element: HTMLElement | null, multiplier: number = 1) {
+function calculateElementWidth(element: HTMLElement | null) {
   if (!element) return;
   const elementWidth = element.getBoundingClientRect().width;
-  return elementWidth * multiplier + 'px';
+  return `${elementWidth}px`;
 }
 
 function getEpochSeatGoalCount() {
