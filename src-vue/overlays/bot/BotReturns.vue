@@ -7,13 +7,12 @@
       <TooltipPortal>
         <TooltipContent
           :side="`bottom`"
-          :side-offset="-5"
+          :sideOffset="-5"
           :align="props.align ?? 'center'"
-          :align-offset="alignOffset ?? 0"
-          :avoid-collisions="true"
+          :alignOffset="alignOffset ?? 0"
+          :avoidCollisions="true"
           :collisionPadding="30"
-          class="text-md data-[state=delayed-open]:data-[side=top]:animate-slideDownAndFade data-[state=delayed-open]:data-[side=right]:animate-slideLeftAndFade data-[state=delayed-open]:data-[side=left]:animate-slideRightAndFade data-[state=delayed-open]:data-[side=bottom]:animate-slideUpAndFade pointer-events-none z-100 rounded-lg border border-gray-800/20 bg-white px-5 pt-4 pb-2 text-left leading-5.5 text-gray-600 shadow-xl will-change-[transform,opacity]"
-          :style="{ width: props.width }"
+          class="text-md data-[state=delayed-open]:data-[side=top]:animate-slideDownAndFade data-[state=delayed-open]:data-[side=right]:animate-slideLeftAndFade data-[state=delayed-open]:data-[side=left]:animate-slideRightAndFade data-[state=delayed-open]:data-[side=bottom]:animate-slideUpAndFade pointer-events-none z-100 w-[800px] rounded-lg border border-gray-800/20 bg-white px-5 pt-4 pb-2 text-left leading-5.5 text-gray-600 shadow-xl will-change-[transform,opacity]"
         >
           <p>
             Calculating your future return is complex since it's difficult to predict what will happen at auction. For
@@ -98,16 +97,10 @@ import { TooltipArrow, TooltipContent, TooltipPortal, TooltipProvider, TooltipRo
 import { IBiddingRules } from '@argonprotocol/commander-core';
 import { getBiddingCalculator, getBiddingCalculatorData } from '../../stores/mainchain';
 
-const props = withDefaults(
-  defineProps<{
-    align?: 'start' | 'end' | 'center';
-    alignOffset?: number;
-    width?: string;
-  }>(),
-  {
-    width: '700px',
-  },
-);
+const props = defineProps<{
+  align?: 'start' | 'end' | 'center';
+  alignOffset?: number;
+}>();
 
 const calculator = getBiddingCalculator();
 const calculatorData = getBiddingCalculatorData();

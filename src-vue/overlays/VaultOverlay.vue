@@ -32,7 +32,11 @@
 
             <div v-if="isLoaded" class="flex flex-col grow relative w-full">
               <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
-                Vaults are special holding mechanisms that stabilize the Argon stablecoin and provide liquidity to the broader network. You can earn revenue by creating and managing these vaults. Use the screen below to configure your vault.
+                Vaults are special holding mechanisms that stabilize the Argon stablecoin and provide liquidity to the broader network. 
+                You can earn revenue by creating and managing these vaults. Use the screen below to configure your vault.
+                <div class="inline-block cursor-pointer text-argon-600 hover:underline decoration-dashed underline-offset-4" @click="startTour">
+                  Take the Vaulting Tour.
+                </div>
               </DialogDescription>
 
               <section class="flex flex-row border-t border-b border-slate-500/30 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
@@ -44,7 +48,8 @@
                       </header>
                       <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
                         <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
-                          You are creating a new vault with a total capital value of
+                          You are creating a <tooltip content="It won't be created until a subsequent step">new vault</tooltip> with a 
+                          <tooltip content="We'll show you how to fund this in the next step">total capital need</tooltip> of
                         </div>
                         <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
                           <InputArgon v-model="rules.baseMicrogonCommitment" :min="1_000_000_000n" :minDecimals="0" class="focus:outline-none" />
@@ -259,6 +264,7 @@ import InputArgon from '../components/InputArgon.vue';
 import ExistingNetworkVaultsOverlayButton from './ExistingNetworkVaultsOverlayButton.vue';
 import VaultCapital from './vault/VaultCapital.vue';
 import VaultReturns from './vault/VaultReturns.vue';
+import Tooltip from '../components/Tooltip.vue';
 
 const config = useConfig();
 const currency = useCurrency();
@@ -355,6 +361,10 @@ function updateAPYs() {
   poolSpace.value = calculator.calculateTotalPoolSpace('High');
 }
 
+function startTour() {
+  // TODO: Implement
+}
+
 Vue.watch(
   rules,
   () => {
@@ -416,11 +426,24 @@ basicEmitter.on('openVaultOverlay', async () => {
   [PrimaryStat] {
     @apply relative;
 
-    div[InputFieldWrapper] {
+    [tooltip]:focus {
+      @apply text-argon-600;
+    }
+
+    &:hover {
+      [tooltip] {
+        @apply text-argon-600;
+      }
+      [PiechartIcon] {
+        animation: fadeToArgon 2s ease-in-out 1;
+      }
+    }
+
+    [InputFieldWrapper] {
       @apply text-argon-600 border-none font-mono text-6xl font-bold !outline-none hover:bg-transparent focus:!outline-none;
       box-shadow: none;
     }
-    div[NumArrows] {
+    [NumArrows] {
       @apply relative top-2;
     }
     svg[NumArrowUp],
@@ -433,10 +456,6 @@ basicEmitter.on('openVaultOverlay', async () => {
       background: linear-gradient(to bottom, oklch(0.88 0.09 320 / 0.2) 0%, transparent 100%);
       text-shadow: 1px 1px 0 white;
     }
-  }
-
-  section div[StatHeader] {
-    @apply pt-1;
   }
 
   section div[MainWrapper] {
@@ -453,10 +472,21 @@ basicEmitter.on('openVaultOverlay', async () => {
       [StatHeader] {
         @apply text-argon-600/70;
       }
+      [EditIcon] {
+        @apply inline-block;
+      }
+    }
+
+    [StatHeader] {
+      @apply pt-1;
+    }
+
+    [EditIcon] {
+      @apply text-argon-600/50 relative z-10 -mt-0.5 ml-2 hidden h-4.5 min-h-4.5 w-4.5 min-w-4.5;
     }
 
     [MainRule] {
-      @apply text-argon-700/80 relative mt-1 mb-1 border-t border-b border-dashed border-slate-500/30 py-1 text-center font-mono font-bold;
+      @apply text-argon-700/80 relative my-1.5 border-t border-b border-dashed border-slate-500/30 py-1 text-center font-mono font-bold;
       &::before {
         content: '';
         display: block;
@@ -480,6 +510,18 @@ basicEmitter.on('openVaultOverlay', async () => {
       span {
         @apply relative z-10;
       }
+    }
+  }
+
+  @keyframes fadeToArgon {
+    0% {
+      color: rgb(209 213 219); /* text-gray-300 */
+    }
+    10% {
+      color: oklch(0.48 0.24 320); /* text-argon-600 */
+    }
+    100% {
+      color: rgb(209 213 219); /* text-gray-300 */
     }
   }
 }

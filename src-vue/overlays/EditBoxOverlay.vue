@@ -6,8 +6,10 @@
     :style="[positionStyle, { cursor: isDragging ? 'grabbing' : 'default' }]"
   >
     <div class="flex flex-col">
-      <div @mousedown="onDragStart" class="text-xl font-bold font-sans text-argon-600/70 mx-2 pt-4 pb-1 text-center border-b border-slate-400/30">
-        {{ titles[id as keyof typeof titles] }}
+      <div class="flex flex-row items-center justify-center text-xl font-bold font-sans text-argon-600/70 mx-2 text-center border-b border-slate-400/30">
+        <ChevronLeftIcon v-if="previousId" class="w-5 h-5 text-argon-600/70 cursor-pointer opacity-50 hover:opacity-100" @click="goToPrevious" />
+        <span @mousedown="onDragStart" class="grow pt-4 pb-1 cursor-grab">{{ titles[id as keyof typeof titles] }}</span>
+        <ChevronRightIcon v-if="nextId" class="w-5 h-5 text-argon-600/70 cursor-pointer opacity-50 hover:opacity-100" @click="toToNext" />
       </div>
 
       <div class="flex flex-col grow text-md px-5 mt-4">
@@ -39,6 +41,7 @@
 
 <script lang="ts">
 import * as Vue from 'vue';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/solid';
 
 export interface IEditBoxChildExposed {
   beforeSave?: (stopSaveFn: () => void) => void | Promise<void>;
@@ -86,11 +89,14 @@ import VaultTreasuryFunding from './edit-box/VaultTreasuryFunding.vue';
 const props = defineProps<{
   id: IEditBoxOverlayType;
   position?: { top?: number; left?: number; width?: number };
+  previousId?: IEditBoxOverlayType;
+  nextId?: IEditBoxOverlayType;
 }>();
 
 const emit = defineEmits<{
   (e: 'close', id: IEditBoxOverlayType): void;
   (e: 'update:data'): void;
+  (e: 'goTo', id: IEditBoxOverlayType | undefined): void;
 }>();
 
 const config = useConfig();
@@ -167,6 +173,14 @@ async function cancelOverlay(e?: MouseEvent) {
   emit('close', props.id);
   e?.preventDefault();
   e?.stopPropagation();
+}
+
+function goToPrevious() {
+  emit('goTo', props.previousId);
+}
+
+function toToNext() {
+  emit('goTo', props.nextId);
 }
 
 async function saveOverlay() {

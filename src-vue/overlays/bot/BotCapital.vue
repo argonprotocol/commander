@@ -1,7 +1,7 @@
 <template>
   <TooltipProvider :disableHoverableContent="true" :delayDuration="0">
     <TooltipRoot>
-      <TooltipTrigger asChild>
+      <TooltipTrigger>
         <slot />
       </TooltipTrigger>
       <TooltipPortal>
@@ -12,8 +12,7 @@
           :alignOffset="alignOffset ?? 0"
           :avoidCollisions="true"
           :collisionPadding="30"
-          class="text-md data-[state=delayed-open]:data-[side=top]:animate-slideDownAndFade data-[state=delayed-open]:data-[side=right]:animate-slideLeftAndFade data-[state=delayed-open]:data-[side=left]:animate-slideRightAndFade data-[state=delayed-open]:data-[side=bottom]:animate-slideUpAndFade pointer-events-none z-100 rounded-lg border border-gray-800/20 bg-white px-5 pt-4 pb-2 text-left leading-5.5 text-gray-600 shadow-xl will-change-[transform,opacity]"
-          :style="{ width: props.width }"
+          class="text-md data-[state=delayed-open]:data-[side=top]:animate-slideDownAndFade data-[state=delayed-open]:data-[side=right]:animate-slideLeftAndFade data-[state=delayed-open]:data-[side=left]:animate-slideRightAndFade data-[state=delayed-open]:data-[side=bottom]:animate-slideUpAndFade pointer-events-none z-100 w-[800px] rounded-lg border border-gray-800/20 bg-white px-5 pt-4 pb-2 text-left leading-5.5 text-gray-600 shadow-xl will-change-[transform,opacity]"
         >
           <p>
             This box contains the number of tokens (both argons and argonots) that are committed to your mining
@@ -95,16 +94,10 @@ import { getBiddingCalculator, getBiddingCalculatorData } from '../../stores/mai
 import { useConfig } from '../../stores/config';
 import { IBiddingRules, SeatGoalInterval, SeatGoalType } from '@argonprotocol/commander-core';
 
-const props = withDefaults(
-  defineProps<{
-    align?: 'start' | 'end' | 'center';
-    alignOffset?: number;
-    width?: string;
-  }>(),
-  {
-    width: '700px',
-  },
-);
+const props = defineProps<{
+  align?: 'start' | 'end' | 'center';
+  alignOffset?: number;
+}>();
 
 const calculator = getBiddingCalculator();
 const calculatorData = getBiddingCalculatorData();
