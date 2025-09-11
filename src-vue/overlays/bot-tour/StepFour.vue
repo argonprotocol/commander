@@ -39,7 +39,7 @@
           </h3>
 
           <p>
-            When you're ready, click the "Initalize" button. This simply saves your settings. It doesn't commit you to
+            When you're ready, click the "Initialize" button. This simply saves your settings. It doesn't commit you to
             anything, nor does it start your bot. You can always reopen this overlay to continue making changes before
             (and after) you start mining.
           </p>
