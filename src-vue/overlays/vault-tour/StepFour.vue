@@ -69,12 +69,8 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import dayjs from 'dayjs';
-import dayjsUtc from 'dayjs/plugin/utc';
 import { PopoverContent, PopoverPortal, PopoverRoot } from 'reka-ui';
 import { ITourPos } from '../../stores/tour';
-
-dayjs.extend(dayjsUtc);
 
 const isOpen = Vue.ref(true);
 

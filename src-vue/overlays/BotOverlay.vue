@@ -256,7 +256,7 @@
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
                   <div MainWrapperParent ref="expectedGrowthParent" class="flex flex-col items-center justify-center relative w-1/3">
-                    <tooltip asChild :calculateWidth="() => calculateElementWidth(expectedGrowthParent)" side="top" content="Your vault's utilization will determine how much revenue you earn and how much of the Treasury Pool can be activated. You can use this box to project various scenarios.">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(expectedGrowthParent)" side="top" content="These numbers don't affect your bot's decisions; they only factor into the Estimated APY shown above. Argons is growth in circulation; Argonots is change in token price. Both are factored annually.">
                       <div MainWrapper @click="openEditBoxOverlay('expectedGrowth')" class="flex flex-col w-full h-full items-center justify-center">
                         <div StatHeader>Ecosystem Growth</div>
                         <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
