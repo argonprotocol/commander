@@ -8,17 +8,22 @@
 
       <DialogContent @escapeKeyDown="cancelOverlay" :aria-describedby="undefined">
         <EditBoxOverlay
+          v-if="editBoxOverlayId"
           :id="editBoxOverlayId"
           :position="editBoxOverlayPosition"
-          v-if="editBoxOverlayId"
+          :previousId="editBoxOverlayPreviousId"
+          :nextId="editBoxOverlayNextId"
           @close="editBoxOverlayId = null"
+          @goTo="(id: any) => openEditBoxOverlay(id)"
           @update:data="updateAPYs"
         />
+        <BotTour v-if="currentTourStep" @close="closeTour" @changeStep="currentTourStep = $event" :getPositionCheck="getTourPositionCheck" />
         <div
           ref="dialogPanel"
           class="BotOverlay absolute top-[40px] left-3 right-3 bottom-3 flex flex-col rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left z-20 transition-all focus:outline-none"
           style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255, 255, 255, 1);">
           <BgOverlay v-if="editBoxOverlayId" @close="editBoxOverlayId = null" :showWindowControls="false" rounded="md" class="z-100" />
+          <div v-if="isSuggestingTour" class="absolute inset-0 bg-black/20 z-20 rounded-md"></div>
           <div class="flex flex-col h-full w-full">
             <h2
               class="relative text-3xl font-bold text-left border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 text-[#672D73]"
@@ -31,15 +36,33 @@
             </h2>
 
             <div v-if="isLoaded" class="flex flex-col grow relative w-full">
-              <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
+              <DialogDescription class="text-gray-600 font-light py-6 pl-10 pr-[6%]">
                 Commander uses an automated bidding bot to maximize your chance of winning seats, and this screen allows you to
                 configure the rules for how this bot should make decisions on your behalf. Use your mouse to explore the various
-                settings and their impact on your potential profits. <div class="inline-block cursor-pointer text-argon-600 hover:underline decoration-dashed underline-offset-4" @click="openMiningTour">Take the Mining Tour.</div>
+                settings and their impact on your potential profits. 
+                <PopoverRoot :open="isSuggestingTour">
+                  <PopoverTrigger asChild>
+                    <div :class="[isSuggestingTour ? '' : 'hover:underline']" class="inline-block relative cursor-pointer text-argon-600/80 hover:text-argon-800 decoration-dashed underline-offset-4 z-30" @click="startTour">
+                      <span class="relative z-10 font-semibold">Take our quick Mining Tour</span>
+                      <div v-if="isSuggestingTour" class="border rounded-full border-argon-600/30 bg-white/50 absolute -top-0 -left-2 -right-2 -bottom-0"></div>
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverPortal>
+                    <PopoverContent side="bottom" class="rounded-lg p-5 -translate-y-1 w-[400px] bg-white shadow-sm border border-slate-800/30 z-1000">
+                      <p class="text-gray-800 font-light">We recommend first-time miners start with a brief tour of how to use this overlay.</p>
+                      <div class="flex flex-row space-x-2 mt-6">
+                        <button @click="isSuggestingTour = false" tabindex="-1" class="cursor-pointer grow rounded-md border border-slate-500/30 px-4 py-1 focus:outline-none">Not Now</button>
+                        <button @click="startTour" tabindex="0" class="cursor-pointer grow rounded-md bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-4 py-1 focus:outline-none">Start Tour</button>
+                      </div>
+                      <PopoverArrow :width="24" :height="12" class="fill-white stroke-gray-400/50 shadow-2xl -mt-px" />
+                    </PopoverContent>
+                  </PopoverPortal>
+                </PopoverRoot>.
               </DialogDescription>
 
               <section class="flex flex-row border-t border-b border-slate-500/30 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
                 <div class="w-1/2 flex flex-col grow">
-                  <div PrimaryStat @mouseenter="capitalBoxWidth = calculateElementWidth($event?.target as HTMLElement, 1.3)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                  <div PrimaryStat :isTouring="currentTourStep === 1" ref="capitalToCommitElement" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
                     <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
                       Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
                     </header>
@@ -51,8 +74,10 @@
                       <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
                         <NeedMoreCapitalHover v-if="minimumCapitalCommitment > capitalToCommitMicrogons" :calculator="calculator" :seat-goal-count="getEpochSeatGoalCount()" :ideal-capital-commitment="minimumCapitalCommitment" @increase-capital-commitment="updateMinimumCapital()" />
                         <InputArgon v-model="capitalToCommitMicrogons" :min="10_000_000n" :minDecimals="0" />
-                        <CapitalOverlay align="end" :width="capitalBoxWidth">
-                          <PiechartIcon PiechartIcon class="ml-1 w-10 h-10 text-gray-300 hover:text-argon-600" />
+                        <CapitalOverlay align="end">
+                          <div class="relative ml-1 w-10 h-10">
+                            <PiechartIcon PiechartIcon class="absolute top-0 left-0 w-10 h-10 text-gray-300 hover:!text-argon-600 pointer-events-none" />
+                          </div>
                         </CapitalOverlay>
                       </div>
                       <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
@@ -61,7 +86,7 @@
                         <tooltip content="Argonots are the ownership tokens of the network">argonot{{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') === '1' ? '' : 's' }}</tooltip>
                         and {{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') }} 
                         <tooltip content="Argons are the stable currency of the network">argon{{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') === '0,0' ? '' : 's' }}</tooltip>
-                        at their <tooltip content="Prices reflect real-time rates on the Uniswap market as closely as possible">current market rates</tooltip>.
+                        at their <tooltip content="Prices reflect as closely as possible the real-time rates on Uniswap's trading exchange">current market rates</tooltip>.
                       </div>
                     </div>
                   </div>
@@ -72,7 +97,7 @@
                   </span>
                 </div>
                 <div class="w-1/2 flex flex-col grow">
-                  <div PrimaryStat @mouseenter="returnsBoxWidth = calculateElementWidth($event?.target as HTMLElement, 1.3)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                  <div PrimaryStat :isTouring="currentTourStep === 2" ref="returnOnCapitalElement" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
                     <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
                       Return on Capital
                     </header>
@@ -84,8 +109,8 @@
                       </div>
                       <div class="flex flex-row items-center justify-center grow relative h-26 text-6xl font-bold font-mono text-argon-600">
                         <span>~{{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</span>
-                        <ReturnsOverlay align="start" :width="returnsBoxWidth">
-                          <PiechartIcon PiechartIcon class="ml-4 w-10 h-10 text-gray-300 hover:text-argon-600" />
+                        <ReturnsOverlay align="start">
+                          <PiechartIcon PiechartIcon class="ml-4 w-10 h-10 text-gray-300 hover:!text-argon-600" />
                         </ReturnsOverlay>
                       </div>
                       <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full">
@@ -101,100 +126,100 @@
                 </div>
               </section>
 
-              <div class="flex flex-col relative grow px-5 text-lg">
+              <div ref="configBoxesElement" class="flex flex-col relative grow px-5 text-lg">
                 <section class="flex flex-row h-1/2 my-2">
 
-                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @click="openEditBoxOverlay($event, 'startingBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
-                      <tooltip side="top" content="This is your starting bid price. Don't put it too low or you'll be forced to pay unneeded transaction fees in order to submit a rebid.">
+                  <div MainWrapperParent ref="startingBidParent" class="w-1/3">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(startingBidParent)" side="top" content="This is your starting bid price. Don't put it too low or you'll be forced to pay unneeded transaction fees in order to submit a rebid.">
+                      <div MainWrapper @click="openEditBoxOverlay('startingBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
                         <div StatHeader>Starting Bid</div>
-                      </tooltip>
-                      <div v-if="startingBidAmountOverride" MainRule class="w-full flex flex-row items-center justify-center">
-                        <div class="flex flex-row items-center justify-center space-x-2">
-                          <AlertIcon class="w-5 h-5 text-yellow-700 inline-block relative -top-0.5" />
-                          <span class="line-through text-gray-500/60">{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}</span>
-                          <span>{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmountOverride).format('0,0.00') }}</span>
+                        <div v-if="startingBidAmountOverride" MainRule class="w-full flex flex-row items-center justify-center">
+                          <div class="flex flex-row items-center justify-center space-x-2">
+                            <AlertIcon class="w-5 h-5 text-yellow-700 inline-block relative -top-0.5" />
+                            <span class="line-through text-gray-500/60">{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}</span>
+                            <span>{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmountOverride).format('0,0.00') }}</span>
+                          </div>
+                          <EditIcon EditIcon />
                         </div>
-                        <EditIcon EditIcon />
+                        <div v-else MainRule class="flex flex-row items-center justify-center w-full">
+                          <span>{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}</span>
+                          <EditIcon EditIcon />
+                        </div>
+                        <div class="text-gray-500/60 text-md">
+                          <span v-if="rules.startingBidFormulaType === BidAmountFormulaType.Custom">Custom Value</span>
+                          <template v-else>
+                            <span>{{ rules.startingBidFormulaType }}</span>
+                            <span v-if="rules.startingBidAdjustmentType === BidAmountAdjustmentType.Absolute && rules.startingBidAdjustAbsolute">
+                              {{ rules.startingBidAdjustAbsolute > 0 ? '+' : '-'
+                              }}{{ currency.symbol
+                              }}{{
+                                microgonToMoneyNm(
+                                  rules.startingBidAdjustAbsolute < 0n ? -rules.startingBidAdjustAbsolute : rules.startingBidAdjustAbsolute,
+                                ).format('0.00')
+                              }}
+                            </span>
+                            <span v-else-if="rules.startingBidAdjustRelative">
+                              &nbsp;{{ rules.startingBidAdjustRelative > 0 ? '+' : '-'
+                              }}{{ numeral(Math.abs(rules.startingBidAdjustRelative)).format('0.[00]') }}%
+                            </span>
+                          </template>
+                        </div>
                       </div>
-                      <div v-else MainRule class="flex flex-row items-center justify-center w-full">
-                        <span>{{ currency.symbol }}{{ microgonToMoneyNm(startingBidAmount).format('0,0.00') }}</span>
-                        <EditIcon EditIcon />
-                      </div>
-                      <div class="text-gray-500/60 text-md">
-                        <span v-if="rules.startingBidFormulaType === BidAmountFormulaType.Custom">Custom Value</span>
-                        <template v-else>
-                          <span>{{ rules.startingBidFormulaType }}</span>
-                          <span v-if="rules.startingBidAdjustmentType === BidAmountAdjustmentType.Absolute && rules.startingBidAdjustAbsolute">
-                            {{ rules.startingBidAdjustAbsolute > 0 ? '+' : '-'
-                            }}{{ currency.symbol
-                            }}{{
-                              microgonToMoneyNm(
-                                rules.startingBidAdjustAbsolute < 0n ? -rules.startingBidAdjustAbsolute : rules.startingBidAdjustAbsolute,
-                              ).format('0.00')
-                            }}
-                          </span>
-                          <span v-else-if="rules.startingBidAdjustRelative">
-                            &nbsp;{{ rules.startingBidAdjustRelative > 0 ? '+' : '-'
-                            }}{{ numeral(Math.abs(rules.startingBidAdjustRelative)).format('0.[00]') }}%
-                          </span>
-                        </template>
-                      </div>
-                    </div>
+                    </tooltip>
                   </div>
 
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
-                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @click="openEditBoxOverlay($event, 'maximumBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
-                      <tooltip side="top" content="Your mining bot will never submit a bid above this price. If other bidders go higher than this, you will be knocked out of contention.">
+                  <div MainWrapperParent ref="maximumBidParent" class="w-1/3">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(maximumBidParent)" side="top" content="Your mining bot will never submit a bid above this price. If other bidders go higher than this, you will be knocked out of contention.">
+                      <div MainWrapper @click="openEditBoxOverlay('maximumBid')" class="flex flex-col w-full h-full items-center justify-center px-8">
                         <div StatHeader>Maximum Bid</div>
-                      </tooltip>
-                      <div v-if="maximumBidAmountOverride" MainRule class="w-full flex flex-row items-center justify-center">
-                        <div class="flex flex-row items-center justify-center space-x-2">
-                          <AlertIcon class="w-5 h-5 text-yellow-700 inline-block relative -top-0.5" />
-                          <span class="line-through text-gray-500/60">{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}</span>
-                          <span>{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmountOverride).format('0,0.00') }}</span>
+                        <div v-if="maximumBidAmountOverride" MainRule class="w-full flex flex-row items-center justify-center">
+                          <div class="flex flex-row items-center justify-center space-x-2">
+                            <AlertIcon class="w-5 h-5 text-yellow-700 inline-block relative -top-0.5" />
+                            <span class="line-through text-gray-500/60">{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}</span>
+                            <span>{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmountOverride).format('0,0.00') }}</span>
+                          </div>
+                          <EditIcon EditIcon />
                         </div>
-                        <EditIcon EditIcon />
+                        <div v-else MainRule class="w-full flex flex-row items-center justify-center">
+                          <span>{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}</span>
+                          <EditIcon EditIcon />
+                        </div>
+                        <div class="text-gray-500/60 text-md">
+                          <span v-if="rules.maximumBidFormulaType === BidAmountFormulaType.Custom">Custom Value</span>
+                          <template v-else>
+                            <span>{{ rules.maximumBidFormulaType }}</span>
+                            <span v-if="rules.maximumBidAdjustmentType === BidAmountAdjustmentType.Absolute && rules.maximumBidAdjustAbsolute">
+                              {{ rules.maximumBidAdjustAbsolute > 0 ? '+' : '-'
+                              }}{{ currency.symbol
+                              }}{{ microgonToMoneyNm(bigIntAbs(rules.maximumBidAdjustAbsolute)).format('0.00') }}
+                            </span>
+                            <span v-else-if="rules.maximumBidAdjustRelative">
+                              &nbsp;{{ rules.maximumBidAdjustRelative > 0 ? '+' : '-'
+                              }}{{ numeral(Math.abs(rules.maximumBidAdjustRelative)).format('0.[00]') }}%
+                            </span>
+                          </template>
+                        </div>
                       </div>
-                      <div v-else MainRule class="w-full flex flex-row items-center justify-center">
-                        <span>{{ currency.symbol }}{{ microgonToMoneyNm(maximumBidAmount).format('0,0.00') }}</span>
-                        <EditIcon EditIcon />
-                      </div>
-                      <div class="text-gray-500/60 text-md">
-                        <span v-if="rules.maximumBidFormulaType === BidAmountFormulaType.Custom">Custom Value</span>
-                        <template v-else>
-                          <span>{{ rules.maximumBidFormulaType }}</span>
-                          <span v-if="rules.maximumBidAdjustmentType === BidAmountAdjustmentType.Absolute && rules.maximumBidAdjustAbsolute">
-                            {{ rules.maximumBidAdjustAbsolute > 0 ? '+' : '-'
-                            }}{{ currency.symbol
-                            }}{{ microgonToMoneyNm(bigIntAbs(rules.maximumBidAdjustAbsolute)).format('0.00') }}
-                          </span>
-                          <span v-else-if="rules.maximumBidAdjustRelative">
-                            &nbsp;{{ rules.maximumBidAdjustRelative > 0 ? '+' : '-'
-                            }}{{ numeral(Math.abs(rules.maximumBidAdjustRelative)).format('0.[00]') }}%
-                          </span>
-                        </template>
-                      </div>
-                    </div>
+                    </tooltip>
                   </div>
 
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
-                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @click="openEditBoxOverlay($event, 'rebiddingStrategy')" class="flex flex-col w-full h-full items-center justify-center px-8">
-                      <tooltip side="top" :content="`If your bids get knocked out of contention, your bot will wait ${rules.rebiddingDelay} minute${rules.rebiddingDelay === 1 ? '' : 's'} before submitting a new bid at ${currency.symbol}${microgonToMoneyNm(rules.rebiddingIncrementBy).format('0.00')} above the current winning bid.`">
+                  <div MainWrapperParent ref="rebiddingStrategyParent" class="flex flex-col items-center justify-center relative w-1/3">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(rebiddingStrategyParent)" side="top" :content="`If your bids get knocked out of contention, your bot will wait ${rules.rebiddingDelay} minute${rules.rebiddingDelay === 1 ? '' : 's'} before submitting a new bid at ${currency.symbol}${microgonToMoneyNm(rules.rebiddingIncrementBy).format('0.00')} above the current winning bid.`">
+                      <div MainWrapper @click="openEditBoxOverlay('rebiddingStrategy')" class="flex flex-col w-full h-full items-center justify-center px-8">
                         <div StatHeader>Rebidding Strategy</div>
-                      </tooltip>
-                      <div MainRule class="w-full flex flex-row items-center justify-center">
-                        <span>+{{ currency.symbol }}{{ microgonToMoneyNm(rules.rebiddingIncrementBy).format('0.00') }}</span>
-                        <EditIcon EditIcon />
+                        <div MainRule class="w-full flex flex-row items-center justify-center">
+                          <span>+{{ currency.symbol }}{{ microgonToMoneyNm(rules.rebiddingIncrementBy).format('0.00') }}</span>
+                          <EditIcon EditIcon />
+                        </div>
+                        <div class="text-gray-500/60 text-md">
+                          Delay By {{ rules.rebiddingDelay }} Minute{{ rules.rebiddingDelay === 1 ? '' : 's' }}
+                        </div>
                       </div>
-                      <div class="text-gray-500/60 text-md">
-                        Delay By {{ rules.rebiddingDelay }} Minute{{ rules.rebiddingDelay === 1 ? '' : 's' }}
-                      </div>
-                    </div>
+                    </tooltip>
                   </div>
 
                 </section>
@@ -208,73 +233,73 @@
                 </div>
 
                 <section class="flex flex-row h-1/2 my-2">
-                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @click="openEditBoxOverlay($event, 'capitalAllocation')" class="flex flex-col w-full h-full items-center justify-center px-8">
-                      <tooltip side="top" :content="`This is your bot's goal, not its ceiling. If the bot can snag more than ${seatGoalText()}, it will do so. If it fails to achieve its goal, it will alert you in the app.`">
+                  <div MainWrapperParent ref="capitalAllocationParent" class="flex flex-col items-center justify-center relative w-1/3">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(capitalAllocationParent)" side="top" :content="`This is your bot's goal, not its ceiling. If the bot can snag more than ${seatGoalText()}, it will do so. If it fails to achieve its goal, it will alert you in the app.`">
+                      <div MainWrapper @click="openEditBoxOverlay('capitalAllocation')" class="flex flex-col w-full h-full items-center justify-center px-8">
                         <div StatHeader>Capital Allocation</div>
-                      </tooltip>
-                      <div MainRule v-if="rules.seatGoalType === SeatGoalType.Max && rules.seatGoalCount === 0" class="w-full">
-                        Disabled
+                        <div MainRule v-if="rules.seatGoalType === SeatGoalType.Max && rules.seatGoalCount === 0" class="w-full">
+                          Disabled
+                        </div>
+                        <div MainRule v-else class="w-full flex flex-row items-center justify-center">
+                          <span>{{ rules.seatGoalType }} {{ rules.seatGoalCount }} Seats Per {{ rules.seatGoalInterval }}</span>
+                          <EditIcon EditIcon />
+                        </div>
+                        <div class="text-gray-500/60 text-md">
+                          {{ rules.seatGoalType === SeatGoalType.Max ? 'Stop After Goal Reached' : 'Reinvest Profits from Operation' }}
+                        </div>
                       </div>
-                      <div MainRule v-else class="w-full flex flex-row items-center justify-center">
-                        <span>{{ rules.seatGoalType }} {{ rules.seatGoalCount }} Seats Per {{ rules.seatGoalInterval }}</span>
-                        <EditIcon EditIcon />
-                      </div>
-                      <div class="text-gray-500/60 text-md">
-                        {{ rules.seatGoalType === SeatGoalType.Max ? 'Stop After Goal Reached' : 'Reinvest Profits from Operation' }}
-                      </div>
-                    </div>
+                    </tooltip>
                   </div>
 
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
-                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @click="openEditBoxOverlay($event, 'expectedGrowth')" class="flex flex-col w-full h-full items-center justify-center">
-                      <tooltip side="top" content="These numbers don't affect your bot's decisions; they only factor into the Estimated APY shown above. Argons is growth in circulation; Argonots is change in token price. Both are factored annually.">
+                  <div MainWrapperParent ref="expectedGrowthParent" class="flex flex-col items-center justify-center relative w-1/3">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(expectedGrowthParent)" side="top" content="These numbers don't affect your bot's decisions; they only factor into the Estimated APY shown above. Argons is growth in circulation; Argonots is change in token price. Both are factored annually.">
+                      <div MainWrapper @click="openEditBoxOverlay('expectedGrowth')" class="flex flex-col w-full h-full items-center justify-center">
                         <div StatHeader>Ecosystem Growth</div>
-                      </tooltip>
-                      <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
-                        <div MainRule class="flex flex-row items-center justify-center w-5/12">
-                          <span>{{ numeral(rules.argonCirculationGrowthPctMin).formatIfElse('0', '0', '+0.[0]') }}%</span>
-                          <span class="text-md px-1.5 text-gray-500/60">to</span>
-                          <span>{{ numeral(rules.argonCirculationGrowthPctMax).formatIfElse('0', '0', '+0.[0]')}}%</span>
-                          <EditIcon EditIcon />
+                        <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
+                          <div MainRule class="flex flex-row items-center justify-center w-5/12">
+                            <span>{{ numeral(rules.argonCirculationGrowthPctMin).formatIfElse('0', '0', '+0.[0]') }}%</span>
+                            <span class="text-md px-1.5 text-gray-500/60">to</span>
+                            <span>{{ numeral(rules.argonCirculationGrowthPctMax).formatIfElse('0', '0', '+0.[0]')}}%</span>
+                            <EditIcon EditIcon />
+                          </div>
+                          <span class="text-md w-2/12 text-gray-500/60">&nbsp;and&nbsp;</span>
+                          <div MainRule class="flex flex-row items-center justify-center w-5/12">
+                            <span>{{ numeral(rules.argonotPriceChangePctMin).formatIfElse('0', '0', '+0.[0]') }}%</span>
+                            <span class="text-md px-1.5 text-gray-500/60">to</span>
+                            <span>{{ numeral(rules.argonotPriceChangePctMax).formatIfElse('0', '0', '+0.[0]')}}%</span>
+                            <EditIcon EditIcon />
+                          </div>
                         </div>
-                        <span class="text-md w-2/12 text-gray-500/60">&nbsp;and&nbsp;</span>
-                        <div MainRule class="flex flex-row items-center justify-center w-5/12">
-                          <span>{{ numeral(rules.argonotPriceChangePctMin).formatIfElse('0', '0', '+0.[0]') }}%</span>
-                          <span class="text-md px-1.5 text-gray-500/60">to</span>
-                          <span>{{ numeral(rules.argonotPriceChangePctMax).formatIfElse('0', '0', '+0.[0]')}}%</span>
-                          <EditIcon EditIcon />
+                        <div class="flex flex-row items-center justify-center px-10 w-full text-center font-mono ">
+                          <div class="flex flex-row items-center justify-center text-md px-1 text-gray-500/60 w-5/12">
+                            Argons
+                          </div>
+                          <span class="text-md w-2/12 text-gray-500/60">&nbsp;</span>
+                          <div class="flex flex-row items-center justify-center text-md text-gray-500/60 w-5/12">
+                            Argonots
+                          </div>
                         </div>
                       </div>
-                      <div class="flex flex-row items-center justify-center px-10 w-full text-center font-mono ">
-                        <div class="flex flex-row items-center justify-center text-md px-1 text-gray-500/60 w-5/12">
-                          Argons
-                        </div>
-                        <span class="text-md w-2/12 text-gray-500/60">&nbsp;</span>
-                        <div class="flex flex-row items-center justify-center text-md text-gray-500/60 w-5/12">
-                          Argonots
-                        </div>
-                      </div>
-                    </div>
+                    </tooltip>
                   </div>
 
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
-                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @click="openEditBoxOverlay($event, 'cloudMachine')" class="flex flex-col w-full h-full items-center justify-center px-8">
-                      <tooltip side="top" content="You can leave this server configuration box as-is for now. Later in the process, we'll guide you through the step-by-step flow of how to set up a new Cloud Machine. Don't worry, it's easy.">
+                  <div MainWrapperParent ref="cloudMachineParent" class="flex flex-col items-center justify-center relative w-1/3">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(cloudMachineParent)" side="top" content="You can leave this server configuration box as-is for now. Later in the process, we'll guide you through the step-by-step flow of how to set up a new Cloud Machine. Don't worry, it's easy.">
+                      <div MainWrapper @click="openEditBoxOverlay('cloudMachine')" class="flex flex-col w-full h-full items-center justify-center px-8">
                         <div StatHeader>Cloud Machine</div>
-                      </tooltip>
-                      <div MainRule class="tracking-widest w-full flex flex-row items-center justify-center">
-                        <span>{{ config.serverDetails.ipAddress || '0.0.0.0' }}</span>
-                        <EditIcon EditIcon />
+                        <div MainRule class="tracking-widest w-full flex flex-row items-center justify-center">
+                          <span>{{ config.serverDetails.ipAddress || '0.0.0.0' }}</span>
+                          <EditIcon EditIcon />
+                        </div>
+                        <div class="text-gray-500/60 text-md font-mono">
+                          {{ config.isMinerInstalled ? 'Existing Server' : 'New Server' }}
+                        </div>
                       </div>
-                      <div class="text-gray-500/60 text-md font-mono">
-                        {{ config.isMinerInstalled ? 'Existing Server' : 'New Server' }}
-                      </div>
-                    </div>
+                    </tooltip>
                   </div>
                 </section>
               </div>
@@ -289,7 +314,7 @@
                 <button @click="cancelOverlay" tabindex="-1" class="border border-argon-button/50 hover:border-argon-button text-xl font-bold text-gray-500 px-7 py-1 rounded-md cursor-pointer">
                   <span>Cancel</span>
                 </button>
-                <button @click="saveRules" tabindex="0" class="bg-argon-button hover:border-argon-800 text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
+                <button @click="saveRules" tabindex="0" ref="saveButtonElement" class="bg-argon-button hover:border-argon-800 text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
                   <span v-if="!isSaving">{{ isBrandNew ? 'Initialize' : 'Update' }} Rules</span>
                   <span v-else>{{ isBrandNew ? 'Initializing' : 'Updating' }} Rules...</span>
                 </button>
@@ -310,7 +335,6 @@ import basicEmitter from '../emitters/basicEmitter';
 import { useConfig } from '../stores/config';
 import { useCurrency } from '../stores/currency';
 import { getBiddingCalculator, getBiddingCalculatorData } from '../stores/mainchain';
-import { getDbPromise } from '../stores/helpers/dbPromise';
 import numeral, { createNumeralHelpers } from '../lib/numeral';
 import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
@@ -329,11 +353,13 @@ import InputArgon from '../components/InputArgon.vue';
 import NeedMoreCapitalHover from './bot/NeedMoreCapitalHover.vue';
 import ReturnsOverlay from './bot/BotReturns.vue';
 import CapitalOverlay from './bot/BotCapital.vue';
-import { useInstaller } from '../stores/installer.ts';
 import { useBot } from '../stores/bot.ts';
 import PiechartIcon from '../assets/piechart.svg?component';
 import EditIcon from '../assets/edit.svg?component';
 import Tooltip from '../components/Tooltip.vue';
+import { PopoverRoot, PopoverTrigger, PopoverContent, PopoverPortal, PopoverArrow } from 'reka-ui';
+import { ITourPos } from '../stores/tour.ts';
+import BotTour from './BotTour.vue';
 
 const calculator = getBiddingCalculator();
 const calculatorData = getBiddingCalculatorData();
@@ -342,8 +368,6 @@ let previousBiddingRules: string | null = null;
 
 const currency = useCurrency();
 const config = useConfig();
-const dbPromise = getDbPromise();
-const installer = useInstaller();
 const bot = useBot();
 
 const { microgonToMoneyNm, microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
@@ -353,15 +377,37 @@ const rules = Vue.computed(() => {
 });
 
 const isBrandNew = Vue.ref(true);
+const isSuggestingTour = Vue.ref(isBrandNew.value);
+const currentTourStep = Vue.ref<number>(0);
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
 
-const capitalBoxWidth = Vue.ref('');
-const returnsBoxWidth = Vue.ref('');
+const capitalToCommitElement = Vue.ref<HTMLElement | null>(null);
+const returnOnCapitalElement = Vue.ref<HTMLElement | null>(null);
+const configBoxesElement = Vue.ref<HTMLElement | null>(null);
+const saveButtonElement = Vue.ref<HTMLElement | null>(null);
+
+const startingBidParent = Vue.ref<HTMLElement | null>(null);
+const maximumBidParent = Vue.ref<HTMLElement | null>(null);
+const rebiddingStrategyParent = Vue.ref<HTMLElement | null>(null);
+const capitalAllocationParent = Vue.ref<HTMLElement | null>(null);
+const expectedGrowthParent = Vue.ref<HTMLElement | null>(null);
+const cloudMachineParent = Vue.ref<HTMLElement | null>(null);
+
+const editBoxParents: Record<IEditBoxOverlayTypeForMining, Vue.Ref<HTMLElement | null>> = {
+  startingBid: startingBidParent,
+  maximumBid: maximumBidParent,
+  rebiddingStrategy: rebiddingStrategyParent,
+  capitalAllocation: capitalAllocationParent,
+  expectedGrowth: expectedGrowthParent,
+  cloudMachine: cloudMachineParent,
+};
 
 const editBoxOverlayId = Vue.ref<IEditBoxOverlayTypeForMining | null>(null);
 const editBoxOverlayPosition = Vue.ref<{ top?: number; left?: number; width?: number } | undefined>(undefined);
+const editBoxOverlayPreviousId = Vue.ref<IEditBoxOverlayTypeForMining | undefined>();
+const editBoxOverlayNextId = Vue.ref<IEditBoxOverlayTypeForMining | undefined>();
 const dialogPanel = Vue.ref(null);
 
 const probableMinSeats = Vue.ref(0);
@@ -382,7 +428,53 @@ const averageAPY = Vue.ref(0);
 const averageEarnings = Vue.ref(0n);
 const epochPercentageYield = Vue.ref(0);
 
-function calculateElementWidth(element: HTMLElement, multiplier: number = 1) {
+function getTourPositionCheck(name: string): ITourPos {
+  if (name === 'capitalToCommit') {
+    const rect = capitalToCommitElement.value?.getBoundingClientRect() as DOMRect;
+    return {
+      left: rect.left,
+      top: rect.top,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+      width: rect.width,
+      height: rect.height,
+    };
+  } else if (name === 'returnOnCapital') {
+    const rect = returnOnCapitalElement.value?.getBoundingClientRect() as DOMRect;
+    return {
+      left: rect.left,
+      top: rect.top,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+      width: rect.width,
+      height: rect.height,
+    };
+  } else if (name === 'configBoxes') {
+    const rect = configBoxesElement.value?.getBoundingClientRect() as DOMRect;
+    const left = rect.left + 20;
+    const width = rect.width - 40;
+    return {
+      left: left,
+      top: rect.top,
+      right: left + width,
+      bottom: rect.top + rect.height,
+      width: width,
+      height: rect.height,
+    };
+  } else if (name === 'saveButton') {
+    const rect = saveButtonElement.value?.getBoundingClientRect() as DOMRect;
+    const left = rect.left - 10;
+    const width = rect.width + 20;
+    const top = rect.top - 10;
+    const height = rect.height + 20;
+    return { left: left, top: top, right: left + width, bottom: top + height, width: width, height: height };
+  } else {
+    return { left: 100, top: 100, right: 200, bottom: 200, width: 100, height: 100 };
+  }
+}
+
+function calculateElementWidth(element: HTMLElement | null, multiplier: number = 1) {
+  if (!element) return;
   const elementWidth = element.getBoundingClientRect().width;
   return elementWidth * multiplier + 'px';
 }
@@ -406,15 +498,23 @@ function seatGoalText() {
   }
 }
 
-function openEditBoxOverlay($event: MouseEvent, type: IEditBoxOverlayTypeForMining) {
-  const parent = ($event.target as HTMLElement).closest('[MainWrapperParent]');
+function openEditBoxOverlay(id: IEditBoxOverlayTypeForMining) {
+  const parent = editBoxParents[id as keyof typeof editBoxParents].value as HTMLElement | null;
   const rect = parent?.getBoundingClientRect() as DOMRect;
   editBoxOverlayPosition.value = {
     top: rect.top,
     left: rect.left,
     width: rect.width,
   };
-  editBoxOverlayId.value = type;
+  const editBoxOverlayIds = Object.keys(editBoxParents) as IEditBoxOverlayTypeForMining[];
+  const idIndex = editBoxOverlayIds.indexOf(id);
+  editBoxOverlayId.value = id;
+  editBoxOverlayPreviousId.value = editBoxOverlayIds[idIndex - 1] as IEditBoxOverlayTypeForMining | undefined;
+  editBoxOverlayPreviousId.value ??= editBoxOverlayIds[editBoxOverlayIds.length - 1] as
+    | IEditBoxOverlayTypeForMining
+    | undefined;
+  editBoxOverlayNextId.value = editBoxOverlayIds[idIndex + 1] as IEditBoxOverlayTypeForMining | undefined;
+  editBoxOverlayNextId.value ??= editBoxOverlayIds[0] as IEditBoxOverlayTypeForMining | undefined;
 }
 
 function cancelOverlay() {
@@ -508,8 +608,13 @@ function updateMinimumCapital() {
   capitalToCommitMicrogons.value = minimumCapitalCommitment.value;
 }
 
-function openMiningTour() {
-  // TODO: Implement
+function startTour() {
+  currentTourStep.value = 1;
+  isSuggestingTour.value = false;
+}
+
+function closeTour() {
+  currentTourStep.value = 0;
 }
 
 Vue.watch(
@@ -585,16 +690,21 @@ basicEmitter.on('openBotOverlay', async () => {
   [PrimaryStat] {
     @apply relative;
 
-    [tooltip]:focus {
-      @apply text-argon-600;
-    }
+    [tooltip] {
+      @apply transition-all duration-300;
 
-    &:hover {
-      [tooltip] {
+      &:focus {
         @apply text-argon-600;
       }
+    }
+
+    &:hover,
+    &[isTouring='true'] {
+      [tooltip] {
+        @apply text-argon-600 cursor-help;
+      }
       [PiechartIcon] {
-        animation: fadeToArgon 2s ease-in-out 1;
+        animation: BotOverlay-fadeToArgon 2s ease-in-out 1;
       }
     }
 
@@ -632,7 +742,7 @@ basicEmitter.on('openBotOverlay', async () => {
         @apply text-argon-600/70;
       }
       [EditIcon] {
-        @apply inline-block;
+        @apply w-4.5 min-w-4.5 opacity-100;
       }
     }
 
@@ -641,11 +751,11 @@ basicEmitter.on('openBotOverlay', async () => {
     }
 
     [EditIcon] {
-      @apply text-argon-600/50 relative z-10 -mt-0.5 ml-2 hidden h-4.5 min-h-4.5 w-4.5 min-w-4.5;
+      @apply text-argon-600/50 relative z-10 -mt-0.5 ml-2 h-4.5 min-h-4.5 w-0 min-w-0 opacity-0 transition-all duration-300;
     }
 
     [MainRule] {
-      @apply text-argon-700/80 relative mt-1.5 mb-1.5 border-t border-b border-dashed border-slate-500/30 py-1 text-center font-mono font-bold;
+      @apply text-argon-700/80 relative my-1.5 border-t border-b border-dashed border-slate-500/30 py-1 text-center font-mono font-bold;
       &::before {
         content: '';
         display: block;
@@ -673,15 +783,18 @@ basicEmitter.on('openBotOverlay', async () => {
   }
 }
 
-@keyframes fadeToArgon {
+@keyframes BotOverlay-fadeToArgon {
   0% {
     color: rgb(209 213 219); /* text-gray-300 */
+    transform: scale(1);
   }
-  10% {
+  30% {
     color: oklch(0.48 0.24 320); /* text-argon-600 */
+    transform: scale(1.15);
   }
   100% {
     color: rgb(209 213 219); /* text-gray-300 */
+    transform: scale(1);
   }
 }
 </style>

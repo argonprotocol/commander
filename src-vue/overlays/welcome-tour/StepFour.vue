@@ -52,7 +52,7 @@
             <button
               @click="nextStep"
               tabindex="0"
-              class="mt-4 cursor-pointer rounded-md border border-fuchsia-800 bg-fuchsia-600 px-8 py-2 text-sm font-semibold text-white shadow-sm hover:border-fuchsia-900 hover:bg-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 focus:outline-none focus:ring-inset"
+              class="bg-argon-button border-argon-button-hover hover:bg-argon-button-hover inner-button-shadow mt-4 cursor-pointer rounded-md border px-8 py-2 text-sm font-bold text-white shadow-sm focus:outline-none"
             >
               Finish Tour
             </button>
