@@ -9,8 +9,7 @@
           ease: 'easeInOut',
           delay: 0.2,
         }"
-        class="overflow-hidden"
-      >
+        class="overflow-hidden">
         <label class="cursor-text select-auto">{{ typedText }}</label>
       </Motion>
     </Motion>

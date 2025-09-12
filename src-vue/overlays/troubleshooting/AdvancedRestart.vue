@@ -10,8 +10,7 @@
       <li>
         <header
           @click="toggleOption(AdvancedRestartOption.ReloadAppUi)"
-          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
-        >
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold">
           <Checkbox :isChecked="options[AdvancedRestartOption.ReloadAppUi].isChecked" :size="5" />
           <span>Reload App Interface</span>
         </header>
@@ -20,12 +19,10 @@
       <li
         :class="[
           options[AdvancedRestartOption.RecreateLocalDatabase].isDisabled ? 'pointer-events-none opacity-50' : '',
-        ]"
-      >
+        ]">
         <header
           @click="toggleOption(AdvancedRestartOption.RecreateLocalDatabase)"
-          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
-        >
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold">
           <Checkbox :isChecked="options[AdvancedRestartOption.RecreateLocalDatabase].isChecked" :size="5" />
           <span>Recreate App Database</span>
         </header>
@@ -37,8 +34,7 @@
       <li :class="[options[AdvancedRestartOption.RestartDockers].isDisabled ? 'pointer-events-none opacity-50' : '']">
         <header
           @click="toggleOption(AdvancedRestartOption.RestartDockers)"
-          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
-        >
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold">
           <Checkbox :isChecked="options[AdvancedRestartOption.RestartDockers].isChecked" :size="5" />
           <span>Restart Dockers on Cloud Machine</span>
         </header>
@@ -53,12 +49,10 @@
           options[AdvancedRestartOption.ResyncBiddingDataOnCloudMachine].isDisabled
             ? 'pointer-events-none opacity-50'
             : '',
-        ]"
-      >
+        ]">
         <header
           @click="toggleOption(AdvancedRestartOption.ResyncBiddingDataOnCloudMachine)"
-          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
-        >
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold">
           <Checkbox :isChecked="options[AdvancedRestartOption.ResyncBiddingDataOnCloudMachine].isChecked" :size="5" />
           <span>Resync Bidding Data on Cloud Machine</span>
         </header>
@@ -72,12 +66,10 @@
           options[AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine].isDisabled
             ? 'pointer-events-none opacity-50'
             : '',
-        ]"
-      >
+        ]">
         <header
           @click="toggleOption(AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine)"
-          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
-        >
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold">
           <Checkbox :isChecked="options[AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine].isChecked" :size="5" />
           <span>Resync Bitcoin Node on Cloud Machine</span>
         </header>
@@ -92,12 +84,10 @@
           options[AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine].isDisabled
             ? 'pointer-events-none opacity-50'
             : '',
-        ]"
-      >
+        ]">
         <header
           @click="toggleOption(AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine)"
-          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
-        >
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold">
           <Checkbox :isChecked="options[AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine].isChecked" :size="5" />
           <span>Resync Argon Node on Cloud Machine</span>
         </header>
@@ -112,16 +102,13 @@
           options[AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine].isDisabled
             ? 'pointer-events-none opacity-50'
             : '',
-        ]"
-      >
+        ]">
         <header
           @click="toggleOption(AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine)"
-          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold"
-        >
+          class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold">
           <Checkbox
             :isChecked="options[AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine].isChecked"
-            :size="5"
-          />
+            :size="5" />
           <span>Completely Wipe and Reinstall Cloud Machine</span>
         </header>
         <p class="text-md ml-7 font-light">
@@ -133,8 +120,7 @@
     <button
       @click="runSelectedOptions"
       :class="[isRestarting ? 'pointer-events-none opacity-50' : '']"
-      class="bg-argon-button mt-4 mb-3 w-full cursor-pointer rounded-lg py-2 text-white focus:outline-none"
-    >
+      class="bg-argon-button mt-4 mb-3 w-full cursor-pointer rounded-lg py-2 text-white focus:outline-none">
       {{ isRestarting ? 'Restarting...' : 'Run Restart' }}
     </button>
   </div>

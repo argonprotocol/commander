@@ -12,8 +12,7 @@
     :maxDecimals="props.maxDecimals"
     :options="props.options"
     :model-value="modelValue"
-    @update:model-value="handleUpdate"
-  />
+    @update:model-value="handleUpdate" />
 </template>
 
 <script setup lang="ts">

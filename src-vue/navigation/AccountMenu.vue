@@ -4,8 +4,7 @@
       <DropdownMenuTrigger
         Trigger
         class="text-argon-600/60 flex h-[30px] w-[38px] cursor-pointer flex-row items-center justify-center rounded-md border text-sm/6 font-semibold hover:border-slate-400/50 hover:bg-slate-400/10 focus:outline-none"
-        :class="[isOpen ? 'border-slate-400/60 bg-slate-400/10' : 'border-slate-400/50']"
-      >
+        :class="[isOpen ? 'border-slate-400/60 bg-slate-400/10' : 'border-slate-400/50']">
         <ConfigIcon class="h-5 w-5" />
       </DropdownMenuTrigger>
 
@@ -17,17 +16,14 @@
           :align="'end'"
           :alignOffset="0"
           :sideOffset="-3"
-          class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad z-50 data-[state=open]:transition-all"
-        >
+          class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad z-50 data-[state=open]:transition-all">
           <div
-            class="bg-argon-menu-bg flex shrink flex-col rounded p-1 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
-          >
+            class="bg-argon-menu-bg flex shrink flex-col rounded p-1 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20">
             <DropdownMenuItem
               @click="() => openBotOverlay()"
               :class="[installer.isRunning ? 'pointer-events-none opacity-30' : '']"
               class="pt-3 pb-3"
-              :disabled="installer.isRunning"
-            >
+              :disabled="installer.isRunning">
               <header>Configure Your Mining Bot</header>
               <p>
                 Set lock fees and securitization
@@ -52,8 +48,7 @@
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent class="relative -top-1 min-w-50">
                 <div
-                  class="bg-argon-menu-bg flex shrink flex-col rounded p-1 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
-                >
+                  class="bg-argon-menu-bg flex shrink flex-col rounded p-1 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20">
                   <DropdownMenuItem class="py-2" @click="() => openFundMiningAccountOverlay()">
                     <header>Mining Wallet</header>
                   </DropdownMenuItem>
@@ -80,8 +75,7 @@
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent class="relative -top-1 min-w-50">
                 <div
-                  class="bg-argon-menu-bg flex shrink flex-col rounded p-1 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20"
-                >
+                  class="bg-argon-menu-bg flex shrink flex-col rounded p-1 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20">
                   <DropdownMenuItem class="py-2" @click="() => openTroubleshooting()">
                     <header>Troubleshooting</header>
                   </DropdownMenuItem>
@@ -101,8 +95,7 @@
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     class="py-2"
-                    @click="() => void openLink('https://github.com/argonprotocol/commander/issues')"
-                  >
+                    @click="() => void openLink('https://github.com/argonprotocol/commander/issues')">
                     <header>GitHub Developer Community</header>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />

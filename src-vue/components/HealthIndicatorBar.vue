@@ -1,19 +1,16 @@
 <template>
   <div
-    class="absolute -bottom-2 left-[calc(50%-0px)] flex h-[10px] w-8/12 -translate-x-1/2 translate-y-full flex-row items-center space-x-1 xl:left-[calc(50%-10px)]"
-  >
+    class="absolute -bottom-2 left-[calc(50%-0px)] flex h-[10px] w-8/12 -translate-x-1/2 translate-y-full flex-row items-center space-x-1 xl:left-[calc(50%-10px)]">
     <div
       v-for="i in 20"
       :key="i"
       class="hidden h-full w-1/20 min-w-1 rounded-full xl:block"
-      :class="[i > maxFilled20 ? 'bg-slate-300/20' : colorFill]"
-    ></div>
+      :class="[i > maxFilled20 ? 'bg-slate-300/20' : colorFill]"></div>
     <div
       v-for="i in 10"
       :key="i"
       class="block h-full w-1/20 min-w-1 rounded-full xl:hidden"
-      :class="[i > maxFilled20 ? 'bg-slate-300/20' : colorFill]"
-    ></div>
+      :class="[i > maxFilled20 ? 'bg-slate-300/20' : colorFill]"></div>
     <div class="text-slate-900/50">{{ numeral(percent).format('0') }}%</div>
   </div>
 </template>

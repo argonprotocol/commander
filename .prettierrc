@@ -7,5 +7,6 @@
   "printWidth": 120,
   "htmlWhitespaceSensitivity": "ignore",
   "plugins": ["prettier-plugin-tailwindcss"],
-  "endOfLine": "lf"
+  "endOfLine": "lf",
+  "bracketSameLine": true
 }

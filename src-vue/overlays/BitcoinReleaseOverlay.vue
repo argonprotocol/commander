@@ -34,8 +34,7 @@
                 v-for="rate in feeRates"
                 :key="rate.key"
                 class="flex cursor-pointer items-center rounded-lg border p-3 hover:bg-gray-50"
-                :class="selectedFeeRate === rate.key ? 'border-argon-500 bg-argon-50' : 'border-gray-200'"
-              >
+                :class="selectedFeeRate === rate.key ? 'border-argon-500 bg-argon-50' : 'border-gray-200'">
                 <input type="radio" :value="rate.key" v-model="selectedFeeRate" class="sr-only" />
                 <div class="flex-1">
                   <div class="flex items-center justify-between">
@@ -55,8 +54,7 @@
               v-model="destinationAddress"
               type="text"
               placeholder="bc1q..."
-              class="focus:ring-argon-500 w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2"
-            />
+              class="focus:ring-argon-500 w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2" />
             <p class="mt-1 text-xs text-gray-500">Where you want to receive your Bitcoin</p>
           </div>
 
@@ -68,15 +66,13 @@
               canSendRequest && !isLoading
                 ? 'bg-red-500 text-white hover:bg-red-600'
                 : 'cursor-not-allowed bg-gray-200 text-gray-400'
-            "
-          >
+            ">
             <span v-if="isLoading">
               <svg class="mr-2 inline h-5 w-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="10" stroke-width="4" stroke-linecap="round" class="text-gray-300"></circle>
                 <path
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2.93 6.93A8 8 0 0112 20v4c-6.627 0-12-5.373-12-12h4a8 8 0 008 8v4z"
-                  fill="currentColor"
-                ></path>
+                  fill="currentColor"></path>
               </svg>
               Releasing...
             </span>
@@ -86,8 +82,7 @@
             v-if="isLoading"
             :progress="releaseProgress"
             :has-error="errorMessage != ''"
-            class="mr-2 inline-block h-4 w-24"
-          />
+            class="mr-2 inline-block h-4 w-24" />
         </template>
         <template v-else>
           <div class="mb-6 text-red-700">
@@ -106,8 +101,7 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
           </div>
 
