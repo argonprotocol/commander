@@ -1,274 +1,641 @@
-<!-- prettier-ignore -->
 <template>
-  <TransitionRoot as="template" :show="isOpen" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100">
-    <Dialog @close="closeOverlay" :initialFocus="dialogPanel">
-      <DialogPanel class="absolute top-0 left-0 right-0 bottom-0 z-10">
-        <BgOverlay @close="closeOverlay" />
+  <DialogRoot class="absolute inset-0 z-10" :open="isOpen">
+    <DialogPortal>
+      <DialogOverlay asChild>
+        <BgOverlay @close="cancelOverlay" />
+      </DialogOverlay>
+
+      <DialogContent @escapeKeyDown="cancelOverlay" :aria-describedby="undefined">
         <div
-          ref="dialogPanel"
-          class="absolute top-[40px] left-3 right-3 bottom-3 z-20 flex flex-col overflow-hidden rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left transition-all"
+          class="ConnectOverlay inner-input-shadow bg-argon-menu-bg absolute top-[40px] right-3 bottom-3 left-3 z-20 flex flex-col overflow-auto rounded-md border border-black/30 text-left transition-all focus:outline-none"
           style="
             box-shadow:
-              0px -1px 2px 0 rgba(0, 0, 0, 0.1),
+              0 -1px 2px 0 rgba(0, 0, 0, 0.1),
               inset 0 2px 0 rgba(255, 255, 255, 1);
-          "
-        >
-          <div v-if="isLoaded" class="flex flex-col h-full w-full">
+          ">
+          <div class="flex w-full flex-col px-4">
             <h2
-              class="relative text-3xl font-bold text-center border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 text-[#672D73]"
-              style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)"
-            >
-              Connect Your Cloud Machine
+              class="relative pt-5 pb-4 pl-3 text-left text-3xl font-bold text-[#672D73]"
+              style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)">
+              <DialogTitle as="div" class="relative z-10">Connect a Server</DialogTitle>
               <div
-                @click="closeOverlay"
-                class="absolute top-[22px] right-[0px] z-10 flex items-center justify-center text-sm/6 font-semibold cursor-pointer border rounded-md w-[30px] h-[30px] focus:outline-none border-slate-400/60 hover:border-slate-500/70 hover:bg-[#D6D9DF]"
-              >
-                <XMarkIcon class="w-5 h-5 text-[#B74CBA] stroke-4" />
+                @click="cancelOverlay"
+                class="absolute top-[22px] right-[0px] z-10 flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-md border border-slate-400/60 text-sm/6 font-semibold hover:border-slate-500/70 hover:bg-[#D6D9DF] focus:outline-none">
+                <XMarkIcon class="h-5 w-5 stroke-4 text-[#B74CBA]" />
               </div>
             </h2>
 
-            <div class="grow relative w-full">
-              <div class="absolute h-[20px] left-0 right-0 bottom-0 z-10 bg-gradient-to-b from-transparent to-argon-menu-bg pointer-events-none"></div>
-              <div ref="scrollContainer" class="absolute top-0 left-0 right-0 bottom-0 px-[6%] overflow-y-scroll pt-8 pb-[50px]">
-                <p class="text-gray-500 border-b border-slate-300 pb-4 mb-8">
-                  Argon Commander will automatically setup and configure your mining server. All you need to do is
-                  activate it. The following steps show you how to activate a new server at Digital Ocean. Please follow
-                  each step exactly as shown -- the details are important!
-                </p>
+            <DialogDescription class="px-10 py-6 font-light opacity-80">
+              Argon Commander will automatically setup and configure your mining server. All you need to do is activate
+              it. The following steps show you how to activate a new server. Digital Ocean is shown as a full reference,
+              but any Ubuntu 24+ server should work.
+            </DialogDescription>
 
-                <ul Steps class="flex flex-col gap-4 w-full">
-                  <li>
-                    <header>1. Open DigitalOcean.com</header>
-                    <div wrapper>
-                      <div>
-                        <p>
-                          Go to digitalocean.com ("DO")and sign up for a new account. Skip to step 3 if you already have
-                          an account.
-                        </p>
-                        <p>
-                          Be aware that DO routinely gives out $100-$200 in free server credits, but clicking the Sign
-                          Up link in the top right corner will NOT give you those credits. At the time of this writing,
-                          scrolling to the bottom of the page and clicking the "Get Started" button will give you the
-                          free credits.
-                        </p>
-                      </div>
-                      <img src="/create-do/step1.png" />
-                    </div>
-                  </li>
+            <TabsRoot class="flex w-full flex-col" :model-value="selectedTab" @update:modelValue="selectedTab = $event">
+              <TabsList class="order-slate-400 relative flex shrink-0 text-2xl" aria-label="Setup a server">
+                <TabsIndicator
+                  class="absolute bottom-0 left-0 h-[2px] translate-y-[1px] rounded-full px-8 transition-[width,transform] duration-300"
+                  :style="{
+                    width: 'var(--reka-tabs-indicator-size)',
+                    transform: `translateX(var(--reka-tabs-indicator-position))`,
+                    height: '2px',
+                  }">
+                  <div class="bg-argon-600 h-full w-full"></div>
+                </TabsIndicator>
+                <TabsTrigger
+                  class="hover:text-argon-800 data-[state=active]:text-argon-600 flex h-[45px] flex-1 cursor-pointer items-center justify-center rounded-tl-md px-5 text-xl leading-none text-slate-500 outline-none select-none data-[state=active]:font-bold"
+                  value="do">
+                  Digital Ocean
+                </TabsTrigger>
 
-                  <li>
-                    <header>2. Fill Out the Sign Up Form</header>
-                    <div wrapper>
-                      <div>
-                        <p>
-                          Fill out the short form, confirm your email address, and input your credit card (even if you
-                          have free credits, you'll still need a card on file).
-                        </p>
-                        <p>
-                          Don't skip past the welcome screen. We'll use this as the jumping off point for the next step.
-                        </p>
-                      </div>
-                      <img src="/create-do/step2.png" />
-                    </div>
-                  </li>
+                <TabsTrigger
+                  class="hover:text-argon-800 data-[state=active]:text-argon-600 flex h-[45px] flex-1 cursor-pointer items-center justify-center rounded-tl-md px-5 text-xl leading-none text-slate-500 outline-none select-none data-[state=active]:font-bold"
+                  value="custom">
+                  Custom Server
+                </TabsTrigger>
 
-                  <li>
-                    <header>3. Click to Create a Virtual Machine</header>
-                    <div wrapper>
-                      <div>
-                        <p>
-                          Once your account is setup, you will be given several options. Click the "Deploy a Virtual
-                          Machine" button. If you have an existing account, use the "Create a Droplet". Don't create a
-                          "GPU Droplet", just a standard Droplet. BTW, Droplets are DO's lingo for what everyone else
-                          calls servers. Regardless, you'll be given a few options for how you want to create your
-                          server...
-                        </p>
-                      </div>
-                      <img src="/create-do/step3.png" />
-                    </div>
-                  </li>
-
-                  <li>
-                    <header>4. Keep Default Docker Image</header>
-                    <div wrapper>
-                      <div>
-                        <p>
-                          You should use all the default options when creating your new droplet, including Digital
-                          Ocean's default image. It should be using Ubuntu version 24.10 or higher.
-                        </p>
-                        <p>Keep on scrolling.</p>
-                      </div>
-                      <img src="/create-do/step4.png" />
-                    </div>
-                  </li>
-
-                  <li>
-                    <header>5. Choose Basic Size</header>
-                    <div wrapper>
-                      <div>
-                        <p>Under the Choose Size section, select "Basic" for Droplet Type.</p>
-                        <p>
-                          For the "CPU Options" select "Premium Intel" and then the $32/mo. This is plenty of power for
-                          Argon mining. Hopefully you have $200 in credits which makes this free.
-                        </p>
-                      </div>
-                      <img src="/create-do/step5.png" />
-                    </div>
-                  </li>
-
-                  <li>
-                    <header>6. Copy Your SSH Key</header>
-                    <div wrapper>
-                      <div>
-                        <p>
-                          Skip down to the "Choose Authentication Method" and select "SSH Key" then "Add SSH Key". This
-                          will pop up an overlay with a text box.
-                        </p>
-                        <p>Copy and paste the following public key:</p>
-                        <CopyToClipboard
-                          ref="copyToClipboard"
-                          :content="sshPublicKey"
-                          class="relative mb-3"
-                          @click="highlightCopiedContent"
-                        >
-                          <input
-                            type="text"
-                            :value="sshPublicKey"
-                            class="bg-white py-4 pl-4 pr-8 border border-slate-300 rounded-md w-full pointer-events-none"
-                            readonly
-                          />
-                          <div
-                            class="absolute right-8 top-1 w-10 bottom-1 bg-gradient-to-r from-transparent to-white pointer-events-auto"
-                          ></div>
-                          <div class="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer">
-                            <CopyIcon class="w-4 h-4 opacity-80" />
+                <TabsTrigger
+                  class="hover:text-argon-800 data-[state=active]:text-argon-600 flex h-[45px] flex-1 cursor-pointer items-center justify-center rounded-tl-md px-5 text-xl leading-none text-slate-500 outline-none select-none data-[state=active]:font-bold"
+                  value="local">
+                  Local Machine
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="do">
+                <div class="mx-5 p-3">
+                  <ul Steps class="flex w-full flex-col space-y-6">
+                    <li>
+                      <div class="rounded-lg border border-slate-300/40 bg-white/80 p-4 shadow-sm">
+                        <header class="text-argon-800/60 flex items-center gap-3 text-xl font-semibold">
+                          <span
+                            class="bg-argon-500 flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold text-white">
+                            1
+                          </span>
+                          Create a Digital Ocean Account
+                        </header>
+                        <div wrapper class="flex h-full w-full flex-row gap-10 pt-3">
+                          <div class="flex w-1/2 flex-col gap-10">
+                            <p>
+                              Digital Ocean usually has promotional credits for new users. You can use these credits
+                              towards your server costs. Follow along with the video to the right to see how to create
+                              an account and get free credits.
+                              <br />
+                              <br />
+                              You can open a browser to the signup page
+                              <a @click="openDigitalOceanLink" class="!text-argon-600 text-semibold cursor-pointer">
+                                here.
+                              </a>
+                            </p>
+                            <p class="bg-slate-200/50 p-3 text-sm">
+                              <strong>NOTE:</strong>
+                              you might find it helpful to open the video in a new window so you can put it on top of
+                              the Digital Ocean website as you fill out the registration form.
+                            </p>
                           </div>
-                          <template #copied>
-                            <div class="bg-white py-4 pl-4 pr-8 border border-slate-300 rounded-md w-full pointer-events-none overflow-hidden">
-                              <span class="bg-blue-200 whitespace-nowrap w-full inline-block">
-                                {{ sshPublicKey }}
-                              </span>
-                            </div>
-                            <div
-                              class="flex flex-row items-center absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none bg-white pl-2"
-                            >
+
+                          <YoutubeVideo video-id="iB-8deHtiQk" class="w-1/2" title="Create a Digital Ocean Account" />
+                        </div>
+                      </div>
+                    </li>
+                    <li>
+                      <div class="rounded-lg border border-slate-300/40 bg-white/80 p-4 shadow-sm">
+                        <header class="text-argon-800/60 flex items-center gap-3 text-xl font-semibold">
+                          <span
+                            class="bg-argon-500 flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold text-white">
+                            2
+                          </span>
+                          Create a Droplet (Server)
+                        </header>
+                        <div wrapper class="flex h-full w-full flex-row items-start gap-10 pt-3">
+                          <div class="w-1/2">
+                            <p class="mb-8">
+                              You can create a server (called a "Droplet" on Digital Ocean) by following the steps in
+                              this video. You will want to create the "Basic", $32 a month droplet. Hopefully you have
+                              $200 in credits which makes this free.
+                            </p>
+
+                            <a
+                              @click="showDetailedServerInstructions = true"
+                              class="!text-argon-500 cursor-pointer text-sm"
+                              v-if="!showDetailedServerInstructions">
+                              > Show "Droplet" Settings
+                            </a>
+                            <Motion
+                              as="div"
+                              :initial="{ height: 0, opacity: 0 }"
+                              :animate="{ height: 'auto', opacity: 1 }"
+                              :exit="{ height: 0, opacity: 0 }"
+                              :transition="{ duration: 0.4, ease: 'easeOut' }"
+                              class="overflow-hidden rounded bg-slate-200/50 p-3 text-sm text-slate-800"
+                              v-else>
+                              <h5 class="text-md mb-2 font-bold">
+                                Droplet Settings
+                                <a
+                                  @click="showDetailedServerInstructions = false"
+                                  class="!text-argon-500 ml-2 cursor-pointer text-xs">
+                                  hide
+                                </a>
+                              </h5>
+                              <table class="m-2">
+                                <tbody>
+                                  <tr>
+                                    <td class="text-argon-800/60 w-1/3">Choose a Region</td>
+                                    <td class="w-1/3 font-sans font-bold">Anything here works.</td>
+                                    <td>
+                                      <ImageZoom
+                                        src="/create-do/region.png"
+                                        alt="Choose a Region"
+                                        add-classes="h-25 w-60" />
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td class="text-argon-800/60">Choose an Image</td>
+                                    <td class="font-sans font-bold">Ubuntu</td>
+                                    <td>
+                                      <ImageZoom src="/create-do/step4.png" alt="Ubuntu" add-classes="h-25 w-60" />
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td class="text-argon-800/60">Choose Size</td>
+                                    <td class="font-sans font-bold">Basic</td>
+                                    <td>
+                                      <ImageZoom src="/create-do/size.png" alt="Server Size" add-classes="h-25 w-60" />
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td class="text-argon-800/60">CPU options</td>
+                                    <td class="font-sans font-bold">Premium Intel - $32/mo</td>
+                                    <td>
+                                      <ImageZoom src="/create-do/cost.png" alt="$32/mo" add-classes="h-25 w-60" />
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </Motion>
+                          </div>
+
+                          <YoutubeVideo video-id="bdkupHXnXio" class="w-1/2" title="Create a Droplet" />
+                        </div>
+                      </div>
+                    </li>
+
+                    <li>
+                      <div class="rounded-lg border border-slate-300/40 bg-white/80 p-4 shadow-sm">
+                        <header class="text-argon-800/60 flex items-center gap-3 text-xl font-semibold">
+                          <span
+                            class="bg-argon-500 flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold text-white">
+                            3
+                          </span>
+                          Allow Remote Access to Commander
+                        </header>
+                        <div wrapper>
+                          <div class="w-2/3">
+                            <p class="my-3">
+                              Skip down to the "Choose Authentication Method" and select "SSH Key" then "Add SSH Key".
+                              This will pop up an overlay with a text box.
+                            </p>
+                            <p>Copy and paste the following public key:</p>
+                            <CopyToClipboard
+                              ref="copyToClipboard"
+                              :content="sshPublicKey"
+                              class="relative mb-3"
+                              @click="highlightCopiedContent">
+                              <input
+                                type="text"
+                                :value="sshPublicKey"
+                                class="pointer-events-none w-full rounded-md border border-slate-300 bg-white py-4 pr-8 pl-4"
+                                readonly />
                               <div
-                                class="absolute -left-8 w-8 top-0 bottom-0 bg-gradient-to-r from-transparent to-white pointer-events-auto"
-                              ></div>
-                              <span class="font-bold text-blue-800/60">Copied</span>
-                              <CopyIcon class="w-4 h-4 ml-3 text-blue-600" />
-                            </div>
-                          </template>
-                        </CopyToClipboard>
-                        <p>You'll need to give this key a name. We recommend "Argon Commander". Click "Add SSH Key".</p>
+                                class="pointer-events-auto absolute top-1 right-8 bottom-1 w-10 bg-gradient-to-r from-transparent to-white"></div>
+                              <div class="absolute top-1/2 right-4 -translate-y-1/2 cursor-pointer">
+                                <CopyIcon class="h-4 w-4 opacity-80" />
+                              </div>
+                              <template #copied>
+                                <div
+                                  class="pointer-events-none w-full overflow-hidden rounded-md border border-slate-300 bg-white py-4 pr-8 pl-4">
+                                  <span class="inline-block w-full bg-blue-200 whitespace-nowrap">
+                                    {{ sshPublicKey }}
+                                  </span>
+                                </div>
+                                <div
+                                  class="pointer-events-none absolute top-1/2 right-4 flex -translate-y-1/2 flex-row items-center bg-white pl-2">
+                                  <div
+                                    class="pointer-events-auto absolute top-0 bottom-0 -left-8 w-8 bg-gradient-to-r from-transparent to-white"></div>
+                                  <span class="font-bold text-blue-800/60">Copied</span>
+                                  <CopyIcon class="ml-3 h-4 w-4 text-blue-600" />
+                                </div>
+                              </template>
+                            </CopyToClipboard>
+                            <p>
+                              You'll need to give this key a name. We recommend "Argon Commander". Click "Add SSH Key".
+                            </p>
+                          </div>
+                          <div class="w-1/3">
+                            <ImageZoom src="/create-do/step6.png" alt="Add SSH Key" add-classes="aspect-video" />
+                          </div>
+                        </div>
                       </div>
-                      <img src="/create-do/step6.png" />
-                    </div>
-                  </li>
+                    </li>
 
-                  <li>
-                    <header>7. Finalize Your New Server</header>
-                    <div wrapper>
-                      <div>
-                        <p>
-                          Under "Finalze Details", you can optionally customize the hostname of your server. This is
-                          used in Digital Ocean's control panel to identify your server (by default they use a long
-                          convoluted name). Use whatever name you want. It is for your eyes only.
-                        </p>
-                        <p>Click the "Create Droplet" button, and wait for your new server to boot up.</p>
-                      </div>
-                      <img src="/create-do/step7.png" />
-                    </div>
-                  </li>
-
-                  <li>
-                    <header>8. Find Your Server's IP Address</header>
-                    <div wrapper>
-                      <div>
-                        <p>
-                          Once your server is provisioned (this might take a few minutes), you'll need to copy and paste
-                          the server's IP address into the input box below. If you see a blue progress bar, it means
-                          your server is still provisioning. Give it some time, and it will appear.
-                        </p>
-                        <div v-if="hasIpAddressError" class="rounded-md bg-red-200 p-2 mb-2">
-                          <div class="flex">
-                            <div class="shrink-0">
-                              <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />
+                    <li>
+                      <div class="rounded-lg border border-slate-300/40 bg-white/80 p-4 shadow-sm">
+                        <header class="text-argon-800/60 flex items-center gap-3 text-xl font-semibold">
+                          <span
+                            class="bg-argon-500 flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold text-white">
+                            4
+                          </span>
+                          Find Your Server's IP Address
+                        </header>
+                        <div wrapper>
+                          <div>
+                            <p class="my-3">
+                              Once your server is provisioned (this might take a few minutes), you'll need to copy and
+                              paste the server's IP address into the input box below. If you see a blue progress bar, it
+                              means your server is still provisioning. Give it some time, and it will appear.
+                            </p>
+                            <div class="wrapper mr-4 flex grow flex-col">
+                              <div v-if="hasIpAddressError" class="mb-2 rounded-md bg-red-200 p-2">
+                                <div class="flex">
+                                  <div class="shrink-0">
+                                    <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />
+                                  </div>
+                                  <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-red-800">IP Address cannot be left blank</h3>
+                                  </div>
+                                </div>
+                              </div>
+                              <input
+                                type="text"
+                                v-model="ipAddress"
+                                placeholder="Your Server's IP Address"
+                                class="w-full rounded-md border border-slate-300 bg-white px-4 py-4" />
                             </div>
-                            <div class="ml-3">
-                              <h3 class="text-sm font-medium text-red-800">IP Address cannot be left blank</h3>
+                          </div>
+                          <div class="w-1/3">
+                            <ImageZoom src="/create-do/step8.png" alt="GetServer IP" add-classes="aspect-video" />
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+              </TabsContent>
+              <TabsContent value="custom">
+                <div class="mx-5 p-3">
+                  <ul Steps class="flex w-full flex-col space-y-6">
+                    <li>
+                      <div class="rounded-lg border border-slate-300/40 bg-white/80 p-4 shadow-sm">
+                        <header class="text-argon-800/60 flex items-center gap-3 text-xl font-semibold">
+                          <span
+                            class="bg-argon-500 flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold text-white">
+                            1
+                          </span>
+                          Create a Server
+                        </header>
+                        <div class="flex gap-10 pt-3">
+                          <div class="w-1/2">
+                            You'll need to provision a machine to run your Bidding Bot, the Argon Blockchain and the
+                            Bitcoin Blockchain. The basic requirements of the machine are:
+                          </div>
+
+                          <div class="w-1/2 rounded-md bg-slate-50/50">
+                            <table class="w-full border border-slate-300/40 bg-white/80 p-4 shadow-sm">
+                              <tbody>
+                                <tr class="border-b border-dashed border-slate-400/20">
+                                  <td
+                                    class="text-argon-800/60 border-r border-dashed border-slate-400/20 p-2 pr-4 text-right">
+                                    Operating System
+                                  </td>
+                                  <td class="text-argon-800/80 p-2 pl-4 text-left font-sans font-bold">
+                                    Ubuntu 24.04+
+                                  </td>
+                                </tr>
+                                <tr class="border-b border-dashed border-slate-400/20">
+                                  <td
+                                    class="text-argon-800/60 border-r border-dashed border-slate-400/20 p-2 pr-4 text-right">
+                                    Memory
+                                  </td>
+                                  <td class="text-argon-800/80 p-2 pl-4 font-sans font-bold">4GB+ RAM</td>
+                                </tr>
+                                <tr class="border-b border-dashed border-slate-400/20">
+                                  <td
+                                    class="text-argon-800/60 border-r border-dashed border-slate-400/20 p-2 pr-4 text-right">
+                                    Compute Cores
+                                  </td>
+                                  <td class="text-argon-800/80 p-2 pl-4 font-sans font-bold">2+ vCPUs</td>
+                                </tr>
+                                <tr class="border-b border-dashed border-slate-400/20">
+                                  <td
+                                    class="text-argon-800/60 border-r border-dashed border-slate-400/20 p-2 pr-4 text-right">
+                                    Hard Drive
+                                  </td>
+                                  <td class="text-argon-800/80 p-2 pl-4 font-sans font-bold">100GB or more</td>
+                                </tr>
+                                <tr class="border-b border-dashed border-slate-400/20">
+                                  <td
+                                    class="text-argon-800/60 border-r border-dashed border-slate-400/20 p-2 pr-4 text-right">
+                                    Internet Access
+                                  </td>
+                                  <td class="text-argon-800/80 p-2 pl-4 font-sans font-bold">Public</td>
+                                </tr>
+                                <tr class="">
+                                  <td
+                                    class="text-argon-800/60 border-r border-dashed border-slate-400/20 p-2 text-right">
+                                    Uptime
+                                  </td>
+                                  <td class="text-argon-800/80 p-2 pl-4 font-sans font-bold">Always On</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+
+                    <li>
+                      <div class="rounded-lg border border-slate-300/40 bg-white/80 p-4 shadow-sm">
+                        <header class="text-argon-800/60 flex items-center gap-3 text-xl font-semibold">
+                          <span
+                            class="bg-argon-500 flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold text-white">
+                            2
+                          </span>
+                          Allow Remote Access to Commander
+                        </header>
+                        <div class="flex gap-10 pt-3">
+                          <div class="w-1/2">
+                            <p>
+                              You'll need to add the commander SSH public key to your server's authorized keys.
+                              <br />
+                              <br />
+                              Log-in to your server and run the following command:
+                            </p>
+                          </div>
+                          <div class="w-1/2">
+                            <CopyToClipboard
+                              ref="copyToClipboard"
+                              :content="addSshPublicKey"
+                              class="relative mb-3 h-full w-full"
+                              @click="highlightCopiedContent">
+                              <textarea
+                                type="text"
+                                :value="addSshPublicKey"
+                                class="pointer-events-none h-full w-full rounded-md border border-slate-300 bg-white py-4 pr-8 pl-4"
+                                rows="3"
+                                readonly />
+                              <div
+                                class="pointer-events-auto absolute top-1 right-8 bottom-1 w-10 bg-gradient-to-r from-transparent to-white"></div>
+                              <div class="absolute top-1/2 right-4 -translate-y-1/2 cursor-pointer">
+                                <CopyIcon class="h-4 w-4 opacity-80" />
+                              </div>
+                              <template #copied>
+                                <div
+                                  class="pointer-events-none h-full w-full rounded-md border border-slate-300 bg-white py-4 pr-8 pl-4">
+                                  <span class="inline-block h-full w-full bg-blue-200" style="word-break: break-word">
+                                    {{ addSshPublicKey }}
+                                  </span>
+                                </div>
+                                <div
+                                  class="pointer-events-none absolute top-1/2 right-4 flex -translate-y-1/2 flex-row items-center bg-white pl-2">
+                                  <div
+                                    class="pointer-events-auto absolute top-0 bottom-0 -left-8 w-8 bg-gradient-to-r from-transparent to-white"></div>
+                                  <span class="font-bold text-blue-800/60">Copied</span>
+                                  <CopyIcon class="ml-3 h-4 w-4 text-blue-600" />
+                                </div>
+                              </template>
+                            </CopyToClipboard>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                    <li>
+                      <div class="rounded-lg border border-slate-300/40 bg-white/80 p-4 shadow-sm">
+                        <header class="text-argon-800/60 flex items-center gap-3 text-xl font-semibold">
+                          <span
+                            class="bg-argon-500 flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold text-white">
+                            3
+                          </span>
+                          Input Your Server's SSH Details
+                        </header>
+                        <div>
+                          <div>
+                            <p class="my-3">
+                              You'll need to input your server's IP address and SSH user below. The default SSH user for
+                              Ubuntu servers is usually
+                              <code>ubuntu</code>
+                              or
+                              <code>root</code>
+                              .
+                            </p>
+                            <div class="flex flex-row items-center">
+                              <div class="wrapper mr-2 flex w-1/5 flex-row items-center justify-center">
+                                <input
+                                  type="text"
+                                  v-model="sshUser"
+                                  placeholder="SSH User"
+                                  class="w-full rounded-md border border-slate-300 bg-white px-4 py-4" />
+                                <span class="pl-2 font-bold text-slate-500/60">@</span>
+                              </div>
+                              <div class="wrapper mr-4 flex grow flex-col">
+                                <div v-if="hasIpAddressError" class="mb-2 rounded-md bg-red-200 p-2">
+                                  <div class="flex">
+                                    <div class="shrink-0">
+                                      <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />
+                                    </div>
+                                    <div class="ml-3">
+                                      <h3 class="text-sm font-medium text-red-800">IP Address cannot be left blank</h3>
+                                    </div>
+                                  </div>
+                                </div>
+                                <input
+                                  type="text"
+                                  v-model="ipAddress"
+                                  placeholder="Your Server's IP Address"
+                                  class="w-full rounded-md border border-slate-300 bg-white px-4 py-4" />
+                              </div>
                             </div>
                           </div>
                         </div>
-                        <input
-                          type="text"
-                          v-model="ipAddress"
-                          placeholder="Your Server's IP Address"
-                          class="w-full border bg-white border-slate-300 rounded-md px-4 py-4"
-                        />
                       </div>
-                      <img src="/create-do/step8.png" />
-                    </div>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
+                    </li>
+                  </ul>
+                </div>
+              </TabsContent>
 
-          <div
-            v-if="isOpen"
-            class="flex flex-row justify-end px-4 border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg"
-          >
-            <div v-if="hasServerDetailsError" class="grow rounded-md bg-red-200 p-2 pl-4 flex items-center">
-              <div class="flex">
-                <div class="shrink-0">
-                  <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />
+              <TabsContent value="local">
+                <div class="mx-5 p-3">
+                  <ul Steps class="flex w-full flex-col space-y-6">
+                    <li>
+                      <div class="rounded-lg border border-slate-300/40 bg-white/80 p-4 shadow-sm">
+                        <header class="text-argon-800/60 flex items-center gap-3 text-xl font-semibold">
+                          <span
+                            class="bg-argon-500 flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold text-white">
+                            1
+                          </span>
+                          Install Docker
+                        </header>
+                        <div class="flex gap-10 pt-3">
+                          <div class="w-1/2">
+                            You'll need docker installed on your local machine. The basic requirements are:
+
+                            <div class="mt-3">
+                              <a @click="openDockerInstallLink" class="!text-argon-600 cursor-pointer">
+                                Click to Install Docker
+                              </a>
+                            </div>
+                          </div>
+
+                          <div class="w-1/2 rounded-md bg-slate-50/50">
+                            <table class="w-full border border-slate-300/40 bg-white/80 p-4 shadow-sm">
+                              <tbody>
+                                <tr class="border-b border-dashed border-slate-400/20">
+                                  <td
+                                    class="text-argon-800/60 border-r border-dashed border-slate-400/20 p-2 pr-4 text-right">
+                                    Docker Version
+                                  </td>
+                                  <td class="text-argon-800/80 p-2 pl-4 text-left font-sans font-bold">27+</td>
+                                </tr>
+                                <tr class="border-b border-dashed border-slate-400/20">
+                                  <td
+                                    class="text-argon-800/60 border-r border-dashed border-slate-400/20 p-2 pr-4 text-right">
+                                    Hard Drive Space
+                                  </td>
+                                  <td class="text-argon-800/80 p-2 pl-4 font-sans font-bold">100GB or more</td>
+                                </tr>
+                                <tr class="">
+                                  <td
+                                    class="text-argon-800/60 border-r border-dashed border-slate-400/20 p-2 text-right">
+                                    Computer Sleep
+                                  </td>
+                                  <td class="text-argon-800/80 p-2 pl-4 font-sans font-bold">
+                                    Your Computer Must be Set to Always On
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                    <li>
+                      <div class="rounded-lg border border-slate-300/40 bg-white/80 p-4 shadow-sm">
+                        <header class="text-argon-800/60 flex items-center gap-3 text-xl font-semibold">
+                          <span
+                            class="bg-argon-500 flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold text-white">
+                            2
+                          </span>
+                          Your Computer Will Stay Awake
+                        </header>
+                        <div class="flex gap-10 pt-3">
+                          <div class="w-1/2">
+                            <strong>NOTE:</strong>
+                            Running a Miner and Bidding Bot from your local computer requires your machine to stay awake
+                            in order to be available to bid on seats and close blocks.
+                            <br />
+                            <br />
+                            This app will automatically keep your computer from sleeping completely.
+                          </div>
+
+                          <div class="w-1/2 rounded-md bg-slate-50/50">
+                            <div class="flex items-center gap-2">
+                              <label
+                                class="text-argon-800/60 pr-2 text-sm leading-none font-bold select-none"
+                                for="stay-awake">
+                                App Keeps Computer Awake
+                              </label>
+
+                              <SwitchRoot
+                                id="stay-awake"
+                                v-model="setAlwaysOn"
+                                :disabled="true"
+                                class="border-argon-300 focus-within:border-argon-800 data-[state=checked]:bg-argon-800/40 data-[state=checked]:border-argon-600/40 data-[state=unchecked]:bg-argon-300 relative flex h-[20px] w-[32px] rounded-full border shadow-sm transition-[background] focus-within:shadow-[0_0_0_1px] focus-within:shadow-slate-800 focus-within:outline-none">
+                                <SwitchThumb
+                                  class="my-auto flex h-3.5 w-3.5 translate-x-0.5 items-center justify-center rounded-full bg-white text-xs shadow-xl transition-transform will-change-transform data-[state=checked]:translate-x-full" />
+                              </SwitchRoot>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  </ul>
                 </div>
-                <div class="ml-3">
-                  <h3 class="text-sm font-medium text-red-800">
-                    Failed to connect to server. Please ensure you used the correct Public Key.
-                  </h3>
+              </TabsContent>
+            </TabsRoot>
+            <div class="mx-4 mb-5 flex flex-row justify-end space-x-4 px-4">
+              <div v-if="hasServerDetailsError" class="flex grow items-center rounded-md bg-red-200 p-2 pl-4">
+                <div class="flex">
+                  <div class="shrink-0">
+                    <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />
+                  </div>
+                  <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">
+                      Failed to connect to server. Please ensure you used the correct Public Key.
+                    </h3>
+                  </div>
                 </div>
               </div>
+              <button
+                @click="cancelOverlay"
+                class="cursor-pointer rounded-md border border-[#A600D4] px-7 py-2 text-xl font-bold text-gray-500">
+                <span>Close</span>
+              </button>
+              <button
+                @click="addServer"
+                class="cursor-pointer rounded-md bg-[#A600D4] px-7 py-2 text-xl font-bold text-white">
+                <span v-if="!isSaving">Add Server</span>
+                <span v-else>Adding Server...</span>
+              </button>
             </div>
-            <button
-              @click="closeOverlay"
-              class="border border-[#A600D4] text-xl font-bold text-gray-500 px-7 py-2 rounded-md cursor-pointer"
-            >
-              <span>Close</span>
-            </button>
-            <button
-              @click="addServer"
-              class="bg-[#A600D4] text-xl font-bold text-white px-7 py-2 rounded-md cursor-pointer"
-            >
-              <span v-if="!isSaving">Add Server</span>
-              <span v-else>Adding Server...</span>
-            </button>
           </div>
         </div>
-      </DialogPanel>
-    </Dialog>
-  </TransitionRoot>
+      </DialogContent>
+    </DialogPortal>
+  </DialogRoot>
 </template>
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { TransitionRoot, Dialog, DialogPanel, TransitionChild } from '@headlessui/vue';
 import basicEmitter from '../emitters/basicEmitter';
 import { useConfig } from '../stores/config';
 import { useInstaller } from '../stores/installer';
 import BgOverlay from '../components/BgOverlay.vue';
 import CopyIcon from '../assets/copy.svg?component';
 import { ExclamationTriangleIcon } from '@heroicons/vue/20/solid';
+import YoutubeVideo from '../components/YoutubeVideo.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import CopyToClipboard from '../components/CopyToClipboard.vue';
 import { SSH } from '../lib/SSH';
-import { IConfigServerDetails } from '../interfaces/IConfig';
+import { IConfigServerDetails, ServerType } from '../interfaces/IConfig';
+import {
+  DialogContent,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogRoot,
+  DialogTitle,
+  TabsContent,
+  TabsIndicator,
+  TabsList,
+  TabsRoot,
+  TabsTrigger,
+  SwitchRoot,
+  SwitchThumb,
+} from 'reka-ui';
+import ImageZoom from '../components/ImageZoom.vue';
+import { Motion } from 'motion-v';
+import { invokeWithTimeout } from '../lib/tauriApi.ts';
+import { enable as enableAutostart } from '@tauri-apps/plugin-autostart';
+import { platformType } from '../tauri-controls/utils/os.ts';
+import { open as tauriOpenUrl } from '@tauri-apps/plugin-shell';
 
 const config = useConfig();
 const installer = useInstaller();
 
 const sshPublicKey = Vue.computed(() => config.security.sshPublicKey);
+
+const addSshPublicKey = Vue.computed(() => {
+  const key = config.security.sshPublicKey.trim();
+
+  return `echo "${key}" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
+});
 
 const scrollContainer = Vue.ref<HTMLDivElement>();
 
@@ -276,11 +643,13 @@ const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
 
+const sshUser = Vue.ref('');
 const ipAddress = Vue.ref(config.serverDetails.ipAddress ?? '');
 const hasIpAddressError = Vue.ref(false);
 const hasServerDetailsError = Vue.ref(false);
-
-const dialogPanel = Vue.ref(null);
+const selectedTab = Vue.ref('do');
+const showDetailedServerInstructions = Vue.ref(false);
+const setAlwaysOn = Vue.ref(true);
 const copyToClipboard = Vue.ref<typeof CopyToClipboard>();
 
 basicEmitter.on('openServerConnectOverlay', async () => {
@@ -288,7 +657,7 @@ basicEmitter.on('openServerConnectOverlay', async () => {
   isLoaded.value = true;
 });
 
-const closeOverlay = () => {
+const cancelOverlay = () => {
   isOpen.value = false;
   isLoaded.value = false;
 };
@@ -304,11 +673,21 @@ async function addServer() {
     scrollContainer.value?.scrollTo({ top: scrollContainer.value.scrollHeight, behavior: 'smooth' });
     return;
   }
+  let type = ServerType.DigitalOcean;
+  if (selectedTab.value === 'do') {
+    sshUser.value = 'root';
+  } else if (selectedTab.value === 'custom') {
+    type = ServerType.AnyServer;
+  } else if (selectedTab.value === 'local') {
+    type = ServerType.Docker;
+  }
 
   try {
     const newServerDetails: IConfigServerDetails = {
       ...config.serverDetails,
       ipAddress: ipAddress.value,
+      sshUser: sshUser.value,
+      type,
     };
     const serverMeta = await SSH.tryConnection(newServerDetails, config.security.sshPrivateKeyPath);
     if (serverMeta.walletAddress && serverMeta.walletAddress !== config.miningAccount.address) {
@@ -316,12 +695,30 @@ async function addServer() {
     }
     config.serverDetails = newServerDetails;
     await config.save();
-    closeOverlay();
+    if (type === ServerType.Docker) {
+      await invokeWithTimeout('toggle_nosleep', { enable: true }, 5000);
+      await enableAutostart();
+    }
+    cancelOverlay();
   } catch (error) {
     console.log('error', error);
     hasServerDetailsError.value = true;
   }
   isSaving.value = false;
+}
+
+function openDockerInstallLink() {
+  const install = {
+    gnome: 'linux',
+    macos: 'mac-install',
+    windows: 'windows-install',
+  }[platformType];
+  const url = `https://docs.docker.com/desktop/setup/install/${install}/`;
+  void tauriOpenUrl(url);
+}
+
+function openDigitalOceanLink() {
+  void tauriOpenUrl('https://www.digitalocean.com#start-building-today');
 }
 
 function highlightCopiedContent() {
@@ -336,48 +733,51 @@ function highlightCopiedContent() {
 <style scoped>
 @reference "../main.css";
 
-ul[Steps] li {
-  @apply mb-5 flex flex-col gap-2;
-  header {
-    @apply text-lg font-bold;
-  }
-  [wrapper] {
-    @apply flex flex-row items-start gap-x-10;
-    & > div {
-      @apply grow;
+.ConnectOverlay {
+  h2 {
+    position: relative;
+    &:before {
+      @apply from-argon-menu-bg bg-gradient-to-r to-transparent;
+      content: '';
+      display: block;
+      width: 30px;
+      position: absolute;
+      z-index: 1;
+      left: -5px;
+      top: 0;
+      bottom: -5px;
+    }
+    &:after {
+      @apply from-argon-menu-bg bg-gradient-to-l to-transparent;
+      content: '';
+      display: block;
+      width: 30px;
+      position: absolute;
+      z-index: 1;
+      right: -5px;
+      top: 0;
+      bottom: -5px;
     }
   }
-  p {
-    @apply mb-3;
-  }
-  img {
-    @apply relative top-1 w-60 rounded-md border border-black/40 object-contain;
-  }
-}
-
-h2 {
-  position: relative;
-  &:before {
-    @apply from-argon-menu-bg bg-gradient-to-r to-transparent;
-    content: '';
-    display: block;
-    width: 30px;
-    position: absolute;
-    z-index: 1;
-    left: -5px;
-    top: 0;
-    bottom: -5px;
-  }
-  &:after {
-    @apply from-argon-menu-bg bg-gradient-to-l to-transparent;
-    content: '';
-    display: block;
-    width: 30px;
-    position: absolute;
-    z-index: 1;
-    right: -5px;
-    top: 0;
-    bottom: -5px;
+  ul[Steps] {
+    > li {
+      @apply mb-5 flex flex-col gap-2;
+    }
+    header {
+      @apply text-lg font-bold;
+    }
+    [wrapper] {
+      @apply flex flex-row items-start gap-x-10;
+      & > div {
+        @apply w-2/3;
+      }
+    }
+    p {
+      @apply mb-3;
+    }
+    td {
+      @apply pb-2;
+    }
   }
 }
 </style>

@@ -17,7 +17,7 @@ Become an Argon Miner, even if you don't know have the technical background to m
 
 The workflow will help you:
 
-- Provision a cloud machine (current providers are [`Digital Ocean`])
+- Provision a cloud machine (current providers are [`Digital Ocean`, `Custom Servers`, `Local Docker`])
 - Calculate a profitable "bid" amount
 - Configure a bidding "bot" to win 1 or more mining seats
 - Monitor your bids and earnings

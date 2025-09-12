@@ -1,10 +1,12 @@
 use log::trace;
+use nosleep::{NoSleep, NoSleepType};
 use std::fs;
 use std::path::PathBuf;
-use tauri::Emitter;
 use tauri::{AppHandle, Listener, Manager};
+use tauri::{Emitter, State};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use time::OffsetDateTime;
+use tokio::sync::Mutex;
 use utils::Utils;
 #[cfg(target_os = "macos")]
 use window_vibrancy::*;
@@ -14,6 +16,10 @@ mod security;
 mod ssh;
 mod ssh_pool;
 mod utils;
+
+struct NoSleepState {
+    nosleep: Mutex<Option<NoSleep>>,
+}
 
 #[tauri::command]
 async fn open_ssh_connection(
@@ -165,6 +171,25 @@ async fn run_db_migrations(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn toggle_nosleep(
+    nosleep_state: State<'_, NoSleepState>,
+    enable: bool,
+) -> Result<(), String> {
+    let Some(ref mut nosleep) = *nosleep_state.nosleep.lock().await else {
+        return Err("NoSleep not initialized".to_string());
+    };
+    if enable {
+        log::info!("KeepAwake enabled");
+        nosleep.start(NoSleepType::PreventUserIdleSystemSleep)
+    } else {
+        log::info!("KeepAwake disabled");
+        nosleep.stop()
+    }
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn create_zip(
     paths_with_prefixes: Vec<(PathBuf, PathBuf)>,
     zip_name: PathBuf,
@@ -288,6 +313,9 @@ pub fn run() {
 
     tauri::Builder::default()
           .on_page_load(move |window, _payload| {
+            if window.label() != "main" {
+              return;
+            }
             log::info!("Page loaded for instance '{}'", instance_name_clone);
             window.emit("tauri://page-loaded", ()).unwrap();
             window.eval(format!("window.__COMMANDER_INSTANCE__ = '{}'", instance_name_clone)).expect("Failed to set instance name in window");
@@ -304,6 +332,9 @@ pub fn run() {
             let handle = app.handle();
             let security = security::Security::load(handle).map_err(|e| e.to_string())?;
             let security_json = serde_json::to_string(&security).map_err(|e| e.to_string())?;
+
+            let  nosleep = NoSleep::new().map_err(|e| e.to_string())?;
+            app.manage(NoSleepState { nosleep: Mutex::new(Some(nosleep)) });
 
             let window = app.get_webview_window("main").unwrap();
 
@@ -333,6 +364,10 @@ pub fn run() {
         .plugin(logger.build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_autostart::Builder::new()
+                .app_name("Argon Commander")
+                .build(),
+        )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(
@@ -354,6 +389,7 @@ pub fn run() {
             overwrite_mnemonic,
             run_db_migrations,
             create_zip,
+            toggle_nosleep,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

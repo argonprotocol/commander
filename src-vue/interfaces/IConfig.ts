@@ -37,9 +37,16 @@ export enum PanelKey {
   Vaulting = 'Vaulting',
 }
 
+export enum ServerType {
+  DigitalOcean = 'DigitalOcean',
+  AnyServer = 'AnyServer',
+  Docker = 'Docker',
+}
+
 export const ConfigServerDetailsSchema = z.object({
   ipAddress: z.string(),
   sshUser: z.string(),
+  type: z.nativeEnum(ServerType),
 });
 
 export const ConfigInstallStep = z.object({

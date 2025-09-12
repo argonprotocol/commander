@@ -2268,6 +2268,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tauri-apps/plugin-autostart@npm:^2.5.0":
+  version: 2.5.0
+  resolution: "@tauri-apps/plugin-autostart@npm:2.5.0"
+  dependencies:
+    "@tauri-apps/api": "npm:^2.6.0"
+  checksum: 10c0/8646ef6e3d48c1293e28ae3ac9a39bfc99ee76cd85869ba523ccca8db4eae46b36d3efb1424ac2ac8198b7e870fc34f2b442d3f3ce0a5f933e2af2c49656daa1
+  languageName: node
+  linkType: hard
+
 "@tauri-apps/plugin-dialog@npm:~2.4.0":
   version: 2.4.0
   resolution: "@tauri-apps/plugin-dialog@npm:2.4.0"
@@ -3409,6 +3418,7 @@ __metadata:
     "@tailwindcss/vite": "npm:^4.1.12"
     "@tauri-apps/api": "npm:~2.8.0"
     "@tauri-apps/cli": "npm:^2.8.2"
+    "@tauri-apps/plugin-autostart": "npm:^2.5.0"
     "@tauri-apps/plugin-dialog": "npm:~2.4.0"
     "@tauri-apps/plugin-fs": "npm:~2.4.2"
     "@tauri-apps/plugin-http": "npm:~2.5.2"

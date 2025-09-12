@@ -70,6 +70,7 @@ export default class Importer {
     const serverDetails: IConfigServerDetails = {
       ipAddress,
       sshUser: this.config.serverDetails.sshUser,
+      type: this.config.serverDetails.type,
     };
 
     const serverData = await this.fetchServerData(serverDetails, this.config.security.sshPrivateKeyPath);

@@ -3,7 +3,8 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main"
+    "main",
+    "popup-youtube"
   ],
   "permissions": [
     "core:default",
@@ -15,6 +16,7 @@
     "core:window:allow-start-dragging",
     "core:window:allow-set-fullscreen",
     "core:window:allow-toggle-maximize",
+    "core:webview:allow-create-webview-window",
     "updater:default",
     "dialog:default",
     "process:default",
