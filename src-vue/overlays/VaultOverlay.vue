@@ -8,20 +8,25 @@
 
       <DialogContent @escapeKeyDown="cancelOverlay" :aria-describedby="undefined">
         <EditBoxOverlay
+          v-if="editBoxOverlayId"
           :id="editBoxOverlayId"
           :position="editBoxOverlayPosition"
-          v-if="editBoxOverlayId"
+          :previousId="editBoxOverlayPreviousId"
+          :nextId="editBoxOverlayNextId"
           @close="editBoxOverlayId = null"
+          @goTo="(id: any) => openEditBoxOverlay(id)"
           @update:data="updateAPYs"
         />
+        <VaultTour v-if="currentTourStep" @close="closeTour" @changeStep="currentTourStep = $event" :getPositionCheck="getTourPositionCheck" />
         <div
           ref="dialogPanel"
           class="VaultOverlay absolute top-[40px] left-3 right-3 bottom-3 flex flex-col rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left z-20 transition-all focus:outline-none"
-          style="box-shadow: 0 -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255, 255, 255, 1);">
+          style="box-shadow: 0 -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255, 255, 255, 1)">
           <BgOverlay v-if="editBoxOverlayId" @close="editBoxOverlayId = null" :showWindowControls="false" rounded="md" class="z-100" />
+          <div v-if="isSuggestingTour" class="absolute inset-0 bg-black/20 z-20 rounded-md"></div>
           <div class="flex flex-col h-full w-full">
             <h2
-              class="relative text-3xl font-bold text-left border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 cursor-pointer text-[#672D73]"
+              class="relative text-3xl font-bold text-left border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 text-[#672D73]"
               style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)"
             >
               <DialogTitle as="div" class="relative z-10">Configure Your Stabilization Vault</DialogTitle>
@@ -31,36 +36,59 @@
             </h2>
 
             <div v-if="isLoaded" class="flex flex-col grow relative w-full">
-              <DialogDescription class="opacity-80 font-light py-6 pl-10 pr-[6%]">
+              <DialogDescription class="text-gray-600 font-light py-6 pl-10 pr-[6%]">
                 Vaults are special holding mechanisms that stabilize the Argon stablecoin and provide liquidity to the broader network. 
                 You can earn revenue by creating and managing these vaults. Use the screen below to configure your vault.
-                <div class="inline-block cursor-pointer text-argon-600 hover:underline decoration-dashed underline-offset-4" @click="startTour">
-                  Take the Vaulting Tour.
-                </div>
+                <PopoverRoot :open="isSuggestingTour">
+                  <PopoverTrigger asChild>
+                    <div :class="[isSuggestingTour ? '' : 'hover:underline']" class="inline-block relative cursor-pointer text-argon-600/80 hover:text-argon-800 decoration-dashed underline-offset-4 z-30" @click="startTour">
+                      <span class="relative z-10 font-semibold">Take the quick Vaulting Tour</span>
+                      <div v-if="isSuggestingTour" class="border rounded-full border-argon-600/30 bg-white/50 absolute -top-0 -left-2 -right-2 -bottom-0"></div>
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverPortal>
+                    <PopoverContent side="bottom" class="rounded-lg p-5 -translate-y-1 w-[400px] bg-white shadow-sm border border-slate-800/30 z-1000">
+                      <p class="text-gray-800 font-light">We recommend first-time vaulters start with a brief tour of how to use this overlay.</p>
+                      <div class="flex flex-row space-x-2 mt-6">
+                        <button @click="isSuggestingTour = false" tabindex="-1" class="cursor-pointer grow rounded-md border border-slate-500/30 px-4 py-1 focus:outline-none">Not Now</button>
+                        <button @click="startTour" tabindex="0" class="cursor-pointer grow rounded-md bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-4 py-1 focus:outline-none">Start Tour</button>
+                      </div>
+                      <PopoverArrow :width="24" :height="12" class="fill-white stroke-gray-400/50 shadow-2xl -mt-px" />
+                    </PopoverContent>
+                  </PopoverPortal>
+                </PopoverRoot>.
               </DialogDescription>
 
               <section class="flex flex-row border-t border-b border-slate-500/30 text-center pt-8 pb-8 px-3.5 mx-5 justify-stretch">
                 <div class="w-1/2 flex flex-col grow">
-                  <VaultCapital align="start" :width="capitalBoxWidth" :from-overlay="true">
-                    <div PrimaryStat @mouseenter="capitalBoxWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
-                      <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
+                  <div PrimaryStat :isTouring="currentTourStep === 1" ref="capitalToCommitElement" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                    <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
+                      <tooltip side="top" content="The amount you're willing to invest in your vault">
                         Capital {{ isBrandNew ? 'to Commit' : 'Committed' }}
-                      </header>
-                      <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
-                        <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
-                          You are creating a <tooltip content="It won't be created until a subsequent step">new vault</tooltip> with a 
-                          <tooltip content="We'll show you how to fund this in the next step">total capital need</tooltip> of
-                        </div>
-                        <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
-                          <InputArgon v-model="rules.baseMicrogonCommitment" :min="1_000_000_000n" :minDecimals="0" class="focus:outline-none" />
-                        </div>
-                        <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
-                          This capital will allow you to secure {{ numeral(btcSpaceAvailable).format('0,0.[00000000]') }} in BTC<br/>
-                          with a corresponding treasury pool investment of {{ microgonToArgonNm(poolSpace).format('0,0.[00]') }} argons.
-                        </div>
+                      </tooltip>
+                    </header>
+                    <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
+                      <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
+                        You are <tooltip content="We'll show you how to create it in the next step">creating a new vault</tooltip> with a 
+                        <tooltip content="This includes everything, even transaction fees">total capital need</tooltip> of
+                      </div>
+                      <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
+                        <InputArgon v-model="rules.baseMicrogonCommitment" :min="1_000_000_000n" :minDecimals="0" class="focus:outline-none" />
+                        <CapitalOverlay align="end">
+                          <div class="relative ml-1 w-10 h-10">
+                            <PiechartIcon PiechartIcon class="absolute top-0 left-0 w-10 h-10 text-gray-300 hover:!text-argon-600 pointer-events-none" />
+                          </div>
+                        </CapitalOverlay>
+                      </div>
+                      <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
+                        <tooltip content="The amount shown is what you're are committing">This capital</tooltip> will allow you to
+                        <tooltip content="The total amount of bitcoin your vault can lock">secure {{ numeral(btcSpaceAvailable).format('0,0.[00000000]') }} in BTC</tooltip><br/>
+                        with a
+                        <tooltip content="This is funded by revenue from mining auctions">treasury pool</tooltip> investment <tooltip content="You are not required to participate in the treasury">options</tooltip> of 
+                        <tooltip content="This can be invested by yourself or third parties">{{ microgonToArgonNm(poolSpace).format('0,0.[00]') }} argons</tooltip>.
                       </div>
                     </div>
-                  </VaultCapital>
+                  </div>
                 </div>
 
                 <div class="flex flex-col items-center justify-center text-3xl mx-2 text-center">
@@ -70,82 +98,97 @@
                 </div>
 
                 <div class="w-1/2 flex flex-col grow">
-                  <VaultReturns align="end" :width="returnsBoxWidth">
-                    <div PrimaryStat @mouseenter="returnsBoxWidth = calculateElementWidth($event?.target as HTMLElement)" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
-                      <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
+                  <div PrimaryStat :isTouring="currentTourStep === 2" ref="returnOnCapitalElement" class="flex flex-col grow group border border-slate-500/30 rounded-lg shadow-sm">
+                    <header StatHeader class="mx-0.5 pt-5 pb-0 relative">
+                      <tooltip side="top" content="The amount you might earn on your capital">
                         Return on Capital
-                      </header>
-                      <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
-                        <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
-                          Your vault is set to earn {{ currency.symbol
-                          }}{{ microgonToMoneyNm(averageEpochEarnings).format('0,0.00') }} this epoch with an APY of
-                        </div>
-                        <div class="flex flex-row items-center justify-center grow relative h-26 text-6xl font-bold font-mono text-argon-600">
-                          {{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
-                        </div>
-                        <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full">
-                        This represents an average of your estimated vaulting<br/>
-                        returns,
-                        <template v-if="vaultLowUtilizationAPY < 999_999 || vaultHighUtilizationAPY < 999_999">
-                          which range between
-                          {{ numeral(vaultLowUtilizationAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}%
-                          and {{ numeral(vaultHighUtilizationAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}% APY.
-                        </template>
-                        <template v-else>
-                          all which are above 999,999% APY.
-                        </template>
+                      </tooltip>
+                    </header>
+                    <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
+                      <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
+                        Your <tooltip content="This is not a guarantee, simply an estimate">vault is expected</tooltip>
+                        to earn {{ currency.symbol }}{{ microgonToMoneyNm(averageEpochEarnings).format('0,0.00') }} 
+                        <tooltip content="An epoch is equivalent to ten days">per epoch</tooltip> at an <tooltip content="Annual Percent Yield">APY</tooltip> of
                       </div>
+                      <div class="flex flex-row items-center justify-center grow relative h-26 text-6xl font-bold font-mono text-argon-600">
+                        <span>~{{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%</span>
+                        <ReturnsOverlay align="start">
+                          <PiechartIcon PiechartIcon class="ml-4 w-10 h-10 text-gray-300 hover:!text-argon-600" />
+                        </ReturnsOverlay>
                       </div>
+                      <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full">
+                      This <tooltip content="It's a blended approximation that is probably wrong">represents an average</tooltip> of all your estimated vaulting<br/>
+                      returns
+                      <template v-if="vaultLowUtilizationAPY < 999_999 || vaultHighUtilizationAPY < 999_999">
+                        which range between
+                        <tooltip content="This is the minimum APY we expect">{{ numeral(vaultLowUtilizationAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}%</tooltip>
+                        and <tooltip content="This is the maximum APY we expect">{{ numeral(vaultHighUtilizationAPY).formatIfElseCapped('>=100', '0,0', '0,0.[00]', 999_999) }}%</tooltip> APY.
+                      </template>
+                      <template v-else>
+                        at the <tooltip content="Customize your projected utilization ranges below">full range of projected utilization levels</tooltip>.
+                      </template>
                     </div>
-                  </VaultReturns>
+                    </div>
+                  </div>
                 </div>
               </section>
 
-              <div class="flex flex-col relative grow px-5 text-lg">
+              <div ref="configBoxesElement" class="flex flex-col relative grow px-5 text-lg">
                 <section class="flex flex-row h-1/2 my-2">
 
-                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @click="openEditBoxOverlay($event, 'personalBtc')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
-                      <div StatHeader>Internal Bitcoin Locking</div>
-                      <div MainRule class="w-full">
-                        {{ rules.personalBtcPct }}%
-                      </div>
-                      <div class="text-gray-500/60 text-md font-mono">
-                        Your Bitcoin Commitment
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="w-[1px] bg-slate-300 mx-2"></div>
-
-                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @click="openEditBoxOverlay($event, 'securitizationRatio')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
-                      <div StatHeader>Securitization Ratio</div>
-                      <div MainRule class="w-full">
-                        {{ numeral(rules.securitizationRatio).format('0.[00]') }}
-                        <span class="font-light">to</span>
-                        1
-                      </div>
-                      <div class="text-gray-500/60 text-md font-mono">
-                        Collateral for Bitcoin
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="w-[1px] bg-slate-300 mx-2"></div>
-
-                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @click="openEditBoxOverlay($event, 'treasuryFunding')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
-                      <div StatHeader>Internal Treasury Funding</div>
-                      <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
-                        <div MainRule class="w-full">
-                          <span>{{ numeral(calculator.calculatePercentOfTreasuryClaimed()).format('0.[00]') }}%</span>
+                  <div MainWrapperParent ref="personalBtcParent" class="w-1/3">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(personalBtcParent)" side="top" content="You'll probably want to bootstrap your vault with some of your own bitcoin. The more bitcoin, the sooner you'll start earning returns.">
+                      <div MainWrapper @click="openEditBoxOverlay('personalBtc')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                        <div StatHeader>Internal Bitcoin Locking</div>
+                        <div MainRule class="flex flex-row items-center justify-center w-full">
+                          <span>{{ rules.personalBtcPct }}%</span>
+                          <EditIcon EditIcon />
+                        </div>
+                        <div class="text-gray-500/60 text-md">
+                          Your Bitcoin Commitment
                         </div>
                       </div>
-                      <div class="text-gray-500/60 text-md font-mono">
-                          Your Capital Commitment
+                    </tooltip>
+                  </div>
+
+                  <div class="w-[1px] bg-slate-300 mx-2"></div>
+
+                  <div MainWrapperParent ref="securitizationRatioParent" class="w-1/3">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(securitizationRatioParent)" side="top" content="This is the ratio of argons to bitcoins that you are committing. These argons guarantee the bitcoin holders that their assets are safe.">
+                      <div MainWrapper @click="openEditBoxOverlay('securitizationRatio')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                        <div StatHeader>Securitization Ratio</div>
+                        <div MainRule class="flex flex-row items-center justify-center w-full">
+                          <span class="flex flex-row items-center justify-center space-x-2">
+                            <span>{{ numeral(rules.securitizationRatio).format('0.[00]') }}</span>
+                            <span class="font-light">to</span>
+                            <span>1</span>
+                          </span>
+                          <EditIcon EditIcon />
+                        </div>
+                        <div class="text-gray-500/60 text-md font-mono">
+                          Collateral for Bitcoin
+                        </div>
                       </div>
-                    </div>
+                    </tooltip>
+                  </div>
+
+                  <div class="w-[1px] bg-slate-300 mx-2"></div>
+
+                  <div MainWrapperParent ref="treasuryFundingParent" class="w-1/3">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(treasuryFundingParent)" side="top" content="This is how much of the Treasury Pool you want to fund with your own capital. If you set to less than 100%, you're relying on the community to fund the rest.">
+                      <div MainWrapper @click="openEditBoxOverlay('treasuryFunding')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                        <div StatHeader>Internal Treasury Funding</div>
+                        <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
+                          <div MainRule class="flex flex-row items-center justify-center w-full">
+                            <span>{{ numeral(calculator.calculatePercentOfTreasuryClaimed()).format('0.[00]') }}%</span>
+                            <EditIcon EditIcon />
+                          </div>
+                        </div>
+                        <div class="text-gray-500/60 text-md font-mono">
+                            Your Capital Commitment
+                        </div>
+                      </div>
+                    </tooltip>
                   </div>
 
 
@@ -160,72 +203,82 @@
                 </div>
 
                 <section class="flex flex-row h-1/2 my-2">
-                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @click="openEditBoxOverlay($event, 'btcLockingFees')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
-                      <div StatHeader>Bitcoin Locking Fee</div>
-                      <div MainRule class="w-full">
-                        <span v-if="rules.personalBtcPct === 100" class="opacity-40">N/A</span>
-                        <template v-else>
-                        {{ currency.symbol }}{{ microgonToMoneyNm(rules.btcFlatFee).format('0,0.00') }} + {{ numeral(rules.btcPctFee).format('0.[00]') }}%
-                        </template>
+                  <div MainWrapperParent ref="btcLockingFeesParent" class="w-1/3">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(btcLockingFeesParent)" side="top" :content="rules.personalBtcPct === 100 ? 'You have committed 100% of the bitcoin needed to fill your vault, so no locking fees are possible.' : 'Each bitcoin transaction that locks in your vault must pay this flat fee for doing so.'">
+                      <div MainWrapper @click="openEditBoxOverlay('btcLockingFees')" class="flex flex-col w-full h-full items-center justify-center px-8">
+                        <div StatHeader>Bitcoin Locking Fee</div>
+                        <div MainRule class="flex flex-row items-center justify-center w-full">
+                          <span v-if="rules.personalBtcPct === 100" class="opacity-40">N/A</span>
+                          <span v-else>
+                          {{ currency.symbol }}{{ microgonToMoneyNm(rules.btcFlatFee).format('0,0.00') }} + {{ numeral(rules.btcPctFee).format('0.[00]') }}%
+                          </span>
+                          <EditIcon EditIcon />
+                        </div>
+                        <div class="text-gray-500/60 text-md font-mono">
+                          Per Transaction
+                        </div>
                       </div>
-                      <div class="text-gray-500/60 text-md font-mono">
-                        Per Transaction
-                      </div>
-                    </div>
+                    </tooltip>
                   </div>
 
                   <div class="w-[1px] bg-slate-300 mx-2"></div>
 
-                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @click="openEditBoxOverlay($event, 'projectedUtilization')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
-                      <div StatHeader>Projected Utilization</div>
-                      <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
-                        <div MainRule class="flex flex-row items-center justify-center w-5/12">
-                          <span>{{ rules.btcUtilizationPctMin }}%</span>
-                          <span class="text-md px-1.5 text-gray-500/60">to</span>
-                          <span>{{ rules.btcUtilizationPctMax }}%</span>
+                  <div MainWrapperParent ref="projectedUtilizationParent" class="w-1/3">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(projectedUtilizationParent)" side="top" content="This is the percentage of your capital you're willing to fund the treasury pool with.">
+                      <div MainWrapper @click="openEditBoxOverlay('projectedUtilization')" class="flex flex-col w-full h-full items-center justify-center px-4">
+                        <div StatHeader>Projected Utilization</div>
+                        <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono">
+                          <div MainRule class="flex flex-row items-center justify-center w-5/12">
+                            <span>{{ rules.btcUtilizationPctMin }}%</span>
+                            <span class="text-md px-1.5 text-gray-500/60">to</span>
+                            <span>{{ rules.btcUtilizationPctMax }}%</span>
+                            <EditIcon EditIcon />
+                          </div>
+                          <span class="text-md w-2/12 text-gray-500/60">&nbsp;and&nbsp;</span>
+                          <div MainRule class="flex flex-row items-center justify-center w-5/12">
+                            <span>{{ rules.poolUtilizationPctMin }}%</span>
+                            <span class="text-md px-1.5 text-gray-500/60">to</span>
+                            <span>{{ rules.poolUtilizationPctMax }}%</span>
+                            <EditIcon EditIcon />
+                          </div>
                         </div>
-                        <span class="text-md w-2/12 text-gray-500/60">&nbsp;and&nbsp;</span>
-                        <div MainRule class="flex flex-row items-center justify-center w-5/12">
-                          <span>{{ rules.poolUtilizationPctMin }}%</span>
-                          <span class="text-md px-1.5 text-gray-500/60">to</span>
-                          <span>{{ rules.poolUtilizationPctMax }}%</span>
+                        <div class="flex flex-row items-center justify-center px-8 w-full text-center font-mono whitespace-nowrap">
+                          <div class="flex flex-row items-center justify-center text-md px-1 text-gray-500/60 w-5/12">
+                            Bitcoin Usage
+                          </div>
+                          <span class="text-md w-2/12 text-gray-500/60">&nbsp;</span>
+                          <div class="flex flex-row items-center justify-center text-md text-gray-500/60 w-5/12">
+                            Treasury Usage
+                          </div>
                         </div>
                       </div>
-                      <div class="flex flex-row items-center justify-center px-10 w-full text-center font-mono ">
-                        <div class="flex flex-row items-center justify-center text-md px-1 text-gray-500/60 w-5/12">
-                          Bitcoin Usage
-                        </div>
-                        <span class="text-md w-2/12 text-gray-500/60">&nbsp;</span>
-                        <div class="flex flex-row items-center justify-center text-md text-gray-500/60 w-5/12">
-                          Treasury Usage
-                        </div>
-                      </div>
-                    </div>
+                    </tooltip>
                   </div>
 
                   <div class="w-[1px] bg-slate-300 mx-2"></div>
 
-                  <div MainWrapperParent class="flex flex-col items-center justify-center relative w-1/3">
-                    <div MainWrapper @click="openEditBoxOverlay($event, 'poolRevenueShare')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
-                      <div StatHeader>Treasury Revenue Split</div>
-                      <div MainRule class="w-full">
-                        <span v-if="rules.capitalForTreasuryPct === 50" class="opacity-40">N/A</span>
-                        <template v-else>
-                          {{ numeral(100 - rules.profitSharingPct).format('0.[00]') }}% <span class="opacity-40 font-light">/</span> {{ numeral(rules.profitSharingPct).format('0.[00]') }}%
-                        </template>
+                  <div MainWrapperParent ref="poolRevenueShareParent" class="w-1/3">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(poolRevenueShareParent)" side="top" :content="rules.capitalForTreasuryPct === 50? 'Since you are personally funding 100% of the Treasury Pool, there is no external capital to share profits with.' : 'Outside funders can contribute to your Treasury Pool, and in return you agree to share a portion of your profits with them.'">
+                      <div MainWrapper @click="openEditBoxOverlay('poolRevenueShare')" class="flex flex-col w-full h-full hover:bg-argon-100/20 items-center justify-center cursor-pointer">
+                        <div StatHeader>Treasury Revenue Split</div>
+                        <div MainRule class="flex flex-row items-center justify-center w-full">
+                          <span v-if="rules.capitalForTreasuryPct === 50" class="opacity-40">N/A</span>
+                          <span v-else>
+                            {{ numeral(100 - rules.profitSharingPct).format('0.[00]') }}% <span class="opacity-40 font-light">/</span> {{ numeral(rules.profitSharingPct).format('0.[00]') }}%
+                          </span>
+                          <EditIcon EditIcon />
+                        </div>
+                        <div class="text-gray-500/60 text-md font-mono">
+                          Internal vs External
+                        </div>
                       </div>
-                      <div class="text-gray-500/60 text-md font-mono">
-                        Internal vs External
-                      </div>
-                    </div>
+                    </tooltip>
                   </div>
 
                 </section>
               </div>
             </div>
-            <div v-else>Loading...</div>
+            <div v-else class="grow flex items-center justify-center">Loading...</div>
 
             <div class="flex flex-row justify-end border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
               <div class="flex flex-row space-x-4 justify-center items-center">
@@ -233,10 +286,12 @@
                 <button @click="cancelOverlay" class="border border-argon-button/50 text-xl font-bold text-gray-500 px-7 py-1 rounded-md cursor-pointer">
                   <span>Cancel</span>
                 </button>
-                <button @click="saveRules" class="bg-argon-button text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
-                  <span v-if="!isSaving">{{ isBrandNew ? 'Initialize' : 'Update' }} Rules</span>
-                  <span v-else>{{ isBrandNew ? 'Initializing' : 'Updating' }} Rules...</span>
-                </button>
+                <tooltip asChild :calculateWidth="() => calculateElementWidth(saveButtonElement)" side="top" content="Clicking this button does not commit you to anything.">
+                  <button @click="saveRules" ref="saveButtonElement" class="bg-argon-button text-xl font-bold text-white px-7 py-1 rounded-md cursor-pointer">
+                    <span v-if="!isSaving">{{ isBrandNew ? 'Initialize' : 'Update' }} Rules</span>
+                    <span v-else>{{ isBrandNew ? 'Initializing' : 'Updating' }} Rules...</span>
+                  </button>
+                </tooltip>
               </div>
             </div>
 
@@ -262,9 +317,14 @@ import { JsonExt } from '@argonprotocol/commander-core';
 import IVaultingRules from '../interfaces/IVaultingRules';
 import InputArgon from '../components/InputArgon.vue';
 import ExistingNetworkVaultsOverlayButton from './ExistingNetworkVaultsOverlayButton.vue';
-import VaultCapital from './vault/VaultCapital.vue';
-import VaultReturns from './vault/VaultReturns.vue';
+import CapitalOverlay from './vault/VaultCapital.vue';
+import ReturnsOverlay from './vault/VaultReturns.vue';
+import VaultTour from './VaultTour.vue';
+import { PopoverRoot, PopoverTrigger, PopoverContent, PopoverPortal, PopoverArrow } from 'reka-ui';
+import PiechartIcon from '../assets/piechart.svg?component';
+import EditIcon from '../assets/edit.svg?component';
 import Tooltip from '../components/Tooltip.vue';
+import { ITourPos } from '../stores/tour';
 
 const config = useConfig();
 const currency = useCurrency();
@@ -279,18 +339,40 @@ const rules = Vue.computed(() => {
 const calculator = getVaultCalculator();
 
 const isBrandNew = Vue.ref(true);
+const isSuggestingTour = Vue.ref(isBrandNew.value);
+const currentTourStep = Vue.ref<number>(0);
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
 
-const capitalBoxWidth = Vue.ref('');
-const returnsBoxWidth = Vue.ref('');
+const capitalToCommitElement = Vue.ref<HTMLElement | null>(null);
+const returnOnCapitalElement = Vue.ref<HTMLElement | null>(null);
+const configBoxesElement = Vue.ref<HTMLElement | null>(null);
+const saveButtonElement = Vue.ref<HTMLElement | null>(null);
+
+const personalBtcParent = Vue.ref<HTMLElement | null>(null);
+const securitizationRatioParent = Vue.ref<HTMLElement | null>(null);
+const treasuryFundingParent = Vue.ref<HTMLElement | null>(null);
+const btcLockingFeesParent = Vue.ref<HTMLElement | null>(null);
+const projectedUtilizationParent = Vue.ref<HTMLElement | null>(null);
+const poolRevenueShareParent = Vue.ref<HTMLElement | null>(null);
+
+const editBoxParents: Record<IEditBoxOverlayTypeForVaulting, Vue.Ref<HTMLElement | null>> = {
+  personalBtc: personalBtcParent,
+  securitizationRatio: securitizationRatioParent,
+  treasuryFunding: treasuryFundingParent,
+  btcLockingFees: btcLockingFeesParent,
+  projectedUtilization: projectedUtilizationParent,
+  poolRevenueShare: poolRevenueShareParent,
+};
 
 const averageAPY = Vue.ref(0);
 const averageEpochEarnings = Vue.ref(0n);
 
 const editBoxOverlayId = Vue.ref<IEditBoxOverlayTypeForVaulting | null>(null);
 const editBoxOverlayPosition = Vue.ref<{ top?: number; left?: number; width?: number } | undefined>(undefined);
+const editBoxOverlayPreviousId = Vue.ref<IEditBoxOverlayTypeForVaulting | undefined>();
+const editBoxOverlayNextId = Vue.ref<IEditBoxOverlayTypeForVaulting | undefined>();
 const dialogPanel = Vue.ref(null);
 
 const vaultLowUtilizationAPY = Vue.ref(0);
@@ -304,24 +386,78 @@ const poolSpace = Vue.ref(0n);
 const hasExternalPoolCapitalLow = Vue.ref(false);
 const hasExternalPoolCapitalHigh = Vue.ref(false);
 
-function calculateElementWidth(element: HTMLElement) {
-  return element.getBoundingClientRect().width + 'px';
+function getTourPositionCheck(name: string): ITourPos {
+  if (name === 'capitalToCommit') {
+    const rect = capitalToCommitElement.value?.getBoundingClientRect() as DOMRect;
+    return {
+      left: rect.left,
+      top: rect.top,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+      width: rect.width,
+      height: rect.height,
+    };
+  } else if (name === 'returnOnCapital') {
+    const rect = returnOnCapitalElement.value?.getBoundingClientRect() as DOMRect;
+    return {
+      left: rect.left,
+      top: rect.top,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+      width: rect.width,
+      height: rect.height,
+    };
+  } else if (name === 'configBoxes') {
+    const rect = configBoxesElement.value?.getBoundingClientRect() as DOMRect;
+    const left = rect.left + 20;
+    const width = rect.width - 40;
+    return {
+      left: left,
+      top: rect.top,
+      right: left + width,
+      bottom: rect.top + rect.height,
+      width: width,
+      height: rect.height,
+    };
+  } else if (name === 'saveButton') {
+    const rect = saveButtonElement.value?.getBoundingClientRect() as DOMRect;
+    const left = rect.left - 10;
+    const width = rect.width + 20;
+    const top = rect.top - 10;
+    const height = rect.height + 20;
+    return { left: left, top: top, right: left + width, bottom: top + height, width: width, height: height };
+  } else {
+    return { left: 100, top: 100, right: 200, bottom: 200, width: 100, height: 100 };
+  }
 }
 
-function openEditBoxOverlay($event: MouseEvent, type: IEditBoxOverlayTypeForVaulting) {
-  const parent = ($event.target as HTMLElement).closest('[MainWrapperParent]');
+function calculateElementWidth(element: HTMLElement | null) {
+  if (!element) return;
+  const elementWidth = element.getBoundingClientRect().width;
+  return `${elementWidth}px`;
+}
+
+function openEditBoxOverlay(id: IEditBoxOverlayTypeForVaulting) {
+  const parent = editBoxParents[id as keyof typeof editBoxParents].value as HTMLElement | null;
   const rect = parent?.getBoundingClientRect() as DOMRect;
   editBoxOverlayPosition.value = {
     top: rect.top,
     left: rect.left,
     width: rect.width,
   };
-  editBoxOverlayId.value = type;
+  const editBoxOverlayIds = Object.keys(editBoxParents) as IEditBoxOverlayTypeForVaulting[];
+  const idIndex = editBoxOverlayIds.indexOf(id);
+  editBoxOverlayId.value = id;
+  editBoxOverlayPreviousId.value = editBoxOverlayIds[idIndex - 1] as IEditBoxOverlayTypeForVaulting | undefined;
+  editBoxOverlayPreviousId.value ??= editBoxOverlayIds[editBoxOverlayIds.length - 1] as
+    | IEditBoxOverlayTypeForVaulting
+    | undefined;
+  editBoxOverlayNextId.value = editBoxOverlayIds[idIndex + 1] as IEditBoxOverlayTypeForVaulting | undefined;
+  editBoxOverlayNextId.value ??= editBoxOverlayIds[0] as IEditBoxOverlayTypeForVaulting | undefined;
 }
 
 function cancelOverlay() {
   if (editBoxOverlayId.value) return;
-
   isOpen.value = false;
 
   if (previousVaultingRules) {
@@ -362,7 +498,12 @@ function updateAPYs() {
 }
 
 function startTour() {
-  // TODO: Implement
+  currentTourStep.value = 1;
+  isSuggestingTour.value = false;
+}
+
+function closeTour() {
+  currentTourStep.value = 0;
 }
 
 Vue.watch(

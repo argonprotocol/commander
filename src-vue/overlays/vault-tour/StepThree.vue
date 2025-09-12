@@ -39,7 +39,7 @@
           </h3>
 
           <p>
-            These six boxes contain all the configuration settings for your mining operations. Click on any box to see
+            These six boxes contain all the configuration settings for your vaulting operations. Click on any box to see
             more details or make adjustments. We've set some defaults to get you started.
           </p>
 

@@ -32,20 +32,24 @@
       </span>
 
       <div NumArrows v-if="!props.disabled" class="flex flex-col mr-2">
-        <NumArrow NumArrowUp
-          @pointerdown="handlePointerDown"
-          @pointerup="handlePointerUp"
-          @pointermove="emitDrag"
-          @pointercancel="handlePointerUp"
-          class="relative top-[1px] size-[12px] text-gray-300 cursor-pointer hover:text-gray-600"
-        />
-        <NumArrow NumArrowDown
-          @pointerdown="handlePointerDown"
-          @pointerup="handlePointerUp"
-          @pointermove="emitDrag"
-          @pointercancel="handlePointerUp"
-          class="relative top-[-1px] size-[12px] text-gray-300 rotate-180 cursor-pointer hover:text-gray-600"
-        />
+        <tooltip side="top" content="Click or drag">
+          <NumArrow NumArrowUp
+            @pointerdown="handlePointerDown"
+            @pointerup="handlePointerUp"
+            @pointermove="emitDrag"
+            @pointercancel="handlePointerUp"
+            class="relative top-[1px] size-[12px] text-gray-300 cursor-pointer hover:text-gray-600"
+          />
+        </tooltip>
+        <tooltip side="bottom" content="Click or drag">
+          <NumArrow NumArrowDown
+            @pointerdown="handlePointerDown"
+            @pointerup="handlePointerUp"
+            @pointermove="emitDrag"
+            @pointercancel="handlePointerUp"
+            class="relative top-[-1px] size-[12px] text-gray-300 rotate-180 cursor-pointer hover:text-gray-600"
+          />
+        </tooltip>
       </div>
     </div>
   </div>
@@ -56,6 +60,7 @@ import * as Vue from 'vue';
 import BigNumber from 'bignumber.js';
 import NumArrow from '../assets/num-arrow.svg?component';
 import numeral from '../lib/numeral';
+import Tooltip from './Tooltip.vue';
 
 const props = withDefaults(
   defineProps<{
