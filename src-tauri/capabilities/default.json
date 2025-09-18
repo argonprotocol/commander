@@ -18,12 +18,12 @@
     "core:window:allow-toggle-maximize",
     "core:webview:allow-create-webview-window",
     "updater:default",
+    "autostart:default",
     "dialog:default",
     "process:default",
     "log:default",
     "sql:default",
     "sql:allow-execute",
-    "http:default",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     "clipboard-manager:allow-clear",
@@ -36,7 +36,10 @@
           "url": "http://127.0.0.1:*"
         },
         {
-          "url": "http://*:3000/*"
+          "url": "http://*:3260/*"
+        },
+        {
+          "url": "http://*:3261/*"
         }
       ],
       "deny": []

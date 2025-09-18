@@ -50,11 +50,11 @@ export default class Restarter {
         await server.deleteBotStorageFiles();
         await server.startBotDocker();
       }
-    }
 
-    if (toRestart.has(AdvancedRestartOption.RestartDockers)) {
-      const server = await this.getServer();
-      await server.restartDocker();
+      if (toRestart.has(AdvancedRestartOption.RestartDockers)) {
+        const server = await this.getServer();
+        await server.restartDocker();
+      }
     }
 
     if (toRestart.has(AdvancedRestartOption.ReloadAppUi)) {

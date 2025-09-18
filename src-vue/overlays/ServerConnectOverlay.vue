@@ -265,7 +265,7 @@
                               </div>
                               <input
                                 type="text"
-                                v-model="ipAddress"
+                                v-model="ipAddressAndMaybePort"
                                 placeholder="Your Server's IP Address"
                                 class="w-full rounded-md border border-slate-300 bg-white px-4 py-4" />
                             </div>
@@ -427,6 +427,16 @@
                             </p>
                             <div class="flex flex-row items-center">
                               <div class="wrapper mr-2 flex w-1/5 flex-row items-center justify-center">
+                                <div v-if="hasSshUserError" class="mb-2 rounded-md bg-red-200 p-2">
+                                  <div class="flex">
+                                    <div class="shrink-0">
+                                      <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />
+                                    </div>
+                                    <div class="ml-3">
+                                      <h3 class="text-sm font-medium text-red-800">SSH User cannot be left blank</h3>
+                                    </div>
+                                  </div>
+                                </div>
                                 <input
                                   type="text"
                                   v-model="sshUser"
@@ -447,7 +457,7 @@
                                 </div>
                                 <input
                                   type="text"
-                                  v-model="ipAddress"
+                                  v-model="ipAddressAndMaybePort"
                                   placeholder="Your Server's IP Address"
                                   class="w-full rounded-md border border-slate-300 bg-white px-4 py-4" />
                               </div>
@@ -480,6 +490,13 @@
                               <a @click="openDockerInstallLink" class="!text-argon-600 cursor-pointer">
                                 Click to Install Docker
                               </a>
+                              <p class="mt-5 text-lg font-bold text-red-500" v-if="!isDockerStarted">
+                                You must install and start Docker to use this option.
+                              </p>
+                              <p class="mt-5 text-lg font-bold text-red-700/60" v-else-if="needsOpenPorts.length">
+                                There are some network ports in use on your machine that need to be freed up:
+                                <span class="font-normal">{{ needsOpenPorts.join(', ') }}</span>
+                              </p>
                             </div>
                           </div>
 
@@ -506,7 +523,7 @@
                                     Computer Sleep
                                   </td>
                                   <td class="text-argon-800/80 p-2 pl-4 font-sans font-bold">
-                                    Your Computer Must be Set to Always On
+                                    Your Computer Must Stay Awake
                                   </td>
                                 </tr>
                               </tbody>
@@ -560,14 +577,14 @@
               </TabsContent>
             </TabsRoot>
             <div class="mx-4 mb-5 flex flex-row justify-end space-x-4 px-4">
-              <div v-if="hasServerDetailsError" class="flex grow items-center rounded-md bg-red-200 p-2 pl-4">
+              <div v-if="serverDetailsError" class="flex grow items-center rounded-md bg-red-200 p-2 pl-4">
                 <div class="flex">
                   <div class="shrink-0">
                     <ExclamationTriangleIcon class="size-5 text-red-400" aria-hidden="true" />
                   </div>
                   <div class="ml-3">
                     <h3 class="text-sm font-medium text-red-800">
-                      Failed to connect to server. Please ensure you used the correct Public Key.
+                      {{ serverDetailsError }}
                     </h3>
                   </div>
                 </div>
@@ -579,9 +596,17 @@
               </button>
               <button
                 @click="addServer"
-                class="cursor-pointer rounded-md bg-[#A600D4] px-7 py-2 text-xl font-bold text-white">
-                <span v-if="!isSaving">Add Server</span>
-                <span v-else>Adding Server...</span>
+                :disabled="!canSubmit()"
+                class="rounded-md bg-[#A600D4] px-7 py-2 text-xl font-bold text-white"
+                :class="[canSubmit() ? 'cursor-pointer' : 'cursor-normal bg-[#A600D4]/50']">
+                <template v-if="selectedTab === 'local'">
+                  <span v-if="!isSaving">Add Local Machine</span>
+                  <span v-else>Adding Local Machine...</span>
+                </template>
+                <template v-else>
+                  <span v-if="!isSaving">Add Server</span>
+                  <span v-else>Adding Server...</span>
+                </template>
               </button>
             </div>
           </div>
@@ -625,6 +650,7 @@ import { invokeWithTimeout } from '../lib/tauriApi.ts';
 import { enable as enableAutostart } from '@tauri-apps/plugin-autostart';
 import { platformType } from '../tauri-controls/utils/os.ts';
 import { open as tauriOpenUrl } from '@tauri-apps/plugin-shell';
+import { LocalMachine } from '../lib/LocalMachine.ts';
 
 const config = useConfig();
 const installer = useInstaller();
@@ -644,9 +670,13 @@ const isLoaded = Vue.ref(false);
 const isSaving = Vue.ref(false);
 
 const sshUser = Vue.ref('');
-const ipAddress = Vue.ref(config.serverDetails.ipAddress ?? '');
+const ipAddressAndMaybePort = Vue.ref(config.serverDetails.ipAddress ?? '');
+if (config.serverDetails.port && config.serverDetails.port !== 22) {
+  ipAddressAndMaybePort.value = `${ipAddressAndMaybePort.value}:${config.serverDetails.port}`;
+}
 const hasIpAddressError = Vue.ref(false);
-const hasServerDetailsError = Vue.ref(false);
+const hasSshUserError = Vue.ref(false);
+const serverDetailsError = Vue.ref('');
 const selectedTab = Vue.ref('do');
 const showDetailedServerInstructions = Vue.ref(false);
 const setAlwaysOn = Vue.ref(true);
@@ -662,36 +692,110 @@ const cancelOverlay = () => {
   isLoaded.value = false;
 };
 
+function checkIpAddress() {
+  if (ipAddressAndMaybePort.value === '') {
+    hasIpAddressError.value = true;
+    return false;
+  }
+  return true;
+}
+
+function checkSshUser() {
+  if (sshUser.value === '') {
+    hasSshUserError.value = true;
+    return false;
+  }
+  return true;
+}
+
+function canSubmit() {
+  if (hasIpAddressError.value) return false;
+  if (hasSshUserError.value) return false;
+  if (isSaving.value) return false;
+  if (selectedTab.value === 'local') {
+    if (!isDockerStarted.value) return false;
+    if (needsOpenPorts.value.length > 0) return false;
+  }
+  return true;
+}
+
 async function addServer() {
   isSaving.value = true;
   hasIpAddressError.value = false;
-  hasServerDetailsError.value = false;
-
-  if (ipAddress.value === '') {
-    hasIpAddressError.value = true;
-    isSaving.value = false;
-    scrollContainer.value?.scrollTo({ top: scrollContainer.value.scrollHeight, behavior: 'smooth' });
-    return;
-  }
-  let type = ServerType.DigitalOcean;
-  if (selectedTab.value === 'do') {
-    sshUser.value = 'root';
-  } else if (selectedTab.value === 'custom') {
-    type = ServerType.AnyServer;
-  } else if (selectedTab.value === 'local') {
-    type = ServerType.Docker;
-  }
+  hasSshUserError.value = false;
+  serverDetailsError.value = '';
 
   try {
+    let type = ServerType.DigitalOcean;
+    if (selectedTab.value === 'do') {
+      sshUser.value = 'root';
+      if (!checkIpAddress()) {
+        return;
+      }
+    } else if (selectedTab.value === 'custom') {
+      type = ServerType.AnyServer;
+      if (!checkIpAddress() || !checkSshUser()) {
+        return;
+      }
+    } else if (selectedTab.value === 'local') {
+      sshUser.value = 'root';
+      type = ServerType.Docker;
+    }
+
+    const [ipAddress, maybePort] = ipAddressAndMaybePort.value.split(':');
+
+    const port = maybePort ? parseInt(maybePort.trim(), 10) : 22;
+    if (isNaN(port) || port <= 0 || port > 65535) {
+      hasIpAddressError.value = true;
+      serverDetailsError.value = 'Invalid port number in IP address.';
+      isSaving.value = false;
+      return;
+    }
+
     const newServerDetails: IConfigServerDetails = {
       ...config.serverDetails,
-      ipAddress: ipAddress.value,
+      ipAddress,
+      port,
       sshUser: sshUser.value,
       type,
     };
-    const serverMeta = await SSH.tryConnection(newServerDetails, config.security.sshPrivateKeyPath);
-    if (serverMeta.walletAddress && serverMeta.walletAddress !== config.miningAccount.address) {
-      hasServerDetailsError.value = true;
+
+    if (type === ServerType.Docker) {
+      await checkDockerDependencies();
+      if (!isDockerStarted.value) {
+        serverDetailsError.value = 'You must start Docker before adding your local machine.';
+        return;
+      }
+      if (needsOpenPorts.value.length > 0) {
+        serverDetailsError.value = `This local machine requires some network ports that are currently in use by other applications (${String(needsOpenPorts.value.join(', '))}). Please free these ports and try again.`;
+        return;
+      }
+      try {
+        const { sshPort } = await LocalMachine.create(sshPublicKey.value);
+        newServerDetails.ipAddress = `127.0.0.1`;
+        newServerDetails.port = sshPort;
+      } catch (err) {
+        serverDetailsError.value = `Something went wrong trying to create your local Docker server. Try restarting Docker.`;
+        console.error(`Error creating local docker machine`, err);
+        return;
+      }
+    }
+
+    try {
+      const serverMeta = await SSH.tryConnection(newServerDetails, config.security.sshPrivateKeyPath);
+      if (serverMeta.walletAddress && serverMeta.walletAddress !== config.miningAccount.address) {
+        serverDetailsError.value = 'This server has a different wallet address than your mining account.';
+        return;
+      }
+    } catch (err) {
+      console.error('Error connecting to server', err);
+      if (type === ServerType.Docker) {
+        serverDetailsError.value = `Failed to connect to your local Docker server. Try restarting docker.`;
+        return;
+      } else {
+        serverDetailsError.value = `Failed to connect to server. Please ensure you used the correct Public Key.`;
+      }
+      return;
     }
     config.serverDetails = newServerDetails;
     await config.save();
@@ -701,10 +805,13 @@ async function addServer() {
     }
     cancelOverlay();
   } catch (error) {
-    console.log('error', error);
-    hasServerDetailsError.value = true;
+    serverDetailsError.value = `An unknown error occurred connecting to this machine: ${String(error)}`;
+  } finally {
+    isSaving.value = false;
+    if (hasIpAddressError.value || hasSshUserError.value) {
+      scrollContainer.value?.scrollTo({ top: scrollContainer.value.scrollHeight, behavior: 'smooth' });
+    }
   }
-  isSaving.value = false;
 }
 
 function openDockerInstallLink() {
@@ -728,6 +835,42 @@ function highlightCopiedContent() {
   const inputElem = wrapperElem.querySelector('input') as HTMLInputElement;
   inputElem.select();
 }
+
+const isDockerStarted = Vue.ref(false);
+const needsOpenPorts = Vue.ref([] as number[]);
+let checkDockerInterval: number | undefined;
+
+async function checkDockerDependencies() {
+  if (checkDockerInterval) clearTimeout(checkDockerInterval);
+  try {
+    isDockerStarted.value = await LocalMachine.isDockerRunning();
+  } catch (e) {
+    // no action
+  }
+
+  // check for blocked ports
+  try {
+    needsOpenPorts.value = await LocalMachine.checkBlockedPorts();
+  } catch (e) {
+    // no action
+  }
+  if (selectedTab.value === 'local' && (!isDockerStarted.value || needsOpenPorts.value.length > 0)) {
+    checkDockerInterval = setTimeout(checkDockerDependencies, 1000) as unknown as number;
+  }
+}
+
+Vue.watch(selectedTab, async tab => {
+  if (tab === 'local') {
+    void checkDockerDependencies();
+  } else {
+    if (checkDockerInterval) clearTimeout(checkDockerInterval);
+  }
+});
+Vue.onMounted(() => {
+  if (selectedTab.value === 'local') {
+    void checkDockerDependencies();
+  }
+});
 </script>
 
 <style scoped>

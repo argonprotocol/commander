@@ -16,6 +16,7 @@ mod security;
 mod ssh;
 mod ssh_pool;
 mod utils;
+mod vm;
 
 struct NoSleepState {
     nosleep: Mutex<Option<NoSleep>>,
@@ -390,6 +391,11 @@ pub fn run() {
             run_db_migrations,
             create_zip,
             toggle_nosleep,
+            vm::create_local_vm,
+            vm::activate_local_vm,
+            vm::remove_local_vm,
+            vm::is_docker_running,
+            vm::check_needed_ports,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

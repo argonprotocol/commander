@@ -29,6 +29,7 @@ import { getMainchainClients } from '../stores/mainchain';
 import { WalletBalances } from './WalletBalances';
 import { SECURITY } from './Env.ts';
 import { invokeWithTimeout } from './tauriApi.ts';
+import { LocalMachine } from './LocalMachine.ts';
 
 export class Config {
   public readonly version: string = packageJson.version;
@@ -148,11 +149,11 @@ export class Config {
 
         loadedData[key] = JsonExt.parse(rawValue as string);
         rawData[key as keyof typeof rawData] = rawValue as string;
-        if (key === 'serverDetails') {
+        if (key === dbFields.serverDetails) {
           // Ensure old serverDetails without type are set to DigitalOcean
           loadedData.serverDetails.type ??= ServerType.DigitalOcean;
           fieldsToSave.add(key);
-          rawData[key as keyof typeof rawData] = JsonExt.stringify(loadedData.serverDetails, 2);
+          rawData[dbFields.serverDetails] = JsonExt.stringify(loadedData.serverDetails, 2);
         }
       }
 
@@ -161,6 +162,14 @@ export class Config {
         await this._injectFirstTimeAppData(loadedData, rawData, fieldsToSave);
       }
 
+      if (loadedData.serverDetails.type === ServerType.Docker && loadedData.isMinerInstalled) {
+        const { sshPort } = await LocalMachine.activate();
+        await invokeWithTimeout('toggle_nosleep', { enable: true }, 5000);
+        loadedData.serverDetails.ipAddress = `127.0.0.1`;
+        loadedData.serverDetails.port = sshPort;
+        fieldsToSave.add(dbFields.serverDetails);
+        rawData[dbFields.serverDetails] = JsonExt.stringify(loadedData.serverDetails, 2);
+      }
       const dataToSave = Config.extractDataToSave(fieldsToSave, rawData);
       await db.configTable.insertOrReplace(dataToSave);
 
@@ -180,9 +189,6 @@ export class Config {
       this._loadedDeferred.resolve();
       if (this.miningAccountHadPreviousLife && !this.miningAccountPreviousHistory) {
         await this._bootupFromMiningAccountPreviousHistory();
-      }
-      if (this.serverDetails.type === ServerType.Docker) {
-        await invokeWithTimeout('toggle_nosleep', { enable: true }, 5000);
       }
     } catch (e) {
       this._loadedDeferred.reject(e);

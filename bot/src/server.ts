@@ -7,7 +7,7 @@ import cors from 'cors';
 import type { IBlockNumbers } from './Dockers.ts';
 import { Dockers } from './Dockers.ts';
 import type { IBotStateError, IBotStateStarting } from './interfaces/IBotStateFile.ts';
-import { MiningFrames } from '@argonprotocol/commander-core';
+import { MiningFrames, NetworkConfig } from '@argonprotocol/commander-core';
 import os from 'node:os';
 import { promises as Fs } from 'node:fs';
 
@@ -33,6 +33,8 @@ let networkName = process.env.ARGON_CHAIN ?? 'mainnet';
 if (networkName === 'local') {
   networkName = 'localnet';
 }
+// set archive url from env since we might be in docker and can't use localhost
+NetworkConfig[networkName as keyof typeof NetworkConfig].archiveUrl = requireEnv('ARCHIVE_NODE_URL');
 MiningFrames.setNetwork(networkName as any);
 
 const bot = new Bot({

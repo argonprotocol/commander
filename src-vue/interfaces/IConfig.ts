@@ -44,7 +44,8 @@ export enum ServerType {
 }
 
 export const ConfigServerDetailsSchema = z.object({
-  ipAddress: z.string(),
+  ipAddress: z.string().ip(),
+  port: z.number().optional(),
   sshUser: z.string(),
   type: z.nativeEnum(ServerType),
 });

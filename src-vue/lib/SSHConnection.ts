@@ -1,9 +1,8 @@
 import { invoke, invokeWithTimeout } from './tauriApi';
 import { listen } from '@tauri-apps/api/event';
+import { IConfigServerDetails, ServerType } from '../interfaces/IConfig.ts';
 
-export interface ISSHConfig {
-  address: string;
-  username: string;
+export interface ISSHConfig extends IConfigServerDetails {
   privateKeyPath?: string;
 }
 
@@ -11,26 +10,30 @@ export class SSHConnection {
   public isConnected = false;
   public isConnectedPromise?: Promise<void>;
 
-  public address: string;
+  public get address() {
+    return `${this.host}:${this.port}`;
+  }
+
   public host: string;
   public port: number;
   public username: string;
   public privateKeyPath?: string;
+  public isDockerHostProxy = false;
 
   constructor(sshConfig: ISSHConfig) {
-    const { host, port } = this.extractHostPort(sshConfig.address);
-    this.address = sshConfig.address;
-    this.host = host;
-    this.port = port;
-    this.username = sshConfig.username;
+    this.host = sshConfig.ipAddress;
+    this.port = sshConfig.port ?? 22;
+    this.username = sshConfig.sshUser;
     this.privateKeyPath = sshConfig.privateKeyPath;
+    this.isDockerHostProxy = sshConfig.type === ServerType.Docker;
   }
 
-  public async connect(): Promise<void> {
+  public async connect(retries = 3): Promise<void> {
     if (this.isConnectedPromise) {
       return this.isConnectedPromise;
     }
 
+    this.isConnected = false;
     this.isConnectedPromise = new Promise(async (resolve, reject) => {
       const sshConfig = {
         address: this.address,
@@ -45,13 +48,17 @@ export class SSHConnection {
       }
       try {
         await invoke('open_ssh_connection', sshConfig);
+        this.isConnected = true;
+        resolve();
       } catch (error) {
+        if (String(error).toLowerCase().includes('connection refused') && retries > 0) {
+          console.log(`Connection refused... retrying ${3 - retries + 1}/3`);
+          await new Promise(r => setTimeout(r, 1000 * (4 - retries)));
+          await this.close();
+          return this.connect(retries - 1);
+        }
         reject(error);
-        return;
       }
-      this.isConnected = true;
-      resolve();
-      this.isConnectedPromise = undefined;
     });
 
     return this.isConnectedPromise;
@@ -62,8 +69,16 @@ export class SSHConnection {
       const payload = { address: this.address, command };
       return await invokeWithTimeout('ssh_run_command', payload, timeout);
     } catch (e) {
-      if (e === 'SSHCommandMissingExitStatus' && retries < 3) {
-        console.error(`Failed to run command... retrying (${retries + 1}/3): % ${command}: ${e}`);
+      const hasRetries = retries < 3;
+      let shouldRetry = e === 'SSHCommandMissingExitStatus' && retries < 3;
+      if (String(e) === 'No SSH connection' && hasRetries) {
+        await this.close();
+        await this.connect();
+        shouldRetry = true;
+      }
+
+      if (shouldRetry) {
+        console.error(`Failed to run command... retrying (${retries + 1}/3): % ${command}`, e);
         return this.runCommandWithTimeout(command, timeout, retries + 1);
       }
       console.error(`Error running command ${command}`, e);
@@ -125,13 +140,5 @@ export class SSHConnection {
     await invokeWithTimeout('close_ssh_connection', payload, 5_000);
     this.isConnectedPromise = undefined;
     this.isConnected = false;
-  }
-
-  private extractHostPort(address: string): { host: string; port: number } {
-    if (address.includes(':')) {
-      const [host, port] = address.split(':');
-      return { host, port: parseInt(port) };
-    }
-    return { host: address, port: 22 };
   }
 }

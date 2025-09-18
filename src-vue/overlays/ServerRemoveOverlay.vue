@@ -50,6 +50,8 @@
             </button>
             <button
               @click="removeServer"
+              :disabled="isRemoving"
+              :class="{ 'opacity-50 cursor-normal': isRemoving }"
               class="bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-6 py-2 rounded-md cursor-pointer"
             >
               {{ isRemoving ? 'Removing...' : 'Confirm Remove Server' }}
@@ -69,8 +71,10 @@ import { XMarkIcon } from '@heroicons/vue/24/outline';
 import BgOverlay from '../components/BgOverlay.vue';
 import { useConfig } from '../stores/config';
 import { Config } from '../lib/Config';
-import { type IConfigInstallDetails } from '../interfaces/IConfig';
+import { type IConfigInstallDetails, ServerType } from '../interfaces/IConfig';
 import { SSH } from '../lib/SSH';
+import { invokeWithTimeout } from '../lib/tauriApi.ts';
+import { LocalMachine } from '../lib/LocalMachine.ts';
 
 const config = useConfig();
 
@@ -93,12 +97,20 @@ async function removeServer() {
   if (isRemoving.value) return;
   isRemoving.value = true;
 
+  const isLocalDocker = config.serverDetails.type === ServerType.Docker;
   config.isMinerReadyToInstall = false;
   config.isMinerInstalled = false;
   config.isMinerUpToDate = false;
-  config.serverDetails = { ...config.serverDetails, ipAddress: '' };
+  config.serverDetails = { ...config.serverDetails, ipAddress: '', port: undefined };
   config.installDetails = Config.getDefault('installDetails') as IConfigInstallDetails;
   await config.save();
+  if (isLocalDocker) {
+    try {
+      await LocalMachine.remove();
+    } catch (e) {
+      console.error('Error removing local docker machine:', e);
+    }
+  }
 
   await SSH.closeConnection();
 

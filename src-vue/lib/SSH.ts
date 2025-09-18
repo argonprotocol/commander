@@ -27,16 +27,19 @@ export class SSH {
     return this.config.serverDetails.ipAddress;
   }
 
-  public static async getOrCreateConnection(): Promise<SSHConnection> {
-    if (!this.connection) {
-      await this.config.isLoadedPromise;
-      this.connection = new SSHConnection({
-        address: this.config.serverDetails.ipAddress,
-        username: this.config.serverDetails.sshUser,
-        privateKeyPath: this.config.security.sshPrivateKeyPath,
-      });
-      await this.connection.connect();
+  public static async getOrCreateConnection(retries = 3): Promise<SSHConnection> {
+    await this.config.isLoadedPromise;
+    this.connection ??= new SSHConnection({
+      ...this.config.serverDetails,
+      privateKeyPath: this.config.security.sshPrivateKeyPath,
+    });
+    try {
+      await this.connection.connect(retries);
+    } catch (e) {
+      this.connection = undefined;
+      throw e;
     }
+
     return this.connection;
   }
 
@@ -45,11 +48,10 @@ export class SSH {
     sshPrivateKeyPath: string,
   ): Promise<ITryServerData> {
     const connection = new SSHConnection({
-      address: serverDetails.ipAddress,
-      username: serverDetails.sshUser,
+      ...serverDetails,
       privateKeyPath: sshPrivateKeyPath,
     });
-    await connection.connect();
+    await connection.connect(0);
     const server = new Server(connection);
     const walletAddress = await server.downloadAccountAddress();
     this.connection = connection; // save the working connection

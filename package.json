@@ -17,12 +17,18 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "sh -c 'TAURI_PORT=${COMMANDER_INSTANCE##*:}; if [ \"$TAURI_PORT\" = \"$COMMANDER_INSTANCE\" ]; then unset TAURI_PORT; fi; yarn tauri dev --config=\"{\\\"build\\\":{\\\"devUrl\\\":\\\"http://localhost:${TAURI_PORT:-1420}\\\"}}\"'",
+    "tauri:dev:local": "NODE_ENV=localnet yarn tauri:dev",
     "lint": "prettier -w bot core src-vue cli",
     "lint:check": "prettier --check bot core cli src-vue && eslint bot core cli src-vue --ext .ts --cache --max-warnings=0",
     "eslint": "eslint bot core cli src-vue --ext .ts --cache --fix",
     "test": "vitest --run",
     "typecheck": "vue-tsc --noEmit && yarn workspaces foreach --all run tsc --noEmit",
     "update-data": "tsx data-generators/all.ts",
+    "docker:clean": "yarn docker:local down -v && yarn docker:argon down",
+    "docker:local": "docker compose -f docker-compose.yml",
+    "docker:argon": "docker compose -f ../mainchain/docker-compose.yml --profile=pricing --env-file=../mainchain/.env.local",
+    "docker:build": "yarn docker:argon up --build && yarn docker:local --build",
+    "docker:up": "yarn docker:clean && yarn docker:argon up -d && yarn docker:local up -d",
     "prepare": "husky"
   },
   "dependencies": {

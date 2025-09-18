@@ -5,6 +5,13 @@ DEBUG_LOG="/tmp/installer_debug.log"
 
 SCRIPT_PATH="$(readlink -f "$0")"
 SCRIPTS_DIR="$(dirname "$SCRIPT_PATH")"
+NEEDS_FULL_SETUP=true
+LOCALHOST=127.0.0.1
+if [ "$IS_DOCKER_HOST_PROXY" = "true" ]; then
+  echo "Local install detected, skipping some setup steps"
+  NEEDS_FULL_SETUP=false
+  LOCALHOST=host.docker.internal
+fi
 
 # Prevent recursive execution
 if [ "$PPID" != "1" ]; then
@@ -126,6 +133,10 @@ if ! (already_ran "UbuntuCheck"); then
     echo "-----------------------------------------------------------------"
     echo "SETTING UP UFW FIREWALL RULES"
 
+    run_command "sudo apt update"
+
+    run_command "sudo apt install -y ufw curl jq bc"
+
     command_output=$(run_command "sudo ufw app list | grep -q '^OpenSSH$' && echo 'OpenSSH found' || echo 'OpenSSH not found'")
     if echo "$command_output" | grep -q 'OpenSSH found'; then
         echo "OpenSSH is already installed, allowing OpenSSH through UFW"
@@ -136,28 +147,30 @@ if ! (already_ran "UbuntuCheck"); then
 
     run_command "sudo ufw --force enable"
 
-    echo "-----------------------------------------------------------------"
-    echo "INSTALLING auditd and fail2ban"
-    run_command "sudo apt install -y auditd fail2ban"
+    if [ "$NEEDS_FULL_SETUP" = true ]; then
+        echo "-----------------------------------------------------------------"
+        echo "INSTALLING auditd and fail2ban"
+        run_command "sudo apt install -y auditd fail2ban"
 
-    run_command "cp $SCRIPTS_DIR/conf/auditd_hardening.rules /etc/audit/rules.d/hardening.rules"
-    run_command "sudo augenrules --load"
+        run_command "cp $SCRIPTS_DIR/conf/auditd_hardening.rules /etc/audit/rules.d/hardening.rules"
+        run_command "sudo augenrules --load"
 
-    run_command "sed -i 's/^max_log_file *=.*/max_log_file = 200/' /etc/audit/auditd.conf"
-    run_command "sed -i 's/^max_log_file_action *=.*/max_log_file_action = rotate/' /etc/audit/auditd.conf"
-    run_command "sed -i 's/^space_left_action *=.*/space_left_action = email/' /etc/audit/auditd.conf"
-    run_command "sed -i 's/^admin_space_left_action *=.*/admin_space_left_action = single/' /etc/audit/auditd.conf"
-    run_command "sed -i 's/^disk_full_action *=.*/disk_full_action = ignore/' /etc/audit/auditd.conf"
-    run_command "sed -i 's/^disk_error_action *=.*/disk_error_action = ignore/' /etc/audit/auditd.conf"
-    run_command "sed -i 's/^num_logs *=.*/num_logs = 10/' /etc/audit/auditd.conf"
+        run_command "sed -i 's/^max_log_file *=.*/max_log_file = 200/' /etc/audit/auditd.conf"
+        run_command "sed -i 's/^max_log_file_action *=.*/max_log_file_action = rotate/' /etc/audit/auditd.conf"
+        run_command "sed -i 's/^space_left_action *=.*/space_left_action = email/' /etc/audit/auditd.conf"
+        run_command "sed -i 's/^admin_space_left_action *=.*/admin_space_left_action = single/' /etc/audit/auditd.conf"
+        run_command "sed -i 's/^disk_full_action *=.*/disk_full_action = ignore/' /etc/audit/auditd.conf"
+        run_command "sed -i 's/^disk_error_action *=.*/disk_error_action = ignore/' /etc/audit/auditd.conf"
+        run_command "sed -i 's/^num_logs *=.*/num_logs = 10/' /etc/audit/auditd.conf"
 
-    run_command "sudo systemctl restart auditd"
+        run_command "sudo systemctl restart auditd"
 
-    run_command "mkdir -p /etc/fail2ban/jail.d || true"
-    run_command "cp $SCRIPTS_DIR/conf/fail2ban_sshd.local /etc/fail2ban/jail.d/sshd.local"
-    run_command "cp $SCRIPTS_DIR/conf/fail2ban_recidive.local /etc/fail2ban/jail.d/recidive.local"
-    run_command "sudo systemctl enable fail2ban --now"
-    run_command "sudo systemctl restart fail2ban"
+        run_command "mkdir -p /etc/fail2ban/jail.d || true"
+        run_command "cp $SCRIPTS_DIR/conf/fail2ban_sshd.local /etc/fail2ban/jail.d/sshd.local"
+        run_command "cp $SCRIPTS_DIR/conf/fail2ban_recidive.local /etc/fail2ban/jail.d/recidive.local"
+        run_command "sudo systemctl enable fail2ban --now"
+        run_command "sudo systemctl restart fail2ban"
+    fi
 
     finish "UbuntuCheck"
 fi
@@ -182,7 +195,6 @@ if ! (already_ran "DockerInstall"); then
         gnupg \
         lsb-release"
 
-
     run_command "sudo mkdir -p /etc/apt/keyrings"
     run_command "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
         sudo gpg --yes --dearmor -o /etc/apt/keyrings/docker.gpg"
@@ -193,12 +205,21 @@ if ! (already_ran "DockerInstall"); then
         $(lsb_release -cs) stable" | \
         sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-    run_command "sudo apt update"
-    run_command "sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
 
-    run_command "sudo systemctl status docker"
+    run_command "sudo apt update"
+
+    if [ "$NEEDS_FULL_SETUP" = false ]; then
+      echo "Local install detected, installing only docker CLI and compose plugin"
+      run_command "sudo apt install -y docker-cli docker-compose-plugin"
+    else
+      echo "Remote install detected, installing full Docker engine"
+      run_command "sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
+      run_command "sudo systemctl enable docker --now"
+      run_command "sudo systemctl status docker"
+    fi
 
     run_command "sudo docker system prune -af --volumes >/dev/null 2>&1 || true"
+
     command_output=$(run_command "docker --version")
 
     # Extract version numbers from the output - handle both 2 and 3 number versions
@@ -225,14 +246,13 @@ if ! (already_ran "BitcoinInstall"); then
     echo "-----------------------------------------------------------------"
     echo "BUILDING BITCOIN FOR $ARGON_CHAIN"
 
-    command_output=$(run_command "cat .env.$ARGON_CHAIN | grep -E '^BITCOIN_P2P_PORT=' | cut -d'=' -f2")
+    command_output=$(run_command "cat .env | grep -E '^BITCOIN_P2P_PORT=' | cut -d'=' -f2")
     if [ -z "$command_output" ]; then
-        failed "BITCOIN_P2P_PORT not found in .env.$ARGON_CHAIN"
+        failed "BITCOIN_P2P_PORT not found in .env"
     fi
     run_command "ufw allow $command_output/tcp"
 
-
-    command_output=$(run_command "docker compose --env-file=.env.$ARGON_CHAIN build bitcoin")
+    command_output=$(run_command "docker compose build bitcoin status")
     if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
         failed "no configuration file provided: not found"
     fi
@@ -244,22 +264,40 @@ if ! (already_ran "BitcoinInstall"); then
 
     # echo "-----------------------------------------------------------------"
     # echo "RUNNING BITCOIN-DATA CONTAINER"
-#    command_output=$(run_command "docker compose --env-file=.env.$ARGON_CHAIN run --remove-orphans --pull=always bitcoin-data")
+#    command_output=$(run_command "docker compose run --remove-orphans --pull=always bitcoin-data")
 #    if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
 #         failed "no configuration file provided: not found"
 #    fi
 
-    command_output=$(run_command "docker compose --env-file=.env.$ARGON_CHAIN up bitcoin -d --build --force-recreate")
+    ## TODO: we should keep track of the env vars used to build the image and if they change, we should
+    ##  --force-recreate, otherwise this is tearing down the container every time the installer runs
+    command_output=$(run_command "docker compose up bitcoin -d --build --force-recreate")
     if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
         failed "no configuration file provided: not found"
     fi
 
     # Loop until syncstatus is >= 100%
+    failures=0
     while true; do
         sleep 1
-        command_output=$(run_command "docker exec server-bitcoin-1 syncstatus.sh")
-        percent_value=$(echo "$command_output" | tr -d '%')
-        if (( $(echo "$percent_value >= 100" | bc -l) )); then
+        command_output=$(run_command "curl -s http://${LOCALHOST}:3261/bitcoin/syncstatus" )
+
+        # Check if command failed
+        if [[ -z "$command_output" ]] || \
+           ! echo "$command_output" | jq empty >/dev/null 2>&1 || \
+           echo "$command_output" | jq -e '.error?' >/dev/null 2>&1; then
+         failures=$((failures + 1))
+         if [ "$failures" -ge 5 ]; then
+           failed "Bitcoin syncstatus returned error JSON too many times"
+         fi
+         echo "Bitcoin syncstatus returned error JSON ($failures / 5), retrying..."
+         continue
+        fi
+
+        failures=0
+        percent_value=$(echo "$command_output" | jq -r '.syncPercent // 0')
+        echo "Bitcoin Sync... ($percent_value%)"
+        if (( percent_value >= 100 )); then
             echo "Bitcoin Sync is complete (>= 100%)"
             break
         else
@@ -279,7 +317,7 @@ if ! (already_ran "ArgonInstall"); then
 
     run_command "ufw allow 30333/tcp"
 
-    command_output=$(run_command "docker compose --env-file=.env.$ARGON_CHAIN build argon-miner")
+    command_output=$(run_command "docker compose build argon-miner")
     if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
         failed "no configuration file provided: not found"
     fi
@@ -289,32 +327,35 @@ if ! (already_ran "ArgonInstall"); then
         failed "argon-miner image was not found"
     fi
 
-    run_command "docker compose --env-file=.env.$ARGON_CHAIN build bot"
-    command_output=$(run_command "docker images")
-    if ! echo "$command_output" | grep -q "bot"; then
-        failed "bot image was not found:\n$command_output"
-    fi
-
-    command_output=$(run_command "docker compose --env-file=.env.$ARGON_CHAIN up argon-miner -d --build --force-recreate")
+    command_output=$(run_command "docker compose up argon-miner -d --build --force-recreate")
     if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
         failed "no configuration file provided: not found"
     fi
 
     # Loop until syncstatus is >= 100%
+    failures=0
     while true; do
         sleep 1
-        command_output=$(run_command "docker exec server-argon-miner-1 syncstatus.sh")
-        percent_value=$(echo "$command_output" | tr -d '%')
+        command_output=$(run_command "curl -s http://${LOCALHOST}:3261/argon/syncstatus")
+
+        # Check if the response failed
+        if [[ -z "$command_output" ]] || \
+           ! echo "$command_output" | jq empty >/dev/null 2>&1 || \
+           echo "$command_output" | jq -e '.error?' >/dev/null 2>&1; then
+         failures=$((failures + 1))
+         if [ "$failures" -ge 5 ]; then
+           failed "Argon syncstatus returned error JSON too many times"
+         fi
+         echo "Argon syncstatus returned error JSON ($failures / 5), retrying..."
+         continue
+        fi
+
+        failures=0
+        percent_value=$(echo "$command_output" | jq -r '.syncPercent // 0')
         echo "Argon Sync... ($percent_value%)"
-        if (( $(echo "$percent_value >= 100" | bc -l) )); then
+        if (( percent_value >= 100 )); then
             echo "Argon Sync is complete (>= 100%)"
             break
-        fi
-        command_output=$(run_command "docker exec server-argon-miner-1 iscomplete.sh")
-        if [[ "$command_output" != "true" && "$command_output" != "false" && "$command_output" != "" ]]; then
-            failed "Argon iscomplete.sh has error: $command_output"
-        elif [[ "$command_output" == "" ]]; then
-            echo "Argon iscomplete.sh is empty: $command_output"
         fi
     done
 
@@ -328,11 +369,16 @@ start "MiningLaunch"
 echo "-----------------------------------------------------------------"
 echo "STARTING BOT ON $ARGON_CHAIN"
 
-run_command "docker compose --env-file=.env.$ARGON_CHAIN up bot -d --build --force-recreate"
+run_command "docker compose build bot"
+command_output=$(run_command "docker images")
+if ! echo "$command_output" | grep -q "bot"; then
+    failed "bot image was not found:\n$command_output"
+fi
+run_command "docker compose up bot -d --build --force-recreate"
 
 while true; do
     sleep 1
-    RESPONSE=$(curl -s -w "\n%{http_code}" "http://127.0.0.1:3000/state" || echo -e "\n000")
+    RESPONSE=$(curl -s -w "\n%{http_code}" "http://127.0.0.1:3260/state" || echo -e "\n000")
     echo "$RESPONSE"
     status=${RESPONSE##*$'\n'}        # last line
     json=${RESPONSE%$'\n'*}           # all but last line
@@ -340,7 +386,7 @@ while true; do
       ready_or_sync=$(
         jq -r '((.isSyncing // false) or (.isReady // false))' <<<"$json" 2>/dev/null || echo false
       )
-      if [[ "$ready_or_sync" != "true" ]]; then
+      if [[ "$ready_or_sync" == "true" ]]; then
         echo "Bot is running"
         break;
       fi

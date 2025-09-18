@@ -289,7 +289,6 @@ async function runSelectedOptions() {
 }
 
 function updateDisabledOptions() {
-  console.log('On disalbig options, installer.isRunning = ', installer.isRunning);
   const isDisabled = !config.isMinerInstalled && !installer.isRunning;
   options.value[AdvancedRestartOption.RecreateLocalDatabase].isDisabled = installer.isRunning;
   options.value[AdvancedRestartOption.RestartDockers].isDisabled = isDisabled;

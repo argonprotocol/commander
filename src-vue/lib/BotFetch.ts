@@ -18,7 +18,7 @@ export class BotFetch {
       botPath = botPath.slice(1);
     }
     const ipAddress = await SSH.getIpAddress();
-    const url = `http://${ipAddress}:3000/${botPath}`;
+    const url = `http://${ipAddress}:3260/${botPath}`;
     console.log(`Fetching: ${url}`);
     const result = await fetch(url).catch(e => {
       console.error('Failed to fetch bot data:', e);

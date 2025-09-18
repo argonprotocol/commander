@@ -24,7 +24,7 @@ run_command() {
     command_exit_status=${PIPESTATUS[0]}
     if [ $command_exit_status -ne 0 ]; then
         rm "$temp_file"
-        failed $akey
+        failed "Command \"$command\" failed with exit status $command_exit_status"
     fi
     # Return the captured output
     cat "$temp_file"

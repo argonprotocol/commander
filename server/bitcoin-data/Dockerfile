@@ -1,6 +1,6 @@
 # syntax = docker/dockerfile:latest
 
-FROM --platform=linux/amd64 debian AS init-data
+FROM debian AS init-data
 ARG TAR_PATHS
 
 RUN --mount=type=bind,from=data,source=/,target=/data \
@@ -9,7 +9,7 @@ RUN --mount=type=bind,from=data,source=/,target=/data \
 
 ########################
 
-FROM --platform=linux/amd64 debian
+FROM debian
 LABEL org.opencontainers.image.source https://github.com/argonprotocol/commander-deploy
 # Make sure we put everything is separate layers so we dont trigger rate limits
 # We abuse wildcard here so it doesn't crash if some files don't exist
