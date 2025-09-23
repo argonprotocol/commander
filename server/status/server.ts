@@ -55,6 +55,18 @@ Bun.serve({
 });
 
 class ArgonApis {
+  static buildProgressFile = Bun.file(`${process.env.LOGS_DIR}/step-ArgonInstall.progress-build-argon-miner.json`);
+
+  static async dockerPercentComplete(): Promise<number> {
+    const percentComplete = await this.buildProgressFile.text().catch(() => '0');
+
+    const percent = Number(percentComplete.trim());
+    if (!percent) {
+      return percent;
+    }
+    return getRoundedPercent(percent / 100);
+  }
+
   static async latestBlocks(): Promise<IBlockNumbers> {
     const now = Date.now();
     if (cache.argon && now - cache.argon.timestamp < 2000) {
@@ -85,13 +97,23 @@ class ArgonApis {
   }
 
   static async syncStatus(): Promise<{ syncPercent: number } & IBlockNumbers> {
-    const { localNodeBlockNumber, mainNodeBlockNumber } = await this.latestBlocks();
-    let percent = Math.round((localNodeBlockNumber / mainNodeBlockNumber) * 1000) / 10;
-    if (percent >= 100) {
-      const complete = await this.isComplete();
-      if (complete !== true) percent = 99;
+    let dockerPercent = await this.dockerPercentComplete().catch(() => 0);
+    const { localNodeBlockNumber, mainNodeBlockNumber } = await this.latestBlocks().catch(() => ({
+      localNodeBlockNumber: 0,
+      mainNodeBlockNumber: 0,
+    }));
+    // if we have any blocks, docker is definitely done
+    if (localNodeBlockNumber > 0) {
+      dockerPercent = 100;
     }
-    return { syncPercent: Math.min(percent, 100), mainNodeBlockNumber, localNodeBlockNumber };
+
+    let blockSyncPercent = mainNodeBlockNumber ? getRoundedPercent(localNodeBlockNumber / mainNodeBlockNumber) : 0;
+    if (blockSyncPercent >= 100) {
+      const complete = await this.isComplete().catch(() => false);
+      if (complete !== true) blockSyncPercent = 99;
+    }
+    const syncPercent = getRoundedPercent((dockerPercent * 0.2 + blockSyncPercent * 0.8) / 100, 1);
+    return { syncPercent, mainNodeBlockNumber, localNodeBlockNumber };
   }
 
   static async getBlockNumber(url: string): Promise<number> {
@@ -106,8 +128,27 @@ class ArgonApis {
 }
 
 class BitcoinApis {
+  static dataPullProgressFile = Bun.file(`${process.env.LOGS_DIR}/step-BitcoinInstall.progress-pull-bitcoin-data.json`);
+  static buildBitcoinProgressFile = Bun.file(`${process.env.LOGS_DIR}/step-BitcoinInstall.progress-build-bitcoin.json`);
+
   static async blockchainInfo(): Promise<IBlockchainInfo> {
     return callBitcoinRpc('getblockchaininfo');
+  }
+
+  static async dockerPercentComplete(): Promise<number> {
+    const percents = await Promise.all([
+      this.dataPullProgressFile.text().catch(() => '0'),
+      this.buildBitcoinProgressFile.text().catch(() => '0'),
+    ]);
+
+    const sum = percents.reduce((acc, val) => {
+      const value = Number(val.trim());
+      if (!value) {
+        return acc;
+      }
+      return acc + value;
+    }, 0);
+    return getRoundedPercent(sum / (percents.length * 100));
   }
 
   static async latestBlocks(): Promise<IBlockNumbers> {
@@ -149,17 +190,26 @@ class BitcoinApis {
   }
 
   static async syncStatus(): Promise<{ syncPercent: number } & IBlockNumbers> {
-    const { localNodeBlockNumber, mainNodeBlockNumber } = await this.latestBlocks();
-    if (mainNodeBlockNumber === 0) {
-      throw new Error('Main node block number is zero');
+    let dockerPercent = await this.dockerPercentComplete().catch(() => 0);
+    const { localNodeBlockNumber, mainNodeBlockNumber } = await this.latestBlocks().catch(() => ({
+      localNodeBlockNumber: 0,
+      mainNodeBlockNumber: 0,
+    }));
+    // if we have any blocks, docker is definitely done
+    if (localNodeBlockNumber > 0) {
+      dockerPercent = 100;
     }
-    let percent = Math.round((localNodeBlockNumber / mainNodeBlockNumber) * 1000) / 10;
-    const localSyncedInfo = await callBitcoinRpc<Record<string, { synced: boolean }>>('getindexinfo');
+
+    let blockSyncPercent = mainNodeBlockNumber ? getRoundedPercent(localNodeBlockNumber / mainNodeBlockNumber) : 0;
+    const localSyncedInfo = await callBitcoinRpc<Record<string, { synced: boolean }>>('getindexinfo').catch(() => ({
+      na: { synced: false },
+    }));
     const localSynced = Object.values(localSyncedInfo).every(index => index.synced);
-    if (!localSynced && percent >= 100) {
-      percent = 99;
+    if (!localSynced && blockSyncPercent >= 100) {
+      blockSyncPercent = 99;
     }
-    return { syncPercent: Math.min(percent, 100), mainNodeBlockNumber, localNodeBlockNumber };
+    const syncPercent = getRoundedPercent((dockerPercent * 0.7 + blockSyncPercent * 0.3) / 100, 1);
+    return { syncPercent, mainNodeBlockNumber, localNodeBlockNumber };
   }
 
   static async recentBlocks(blockCount: number): Promise<IBitcoinBlockMeta[]> {
@@ -169,6 +219,13 @@ class BitcoinApis {
     );
     return await Promise.all(hashes.map(h => callBitcoinRpc<IBitcoinBlockMeta>('getblock', h, 1)));
   }
+}
+
+function getRoundedPercent(num: number, decimals = 1): number {
+  const factor = Math.pow(10, decimals);
+
+  const percent = Math.round(100 * num * factor) / factor;
+  return Math.min(percent, 100);
 }
 
 function safeJsonRoute(handler: (req: Request) => Promise<any>): (req: Request) => Promise<Response> {

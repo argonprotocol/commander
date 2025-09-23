@@ -1,7 +1,6 @@
 use crate::utils::Utils;
 use include_dir::{Dir, include_dir};
 use std::fs;
-use std::io::Cursor;
 use std::net::TcpListener;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::prelude::*;
@@ -10,9 +9,6 @@ use std::process::Command;
 use tauri::AppHandle;
 
 static VM_FILES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../local-machine");
-static ENV_LOCAL: &str = include_str!("../../server/.env.localnet");
-static ENV_MAINNET: &str = include_str!("../../server/.env.mainnet");
-static ENV_TESTNET: &str = include_str!("../../server/.env.testnet");
 
 pub struct Vm {
     pub ssh_port: u16,
@@ -27,16 +23,9 @@ pub fn is_docker_running(_app: AppHandle) -> bool {
 
 #[tauri::command]
 pub fn check_needed_ports() -> Result<Vec<u16>, String> {
-    let env_text = match Utils::get_network_name().as_str() {
-        "localnet" => ENV_LOCAL,
-        "mainnet" => ENV_MAINNET,
-        "testnet" => ENV_TESTNET,
-        _ => return Err("Unknown network".to_string()),
-    };
-    let env_vars = dotenvy::from_read_iter(Cursor::new(env_text));
     let mut blocked_ports = vec![];
-    for line in env_vars {
-        let (key, value) = line.map_err(|e| e.to_string())?;
+    let env_vars = Utils::get_server_env_vars()?;
+    for (key, value) in env_vars {
         if key.ends_with("_PORT") {
             if let Ok(port) = value.parse::<u16>() {
                 let is_in_use = TcpListener::bind(("0.0.0.0", port)).is_err();
@@ -145,7 +134,12 @@ impl Vm {
         if !vm_path.exists() {
             return Ok(());
         }
-        Self::run_compose_command(vm_path, &["down", "--remove-orphans", "--rmi", "all"])?;
+        let server_path = vm_path.join("server");
+        if server_path.exists() {
+            Self::run_compose_command(&server_path, &["down", "--rmi", "all"])?;
+        }
+
+        Self::run_compose_command(vm_path, &["down", "--rmi", "all"])?;
         std::fs::remove_dir_all(vm_path)
             .map_err(|e| format!("Error removing VM directory {}: {}", vm_path.display(), e))?;
 

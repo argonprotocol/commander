@@ -17,8 +17,11 @@ export class SSH {
 
   public static setConfig(config: Config): void {
     this.config = config;
-    if (this.connection) {
-      void this.reconnect();
+    if (
+      this.connection &&
+      this.connection.host !== `${this.config.serverDetails.ipAddress}:${this.config.serverDetails.port ?? 22}`
+    ) {
+      void this.closeConnection();
     }
   }
 
@@ -54,6 +57,9 @@ export class SSH {
     await connection.connect(0);
     const server = new Server(connection);
     const walletAddress = await server.downloadAccountAddress();
+    if (this.connection) {
+      void this.connection.close(true);
+    }
     this.connection = connection; // save the working connection
 
     if (!walletAddress)
@@ -73,17 +79,28 @@ export class SSH {
     };
   }
 
-  public static async runCommand(command: string, retries = 0): Promise<[string, number]> {
+  private static shouldReconnect(error: Error): boolean {
+    return error instanceof InvokeTimeout || String(error) === 'No SSH connection';
+  }
+
+  public static async runCommand(command: string, retries = 3): Promise<[string, number]> {
     const connection = await this.getOrCreateConnection();
     try {
-      const response = await connection.runCommandWithTimeout(command, 60 * 1e3);
-      return response;
+      return await connection.runCommandWithTimeout(command, 60 * 1e3);
     } catch (e) {
-      if (e instanceof InvokeTimeout) {
-        console.error('SSH command timed out, retrying...', command);
+      const hasRetries = retries > 0;
+      let shouldRetry = e === 'SSHCommandMissingExitStatus' && hasRetries;
+      if (this.shouldReconnect(e as any) && hasRetries) {
         await this.reconnect();
-        return this.runCommand(command, retries);
+        shouldRetry = true;
       }
+
+      if (shouldRetry) {
+        console.error(`SSH command timed out, retrying (${3 - retries + 1}/${3})...`, command);
+        return this.runCommand(command, retries - 1);
+      }
+      console.error(`Error running command ${command}`, e);
+
       throw e;
     }
   }
@@ -93,7 +110,7 @@ export class SSH {
     try {
       await connection.uploadFileWithTimeout(contents, remotePath, 60 * 1e3);
     } catch (e) {
-      if (e instanceof InvokeTimeout) {
+      if (this.shouldReconnect(e as any)) {
         await this.reconnect();
         return this.uploadFile(contents, remotePath);
       }
@@ -110,7 +127,7 @@ export class SSH {
     try {
       await connection.downloadFileWithTimeout(args.remotePath, args.downloadPath, args.progressCallback, 60 * 1e3);
     } catch (e) {
-      if (e instanceof InvokeTimeout) {
+      if (this.shouldReconnect(e as any)) {
         return this.reconnect().then(() => this.downloadFile(args));
       }
       throw e;
@@ -128,7 +145,7 @@ export class SSH {
 
   public static async closeConnection(): Promise<void> {
     if (this.connection) {
-      await this.connection.close();
+      await this.connection.close(true);
       this.connection = undefined;
     }
   }

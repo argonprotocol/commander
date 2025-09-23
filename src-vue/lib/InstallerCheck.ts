@@ -24,6 +24,7 @@ export class InstallerCheck {
   private config: Config;
   private cachedInstallStepStatuses: IInstallStepStatuses = {};
   private isCompletedPromise: Promise<void> | null = null;
+  private shouldContinue = true;
 
   constructor(installer: Installer, config: Config) {
     this.installer = installer;
@@ -49,8 +50,16 @@ export class InstallerCheck {
         }
 
         await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!this.shouldContinue) {
+          resolve();
+          return;
+        }
       }
     });
+  }
+
+  public stop(): void {
+    this.shouldContinue = false;
   }
 
   public async waitForInstallToComplete(): Promise<void> {

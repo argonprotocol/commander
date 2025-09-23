@@ -1,0 +1,111 @@
+name: Build and Push Bitcoin Data Snapshot
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 */12 * * *'
+
+env:
+  GHCR_PROJECT: ghcr.io/argonprotocol/commander
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - env_file: .env.testnet
+            image_name: bitcoin-data-signet
+          - env_file: .env.mainnet
+            image_name: bitcoin-data
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # required for cosign
+      packages: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Bootstrap data
+        run: docker compose --env-file=${{matrix.env_file}} run --rm --pull always bitcoin-data
+        working-directory: server
+
+      - name: Start bitcoin service
+        run: docker compose --env-file=${{matrix.env_file}} up -d bitcoin status
+        working-directory: server
+
+      - name: Wait for sync via status service
+        run: |
+          for i in {1..180}; do
+            SYNC=$(curl -s http://localhost:3261/bitcoin/syncstatus | jq -r .syncPercent)
+            if [ "$(echo "$SYNC >= 100" | bc -l)" -eq 1 ]; then
+              echo "Sync complete: $SYNC%"
+              exit 0
+            fi
+            echo "Current sync: $SYNC% (waiting...)"
+            sleep 20
+          done
+          echo "Node did not reach 100% sync in time"
+
+      - name: Get block height
+        id: height
+        run: |
+          HEIGHT=$(curl -s http://localhost:3261/bitcoin/syncstatus | jq -r .localNodeBlockNumber)
+          echo "height=$HEIGHT" >> $GITHUB_OUTPUT
+
+      - name: Stop services
+        run: docker compose --env-file=${{ matrix.env_file }} down --all
+        working-directory: server
+
+      - name: Build snapshot image
+        run: |
+          docker compose --env-file=${{ matrix.env_file }} build bitcoin-data \
+            --label snapshot.height=${{ steps.height.outputs.height }} \
+            --label snapshot.network=${{ matrix.image_name }} \
+            --label snapshot.commit=${{ github.sha }} \
+            -t ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}:${{ steps.height.outputs.height }} \
+            -t ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}:${{ github.sha }}
+        working-directory: server
+
+      - name: Push snapshot image
+        run: |
+          docker push ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}:${{ steps.height.outputs.height }}
+          docker push ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}:${{ github.sha }}
+          docker push ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}:latest
+        working-directory: server
+
+      # --- Attestation ---
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Get UTXO Hash
+        id: utxo
+        run: |
+          UTXO_HASH=$(docker compose --env-file=${{ matrix.env_file }} exec -T bitcoin \
+            bitcoin-cli --conf=$BITCOIN_CONFIG gettxoutsetinfo | jq -r .hash_serialized_2)
+          echo "utxo_hash=$UTXO_HASH" >> $GITHUB_OUTPUT
+
+      - name: Generate provenance attestations
+        run: |
+          for TAG in ${{ steps.height.outputs.height }} ${{ github.sha }}; do
+            cosign attest \
+              --yes \
+              --predicate <(echo '{
+                "snapshotHeight": "${{ steps.height.outputs.height }}",
+                "utxoHash": "${{ steps.utxo.outputs.utxo_hash }}"
+              }')
+              --type slsaprovenance \
+              ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}:$TAG
+          done

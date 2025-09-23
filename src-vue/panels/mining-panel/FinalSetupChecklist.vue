@@ -205,7 +205,7 @@ const walletIsPartiallyFunded = Vue.computed(() => {
     return false;
   }
 
-  return (wallets.totalMiningMicrogons || wallets.miningWallet.availableMicronots) > 0;
+  return (wallets.totalMiningMicrogons || wallets.miningWallet.availableMicronots) > 0n;
 });
 
 const additionalMicrogonsNeeded = Vue.computed(() => {
@@ -221,15 +221,11 @@ const walletIsFullyFunded = Vue.computed(() => {
     return false;
   }
 
-  if (!walletIsPartiallyFunded.value) {
+  if (additionalMicrogonsNeeded.value > 0n) {
     return false;
   }
 
-  if (additionalMicrogonsNeeded.value) {
-    return false;
-  }
-
-  if (additionalMicronotsNeeded.value) {
+  if (additionalMicronotsNeeded.value > 0n) {
     return false;
   }
 

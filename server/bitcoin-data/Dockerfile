@@ -1,7 +1,8 @@
 # syntax = docker/dockerfile:latest
 
-FROM debian AS init-data
+FROM --platform=linux/amd64 debian AS init-data
 ARG TAR_PATHS
+ARG REPO_URL
 
 RUN --mount=type=bind,from=data,source=/,target=/data \
 	mkdir /init-data && cd /data && \
@@ -10,7 +11,7 @@ RUN --mount=type=bind,from=data,source=/,target=/data \
 ########################
 
 FROM debian
-LABEL org.opencontainers.image.source https://github.com/argonprotocol/commander-deploy
+LABEL org.opencontainers.image.source https://github.com/argonprotocol/commander
 # Make sure we put everything is separate layers so we dont trigger rate limits
 # We abuse wildcard here so it doesn't crash if some files don't exist
 COPY --link --from=init-data /init-data/data.tar.aa* /init-data/.

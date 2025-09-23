@@ -36,3 +36,4 @@ resources/SHASUM256
 /.eslintcache
 /cli/lib/
 server/.env
+/data

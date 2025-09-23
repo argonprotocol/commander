@@ -1,7 +1,6 @@
 import { Config } from './Config';
 import { Server } from './Server';
 import { SSH } from './SSH';
-import { appDataDir, appLogDir } from '@tauri-apps/api/path';
 
 export class Diagnostics {
   private server!: Server;

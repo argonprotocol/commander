@@ -16,6 +16,7 @@ services:
     restart: unless-stopped
     volumes:
       - $ROOT/server:/server
+      - $ROOT/logs:/logs
     ports:
       - '${STATUS_PORT}:8080'
     environment:
@@ -25,16 +26,17 @@ services:
       - ARGON_LOCAL_NODE=http://argon-miner:9944
       - BITCOIN_RPC_URL=http://bitcoin:bitcoin@bitcoin:5000/
       - BITCOIN_CHAIN=${BITCOIN_CHAIN}
+      - LOGS_DIR=/logs
 
   bitcoin-data:
     <<: *common-config
-    # TODO: migrate this to commander repo
-    image: ghcr.io/argonprotocol/commander-deploy/bitcoin-data:latest
+    image: ghcr.io/argonprotocol/commander/${BITCOIN_DATA_SLUG}:latest
+    platform: linux/amd64
     build:
       context: bitcoin-data
       dockerfile: Dockerfile
       args:
-        - TAR_PATHS=blocks chainstate indexes
+        - TAR_PATHS=${BITCOIN_TAR_PATHS}
       additional_contexts:
         - data=$BITCOIN_DATA_FOLDER
     volumes:
@@ -150,4 +152,5 @@ services:
 networks:
   default:
     driver: bridge
+    external: true
     name: ${COMPOSE_PROJECT_NAME:-argon}-net

@@ -1,7 +1,7 @@
 import * as dotenv from 'dotenv';
 import { IBiddingRules, JsonExt } from '@argonprotocol/commander-core';
 import { SSHConnection } from './SSHConnection';
-import { DEPLOY_ENV_FILE, INSTANCE_NAME, NETWORK_NAME } from './Env.ts';
+import { DEPLOY_ENV_FILE, INSTANCE_NAME, NETWORK_NAME, SERVER_ENV_VARS } from './Env.ts';
 import { KeyringPair$Json } from '@argonprotocol/mainchain';
 import { SSH } from './SSH';
 import { InstallStepKey } from '../interfaces/IConfig';
@@ -158,7 +158,7 @@ export class Server {
   }
 
   public async stopMiningDockers(): Promise<void> {
-    await this.runComposeCommand(`down argon-miner `);
+    await this.runComposeCommand(`stop argon-miner `);
   }
 
   public async startMiningDockers(): Promise<void> {
@@ -177,7 +177,7 @@ export class Server {
   }
 
   public async stopBitcoinDocker(): Promise<void> {
-    await this.runComposeCommand(`down bitcoin`, 60e3);
+    await this.runComposeCommand(`stop bitcoin`, 60e3);
   }
 
   public async startBitcoinDocker(): Promise<void> {
@@ -196,7 +196,7 @@ export class Server {
   }
 
   public async stopBotDocker(): Promise<void> {
-    await this.runComposeCommand(`down bot`, 10e3);
+    await this.runComposeCommand(`stop bot`, 10e3);
   }
 
   public async startBotDocker(): Promise<void> {
@@ -237,7 +237,7 @@ export class Server {
     if (this.connection.isDockerHostProxy) {
       const fullPath = await Server.virtualMachineFolder();
       // sed replace all instances of ../ with the fullPath
-      const sedCommand = `sed -i -e "s|^ROOT=.*|ROOT=${fullPath}|" ~/server/.env`;
+      const sedCommand = `sed -i -e 's|^ROOT=.*|ROOT="${fullPath}"|' ~/server/.env`;
       await this.connection.runCommandWithTimeout(sedCommand, 10e3);
     }
     if (await this.isInstallerScriptRunning()) {
@@ -392,7 +392,7 @@ export class Server {
     const timeout = setTimeout(() => {
       aborController.abort();
     }, timeoutMs);
-    const response = await fetch(`http://${ip}:3261/${service}/${path}`, {
+    const response = await fetch(`http://${ip}:${SERVER_ENV_VARS.STATUS_PORT}/${service}/${path}`, {
       signal,
     });
     clearTimeout(timeout);

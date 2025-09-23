@@ -1,7 +1,7 @@
 import { BitcoinLocks, type PalletVaultsVaultFrameRevenue, Vault } from '@argonprotocol/mainchain';
 import { bigNumberToBigInt, FrameIterator, JsonExt, MainchainClients } from '@argonprotocol/commander-core';
 import { BaseDirectory, readTextFile, rename, writeTextFile } from '@tauri-apps/plugin-fs';
-import { getMainchainClient, getMainchainClients, getMining } from '../stores/mainchain.ts';
+import { getMainchainClient, getMainchainClients } from '../stores/mainchain.ts';
 import { IBitcoinLockRecord } from './db/BitcoinLocksTable.ts';
 import { convertBigIntStringToNumber, createDeferred, IDeferred } from './Utils.ts';
 import { IAllVaultStats, IVaultFrameStats } from '../interfaces/IVaultStats.ts';

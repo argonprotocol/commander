@@ -4,9 +4,10 @@ import { remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { AdvancedRestartOption } from '../interfaces/IAdvancedRestartOption';
 import { SSH } from './SSH';
 import { Server } from './Server';
-import { InstallStepKey } from '../interfaces/IConfig.ts';
 import { useConfig } from '../stores/config.ts';
 import { toRaw } from 'vue';
+import Installer from './Installer.ts';
+import { LocalMachine } from './LocalMachine.ts';
 
 export default class Restarter {
   private dbPromise: Promise<Db>;
@@ -25,14 +26,23 @@ export default class Restarter {
     return this._server;
   }
 
-  public async run(toRestart: Set<AdvancedRestartOption>) {
-    if (toRestart.has(AdvancedRestartOption.RecreateLocalDatabase)) {
-      await this.recreateLocalDatabase();
-    }
-
+  public async run(toRestart: Set<AdvancedRestartOption>, installer: Installer): Promise<void> {
     if (toRestart.has(AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine)) {
-      const server = await this.getServer();
-      await server.completelyWipeEverything();
+      installer.stop();
+      let server: Server | undefined;
+      try {
+        server = await this.getServer();
+      } catch (error) {
+        const errorString = String(error).toLowerCase();
+        console.log('Error connecting to server to wipe it:', errorString);
+        if (errorString.includes('connection refused') || errorString.includes('host unreachable')) {
+          // Server is likely already wiped, continue
+          if (installer.isDockerHostProxy) {
+            await LocalMachine.remove().catch(() => null);
+          }
+        }
+      }
+      await server?.completelyWipeEverything();
     } else {
       if (toRestart.has(AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine)) {
         const server = await this.getServer();
@@ -55,6 +65,11 @@ export default class Restarter {
         const server = await this.getServer();
         await server.restartDocker();
       }
+    }
+
+    if (toRestart.has(AdvancedRestartOption.RecreateLocalDatabase)) {
+      installer.stop();
+      await this.recreateLocalDatabase();
     }
 
     if (toRestart.has(AdvancedRestartOption.ReloadAppUi)) {

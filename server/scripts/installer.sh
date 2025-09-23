@@ -6,6 +6,7 @@ DEBUG_LOG="/tmp/installer_debug.log"
 SCRIPT_PATH="$(readlink -f "$0")"
 SCRIPTS_DIR="$(dirname "$SCRIPT_PATH")"
 NEEDS_FULL_SETUP=true
+export DOCKER_BUILDKIT=1
 LOCALHOST=127.0.0.1
 if [ "$IS_DOCKER_HOST_PROXY" = "true" ]; then
   echo "Local install detected, skipping some setup steps"
@@ -17,6 +18,11 @@ fi
 if [ "$PPID" != "1" ]; then
     echo "Error: This script should not be run as a child process. Please run it directly."
     exit 1
+fi
+
+# load the env file up one directory
+if [ -f "$SCRIPTS_DIR/../.env" ]; then
+  . "$SCRIPTS_DIR/../.env"
 fi
 
 # Debug logging
@@ -35,12 +41,13 @@ LOCKFILE="/tmp/installer.lock"
 
 # Function to clean up lock file on exit
 cleanup() {
+    local status=$?
     {
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Cleaning up lock file for PID $$"
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Script path: $SCRIPT_PATH"
     } >> "$DEBUG_LOG"
     rm -f "$LOCKFILE"
-    exit
+    exit $status
 }
 
 # Set up trap to clean up lock file on script exit
@@ -210,7 +217,7 @@ if ! (already_ran "DockerInstall"); then
 
     if [ "$NEEDS_FULL_SETUP" = false ]; then
       echo "Local install detected, installing only docker CLI and compose plugin"
-      run_command "sudo apt install -y docker-cli docker-compose-plugin"
+      run_command "sudo apt install -y docker-cli docker-buildx-plugin docker-compose-plugin"
     else
       echo "Remote install detected, installing full Docker engine"
       run_command "sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
@@ -236,6 +243,10 @@ if ! (already_ran "DockerInstall"); then
         failed "Docker version $version is less than required major version 27"
     fi
 
+    network_name="${COMPOSE_PROJECT_NAME:-argon}-net"
+    run_compose "docker network inspect ${network_name} >/dev/null 2>&1 || docker network create ${network_name}"
+    run_compose "docker compose up status -d --build"
+
     finish "DockerInstall" "$command_output"
 fi
 
@@ -246,46 +257,40 @@ if ! (already_ran "BitcoinInstall"); then
     echo "-----------------------------------------------------------------"
     echo "BUILDING BITCOIN FOR $ARGON_CHAIN"
 
-    command_output=$(run_command "cat .env | grep -E '^BITCOIN_P2P_PORT=' | cut -d'=' -f2")
-    if [ -z "$command_output" ]; then
-        failed "BITCOIN_P2P_PORT not found in .env"
-    fi
-    run_command "ufw allow $command_output/tcp"
-
-    command_output=$(run_command "docker compose build bitcoin status")
-    if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
-        failed "no configuration file provided: not found"
-    fi
+    run_command "ufw allow $BITCOIN_P2P_PORT/tcp"
+    run_compose "docker compose build bitcoin"
 
     command_output=$(run_command "docker images")
     if ! echo "$command_output" | grep -q "bitcoin"; then
         failed "bitcoin image was not found"
     fi
 
-    # echo "-----------------------------------------------------------------"
-    # echo "RUNNING BITCOIN-DATA CONTAINER"
-#    command_output=$(run_command "docker compose run --remove-orphans --pull=always bitcoin-data")
-#    if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
-#         failed "no configuration file provided: not found"
-#    fi
+    echo "-----------------------------------------------------------------"
+    echo "RUNNING BITCOIN-DATA CONTAINER"
+    echo "- Checking ${BITCOIN_DATA_FOLDER} for existing data"
+    if [ ! -d "$BITCOIN_DATA_FOLDER" ]; then
+      echo "Bootstrapping bitcoin-data (first run)"
+      run_compose "docker compose pull bitcoin-data"
+      run_compose "docker compose run --rm --pull=never bitcoin-data"
+      run_compose "docker rmi -f bitcoin-data:latest || true"
+    else
+      echo "bitcoin-data already initialized, skipping bootstrap"
+    fi
 
     ## TODO: we should keep track of the env vars used to build the image and if they change, we should
     ##  --force-recreate, otherwise this is tearing down the container every time the installer runs
-    command_output=$(run_command "docker compose up bitcoin -d --build --force-recreate")
-    if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
-        failed "no configuration file provided: not found"
-    fi
+    run_compose "docker compose up bitcoin -d --force-recreate"
 
     # Loop until syncstatus is >= 100%
     failures=0
     while true; do
         sleep 1
-        command_output=$(run_command "curl -s http://${LOCALHOST}:3261/bitcoin/syncstatus" )
+        command_output=$(run_command "curl -s http://${LOCALHOST}:${STATUS_PORT}/bitcoin/syncstatus" )
 
         # Check if command failed
         if [[ -z "$command_output" ]] || \
-           ! echo "$command_output" | jq empty >/dev/null 2>&1 || \
-           echo "$command_output" | jq -e '.error?' >/dev/null 2>&1; then
+           ! jq empty <<<"$command_output" >/dev/null 2>&1 || \
+           jq -e '.error? // empty' <<<"$command_output" >/dev/null 2>&1; then
          failures=$((failures + 1))
          if [ "$failures" -ge 5 ]; then
            failed "Bitcoin syncstatus returned error JSON too many times"
@@ -295,8 +300,7 @@ if ! (already_ran "BitcoinInstall"); then
         fi
 
         failures=0
-        percent_value=$(echo "$command_output" | jq -r '.syncPercent // 0')
-        echo "Bitcoin Sync... ($percent_value%)"
+        percent_value=$(echo "$command_output" | jq -r '.syncPercent // 0 | floor')
         if (( percent_value >= 100 )); then
             echo "Bitcoin Sync is complete (>= 100%)"
             break
@@ -317,31 +321,25 @@ if ! (already_ran "ArgonInstall"); then
 
     run_command "ufw allow 30333/tcp"
 
-    command_output=$(run_command "docker compose build argon-miner")
-    if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
-        failed "no configuration file provided: not found"
-    fi
+    run_compose "docker compose build argon-miner"
 
     command_output=$(run_command "docker images")
     if ! echo "$command_output" | grep -q "argon-miner"; then
         failed "argon-miner image was not found"
     fi
 
-    command_output=$(run_command "docker compose up argon-miner -d --build --force-recreate")
-    if echo "$command_output" | grep "no configuration file provided: not found" > /dev/null; then
-        failed "no configuration file provided: not found"
-    fi
+    run_compose "docker compose up argon-miner -d --force-recreate"
 
     # Loop until syncstatus is >= 100%
     failures=0
     while true; do
         sleep 1
-        command_output=$(run_command "curl -s http://${LOCALHOST}:3261/argon/syncstatus")
+        command_output=$(run_command "curl -s http://${LOCALHOST}:${STATUS_PORT}/argon/syncstatus")
 
         # Check if the response failed
         if [[ -z "$command_output" ]] || \
-           ! echo "$command_output" | jq empty >/dev/null 2>&1 || \
-           echo "$command_output" | jq -e '.error?' >/dev/null 2>&1; then
+           ! jq empty <<<"$command_output" >/dev/null 2>&1 || \
+           jq -e '.error? // empty' <<<"$command_output" >/dev/null 2>&1; then
          failures=$((failures + 1))
          if [ "$failures" -ge 5 ]; then
            failed "Argon syncstatus returned error JSON too many times"
@@ -351,7 +349,7 @@ if ! (already_ran "ArgonInstall"); then
         fi
 
         failures=0
-        percent_value=$(echo "$command_output" | jq -r '.syncPercent // 0')
+        percent_value=$(echo "$command_output" | jq -r '.syncPercent // 0 | floor')
         echo "Argon Sync... ($percent_value%)"
         if (( percent_value >= 100 )); then
             echo "Argon Sync is complete (>= 100%)"
@@ -369,16 +367,16 @@ start "MiningLaunch"
 echo "-----------------------------------------------------------------"
 echo "STARTING BOT ON $ARGON_CHAIN"
 
-run_command "docker compose build bot"
+run_compose "docker compose build bot"
 command_output=$(run_command "docker images")
 if ! echo "$command_output" | grep -q "bot"; then
     failed "bot image was not found:\n$command_output"
 fi
-run_command "docker compose up bot -d --build --force-recreate"
+run_compose "docker compose up bot -d --force-recreate"
 
 while true; do
     sleep 1
-    RESPONSE=$(curl -s -w "\n%{http_code}" "http://127.0.0.1:3260/state" || echo -e "\n000")
+    RESPONSE=$(curl -s -w "\n%{http_code}" "http://${LOCALHOST}:${BOT_PORT}/state" || echo -e "\n000")
     echo "$RESPONSE"
     status=${RESPONSE##*$'\n'}        # last line
     json=${RESPONSE%$'\n'*}           # all but last line

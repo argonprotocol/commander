@@ -311,6 +311,8 @@ pub fn run() {
 
     let network_name_clone = network_name.clone();
     let instance_name_clone = instance_name.clone();
+    let env_vars = Utils::get_server_env_vars().unwrap_or_default();
+    let env_vars_json = serde_json::to_string(&env_vars).unwrap_or_default();
 
     tauri::Builder::default()
           .on_page_load(move |window, _payload| {
@@ -322,6 +324,7 @@ pub fn run() {
             window.eval(format!("window.__COMMANDER_INSTANCE__ = '{}'", instance_name_clone)).expect("Failed to set instance name in window");
             window.eval(format!("window.__ARGON_NETWORK_NAME__ = '{}'", network_name_clone)).expect("Failed to set network name in window");
             window.eval(format!("window.__COMMANDER_ENABLE_AUTOUPDATE__ = {}", enable_auto_update)).expect("Failed to set experimental flag in window");
+            window.eval(format!("window.__SERVER_ENV_VARS__ = {}", env_vars_json)).expect("Failed to set env vars in window");
           })
         .setup(move |app| {
             log::info!(
@@ -334,7 +337,7 @@ pub fn run() {
             let security = security::Security::load(handle).map_err(|e| e.to_string())?;
             let security_json = serde_json::to_string(&security).map_err(|e| e.to_string())?;
 
-            let  nosleep = NoSleep::new().map_err(|e| e.to_string())?;
+            let nosleep = NoSleep::new().map_err(|e| e.to_string())?;
             app.manage(NoSleepState { nosleep: Mutex::new(Some(nosleep)) });
 
             let window = app.get_webview_window("main").unwrap();
