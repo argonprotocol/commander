@@ -19,7 +19,7 @@ jobs:
           - env_file: .env.mainnet
             image_name: bitcoin-data
             network: mainnet
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       id-token: write # required for cosign
@@ -41,11 +41,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create network
-        run: docker network create server-net
+        run: docker network create server-net || true
         working-directory: server
 
       - name: Bootstrap data
-        run: docker compose --env-file=${{matrix.env_file}} run --rm --pull always bitcoin-data
+        run: docker compose --env-file=${{matrix.env_file}} run --rm bitcoin-data
         working-directory: server
 
       - name: Start bitcoin service
@@ -101,7 +101,14 @@ jobs:
       - name: Shutdown bitcoin cleanly
         run: |
           docker compose --env-file=${{ matrix.env_file }} exec bitcoin sh -c 'bitcoin-cli --conf=$BITCOIN_CONFIG stop'
-          docker compose --env-file=${{ matrix.env_file }} stop bitcoin
+          echo "Waiting for bitcoin container to exit..."
+          for i in {1..60}; do
+            if ! docker compose --env-file=${{ matrix.env_file }} ps -q bitcoin | xargs docker inspect -f '{{.State.Running}}' 2>/dev/null | grep true; then
+              echo "bitcoin container has stopped"
+              break
+            fi
+            sleep 2
+          done
         working-directory: server
 
       - name: Build snapshot image
