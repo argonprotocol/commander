@@ -29,11 +29,10 @@ export class CohortBidder {
   public get client(): ArgonClient {
     return this.accountset.client;
   }
-
   public txFees = 0n;
+
   public bidsAttempted = 0;
   public myWinningBids: IBidDetail[] = [];
-
   public readonly myAddresses = new Set<string>();
 
   public readonly currentBids: {
@@ -47,7 +46,9 @@ export class CohortBidder {
     atTick: 0,
     atBlockNumber: 0,
   };
+
   private unsubscribe?: () => void;
+  private lastLoggedSeatsInBudget: number;
 
   private pendingRequest: Promise<any> | undefined;
   private isStopped = false;
@@ -103,6 +104,7 @@ export class CohortBidder {
     this.subaccounts.forEach(x => {
       this.myAddresses.add(x.address);
     });
+    this.lastLoggedSeatsInBudget = subaccounts.length;
   }
 
   public async start() {
@@ -377,7 +379,8 @@ export class CohortBidder {
       estimatedFeePlusTip,
     } = bidsets[0];
     // 3. if we have more seats than we can afford, we need to remove some
-    if (seatsInBudget < this.subaccounts.length) {
+    if (seatsInBudget < myWinningBids.length || seatsInBudget < this.lastLoggedSeatsInBudget) {
+      this.lastLoggedSeatsInBudget = seatsInBudget;
       console.log(
         `Can only afford ${seatsInBudget} seats with next bid of ${formatArgons(nextBid)} at block #${blockNumber}`,
       );
@@ -393,7 +396,7 @@ export class CohortBidder {
         availableBalanceForBids,
       });
     }
-    if (accountsToBidWith.length) {
+    if (accountsToBidWith.length > myWinningBids.length) {
       console.log(`Beatable bid price point found.`, {
         ...bidsets[0],
         accountsToBidWith: accountsToBidWith.map(x => x.index),

@@ -263,6 +263,31 @@ describe('CohortBidder unit tests', () => {
     expect(microgonsPerSeat).toBe(Argons(5));
     expect(accountsToBidWith.length).toBe(8);
   });
+
+  it("should not bid if it doesn't increase seats", async () => {
+    const { cohortBidder, submitBids } = await createBidderWithMocks(accountset, [0, 9], {
+      minBid: Argons(3),
+      maxBid: Argons(8),
+      bidIncrement: Argons(1),
+      accountBalance: Argons(40 + 0.06 - 4),
+    });
+    cohortBidder.currentBids.bids = [
+      ...createBids(3, Argons(10)),
+      ...cohortBidder.subaccounts.slice(0, 7).map(x => {
+        return { bidAtTick: 10, bidMicrogons: Argons(4), address: x.address };
+      }),
+    ];
+    cohortBidder.currentBids.atTick = 10;
+    const onBidParamsAdjusted = vi.fn();
+    cohortBidder.callbacks = {
+      onBidParamsAdjusted,
+    };
+    // @ts-expect-error - private var
+    await expect(cohortBidder.checkWinningBids()).resolves.toBeUndefined();
+    expect(submitBids).toHaveBeenCalledTimes(0);
+    expect(onBidParamsAdjusted).toHaveBeenCalledTimes(1);
+    expect(onBidParamsAdjusted.mock.calls[0][0].reason).toBe('max-budget-too-low');
+  });
 });
 
 function Argons(amount: number): bigint {
