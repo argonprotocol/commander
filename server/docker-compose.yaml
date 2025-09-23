@@ -8,16 +8,35 @@ x-common-config: &common-config
     - default
 
 services:
+  status:
+    <<: *common-config
+    build:
+      context: status
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - $ROOT/server:/server
+      - $ROOT/logs:/logs
+    ports:
+      - '${STATUS_PORT}:8080'
+    environment:
+      - PORT=8080
+      - ARGON_CHAIN=${ARGON_CHAIN}
+      - ARGON_ARCHIVE_NODE=${ARGON_ARCHIVE_NODE}
+      - ARGON_LOCAL_NODE=http://argon-miner:9944
+      - BITCOIN_RPC_URL=http://bitcoin:bitcoin@bitcoin:5000/
+      - BITCOIN_CHAIN=${BITCOIN_CHAIN}
+      - LOGS_DIR=/logs
+
   bitcoin-data:
     <<: *common-config
+    image: ghcr.io/argonprotocol/commander/${BITCOIN_DATA_SLUG}:latest
     platform: linux/amd64
-    # TODO: migrate this to commander repo
-    image: ghcr.io/argonprotocol/commander-deploy/bitcoin-data:latest
     build:
       context: bitcoin-data
       dockerfile: Dockerfile
       args:
-        - TAR_PATHS=blocks chainstate indexes
+        - TAR_PATHS=${BITCOIN_TAR_PATHS}
       additional_contexts:
         - data=$BITCOIN_DATA_FOLDER
     volumes:
@@ -39,12 +58,14 @@ services:
       - /usr/local/bin/bitcoind
       - -conf=${BITCOIN_CONFIG}
     ports:
-      - "${BITCOIN_P2P_PORT:-8333}:${BITCOIN_P2P_PORT:-8333}"
+      - "${BITCOIN_P2P_PORT}:${BITCOIN_P2P_PORT}"
     environment:
       - BITCOIN_CONFIG=${BITCOIN_CONFIG}
       - BITCOIN_CHAIN=${BITCOIN_CHAIN}
     volumes:
       - $BITCOIN_DATA_FOLDER:/data
+    depends_on:
+      - status
     profiles:
       - all
       - miners
@@ -60,14 +81,13 @@ services:
     restart: unless-stopped
     depends_on:
       - bitcoin
+      - status
     command:
       - --bitcoin-rpc-url=http://bitcoin:bitcoin@bitcoin:5000
       - --base-path=/data
       - --no-mdns
       - --no-telemetry
-      - --prometheus-port=9615
-      - --prometheus-external
-      - --port=30333
+      - --port=${ARGON_P2P_PORT}
       - --rpc-port=9944
       - --rpc-methods=unsafe
       - --rpc-cors=all
@@ -85,12 +105,11 @@ services:
       - --unsafe-force-node-key-generation
       - --compute-miners=0
     ports:
-      - '30333:30333'
-      - '9944:9944'
-      - '9615:9615'
+      - '${ARGON_P2P_PORT}:${ARGON_P2P_PORT}'
+      - '${ARGON_RPC_PORT}:9944'
     environment:
       - ARGON_CHAIN=${ARGON_CHAIN}
-      - ARGON_ARCHIVE_NODE=${ARGON_ARCHIVE_NODE} # needed by latestblocks script
+      - ARGON_ARCHIVE_NODE=${ARGON_ARCHIVE_NODE}
     volumes:
       - $ARGON_DATA_FOLDER:/data
     profiles:
@@ -105,25 +124,27 @@ services:
     restart: unless-stopped
     depends_on:
       - argon-miner
+      - status
     ports:
-      - '3000:3000'
+      - '${BOT_PORT}:8080'
     working_dir: /usr/src/app
     env_file:
       - ../config/.env.state
       - ../config/.env.security
     environment:
-      - PORT=3000
+      - PORT=8080
       - BIDDING_RULES_PATH=/tmp/biddingRules.json
       - KEYPAIR_PATH=/tmp/walletMining.json
       - LOCAL_RPC_URL=ws://argon-miner:9944
       - ARCHIVE_NODE_URL=${ARGON_ARCHIVE_NODE}
+      - STATUS_URL=http://status:8080
       - ARGON_CHAIN=${ARGON_CHAIN}
       - DATADIR=/data
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ../config/walletMining.json:/tmp/walletMining.json
-      - ../config/biddingRules.json:/tmp/biddingRules.json
-      - ../data:/data
+      - $ARGON_CONFIG_FOLDER/walletMining.json:/tmp/walletMining.json
+      - $ARGON_CONFIG_FOLDER/biddingRules.json:/tmp/biddingRules.json
+      - $ARGON_DATA_FOLDER:/data
     profiles:
       - all
       - bot
@@ -131,3 +152,5 @@ services:
 networks:
   default:
     driver: bridge
+    external: true
+    name: ${COMPOSE_PROJECT_NAME:-argon}-net

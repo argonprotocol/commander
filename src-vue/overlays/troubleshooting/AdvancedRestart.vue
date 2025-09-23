@@ -278,7 +278,7 @@ async function runSelectedOptions() {
   }
 
   try {
-    await restarter.run(toRestart);
+    await restarter.run(toRestart, installer as any);
     for (const key of Object.keys(options.value)) {
       options.value[key as AdvancedRestartOption].isChecked = false;
       options.value[key as AdvancedRestartOption].checkedBy = '';
@@ -289,8 +289,7 @@ async function runSelectedOptions() {
 }
 
 function updateDisabledOptions() {
-  console.log('On disalbig options, installer.isRunning = ', installer.isRunning);
-  const isDisabled = !config.isMinerInstalled && !installer.isRunning;
+  const isDisabled = !config.isMinerInstalled || installer.isRunning;
   options.value[AdvancedRestartOption.RecreateLocalDatabase].isDisabled = installer.isRunning;
   options.value[AdvancedRestartOption.RestartDockers].isDisabled = isDisabled;
   options.value[AdvancedRestartOption.ResyncBiddingDataOnCloudMachine].isDisabled = isDisabled;

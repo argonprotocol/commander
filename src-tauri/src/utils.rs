@@ -1,7 +1,13 @@
 use anyhow::Result;
 use rand::RngCore;
+use std::collections::HashMap;
+use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
+
+static ENV_LOCAL: &str = include_str!("../../server/.env.localnet");
+static ENV_MAINNET: &str = include_str!("../../server/.env.mainnet");
+static ENV_TESTNET: &str = include_str!("../../server/.env.testnet");
 
 pub struct Utils;
 
@@ -20,6 +26,22 @@ impl Utils {
     pub fn is_experimental() -> bool {
         // baked into runtime via build.rs
         option_env!("ARGON_EXPERIMENTAL").map_or(false, |v| v == "true")
+    }
+
+    pub fn get_server_env_vars() -> Result<HashMap<String, String>, String> {
+        let env_text = match Self::get_network_name().as_str() {
+            "localnet" => ENV_LOCAL,
+            "mainnet" => ENV_MAINNET,
+            "testnet" => ENV_TESTNET,
+            _ => return Err("Unknown network".to_string()),
+        };
+        let env_vars = dotenvy::from_read_iter(Cursor::new(env_text));
+
+        let mut result = HashMap::new();
+        for (key, value) in env_vars.flatten() {
+            result.insert(key, value);
+        }
+        Ok(result)
     }
 
     pub fn get_network_name() -> String {

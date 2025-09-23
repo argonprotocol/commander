@@ -7,6 +7,7 @@ import {
   InstallStepKey,
   InstallStepStatus,
   PanelKey,
+  ServerType,
 } from '../interfaces/IConfig';
 import { Keyring, type KeyringPair, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
 import { JsonExt } from '@argonprotocol/commander-core';
@@ -27,6 +28,8 @@ import ISecurity from '../interfaces/ISecurity';
 import { getMainchainClients } from '../stores/mainchain';
 import { WalletBalances } from './WalletBalances';
 import { SECURITY } from './Env.ts';
+import { invokeWithTimeout } from './tauriApi.ts';
+import { LocalMachine } from './LocalMachine.ts';
 
 export class Config {
   public readonly version: string = packageJson.version;
@@ -72,6 +75,7 @@ export class Config {
       serverDetails: {
         ipAddress: '',
         sshUser: '',
+        type: ServerType.DigitalOcean,
       },
       installDetails: Config.getDefault(dbFields.installDetails) as IConfig['installDetails'],
       oldestFrameIdToSync: Config.getDefault(dbFields.oldestFrameIdToSync) as number,
@@ -145,6 +149,12 @@ export class Config {
 
         loadedData[key] = JsonExt.parse(rawValue as string);
         rawData[key as keyof typeof rawData] = rawValue as string;
+        if (key === dbFields.serverDetails) {
+          // Ensure old serverDetails without type are set to DigitalOcean
+          loadedData.serverDetails.type ??= ServerType.DigitalOcean;
+          fieldsToSave.add(key);
+          rawData[dbFields.serverDetails] = JsonExt.stringify(loadedData.serverDetails, 2);
+        }
       }
 
       const isFirstTimeAppLoad = Object.keys(dbRawData).length === 0;
@@ -152,6 +162,14 @@ export class Config {
         await this._injectFirstTimeAppData(loadedData, rawData, fieldsToSave);
       }
 
+      if (loadedData.serverDetails.type === ServerType.Docker && loadedData.isMinerInstalled) {
+        const { sshPort } = await LocalMachine.activate();
+        await invokeWithTimeout('toggle_nosleep', { enable: true }, 5000);
+        loadedData.serverDetails.ipAddress = `127.0.0.1`;
+        loadedData.serverDetails.port = sshPort;
+        fieldsToSave.add(dbFields.serverDetails);
+        rawData[dbFields.serverDetails] = JsonExt.stringify(loadedData.serverDetails, 2);
+      }
       const dataToSave = Config.extractDataToSave(fieldsToSave, rawData);
       await db.configTable.insertOrReplace(dataToSave);
 
@@ -661,6 +679,7 @@ const defaults: IConfigDefaults = {
     return {
       ipAddress: '',
       sshUser: 'root',
+      type: ServerType.DigitalOcean,
     };
   },
   installDetails: () => {

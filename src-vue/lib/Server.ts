@@ -1,11 +1,13 @@
 import * as dotenv from 'dotenv';
 import { IBiddingRules, JsonExt } from '@argonprotocol/commander-core';
 import { SSHConnection } from './SSHConnection';
-import { DEPLOY_ENV_FILE, NETWORK_NAME } from './Env.ts';
+import { DEPLOY_ENV_FILE, INSTANCE_NAME, NETWORK_NAME, SERVER_ENV_VARS } from './Env.ts';
 import { KeyringPair$Json } from '@argonprotocol/mainchain';
 import { SSH } from './SSH';
 import { InstallStepKey } from '../interfaces/IConfig';
-import { join, tempDir } from '@tauri-apps/api/path';
+import { appDataDir, join, tempDir } from '@tauri-apps/api/path';
+import { LocalMachine } from './LocalMachine.ts';
+import { fetch } from '@tauri-apps/plugin-http';
 
 export enum InstallStepStatusType {
   Pending = 'Pending',
@@ -24,6 +26,7 @@ const installStepStatusPriorityByType: Record<InstallStepStatusType, number> = {
   [InstallStepStatusType.Finished]: 2,
   [InstallStepStatusType.Failed]: 3,
 };
+export const DOCKER_COMPOSE_PROJECT_NAME = `${NETWORK_NAME}-${INSTANCE_NAME}`.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
 export interface IBitcoinBlockChainInfo {
   chain: string;
@@ -54,6 +57,18 @@ export class Server {
 
   public constructor(connection: SSHConnection) {
     this.connection = connection;
+  }
+
+  public static async virtualMachineFolder(): Promise<string> {
+    let path = await join(await appDataDir(), NETWORK_NAME, INSTANCE_NAME, 'virtual-machine');
+    // On Windows, convert to Docker-compatible path: replace backslashes, convert drive letter to /c/ form.
+    if (typeof process !== 'undefined' && process.platform === 'win32') {
+      // Replace backslashes with forward slashes
+      path = path.replace(/\\/g, '/');
+      // If starts with drive letter, e.g., C:/, convert to /c/
+      path = path.replace(/^([A-Z]):\//i, (_m, drive: string) => `/${drive.toLowerCase()}/`);
+    }
+    return path;
   }
 
   public async isConnected(): Promise<boolean> {
@@ -127,8 +142,8 @@ export class Server {
   }
 
   public async getDataDir(service: string): Promise<string> {
-    const [dataDir] = await this.connection.runCommandWithTimeout(
-      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} config ${service} --format json | jq -r '.services.["${service}"].volumes[0].source'`,
+    const [dataDir] = await this.runComposeCommand(
+      `config ${service} --format json | jq -r '.services.["${service}"].volumes[0].source'`,
       10e3,
     );
     return dataDir.trim();
@@ -143,17 +158,11 @@ export class Server {
   }
 
   public async stopMiningDockers(): Promise<void> {
-    await this.connection.runCommandWithTimeout(
-      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} --profile argon-miner down`,
-      60e3,
-    );
+    await this.runComposeCommand(`stop argon-miner `);
   }
 
   public async startMiningDockers(): Promise<void> {
-    await this.connection.runCommandWithTimeout(
-      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} --profile argon-miner up -d`,
-      60e3,
-    );
+    await this.runComposeCommand(`up argon-miner -d`, 60e3);
   }
 
   public async resyncMiner(): Promise<void> {
@@ -168,17 +177,11 @@ export class Server {
   }
 
   public async stopBitcoinDocker(): Promise<void> {
-    await this.connection.runCommandWithTimeout(
-      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} down bitcoin`,
-      60e3,
-    );
+    await this.runComposeCommand(`stop bitcoin`, 60e3);
   }
 
   public async startBitcoinDocker(): Promise<void> {
-    await this.connection.runCommandWithTimeout(
-      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} up bitcoin -d`,
-      60e3,
-    );
+    await this.runComposeCommand(`up bitcoin -d`, 60e3);
   }
 
   public async resyncBitcoin(): Promise<void> {
@@ -193,24 +196,15 @@ export class Server {
   }
 
   public async stopBotDocker(): Promise<void> {
-    await this.connection.runCommandWithTimeout(
-      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} down bot`,
-      10e3,
-    );
+    await this.runComposeCommand(`stop bot`, 10e3);
   }
 
   public async startBotDocker(): Promise<void> {
-    await this.connection.runCommandWithTimeout(
-      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} up bot -d`,
-      10e3,
-    );
+    await this.runComposeCommand(`up bot -d`, 10e3);
   }
 
   public async restartDocker(): Promise<void> {
-    await this.connection.runCommandWithTimeout(
-      `cd server && docker compose --env-file=${DEPLOY_ENV_FILE} restart argon-miner bitcoin bot`,
-      10e3,
-    );
+    await this.runComposeCommand(`restart argon-miner bitcoin bot`, 10e3);
   }
 
   public async uploadEnvSecurity(envSecurity: { sessionMiniSecret: string; keypairPassphrase: string }): Promise<void> {
@@ -236,9 +230,28 @@ export class Server {
   public async startInstallerScript(): Promise<void> {
     const remoteScriptPath = '~/server/scripts/installer.sh';
     const remoteScriptLogPath = '~/logs/installer.log';
-    const shellCommand = `ARGON_CHAIN=${NETWORK_NAME} nohup ${remoteScriptPath} > ${remoteScriptLogPath} 2>&1 &`;
+    await this.connection.runCommandWithTimeout(
+      `cd ~/server && cp ${DEPLOY_ENV_FILE} .env && echo "COMPOSE_PROJECT_NAME=${DOCKER_COMPOSE_PROJECT_NAME}" >> .env`,
+      10e3,
+    );
+    if (this.connection.isDockerHostProxy) {
+      const fullPath = await Server.virtualMachineFolder();
+      // sed replace all instances of ../ with the fullPath
+      const sedCommand = `sed -i -e 's|^ROOT=.*|ROOT="${fullPath}"|' ~/server/.env`;
+      await this.connection.runCommandWithTimeout(sedCommand, 10e3);
+    }
+    if (await this.isInstallerScriptRunning()) {
+      console.log('Restart the installer script: stopping existing one first');
+      await this.connection.runCommandWithTimeout('pkill -f ~/server/scripts/installer.sh || true', 10e3);
+      // wait a bit to ensure it's stopped
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    const shellCommand = `IS_DOCKER_HOST_PROXY=${this.connection.isDockerHostProxy} ARGON_CHAIN=${NETWORK_NAME} nohup ${remoteScriptPath} > ${remoteScriptLogPath} 2>&1 &`;
     await this.connection.runCommandWithTimeout(shellCommand, 10e3);
+
     console.info(`started: ${shellCommand}`);
+    const [pid] = await this.connection.runCommandWithTimeout('pgrep -f ~/server/scripts/installer.sh || true', 10e3);
+    console.info('Installer PID:', pid);
   }
 
   public async createConfigDir(): Promise<void> {
@@ -264,25 +277,14 @@ export class Server {
   }
 
   public async fetchBitcoinInstallProgress(): Promise<number> {
-    const [output] = await this.connection.runCommandWithTimeout('docker exec server-bitcoin-1 syncstatus.sh', 10e3);
-    return parseFloat(output.trim().replace('%', '')) || 0.0;
+    const result = await this.fetchStatus<ISyncStatus>('bitcoin', 'syncstatus', 10e3).catch(() => null);
+    return result?.syncPercent ?? 0.0;
   }
 
   public async fetchBitcoinBlockChainInfo(): Promise<IBitcoinBlockChainInfo> {
-    const [outputRaw1] = await this.connection.runCommandWithTimeout(
-      `docker exec server-bitcoin-1 bash -c 'latestblocks.sh'`,
-      10e3,
-    );
-    const [localNodeBlockNumber, mainNodeBlockNumber] = outputRaw1.split('-');
-    const [bitcoinConfig] = await this.connection.runCommandWithTimeout(
-      `source ~/server/.env.testnet && echo $BITCOIN_CONFIG`,
-      10e3,
-    );
-    const [outputRaw2] = await this.connection.runCommandWithTimeout(
-      `docker exec server-bitcoin-1 bash -c "bitcoin-cli --conf=\\"${bitcoinConfig.trim()}\\" getblockchaininfo"`,
-      10e3,
-    );
-    const output2 = JSON.parse(outputRaw2.trim());
+    const blocks = await this.fetchStatus<IBitcoinLatestBlocks>('bitcoin', `latestblocks`, 10e3);
+
+    const output2: any = await this.fetchStatus('bitcoin', 'getblockchaininfo', 10e3);
     return {
       chain: output2.chain,
       blocks: output2.blocks,
@@ -297,37 +299,32 @@ export class Server {
       sizeOnDisk: output2.size_on_disk,
       pruned: output2.pruned,
       warnings: output2.warnings,
-      localNodeBlockNumber: parseInt(localNodeBlockNumber),
-      mainNodeBlockNumber: parseInt(mainNodeBlockNumber),
+      localNodeBlockNumber: blocks.localNodeBlockNumber,
+      mainNodeBlockNumber: blocks.mainNodeBlockNumber,
     };
   }
 
   public async fetchArgonBlockChainInfo(): Promise<IArgonBlockChainInfo> {
-    const [outputRaw1] = await this.connection.runCommandWithTimeout(
-      `docker exec server-argon-miner-1 bash -c 'latestblocks.sh'`,
+    const { localNodeBlockNumber, mainNodeBlockNumber } = await this.fetchStatus<ILatestBlocks>(
+      'argon',
+      `latestblocks`,
       10e3,
     );
-    const [localNodeBlockNumber, mainNodeBlockNumber] = outputRaw1.split('-');
 
-    const [outputRaw2] = await this.connection.runCommandWithTimeout(
-      `docker exec server-argon-miner-1 bash -c 'iscomplete.sh'`,
-      10e3,
-    );
-    const isComplete = outputRaw2.trim() === 'true';
+    const completeResponse = await this.fetchStatus<boolean | object>('argon', 'iscomplete', 10e3);
+    const isComplete = completeResponse === true;
 
     return {
-      localNodeBlockNumber: parseInt(localNodeBlockNumber),
-      mainNodeBlockNumber: parseInt(mainNodeBlockNumber),
+      localNodeBlockNumber,
+      mainNodeBlockNumber,
       isComplete,
     };
   }
 
   public async fetchArgonInstallProgress(): Promise<number> {
-    const [output] = await this.connection.runCommandWithTimeout(
-      'docker exec server-argon-miner-1 syncstatus.sh',
-      10e3,
-    );
-    return parseFloat(output.trim().replace('%', '')) || 0.0;
+    const result = await this.fetchStatus<ISyncStatus>('argon', 'syncstatus', 10e3);
+
+    return result?.syncPercent ?? 0.0;
   }
 
   public async downloadInstallStepStatuses(): Promise<IInstallStepStatuses> {
@@ -370,6 +367,53 @@ export class Server {
 
   public async completelyWipeEverything(): Promise<void> {
     const shellCommand = `~/server/scripts/wipe_server.sh `;
-    await this.connection.runCommandWithTimeout(shellCommand, 60e3);
+
+    try {
+      await this.connection.runCommandWithTimeout(shellCommand, 60e3);
+    } catch (error) {
+      console.error('Error wiping server:', error);
+    }
+    if (this.connection.isDockerHostProxy) {
+      await LocalMachine.remove();
+    }
   }
+
+  private async runComposeCommand(command: string, timeoutMs = 60e3): Promise<[string, number]> {
+    return await this.connection.runCommandWithTimeout(`cd ~/server && docker compose ${command}`, timeoutMs);
+  }
+
+  private async fetchStatus<T>(service: 'argon' | 'bitcoin', path: string, timeoutMs = 10e3): Promise<T> {
+    if (path.startsWith('/')) {
+      path = path.slice(1);
+    }
+    const ip = this.connection.host;
+    const aborController = new AbortController();
+    const signal = aborController.signal;
+    const timeout = setTimeout(() => {
+      aborController.abort();
+    }, timeoutMs);
+    const response = await fetch(`http://${ip}:${SERVER_ENV_VARS.STATUS_PORT}/${service}/${path}`, {
+      signal,
+    });
+    clearTimeout(timeout);
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}`);
+    }
+    return (await response.json()) as Promise<T>;
+  }
+}
+
+interface ISyncStatus {
+  mainNodeBlockNumber: number;
+  localNodeBlockNumber: number;
+  syncPercent: number;
+}
+
+interface ILatestBlocks {
+  mainNodeBlockNumber: number;
+  localNodeBlockNumber: number;
+}
+
+interface IBitcoinLatestBlocks extends ILatestBlocks {
+  localNodeBlockTime: number;
 }

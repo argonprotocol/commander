@@ -11,6 +11,7 @@ import { BotServerError, BotServerIsLoading, BotServerIsSyncing } from '../inter
 import { SSH } from './SSH.ts';
 import { type IBitcoinBlockMeta, JsonExt } from '@argonprotocol/commander-core';
 import { fetch } from '@tauri-apps/plugin-http';
+import { SERVER_ENV_VARS } from './Env.ts';
 
 export class BotFetch {
   private static async botFetch<T>(botPath: string): Promise<{ data: T; status: number }> {
@@ -18,7 +19,7 @@ export class BotFetch {
       botPath = botPath.slice(1);
     }
     const ipAddress = await SSH.getIpAddress();
-    const url = `http://${ipAddress}:3000/${botPath}`;
+    const url = `http://${ipAddress}:${SERVER_ENV_VARS.BOT_PORT}/${botPath}`;
     console.log(`Fetching: ${url}`);
     const result = await fetch(url).catch(e => {
       console.error('Failed to fetch bot data:', e);

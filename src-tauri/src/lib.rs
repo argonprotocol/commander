@@ -1,10 +1,12 @@
 use log::trace;
+use nosleep::{NoSleep, NoSleepType};
 use std::fs;
 use std::path::PathBuf;
-use tauri::Emitter;
 use tauri::{AppHandle, Listener, Manager};
+use tauri::{Emitter, State};
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use time::OffsetDateTime;
+use tokio::sync::Mutex;
 use utils::Utils;
 #[cfg(target_os = "macos")]
 use window_vibrancy::*;
@@ -14,6 +16,11 @@ mod security;
 mod ssh;
 mod ssh_pool;
 mod utils;
+mod vm;
+
+struct NoSleepState {
+    nosleep: Mutex<Option<NoSleep>>,
+}
 
 #[tauri::command]
 async fn open_ssh_connection(
@@ -165,6 +172,25 @@ async fn run_db_migrations(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn toggle_nosleep(
+    nosleep_state: State<'_, NoSleepState>,
+    enable: bool,
+) -> Result<(), String> {
+    let Some(ref mut nosleep) = *nosleep_state.nosleep.lock().await else {
+        return Err("NoSleep not initialized".to_string());
+    };
+    if enable {
+        log::info!("KeepAwake enabled");
+        nosleep.start(NoSleepType::PreventUserIdleSystemSleep)
+    } else {
+        log::info!("KeepAwake disabled");
+        nosleep.stop()
+    }
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn create_zip(
     paths_with_prefixes: Vec<(PathBuf, PathBuf)>,
     zip_name: PathBuf,
@@ -285,14 +311,20 @@ pub fn run() {
 
     let network_name_clone = network_name.clone();
     let instance_name_clone = instance_name.clone();
+    let env_vars = Utils::get_server_env_vars().unwrap_or_default();
+    let env_vars_json = serde_json::to_string(&env_vars).unwrap_or_default();
 
     tauri::Builder::default()
           .on_page_load(move |window, _payload| {
+            if window.label() != "main" {
+              return;
+            }
             log::info!("Page loaded for instance '{}'", instance_name_clone);
             window.emit("tauri://page-loaded", ()).unwrap();
             window.eval(format!("window.__COMMANDER_INSTANCE__ = '{}'", instance_name_clone)).expect("Failed to set instance name in window");
             window.eval(format!("window.__ARGON_NETWORK_NAME__ = '{}'", network_name_clone)).expect("Failed to set network name in window");
             window.eval(format!("window.__COMMANDER_ENABLE_AUTOUPDATE__ = {}", enable_auto_update)).expect("Failed to set experimental flag in window");
+            window.eval(format!("window.__SERVER_ENV_VARS__ = {}", env_vars_json)).expect("Failed to set env vars in window");
           })
         .setup(move |app| {
             log::info!(
@@ -304,6 +336,9 @@ pub fn run() {
             let handle = app.handle();
             let security = security::Security::load(handle).map_err(|e| e.to_string())?;
             let security_json = serde_json::to_string(&security).map_err(|e| e.to_string())?;
+
+            let nosleep = NoSleep::new().map_err(|e| e.to_string())?;
+            app.manage(NoSleepState { nosleep: Mutex::new(Some(nosleep)) });
 
             let window = app.get_webview_window("main").unwrap();
 
@@ -333,6 +368,10 @@ pub fn run() {
         .plugin(logger.build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_autostart::Builder::new()
+                .app_name("Argon Commander")
+                .build(),
+        )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(
@@ -354,6 +393,12 @@ pub fn run() {
             overwrite_mnemonic,
             run_db_migrations,
             create_zip,
+            toggle_nosleep,
+            vm::create_local_vm,
+            vm::activate_local_vm,
+            vm::remove_local_vm,
+            vm::is_docker_running,
+            vm::check_needed_ports,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

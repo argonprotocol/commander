@@ -4,6 +4,7 @@ import {
   InstallStepErrorType,
   InstallStepKey,
   InstallStepStatus,
+  ServerType,
 } from '../interfaces/IConfig';
 import { Config } from './Config';
 import { InstallerCheck } from './InstallerCheck';
@@ -46,11 +47,16 @@ export default class Installer {
   public reasonToSkipInstall: string;
   public reasonToSkipInstallData: any;
 
+  public get isDockerHostProxy(): boolean {
+    return this.config.serverDetails.type === ServerType.Docker;
+  }
+
   private hasApprovedUpgrade = false;
 
   private isLoadedDeferred!: IDeferred<void>;
   private config: Config;
   private installerCheck: InstallerCheck;
+  private disableWrites = false;
 
   private _server?: Server;
 
@@ -98,6 +104,15 @@ export default class Installer {
 
     this.isLoaded = true;
     this.isLoadedDeferred.resolve();
+  }
+
+  public stop(disableWrites = true) {
+    if (!this.isRunning) return;
+    this.installerCheck.stop();
+    this.isRunning = false;
+    this.isRunningInBackground = false;
+    this.isReadyToRun = false;
+    this.disableWrites = disableWrites;
   }
 
   public async run(waitForLoaded: boolean = true): Promise<void> {
@@ -186,7 +201,7 @@ export default class Installer {
       errorMessage = `Installation failed: ${e}`;
     }
 
-    if (errorMessage) {
+    if (errorMessage && !this.disableWrites) {
       try {
         this.config.installDetails.errorType = InstallStepErrorType.Unknown;
         this.config.installDetails.errorMessage = errorMessage;

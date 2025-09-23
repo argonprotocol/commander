@@ -12,3 +12,8 @@ declare const __ARGON_NETWORK_NAME__: string;
 declare const __COMMANDER_INSTANCE__: string;
 declare const __COMMANDER_ENABLE_AUTOUPDATE__: boolean;
 declare const __COMMANDER_SECURITY__: any;
+declare const __SERVER_ENV_VARS__: {
+  STATUS_PORT: string;
+  BOT_PORT: string;
+  ARGON_RPC_PORT: string;
+};

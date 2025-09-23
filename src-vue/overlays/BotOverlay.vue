@@ -70,21 +70,21 @@
                     </header>
                     <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
                       <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
-                        To secure <tooltip content="Customize this in the Capital Allocation box below">your goal</tooltip> of 
+                        To secure <tooltip content="Customize this in the Capital Allocation box below">your goal</tooltip> of
                         {{getEpochSeatGoalCount()}} mining seats <tooltip content="An epoch is equivalent to ten days">per epoch</tooltip>, you need
                       </div>
                       <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
                         <NeedMoreCapitalHover v-if="minimumCapitalCommitment > capitalToCommitMicrogons" :calculator="calculator" :seat-goal-count="getEpochSeatGoalCount()" :ideal-capital-commitment="minimumCapitalCommitment" @increase-capital-commitment="updateMinimumCapital()" />
-                        <InputArgon v-model="capitalToCommitMicrogons" :min="10_000_000n" :minDecimals="0" />
+                        <InputArgon v-model="capitalToCommitMicrogons" :min="0n" :minDecimals="0" />
                         <CapitalOverlay align="end">
                           <PiechartIcon PiechartIcon class="ml-1 w-10 h-10 text-gray-300 hover:!text-argon-600" />
                         </CapitalOverlay>
                       </div>
                       <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full mx-auto">
                         This is the <tooltip content="Click the capital amount listed above to directly change your commitment">amount of capital you'll need</tooltip> for acquiring<br/>
-                        {{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') }} 
+                        {{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') }}
                         <tooltip content="Argonots are the ownership tokens of the network">argonot{{ micronotToArgonotNm(rules.baseMicronotCommitment).format('0,0') === '1' ? '' : 's' }}</tooltip>
-                        and {{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') }} 
+                        and {{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') }}
                         <tooltip content="Argons are the stable currency of the network">argon{{ microgonToArgonNm(rules.baseMicrogonCommitment).format('0,0') === '0,0' ? '' : 's' }}</tooltip>
                         at their <tooltip content="Prices reflect as closely as possible the real-time rates on Uniswap's trading exchange">current market rates</tooltip>.
                       </div>
@@ -105,8 +105,8 @@
                     </header>
                     <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
                       <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
-                        Your capital is <tooltip content="This is not a guarantee, simply an estimate">estimated</tooltip> to return 
-                        {{ numeral(epochPercentageYield).formatCapped('0,0.00', 999_999) }}% <tooltip content="An epoch is equivalent to ten days">per epoch</tooltip> 
+                        Your capital is <tooltip content="This is not a guarantee, simply an estimate">estimated</tooltip> to return
+                        {{ numeral(epochPercentageYield).formatCapped('0,0.00', 999_999) }}% <tooltip content="An epoch is equivalent to ten days">per epoch</tooltip>
                         at an <tooltip content="Annual Percent Yield">APY</tooltip> of
                       </div>
                       <div class="flex flex-row items-center justify-center grow relative h-26 text-6xl font-bold font-mono text-argon-600">
@@ -116,11 +116,11 @@
                         </ReturnsOverlay>
                       </div>
                       <div class="text-gray-500/60 border-t border-slate-500/30 border-dashed py-5 w-full">
-                      This represents the <tooltip content="It's a blend between multiple possibilities">average return</tooltip> between 
+                      This represents the <tooltip content="It's a blend between multiple possibilities">average return</tooltip> between
                       your <tooltip content="Your bot's opening bid each day">starting</tooltip> <br />
-                      <tooltip content="Your bot's opening bid each day">bid</tooltip> and 
-                      <tooltip content="The price your bot won't go above">maximum bid</tooltip>, 
-                      between <tooltip content="Customize this in the Ecosystem Growth box below">slow growth</tooltip> and 
+                      <tooltip content="Your bot's opening bid each day">bid</tooltip> and
+                      <tooltip content="The price your bot won't go above">maximum bid</tooltip>,
+                      between <tooltip content="Customize this in the Ecosystem Growth box below">slow growth</tooltip> and
                       <tooltip content="Customize this in the Ecosystem Growth box below">fast growth</tooltip>.
                     </div>
                     </div>

@@ -6,7 +6,7 @@ import {
   Mining,
   PriceIndex,
 } from '@argonprotocol/commander-core';
-import { NETWORK_URL } from '../lib/Env.ts';
+import { NETWORK_URL, SERVER_ENV_VARS } from '../lib/Env.ts';
 import { useConfig } from './config';
 import { type IBiddingRules } from '@argonprotocol/commander-core/src/IBiddingRules.ts';
 import { ApiDecoration } from '@polkadot/api/types';
@@ -14,6 +14,7 @@ import { botEmitter } from '../lib/Bot.ts';
 import { BotStatus } from '../lib/BotSyncer.ts';
 import { useBot } from './bot.ts';
 import { VaultCalculator } from '../lib/VaultCalculator.ts';
+import { SSH } from '../lib/SSH.ts';
 
 let mainchainClients: MainchainClients;
 let mining: Mining;
@@ -43,10 +44,8 @@ function setPrunedClientToLocal() {
   if (!mainchainClients) {
     return;
   }
-  const config = useConfig();
-  if (config.isLoaded) {
-    void mainchainClients.setPrunedClient(`ws://${config.serverDetails.ipAddress}:9944`);
-  }
+
+  void SSH.getIpAddress().then(ip => mainchainClients.setPrunedClient(`ws://${ip}:${SERVER_ENV_VARS.ARGON_RPC_PORT}`));
 }
 
 export function getMainchainClients(): MainchainClients {

@@ -133,8 +133,9 @@ impl SSH {
     }
 
     pub async fn run_command(&self, command: impl Display) -> Result<(String, u32)> {
-        info!("Executing ssh command: {}", command);
-        let shell_command = format!("bash -c '{}'", command);
+        let final_command = command.to_string().replace('\'', "'\\''");
+        info!("Executing ssh command: {}", final_command);
+        let shell_command = format!("bash -c '{}'", final_command);
         let mut channel = self.open_channel().await?;
         channel.exec(true, shell_command).await?;
         channel.eof().await?;
