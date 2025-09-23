@@ -27,6 +27,13 @@ services:
       - BITCOIN_RPC_URL=http://bitcoin:bitcoin@bitcoin:5000/
       - BITCOIN_CHAIN=${BITCOIN_CHAIN}
       - LOGS_DIR=/logs
+    healthcheck:
+      # yamllint disable-line rule:line-length
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/ | jq -e '.status == \"ok\"' > /dev/null || exit 1"]
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
+      retries: 12
 
   bitcoin-data:
     <<: *common-config
@@ -37,6 +44,12 @@ services:
       dockerfile: Dockerfile
       args:
         - TAR_PATHS=${BITCOIN_TAR_PATHS}
+        - SNAPSHOT_HEIGHT=${SNAPSHOT_HEIGHT}
+        - SNAPSHOT_NETWORK=${SNAPSHOT_NETWORK}
+        - UTXO_HASH=${UTXO_HASH}
+        - COMMIT_SHA=${COMMIT_SHA}
+      tags:
+        - ghcr.io/argonprotocol/commander/${BITCOIN_DATA_SLUG}:height-${SNAPSHOT_HEIGHT}
       additional_contexts:
         - data=$BITCOIN_DATA_FOLDER
     volumes:
@@ -58,7 +71,7 @@ services:
       - /usr/local/bin/bitcoind
       - -conf=${BITCOIN_CONFIG}
     ports:
-      - "${BITCOIN_P2P_PORT}:${BITCOIN_P2P_PORT}"
+      - '${BITCOIN_P2P_PORT}:${BITCOIN_P2P_PORT}'
     environment:
       - BITCOIN_CONFIG=${BITCOIN_CONFIG}
       - BITCOIN_CHAIN=${BITCOIN_CHAIN}
@@ -69,6 +82,11 @@ services:
     profiles:
       - all
       - miners
+    healthcheck:
+      test: >
+        echo '{"jsonrpc":"1.0","id":"curltest","method":"getblockchaininfo","params":[]}' | curl --fail -s --user bitcoin:bitcoin -H "content-type: text/plain;" --data-binary @- http://localhost:5000/
+      interval: 5s
+      retries: 10
 
   argon-miner:
     <<: *common-config
@@ -115,7 +133,17 @@ services:
     profiles:
       - all
       - miners
-
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          curl -fsS -H 'Content-Type: application/json' \
+            -d '{"id":1,"jsonrpc":"2.0","method":"system_health","params":[]}' \
+            http://127.0.0.1:9944 | jq -e '.result.peers > 0' > /dev/null || exit 1
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
+      retries: 12
   bot:
     <<: *common-config
     build:

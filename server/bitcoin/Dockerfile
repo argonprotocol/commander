@@ -50,6 +50,7 @@ END
 
 COPY ./bitcoin.conf /etc/bitcoin/bitcoin.conf
 COPY ./bitcoin-signet.conf /etc/bitcoin/bitcoin-signet.conf
+COPY ./bitcoin-regtest.conf /etc/bitcoin/bitcoin-regtest.conf
 COPY ./entrypoint.sh /
 
 ENTRYPOINT [ "./entrypoint.sh" ]
