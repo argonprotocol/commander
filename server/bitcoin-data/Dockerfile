@@ -11,7 +11,15 @@ RUN --mount=type=bind,from=data,source=/,target=/data \
 ########################
 
 FROM debian
-LABEL org.opencontainers.image.source https://github.com/argonprotocol/commander
+ARG SNAPSHOT_HEIGHT=unknown
+ARG SNAPSHOT_NETWORK=unknown
+ARG COMMIT_SHA=none
+ARG UTXO_HASH=unknown
+LABEL snapshot.height=$SNAPSHOT_HEIGHT
+LABEL snapshot.network=$SNAPSHOT_NETWORK
+LABEL snapshot.utxohash=$UTXO_HASH
+LABEL org.opencontainers.image.revision=$COMMIT_SHA
+LABEL org.opencontainers.image.source=https://github.com/argonprotocol/commander
 # Make sure we put everything is separate layers so we dont trigger rate limits
 # We abuse wildcard here so it doesn't crash if some files don't exist
 COPY --link --from=init-data /init-data/data.tar.aa* /init-data/.

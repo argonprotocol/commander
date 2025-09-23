@@ -6,4 +6,4 @@ if [ ! -d /data ]; then
 fi
 
 echo "Running cmd: $@"
-"$@"
+exec "$@"

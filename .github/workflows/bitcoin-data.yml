@@ -1,4 +1,4 @@
-name: Build and Push Bitcoin Data Snapshot
+name: Bitcoin Data Snapshot
 
 on:
   workflow_dispatch: {}
@@ -14,14 +14,17 @@ jobs:
       matrix:
         include:
           - env_file: .env.testnet
+            network: signet
             image_name: bitcoin-data-signet
           - env_file: .env.mainnet
             image_name: bitcoin-data
+            network: mainnet
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write   # required for cosign
+      id-token: write # required for cosign
       packages: write
+      attestations: write
 
     steps:
       - name: Checkout repo
@@ -37,75 +40,104 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Create network
+        run: docker network create server-net
+        working-directory: server
 
       - name: Bootstrap data
         run: docker compose --env-file=${{matrix.env_file}} run --rm --pull always bitcoin-data
         working-directory: server
 
       - name: Start bitcoin service
-        run: docker compose --env-file=${{matrix.env_file}} up -d bitcoin status
+        run: |
+          STATUS_PORT=0 docker compose --env-file=${{ matrix.env_file }} --profile=all up -d bitcoin status
         working-directory: server
 
       - name: Wait for sync via status service
         run: |
+          docker compose --env-file=${{ matrix.env_file }} --profile=all logs -f &
+          LOGS_PID=$!
+          port=""
+          for i  in {1..30}; do
+            port=""
+            if docker compose --env-file=${{ matrix.env_file }} port status 8080 >/tmp/port.out 2>/dev/null; then
+              port=$(cut -d: -f2 </tmp/port.out)
+            else
+              echo "Status service not yet publishing port"
+            fi
+            if [ -n "$port" ]; then
+              echo "Status service is running on port $port"
+              break
+            fi
+            echo "Waiting for status service to start..."
+            sleep 10
+          done
           for i in {1..180}; do
-            SYNC=$(curl -s http://localhost:3261/bitcoin/syncstatus | jq -r .syncPercent)
+            SYNC=$(curl -s "http://localhost:$port/bitcoin/syncstatus" | tee /dev/stderr | jq -r '.syncPercent')
             if [ "$(echo "$SYNC >= 100" | bc -l)" -eq 1 ]; then
               echo "Sync complete: $SYNC%"
+              kill $LOGS_PID || true
               exit 0
             fi
             echo "Current sync: $SYNC% (waiting...)"
             sleep 20
           done
           echo "Node did not reach 100% sync in time"
+          kill $LOGS_PID || true
+          exit 1
+        working-directory: server
 
-      - name: Get block height
-        id: height
+      - name: Get UTXO Hash
+        id: data
         run: |
-          HEIGHT=$(curl -s http://localhost:3261/bitcoin/syncstatus | jq -r .localNodeBlockNumber)
+          INFO=$(docker compose --env-file=${{ matrix.env_file }} exec -T bitcoin sh -c 'bitcoin-cli --conf=$BITCOIN_CONFIG gettxoutsetinfo')
+          echo "UTXO info: $INFO"
+          UTXO_HASH=$(echo "$INFO" | jq -r '.hash_serialized_3 // .hash_serialized_2')
+          HEIGHT=$(echo "$INFO" | jq -r '.height')
+          echo "utxo_hash=$UTXO_HASH" >> $GITHUB_OUTPUT
           echo "height=$HEIGHT" >> $GITHUB_OUTPUT
+        working-directory: server
 
-      - name: Stop services
-        run: docker compose --env-file=${{ matrix.env_file }} down --all
+      - name: Shutdown bitcoin cleanly
+        run: |
+          docker compose --env-file=${{ matrix.env_file }} exec bitcoin sh -c 'bitcoin-cli --conf=$BITCOIN_CONFIG stop'
+          docker compose --env-file=${{ matrix.env_file }} stop bitcoin
         working-directory: server
 
       - name: Build snapshot image
         run: |
           docker compose --env-file=${{ matrix.env_file }} build bitcoin-data \
-            --label snapshot.height=${{ steps.height.outputs.height }} \
-            --label snapshot.network=${{ matrix.image_name }} \
-            --label snapshot.commit=${{ github.sha }} \
-            -t ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}:${{ steps.height.outputs.height }} \
-            -t ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}:${{ github.sha }}
+            --build-arg SNAPSHOT_HEIGHT=${{ steps.data.outputs.height }} \
+            --build-arg SNAPSHOT_NETWORK=${{ matrix.network }} \
+            --build-arg UTXO_HASH=${{ steps.data.outputs.utxo_hash }} \
+            --build-arg COMMIT_SHA=${{ github.sha }}
         working-directory: server
+        env:
+          SNAPSHOT_HEIGHT: ${{ steps.data.outputs.height }}
+          BITCOIN_DATA_SLUG: ${{ matrix.image_name }}
 
       - name: Push snapshot image
-        run: |
-          docker push ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}:${{ steps.height.outputs.height }}
-          docker push ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}:${{ github.sha }}
-          docker push ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}:latest
+        run: docker compose --env-file=${{ matrix.env_file }} push bitcoin-data
         working-directory: server
+        env:
+          SNAPSHOT_HEIGHT: ${{ steps.data.outputs.height }}
+          BITCOIN_DATA_SLUG: ${{ matrix.image_name }}
 
       # --- Attestation ---
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
 
-      - name: Get UTXO Hash
-        id: utxo
+      - name: Get image digest
+        id: digest
         run: |
-          UTXO_HASH=$(docker compose --env-file=${{ matrix.env_file }} exec -T bitcoin \
-            bitcoin-cli --conf=$BITCOIN_CONFIG gettxoutsetinfo | jq -r .hash_serialized_2)
-          echo "utxo_hash=$UTXO_HASH" >> $GITHUB_OUTPUT
+          DIGEST=$(docker buildx imagetools inspect ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}:height-${{ steps.data.outputs.height }} \
+            --format '{{json .Manifest.Digest}}' | tr -d '"')
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+          echo "Image digest: $DIGEST"
 
-      - name: Generate provenance attestations
-        run: |
-          for TAG in ${{ steps.height.outputs.height }} ${{ github.sha }}; do
-            cosign attest \
-              --yes \
-              --predicate <(echo '{
-                "snapshotHeight": "${{ steps.height.outputs.height }}",
-                "utxoHash": "${{ steps.utxo.outputs.utxo_hash }}"
-              }')
-              --type slsaprovenance \
-              ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}:$TAG
-          done
+      - name: Attest build provenance (GitHub official)
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          push-to-registry: true
