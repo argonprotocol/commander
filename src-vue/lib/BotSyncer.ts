@@ -1,13 +1,17 @@
 import { Config } from './Config';
 import { Db } from './Db';
 import { BotFetch } from './BotFetch';
-import { type IBidsFile, type IBotState, type IBotStateStarting } from '@argonprotocol/commander-bot';
+import {
+  type IBidsFile,
+  type IBotState,
+  type IBotStateStarting,
+  type IFrameEarningsRollup,
+} from '@argonprotocol/commander-core';
 import { MiningFrames, TICKS_PER_COHORT } from '@argonprotocol/commander-core';
 import { getMining } from '../stores/mainchain';
 import { BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors';
 import { IBotEmitter } from './Bot';
 import Installer from './Installer';
-import type { IFrameEarningsRollup } from '@argonprotocol/commander-bot/src/interfaces/IEarningsFile.ts';
 
 export enum BotStatus {
   Starting = 'Starting',

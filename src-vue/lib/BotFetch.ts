@@ -6,10 +6,11 @@ import {
   type IBotStateStarting,
   type IEarningsFile,
   type IHistoryFile,
-} from '@argonprotocol/commander-bot';
+  type IBitcoinBlockMeta,
+  JsonExt,
+} from '@argonprotocol/commander-core';
 import { BotServerError, BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors.ts';
 import { SSH } from './SSH.ts';
-import { type IBitcoinBlockMeta, JsonExt } from '@argonprotocol/commander-core';
 import { fetch } from '@tauri-apps/plugin-http';
 import { SERVER_ENV_VARS } from './Env.ts';
 

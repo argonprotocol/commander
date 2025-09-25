@@ -1,4 +1,4 @@
-import { IBotActivity } from '@argonprotocol/bot';
+import { IBotActivity } from '@argonprotocol/commander-core';
 
 export interface IServerStateRecord {
   latestFrameId: number;

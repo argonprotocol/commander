@@ -1,11 +1,12 @@
 import { ExtrinsicError } from '@argonprotocol/mainchain';
-import { JsonExt, MiningFrames } from '@argonprotocol/commander-core';
 import {
   BotActivityType,
   type IBotActivity,
   type IBotActivityBidReceived,
   type IHistoryFile,
-} from './interfaces/IHistoryFile.ts';
+  JsonExt,
+  MiningFrames,
+} from '@argonprotocol/commander-core';
 import type { Storage } from './Storage.ts';
 import Queue from 'p-queue';
 import { LRU } from 'tiny-lru';

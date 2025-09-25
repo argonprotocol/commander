@@ -62,16 +62,17 @@ import { Accountset, MiningFrames, parseSubaccountRange } from '@argonprotocol/c
 import ActivityArrowIcon from '../assets/activity-arrow.svg?component';
 import ActivityFailureIcon from '../assets/activity-failure.svg?component';
 import ActivitySuccessIcon from '../assets/activity-success.svg?component';
-import { BotActivityType, IBotActivity } from '@argonprotocol/commander-bot';
+import {
+  BotActivityType,
+  type IBotActivity,
+  type IBotActivityBidReceived,
+  type IBotActivityBidsRejected,
+  type IBotActivityBidsSubmitted,
+  type IBotActivitySeatReduction,
+} from '@argonprotocol/commander-core';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import {
-  IBotActivityBidReceived,
-  IBotActivityBidsRejected,
-  IBotActivityBidsSubmitted,
-  IBotActivitySeatReduction,
-} from '@argonprotocol/commander-bot/src/interfaces/IHistoryFile';
 
 dayjs.extend(utc);
 dayjs.extend(relativeTime);

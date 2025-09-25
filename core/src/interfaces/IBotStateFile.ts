@@ -1,4 +1,4 @@
-import type { IBlockNumbers } from '../Dockers.ts';
+import type { IBlockNumbers } from './IBlockNumbers.ts';
 import type { ILastModifiedAt } from './ILastModified.ts';
 
 export interface IBotStateStarting {

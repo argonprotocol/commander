@@ -1,5 +1,4 @@
-import { type IBidderParams } from './IBidderParams.js';
-import { type IBiddingRules, SeatGoalType } from './IBiddingRules.js';
+import { type IBidderParams, type IBiddingRules, SeatGoalType } from './interfaces/index.js';
 import BiddingCalculator from './BiddingCalculator.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
 import type { MainchainClients } from './MainchainClients.js';

@@ -23,7 +23,7 @@
     "paths": {
       "@argonprotocol/commander-core": ["./core/src/index.ts"],
       "@argonprotocol/cli": ["./cli/src/index.ts"],
-      "@argonprotocol/bot": ["./bot/src/index.ts"]
+      "@argonprotocol/commander-bot": ["./bot/src/index.ts"]
     }
   },
   "include": [
@@ -35,10 +35,11 @@
     "eslint.config.ts",
     "bot/**/*.ts",
     "cli/**/*.ts",
-    "core/**/*.ts"
+    "core/**/*.ts",
   ],
   "exclude": [
-    "**/*.js"
+    "**/*.js",
+    "e2e"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -11,18 +11,21 @@ import {
 import {
   AccountMiners,
   type Accountset,
+  type IBotState,
+  type IBotStateFile,
+  type IBotSyncStatus,
+  type IWinningBid,
+  type IBlock,
+  type IBlockSyncFile,
+  type IEarningsFile,
   MainchainClients,
   Mining,
   MiningFrames,
   PriceIndex,
 } from '@argonprotocol/commander-core';
 import { type Storage } from './Storage.ts';
-import type { IBotState, IBotStateFile, IBotSyncStatus } from './interfaces/IBotStateFile.ts';
-import type { IWinningBid } from './interfaces/IBidsFile.ts';
 import { JsonStore } from './JsonStore.ts';
 import { Dockers } from './Dockers.ts';
-import type { IEarningsFile } from './interfaces/IEarningsFile.ts';
-import type { IBlock, IBlockSyncFile } from './interfaces/IBlockSyncFile.ts';
 
 export interface ILastProcessed {
   date: Date;

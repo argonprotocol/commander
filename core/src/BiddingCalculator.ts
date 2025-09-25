@@ -1,7 +1,7 @@
 import BigNumber from 'bignumber.js';
 import BiddingCalculatorData from './BiddingCalculatorData.js';
 import { bigIntMax, bigIntMin, bigNumberToBigInt } from './utils.js';
-import { BidAmountAdjustmentType, BidAmountFormulaType, type IBiddingRules } from './IBiddingRules.js';
+import { BidAmountAdjustmentType, BidAmountFormulaType, type IBiddingRules } from './interfaces/IBiddingRules.js';
 import { MICROGONS_PER_ARGON } from './index.js';
 
 const MICRONOTS_PER_ARGONOT = MICROGONS_PER_ARGON;
