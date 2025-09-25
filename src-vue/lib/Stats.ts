@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js';
-import { type IBidsFile, IBotActivity, type IWinningBid } from '@argonprotocol/commander-bot';
+import { type IBidsFile, IBotActivity, type IWinningBid } from '@argonprotocol/commander-core';
 import { IDashboardFrameStats, IDashboardGlobalStats } from '../interfaces/IStats';
 import { Db } from './Db';
 import { Config } from './Config';

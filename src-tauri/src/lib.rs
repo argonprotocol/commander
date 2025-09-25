@@ -327,13 +327,15 @@ pub fn run() {
             window.eval(format!("window.__SERVER_ENV_VARS__ = {}", env_vars_json)).expect("Failed to set env vars in window");
           })
         .setup(move |app| {
+            let handle = app.handle();
+            let config_path = Utils::get_absolute_config_instance_dir(&handle);
             log::info!(
-                "Starting instance '{}' on network '{}'",
+                "Starting instance '{}' on network '{}'. Config = {:?}",
                 instance_name,
-                network_name
+                network_name,
+                config_path
             );
             log::info!("Database URL = {}", db_relative_path.display());
-            let handle = app.handle();
             let security = security::Security::load(handle).map_err(|e| e.to_string())?;
             let security_json = serde_json::to_string(&security).map_err(|e| e.to_string())?;
 

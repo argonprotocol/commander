@@ -10,14 +10,14 @@ import {
   ServerType,
 } from '../interfaces/IConfig';
 import { Keyring, type KeyringPair, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
-import { JsonExt } from '@argonprotocol/commander-core';
 import {
   BidAmountAdjustmentType,
   BidAmountFormulaType,
+  JsonExt,
   MicronotPriceChangeType,
   SeatGoalInterval,
   SeatGoalType,
-} from '@argonprotocol/commander-core/src/IBiddingRules.ts';
+} from '@argonprotocol/commander-core';
 import { message as tauriMessage } from '@tauri-apps/plugin-dialog';
 import { createDeferred, ensureOnlyOneInstance, miniSecretFromUri } from './Utils';
 import IDeferred from '../interfaces/IDeferred';

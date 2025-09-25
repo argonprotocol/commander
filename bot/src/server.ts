@@ -4,10 +4,14 @@ import { jsonExt, onExit, requireAll, requireEnv } from './utils.ts';
 import Bot from './Bot.ts';
 import express from 'express';
 import cors from 'cors';
-import type { IBlockNumbers } from './Dockers.ts';
 import { Dockers } from './Dockers.ts';
-import type { IBotStateError, IBotStateStarting } from './interfaces/IBotStateFile.ts';
-import { MiningFrames, NetworkConfig } from '@argonprotocol/commander-core';
+import {
+  type IBlockNumbers,
+  type IBotStateError,
+  type IBotStateStarting,
+  MiningFrames,
+  NetworkConfig,
+} from '@argonprotocol/commander-core';
 import os from 'node:os';
 import { promises as Fs } from 'node:fs';
 

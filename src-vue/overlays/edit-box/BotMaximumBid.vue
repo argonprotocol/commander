@@ -56,7 +56,7 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { BidAmountAdjustmentType, BidAmountFormulaType } from '@argonprotocol/commander-core/src/IBiddingRules.ts';
+import { BidAmountAdjustmentType, BidAmountFormulaType } from '@argonprotocol/commander-core';
 import AlertIcon from '../../assets/alert.svg?component';
 import InputMenu, { type IOption } from '../../components/InputMenu.vue';
 import InputNumber from '../../components/InputNumber.vue';

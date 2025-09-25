@@ -133,8 +133,8 @@ if ! (already_ran "UbuntuCheck"); then
     minor_version=$(echo "$version" | cut -d. -f2)
 
     # Compare versions semantically
-    if [ "$major_version" -lt 24 ] || ([ "$major_version" -eq 24 ] && [ "$minor_version" -lt 10 ]); then
-        failed "Ubuntu version $version is less than required version 24.10"
+    if [ "$major_version" -lt 24 ] || ([ "$major_version" -eq 24 ] && [ "$minor_version" -lt 4 ]); then
+        failed "Ubuntu version $version is less than required version 24.04"
     fi
 
     echo "-----------------------------------------------------------------"

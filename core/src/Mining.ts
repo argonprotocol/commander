@@ -3,7 +3,7 @@ import { type ArgonClient, convertFixedU128ToBigNumber } from '@argonprotocol/ma
 import { bigIntMax, bigIntMin, bigNumberToBigInt } from './utils.js';
 import type { ApiDecoration } from '@polkadot/api/types';
 import { MiningFrames, TICKS_PER_COHORT } from './MiningFrames.js';
-import type { IWinningBid } from '@argonprotocol/commander-bot';
+import type { IWinningBid } from './interfaces/index.js';
 
 export const BLOCK_REWARD_INCREASE_PER_INTERVAL = BigInt(1_000);
 export const BLOCK_REWARD_MAX = BigInt(5_000_000);

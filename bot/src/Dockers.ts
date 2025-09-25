@@ -1,19 +1,10 @@
-import type { IBitcoinBlockMeta } from '@argonprotocol/commander-core';
+import type {
+  IBitcoinBlockMeta,
+  IBitcoinLatestBlocks,
+  IBlockNumbers,
+  ILatestBlocks,
+} from '@argonprotocol/commander-core';
 import { requireEnv } from './utils.js';
-
-export interface IBlockNumbers {
-  localNode: number;
-  mainNode: number;
-}
-
-interface ILatestBlocks {
-  mainNodeBlockNumber: number;
-  localNodeBlockNumber: number;
-}
-
-interface IBitcoinLatestBlocks extends ILatestBlocks {
-  localNodeBlockTime: number;
-}
 
 const statusApi = requireEnv('STATUS_URL');
 

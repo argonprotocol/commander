@@ -1,11 +1,16 @@
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { runOnTeardown, sudo, teardown } from '@argonprotocol/testing';
 import { getClient, mnemonicGenerate } from '@argonprotocol/mainchain';
-import { AccountMiners, Accountset, MainchainClients, MiningFrames } from '@argonprotocol/commander-core';
+import {
+  AccountMiners,
+  Accountset,
+  type IBotSyncStatus,
+  MainchainClients,
+  MiningFrames,
+} from '@argonprotocol/commander-core';
 import { BlockSync } from '../src/BlockSync.js';
 import fs from 'node:fs';
 import { Storage } from '../src/Storage.js';
-import type { IBotSyncStatus } from '../src/interfaces/IBotStateFile.js';
 import { Dockers } from '../src/Dockers.js';
 import { startArgonTestNetwork } from '@argonprotocol/commander-core/__test__/startArgonTestNetwork.js';
 

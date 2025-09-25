@@ -1,13 +1,15 @@
 import Path from 'node:path';
 import { LRU } from 'tiny-lru';
 import * as fs from 'node:fs';
-import { MiningFrames } from '@argonprotocol/commander-core';
-import type { IBotStateFile } from './interfaces/IBotStateFile.ts';
-import type { IEarningsFile } from './interfaces/IEarningsFile.ts';
-import type { IBidsFile } from './interfaces/IBidsFile.ts';
-import type { IHistoryFile } from './interfaces/IHistoryFile.ts';
+import {
+  type IBidsFile,
+  type IBlockSyncFile,
+  type IBotStateFile,
+  type IEarningsFile,
+  type IHistoryFile,
+  MiningFrames,
+} from '@argonprotocol/commander-core';
 import { JsonStore } from './JsonStore.ts';
-import type { IBlockSyncFile } from './interfaces/IBlockSyncFile.ts';
 
 export class Storage {
   private lruCache = new LRU<JsonStore<any>>(100);

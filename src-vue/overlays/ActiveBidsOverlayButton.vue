@@ -57,7 +57,7 @@ import { useCurrency } from '../stores/currency';
 import { getMining, getMainchainClient } from '../stores/mainchain';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { useStats } from '../stores/stats';
-import { type IBidsFile } from '@argonprotocol/commander-bot';
+import { type IBidsFile } from '@argonprotocol/commander-core';
 import { createNumeralHelpers } from '../lib/numeral';
 import { TICK_MILLIS } from '../lib/Env.ts';
 import { Accountset } from '@argonprotocol/commander-core';

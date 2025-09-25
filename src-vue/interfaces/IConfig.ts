@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BiddingRulesSchema } from '@argonprotocol/commander-core/src/IBiddingRules.ts';
+import { BiddingRulesSchema } from '@argonprotocol/commander-core';
 import { VaultingRulesSchema } from './IVaultingRules';
 import { CurrencyKey } from '../lib/Currency';
 

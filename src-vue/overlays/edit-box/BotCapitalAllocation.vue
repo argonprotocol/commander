@@ -42,7 +42,7 @@ import InputNumber from '../../components/InputNumber.vue';
 import InputMenu from '../../components/InputMenu.vue';
 import { getBiddingCalculator } from '../../stores/mainchain';
 import { useConfig } from '../../stores/config';
-import { SeatGoalInterval, SeatGoalType, ProfitUsage } from '@argonprotocol/commander-core/src/IBiddingRules';
+import { SeatGoalType, SeatGoalInterval, ProfitUsage } from '@argonprotocol/commander-core';
 
 const config = useConfig();
 const calculator = getBiddingCalculator();

@@ -2,13 +2,13 @@ import {
   ArgonClient,
   BiddingCalculator,
   BiddingCalculatorData,
+  type IBiddingRules,
   MainchainClients,
   Mining,
   PriceIndex,
 } from '@argonprotocol/commander-core';
 import { NETWORK_URL, SERVER_ENV_VARS } from '../lib/Env.ts';
 import { useConfig } from './config';
-import { type IBiddingRules } from '@argonprotocol/commander-core/src/IBiddingRules.ts';
 import { ApiDecoration } from '@polkadot/api/types';
 import { botEmitter } from '../lib/Bot.ts';
 import { BotStatus } from '../lib/BotSyncer.ts';

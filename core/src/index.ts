@@ -3,8 +3,7 @@ import createBidderParams, { Helper as BiddingParamsHelper } from './createBidde
 import BiddingCalculatorData from './BiddingCalculatorData.js';
 export { type ArgonClient, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
 
-export * from './IBiddingRules.js';
-export * from './IBidderParams.js';
+export * from './interfaces/index.js';
 export * from './PriceIndex.js';
 export * from './MainchainClients.js';
 export * from './FrameIterator.js';
@@ -19,7 +18,6 @@ export * from './BlockWatch.js';
 export * from './CohortBidder.js';
 export * from './MiningBids.js';
 export * from './VaultMonitor.js';
-export * from './IBitcoinBlockMeta.js';
 
 export { convertBigIntStringToNumber, bigNumberToBigInt, JsonExt, filterUndefined, createNanoEvents } from './utils.js';
 

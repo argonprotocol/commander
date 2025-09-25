@@ -31,9 +31,9 @@ export const stepLabels: IStepLabel[] = [
   {
     key: InstallStepKey.UbuntuCheck,
     options: [
-      `Check Ubuntu 24.10 and Related Libraries`,
-      `Checking Ubuntu 24.10 and Related Libraries`,
-      `Checked Ubuntu 24.10 and Related Libraries`,
+      `Check Ubuntu 24.04 and Related Libraries`,
+      `Checking Ubuntu 24.04 and Related Libraries`,
+      `Checked Ubuntu 24.04 and Related Libraries`,
     ],
   },
   {

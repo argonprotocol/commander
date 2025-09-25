@@ -334,7 +334,19 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import BigNumber from 'bignumber.js';
-import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui';
+import {
+  DialogContent,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogRoot,
+  DialogTitle,
+  PopoverArrow,
+  PopoverContent,
+  PopoverPortal,
+  PopoverRoot,
+  PopoverTrigger,
+} from 'reka-ui';
 import basicEmitter from '../emitters/basicEmitter';
 import { useConfig } from '../stores/config';
 import { useCurrency } from '../stores/currency';
@@ -344,14 +356,15 @@ import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 import AlertIcon from '../assets/alert.svg?component';
 import EditBoxOverlay, { type IEditBoxOverlayTypeForMining } from './EditBoxOverlay.vue';
-import { type IBiddingRules, JsonExt } from '@argonprotocol/commander-core';
-import ActiveBidsOverlayButton from './ActiveBidsOverlayButton.vue';
 import {
   BidAmountAdjustmentType,
   BidAmountFormulaType,
+  type IBiddingRules,
+  JsonExt,
   SeatGoalInterval,
   SeatGoalType,
-} from '@argonprotocol/commander-core/src/IBiddingRules.ts';
+} from '@argonprotocol/commander-core';
+import ActiveBidsOverlayButton from './ActiveBidsOverlayButton.vue';
 import { bigIntAbs, bigIntCeil, bigNumberToInteger, ceilTo } from '@argonprotocol/commander-core/src/utils';
 import InputArgon from '../components/InputArgon.vue';
 import NeedMoreCapitalHover from './bot/NeedMoreCapitalHover.vue';
@@ -361,7 +374,6 @@ import { useBot } from '../stores/bot.ts';
 import PiechartIcon from '../assets/piechart.svg?component';
 import EditIcon from '../assets/edit.svg?component';
 import Tooltip from '../components/Tooltip.vue';
-import { PopoverRoot, PopoverTrigger, PopoverContent, PopoverPortal, PopoverArrow } from 'reka-ui';
 import { ITourPos } from '../stores/tour.ts';
 import BotTour from './BotTour.vue';
 

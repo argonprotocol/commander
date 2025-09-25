@@ -4,10 +4,15 @@ import { Storage } from './Storage.ts';
 import { AutoBidder } from './AutoBidder.ts';
 import { BlockSync } from './BlockSync.ts';
 import { Dockers } from './Dockers.ts';
-import { Accountset, type IBiddingRules, JsonExt, MainchainClients } from '@argonprotocol/commander-core';
+import {
+  Accountset,
+  type IBiddingRules,
+  type IBotSyncStatus,
+  JsonExt,
+  FatalError,
+  MainchainClients,
+} from '@argonprotocol/commander-core';
 import { History } from './History.ts';
-import FatalError from './interfaces/FatalError.ts';
-import type { IBotSyncStatus } from './interfaces/IBotStateFile.js';
 
 interface IBotOptions {
   datadir: string;

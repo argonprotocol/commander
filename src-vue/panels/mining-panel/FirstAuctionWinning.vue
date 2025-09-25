@@ -84,7 +84,7 @@ import {
   BiddingCalculatorData,
   BiddingParamsHelper,
 } from '@argonprotocol/commander-core';
-import { type IWinningBid } from '@argonprotocol/commander-bot';
+import { type IWinningBid } from '@argonprotocol/commander-core';
 import CountdownClock from '../../components/CountdownClock.vue';
 import ConfettiIcon from '../../assets/confetti.svg?component';
 import ActiveBidsOverlayButton from '../../overlays/ActiveBidsOverlayButton.vue';
