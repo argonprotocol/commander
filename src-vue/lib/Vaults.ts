@@ -106,8 +106,8 @@ export class Vaults {
     console.log('Synching vault revenue stats back to frame ', oldestFrameToGet);
 
     const currentFrameId = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
-    await new FrameIterator(clients, false).forEachFrame(async (justEndedFrameId, api, meta, abortController) => {
-      if (meta.specVersion < 129) {
+    await new FrameIterator(clients, false).forEachFrame(async (frameId, firstBlockMeta, api, abortController) => {
+      if (firstBlockMeta.specVersion < 129) {
         abortController.abort();
         return;
       }
@@ -117,10 +117,10 @@ export class Vaults {
         await this.updateVaultRevenue(vaultId, frameRevenues, true);
       }
 
-      const isDone = justEndedFrameId <= oldestFrameToGet || meta.specVersion < 123;
+      const isDone = frameId <= oldestFrameToGet || firstBlockMeta.specVersion < 123;
 
       if (isDone) {
-        console.log(`Synched vault revenue to frame ${justEndedFrameId}`);
+        console.log(`Synched vault revenue to frame ${frameId}`);
         abortController.abort();
       }
     });
