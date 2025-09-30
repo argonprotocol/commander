@@ -7,7 +7,7 @@ import {
   type IBotStateStarting,
   type IFrameEarningsRollup,
 } from '@argonprotocol/commander-core';
-import { MiningFrames, TICKS_PER_COHORT } from '@argonprotocol/commander-core';
+import { MiningFrames } from '@argonprotocol/commander-core';
 import { getMining } from '../stores/mainchain';
 import { BotServerIsLoading, BotServerIsSyncing } from '../interfaces/BotErrors';
 import { IBotEmitter } from './Bot';
@@ -143,6 +143,7 @@ export class BotSyncer {
 
   private async updateBotState(retries: number = 0): Promise<void> {
     this.botState = await BotFetch.fetchBotState();
+    console.log('BotState: Updating bot state...', this.botState);
 
     this.botFns.setMaxSeatsReductionReason(this.botState.maxSeatsReductionReason);
     this.botFns.setMaxSeatsPossible(this.botState.maxSeatsPossible);
@@ -370,16 +371,17 @@ export class BotSyncer {
     }
 
     const currentFrameProgress = await this.calculateProgress(this.botState.currentFrameTickRange);
+    const ticksPerCohort = BigInt(MiningFrames.ticksPerCohort);
 
     try {
       const [cohortStartingTick] = MiningFrames.getTickRangeForFrame(cohortActivationFrameId);
-      const cohortEndingTick = cohortStartingTick + TICKS_PER_COHORT;
+      const cohortEndingTick = cohortStartingTick + Number(ticksPerCohort);
       const framesCompleted = Math.min(this.botState.currentFrameId - cohortActivationFrameId, 10);
-      const miningSeatCount = BigInt(bidsFile.allMinersCount);
+      const miningSeatCount = BigInt(bidsFile.allMinersCount) || 1n;
       const progress = Math.min((framesCompleted * 100 + currentFrameProgress) / 10, 100);
       const micronotsStaked = bidsFile.micronotsStakedPerSeat * BigInt(bidsFile.seatCountWon);
 
-      const microgonsToBeMinedDuringCohort = bidsFile.microgonsToBeMinedPerBlock * BigInt(TICKS_PER_COHORT);
+      const microgonsToBeMinedDuringCohort = bidsFile.microgonsToBeMinedPerBlock * ticksPerCohort;
       const micronotsToBeMinedDuringCohort = await this.mainchain.getMinimumMicronotsMinedDuringTickRange(
         cohortStartingTick,
         cohortEndingTick,

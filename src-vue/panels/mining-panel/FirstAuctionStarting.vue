@@ -68,6 +68,7 @@ import {
   type IBiddingRules,
   BiddingCalculatorData,
   BiddingParamsHelper,
+  MiningFrames,
 } from '@argonprotocol/commander-core';
 import basicEmitter from '../../emitters/basicEmitter';
 import { getMining } from '../../stores/mainchain';
@@ -115,8 +116,9 @@ Vue.onMounted(async () => {
   if (!startOfAuctionClosing.value || !startOfNextCohort.value) {
     const tickAtStartOfAuctionClosing = await mainchain.getTickAtStartOfAuctionClosing();
     const tickAtStartOfNextCohort = await mainchain.getTickAtStartOfNextCohort();
-    startOfAuctionClosing.value = dayjs.utc(tickAtStartOfAuctionClosing * 60 * 1000);
-    startOfNextCohort.value = dayjs.utc(tickAtStartOfNextCohort * 60 * 1000);
+    const tickMillis = MiningFrames.tickMillis;
+    startOfAuctionClosing.value = dayjs.utc(tickAtStartOfAuctionClosing * tickMillis);
+    startOfNextCohort.value = dayjs.utc(tickAtStartOfNextCohort * tickMillis);
   }
 });
 </script>

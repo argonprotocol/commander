@@ -2,7 +2,7 @@ import type { MainchainClients } from './MainchainClients.js';
 import { type ArgonClient, convertFixedU128ToBigNumber } from '@argonprotocol/mainchain';
 import { bigIntMax, bigIntMin, bigNumberToBigInt } from './utils.js';
 import type { ApiDecoration } from '@polkadot/api/types';
-import { MiningFrames, TICKS_PER_COHORT } from './MiningFrames.js';
+import { MiningFrames } from './MiningFrames.js';
 import type { IWinningBid } from './interfaces/index.js';
 
 export const BLOCK_REWARD_INCREASE_PER_INTERVAL = BigInt(1_000);
@@ -55,10 +55,11 @@ export class Mining {
 
     for (const [cohortId, blockReward] of blockRewards) {
       const fullRotationsSinceCohortStart = currentCohortId - cohortId.toNumber();
-      const ticksSinceCohortStart = fullRotationsSinceCohortStart * 1_440 + ticksElapsedToday;
+      const ticksSinceCohortStart =
+        fullRotationsSinceCohortStart * MiningFrames.getConfig().ticksBetweenFrames + ticksElapsedToday;
       const startingTick = currentTick - ticksSinceCohortStart;
-      const endingTick = startingTick + TICKS_PER_COHORT;
-      const microgonsMinedInCohort = (blockReward.toBigInt() * BigInt(TICKS_PER_COHORT)) / 10n;
+      const endingTick = startingTick + MiningFrames.ticksPerCohort;
+      const microgonsMinedInCohort = (blockReward.toBigInt() * BigInt(MiningFrames.ticksPerCohort)) / 10n;
       const micronotsMinedInCohort =
         (await this.getMinimumMicronotsMinedDuringTickRange(startingTick, endingTick)) / 10n;
       rewards.microgons += microgonsMinedInCohort;
@@ -80,7 +81,7 @@ export class Mining {
     let frameIdToCheck = startingFrameId;
     while (true) {
       // We must loop backwards until we find a frame with winning bids
-      if (frameIdToCheck < startingFrameId - 10) {
+      if (frameIdToCheck < startingFrameId - 10 || frameIdToCheck <= 0) {
         // We've checked the last 10 frames and found no winning bids, so we're done
         return [];
       }
@@ -107,7 +108,7 @@ export class Mining {
 
   public async getTickAtStartOfCurrentSlot(): Promise<number> {
     const tickAtStartOfNextCohort = await this.getTickAtStartOfNextCohort();
-    return tickAtStartOfNextCohort - 1_440;
+    return tickAtStartOfNextCohort - MiningFrames.ticksPerFrame;
   }
 
   public async fetchWinningBids(): Promise<(IWinningBid & { micronotsStakedPerSeat: bigint })[]> {
@@ -125,6 +126,7 @@ export class Mining {
   }
 
   public async fetchWinningBidAmountsForFrame(frameId: number): Promise<bigint[]> {
+    if (frameId < 1) return [];
     const client = await this.prunedClientOrArchivePromise;
     const winningBids = await client.query.miningSlot.minersByCohort(frameId);
     return winningBids.map(bid => bid.bid.toBigInt());
@@ -205,7 +207,7 @@ export class Mining {
       const elapsedTicks = await this.getTicksSinceGenesis(i);
       if (elapsedTicks >= halvingStartTick) {
         const halvings = Math.floor((elapsedTicks - halvingStartTick) / halvingTicks);
-        rewardsPerBlock = BigInt(Number(BLOCK_REWARD_MAX) / (halvings + 1));
+        rewardsPerBlock = BigInt(Math.floor(Number(BLOCK_REWARD_MAX) / (halvings + 1)));
       } else if (elapsedTicks % BLOCK_REWARD_INTERVAL === 0) {
         rewardsPerBlock += BLOCK_REWARD_INCREASE_PER_INTERVAL;
         rewardsPerBlock = bigIntMin(rewardsPerBlock, BLOCK_REWARD_MAX);

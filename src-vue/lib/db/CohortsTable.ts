@@ -2,7 +2,7 @@ import { ICohortRecord } from '../../interfaces/db/ICohortRecord';
 import { BaseTable } from './BaseTable';
 import { convertSqliteBigInts, fromSqliteBigInt, toSqlParams } from '../Utils';
 import BigNumber from 'bignumber.js';
-import { bigNumberToBigInt } from '@argonprotocol/commander-core';
+import { bigNumberToBigInt, MiningFrames } from '@argonprotocol/commander-core';
 
 export class CohortsTable extends BaseTable {
   private bigIntFields: string[] = [
@@ -38,8 +38,7 @@ export class CohortsTable extends BaseTable {
     const record = convertSqliteBigInts<
       ICohortRecord & { firstTick: number; lastBlockNumber: number; lastTick: number }
     >(rawRecords[0], this.bigIntFields);
-    const ticksPerDay = 1_440;
-    const lastTick = record.firstTick + ticksPerDay * 10;
+    const lastTick = record.firstTick + MiningFrames.ticksPerCohort;
 
     return {
       ...record,

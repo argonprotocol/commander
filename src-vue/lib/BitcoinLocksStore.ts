@@ -1,4 +1,4 @@
-import { getMainchainClient, getMainchainClientAt } from '../stores/mainchain.ts';
+import { getMainchainClient } from '../stores/mainchain.ts';
 import {
   addressBytesHex,
   BitcoinNetwork,
@@ -24,6 +24,7 @@ import { createDeferred, IDeferred } from './Utils.ts';
 import { BITCOIN_BLOCK_MILLIS, ESPLORA_HOST } from './Env.ts';
 import { type AddressTxsUtxo } from '@mempool/mempool.js/lib/interfaces/bitcoin/addresses';
 import { type TxStatus } from '@mempool/mempool.js/lib/interfaces/bitcoin/transactions';
+import { MiningFrames } from '@argonprotocol/commander-core';
 
 export default class BitcoinLocksStore {
   data: {
@@ -46,7 +47,7 @@ export default class BitcoinLocksStore {
   }
 
   #config!: IBitcoinLockConfig;
-  #ticksPerFrame = 1440;
+  #lockTicksPerDay!: number;
   #bitcoinLocksApi!: BitcoinLocks;
   #subscription?: () => void;
   #waitForLoad?: IDeferred;
@@ -70,7 +71,7 @@ export default class BitcoinLocksStore {
       return 0; // Already expired
     }
     const lockReleaseCosignDeadlineFrames = this.#config?.lockReleaseCosignDeadlineFrames ?? 0;
-    const releaseOffset = this.#config.tickDurationMillis * this.#ticksPerFrame * lockReleaseCosignDeadlineFrames;
+    const releaseOffset = this.#config.tickDurationMillis * this.#lockTicksPerDay * lockReleaseCosignDeadlineFrames;
     const expirationDateMillis = (expirationBlock - bitcoinBlockHeight) * BITCOIN_BLOCK_MILLIS;
     return Date.now() + expirationDateMillis - releaseOffset;
   }
@@ -107,7 +108,7 @@ export default class BitcoinLocksStore {
       this.#bitcoinLocksApi ??= new BitcoinLocks(Promise.resolve(await getMainchainClient(true)));
       this.#config ??= await this.#bitcoinLocksApi.getConfig();
       const client = await getMainchainClient(false);
-      this.#ticksPerFrame = client.consts.bitcoinLocks.argonTicksPerDay.toNumber();
+      this.#lockTicksPerDay = client.consts.bitcoinLocks.argonTicksPerDay.toNumber();
       this.data.bitcoinNetwork = getBitcoinNetworkFromApi(this.#config.bitcoinNetwork);
 
       const header = await client.rpc.chain.getHeader();
