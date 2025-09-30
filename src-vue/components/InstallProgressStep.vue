@@ -2,7 +2,7 @@
 <template>
   <li
     v-if="!['Hidden', 'Failed'].includes(stepStatus)"
-    :status="stepStatus"
+    :data-status="stepStatus"
     :style="{ height: `${stepHeightPct}%`, opacity: hasError ? '0.7' : '1' }"
     class="Component InstallProgressStep max-h-24 relative flex flex-row items-center border-t border-dashed border-slate-300 text-black/30 whitespace-nowrap w-full"
   >
@@ -23,9 +23,9 @@
   </li>
   <li
     v-if="stepStatus === 'Failed'"
-    :status="stepStatus"
+    :data-status="stepStatus"
     :class="{ 'opacity-50 pointer-events-none': isRetrying }"
-    class="Component InstallProgressStep relative flex flex-col border-t border-slate-300 text-black/70 w-full px-0 py-4 grow h-full"
+    class="Component InstallProgressStep Failed relative flex flex-col border-t border-slate-300 text-black/70 w-full px-0 py-4 grow h-full"
   >
     <div
       class="absolute top-2 left-0 bottom-0 w-full z-0"

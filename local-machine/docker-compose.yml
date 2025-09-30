@@ -13,6 +13,8 @@ services:
       - SYS_ADMIN   # lets systemd manage cgroups
       - NET_ADMIN   # ufw / iptables rules
       - NET_RAW     # ufw pings / raw sockets
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     security_opt:
       - apparmor:unconfined  # lets systemd manipulate cgroups
       - seccomp:unconfined   # relaxes syscall restrictions

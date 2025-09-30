@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <div class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center m-3 overflow-hidden">
+  <div data-testid="FirstAuctionStarting" class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center m-3 overflow-hidden">
     <ConfettiIcon class="absolute top-[10px] left-[10px]" style="width: calc(100% - 20px)" />
     <div class="relative mx-auto block w-6/10">
       <h1 class="text-6xl font-bold text-argon-600 text-center mt-28 mb-10 whitespace-nowrap">YOUR BIDDING BOT</h1>

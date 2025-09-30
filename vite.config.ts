@@ -5,7 +5,7 @@ import svgLoader from 'vite-svg-loader';
 import wasm from 'vite-plugin-wasm';
 import vitePluginTopLevelAwait from 'vite-plugin-top-level-await';
 import { createServer } from 'node:net';
-import { resolve } from 'node:path';
+import { resolve, basename } from 'node:path';
 
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -62,7 +62,49 @@ export default defineConfig(async ({ mode }) => {
     plugins: [
       wasm(),
       vitePluginTopLevelAwait(),
-      vue(),
+      vue({
+        template: {
+          compilerOptions: {
+            nodeTransforms: [
+              (() => {
+                const templateCounter: { [name: string]: number } = {};
+                return (node, ctx) => {
+                  if (node.type !== 1) return;
+                  if (!ctx.filename) return;
+
+                  if (node.props.some(p => p.name === 'data-testid')) return;
+
+                  let testId = ctx.selfName;
+                  // Look for click handlers
+                  const clickDir = node.props.find(
+                    p =>
+                      p.type === 7 && // DIRECTIVE
+                      p.name === 'on' &&
+                      p.arg?.type === 4 &&
+                      p.arg.content === 'click',
+                  );
+                  if (!clickDir?.exp) return;
+
+                  let fnName = clickDir.exp.content;
+                  if (!fnName.includes('(') && !fnName.includes('=')) fnName += '()';
+                  testId = `${testId}.${fnName}`;
+
+                  node.props.push({
+                    type: 6, // ATTRIBUTE
+                    name: 'data-testid',
+                    value: {
+                      type: 2,
+                      content: testId,
+                      loc: node.loc,
+                    },
+                    loc: node.loc,
+                  });
+                };
+              })(),
+            ],
+          },
+        },
+      }),
       tailwindcss(),
       svgLoader({
         svgoConfig: {
@@ -110,7 +152,7 @@ export default defineConfig(async ({ mode }) => {
         : undefined,
       watch: {
         // 3. tell vite to ignore watching `src-tauri`
-        ignored: ['**/src-tauri/**'],
+        ignored: ['**/src-tauri/**', '**/e2e/**'],
       },
     },
   };

@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <div class="flex flex-col h-full">
+  <div data-testid="Dashboard" class="flex flex-col h-full">
     <div
       class="flex flex-col h-full px-3.5 py-3 gap-y-2.5 justify-stretch grow"
     >

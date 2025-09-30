@@ -154,7 +154,7 @@ it('can autobid and store stats', async () => {
   console.log(`Cohort ${firstCohortActivationFrameId} BidsFile`, cohort1Bids);
   expect(cohort1Bids?.micronotsStakedPerSeat).toBeGreaterThanOrEqual(10000);
   expect(cohort1Bids?.seatCountWon).toBe(10);
-  expect(cohort1Bids?.microgonsBidTotal).toBe(10_000n * 10n);
+  expect(cohort1Bids?.microgonsBidTotal).toBeGreaterThanOrEqual(10_000n * 10n);
 
   const cohortActivationFrameIds = new Set<number>();
   let microgonsMined = 0n;

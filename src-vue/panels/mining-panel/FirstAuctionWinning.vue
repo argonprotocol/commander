@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <div class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center m-3 overflow-hidden">
+  <div data-startid="FirstAuctionWinning" class="grow relative bg-white rounded border border-[#CCCEDA] shadow text-center m-3 overflow-hidden">
     <ConfettiIcon class="absolute top-[10px] left-[10px]" style="width: calc(100% - 20px)" />
     <div class="relative mx-auto inline-block">
       <h1 class="text-5xl font-bold text-center mt-24 mb-10 whitespace-nowrap relative z-0">
