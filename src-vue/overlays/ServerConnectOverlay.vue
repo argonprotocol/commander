@@ -651,6 +651,7 @@ import { enable as enableAutostart } from '@tauri-apps/plugin-autostart';
 import { platformType } from '../tauri-controls/utils/os.ts';
 import { open as tauriOpenUrl } from '@tauri-apps/plugin-shell';
 import { LocalMachine } from '../lib/LocalMachine.ts';
+import { IS_CI } from '../lib/Env.ts';
 
 const config = useConfig();
 const installer = useInstaller();
@@ -738,7 +739,7 @@ async function addServer() {
         return;
       }
     } else if (selectedTab.value === 'local') {
-      sshUser.value = 'root';
+      sshUser.value = 'commander';
       type = ServerType.Docker;
     }
 
@@ -792,7 +793,6 @@ async function addServer() {
       console.error('Error connecting to server', err);
       if (type === ServerType.Docker) {
         serverDetailsError.value = `Failed to connect to your local Docker server. Try restarting docker.`;
-        return;
       } else {
         serverDetailsError.value = `Failed to connect to server. Please ensure you used the correct Public Key.`;
       }
@@ -800,7 +800,7 @@ async function addServer() {
     }
     config.serverDetails = newServerDetails;
     await config.save();
-    if (type === ServerType.Docker) {
+    if (type === ServerType.Docker && !IS_CI) {
       await invokeWithTimeout('toggle_nosleep', { enable: true }, 5000);
       await enableAutostart();
     }

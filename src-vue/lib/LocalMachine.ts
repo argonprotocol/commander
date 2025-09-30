@@ -7,7 +7,7 @@ export class LocalMachine {
     console.log(`Creating local machine`);
     const sshPort = await invokeWithTimeout<number>(
       'create_local_vm',
-      { sshPublicKey: `${sshPubkey}\n`, envText: `COMPOSE_PROJECT_NAME=${DOCKER_COMPOSE_PROJECT_NAME}\n` },
+      { envText: `COMPOSE_PROJECT_NAME=${DOCKER_COMPOSE_PROJECT_NAME}\nSSH_PUBKEY="${sshPubkey.trim()}"` },
       120_000,
     );
     console.log(`Local machine created SSH port: ${sshPort}`);
@@ -25,7 +25,7 @@ export class LocalMachine {
   }
 
   public static async isDockerRunning(): Promise<boolean> {
-    return await invokeWithTimeout<boolean>('is_docker_running', {}, 60_000);
+    return await invokeWithTimeout<boolean>('is_docker_running', {}, 60e3);
   }
 
   public static async activate(): Promise<{ sshPort: number }> {
@@ -44,7 +44,7 @@ export class LocalMachine {
 
   public static async remove() {
     console.log(`Removing local machine`);
-    await invokeWithTimeout('remove_local_vm', {}, 60_000);
+    await invokeWithTimeout('remove_local_vm', {}, 60e3);
     console.log(`Local machine removed`);
   }
 }
