@@ -6,10 +6,10 @@
   "scripts": {
     "preinstall": "husky install",
     "precommit": "tsx scripts/checkPrecommit.ts",
-    "dev": "vite",
+    "dev": "yarn build:config && vite",
     "tsc": "tsc && yarn workspaces foreach --all run tsc",
     "tsc:watch": "tsc --watch",
-    "build": "yarn build:version && yarn build:server && vue-tsc --noEmit && vite build",
+    "build": "yarn build:config && yarn build:version && yarn build:server && vue-tsc --noEmit && vite build",
     "build:workspace": "yarn workspaces foreach --all run build",
     "build:server": "yarn workspace @argonprotocol/commander-bot run build && tsx scripts/buildServer.ts",
     "build:version": "tsx scripts/syncVersions.ts",
@@ -121,5 +121,5 @@
     "request": "^2.88.2",
     "tough-cookie": "^4.1.4"
   },
-  "packageManager": "yarn@4.9.1"
+  "packageManager": "yarn@4.10.3"
 }

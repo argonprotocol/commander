@@ -257,18 +257,19 @@ if ! (already_ran "BitcoinInstall"); then
     echo "-----------------------------------------------------------------"
     echo "BUILDING BITCOIN FOR $ARGON_CHAIN"
 
-    run_command "ufw allow $BITCOIN_P2P_PORT/tcp"
-    run_compose "docker compose build bitcoin"
+    run_command "sudo ufw allow $BITCOIN_P2P_PORT/tcp"
+    run_compose "docker compose build bitcoin-node"
 
     command_output=$(run_command "docker images")
-    if ! echo "$command_output" | grep -q "bitcoin"; then
+    if ! echo "$command_output" | grep -q "bitcoin-node"; then
         failed "bitcoin image was not found"
     fi
 
     echo "-----------------------------------------------------------------"
     echo "RUNNING BITCOIN-DATA CONTAINER"
     echo "- Checking ${BITCOIN_DATA_FOLDER} for existing data"
-    if [ ! -d "$BITCOIN_DATA_FOLDER" ]; then
+    # if not regtest and data folder does not exist, run the bitcoin-data container to initialize it
+    if [ ! -d "$BITCOIN_DATA_FOLDER" ] && [ "$BITCOIN_CHAIN" != "regtest" ]; then
       echo "Bootstrapping bitcoin-data (first run)"
       run_compose "docker compose pull bitcoin-data"
       run_compose "docker compose run --rm --pull=never bitcoin-data"
@@ -279,7 +280,7 @@ if ! (already_ran "BitcoinInstall"); then
 
     ## TODO: we should keep track of the env vars used to build the image and if they change, we should
     ##  --force-recreate, otherwise this is tearing down the container every time the installer runs
-    run_compose "docker compose up bitcoin -d --force-recreate"
+    run_compose "docker compose up bitcoin-node -d --force-recreate"
 
     # Loop until syncstatus is >= 100%
     failures=0
@@ -319,7 +320,7 @@ if ! (already_ran "ArgonInstall"); then
     echo "-----------------------------------------------------------------"
     echo "BUILDING ARGON-MINER FOR $ARGON_CHAIN"
 
-    run_command "ufw allow 30333/tcp"
+    run_command "sudo ufw allow ${ARGON_P2P_PORT}/tcp"
 
     run_compose "docker compose build argon-miner"
 

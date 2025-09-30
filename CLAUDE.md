@@ -69,7 +69,7 @@ yarn tauri [command]
 ## Build Configuration
 
 ### Environment Requirements
-- **Node.js**: Yarn 4.9.1 package manager
+- **Node.js**: Yarn 4.10.3 package manager
 - **Rust**: Version 1.86.0 (specified in `rust-toolchain.toml`)
 - **Tauri CLI**: v2 for desktop development
 

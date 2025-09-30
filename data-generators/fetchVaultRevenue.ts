@@ -18,7 +18,7 @@ export default async function fetchVaultRevenue() {
     const mainchain = getMining();
     const vaults = new Vaults(chain);
     await vaults.load();
-    const data = await vaults.refreshRevenue(mainchain);
+    const data = await vaults.refreshRevenue(mainchain.clients);
 
     // Write data to JSON file
     const filePath = path.join(process.cwd(), 'src-vue', 'data', `vaultRevenue.${chain}.json`);
