@@ -55,7 +55,7 @@ export class SSH {
       privateKeyPath: sshPrivateKeyPath,
     });
     await connection.connect(0);
-    const server = new Server(connection);
+    const server = new Server(connection, serverDetails);
     const walletAddress = await server.downloadAccountAddress();
     if (this.connection) {
       void this.connection.close(true);

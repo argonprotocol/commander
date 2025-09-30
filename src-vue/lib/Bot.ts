@@ -46,6 +46,7 @@ export class Bot {
     this.botSyncer = new BotSyncer(this.config, db, installer, {
       onEvent: (type: keyof IBotEmitter, payload?: any) => botEmitter.emit(type, payload),
       setStatus: (x: BotStatus) => {
+        if (this.status === x) return;
         this.status = x;
         botEmitter.emit('status-changed', x);
       },
@@ -59,7 +60,7 @@ export class Bot {
   }
 
   public async restart(): Promise<void> {
-    const server = new Server(await SSH.getOrCreateConnection());
+    const server = new Server(await SSH.getOrCreateConnection(), this.config.serverDetails);
     this.botSyncer.isPaused = true;
     await server.stopBotDocker();
     await server.startBotDocker();
@@ -67,7 +68,7 @@ export class Bot {
   }
 
   public async resyncBiddingRules(): Promise<void> {
-    const server = new Server(await SSH.getOrCreateConnection());
+    const server = new Server(await SSH.getOrCreateConnection(), this.config.serverDetails);
     try {
       this.status = BotStatus.ServerSyncing;
       this.syncProgress = 25;

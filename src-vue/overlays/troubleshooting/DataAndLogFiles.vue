@@ -63,7 +63,7 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import { Db } from '../../lib/Db';
-import { appDataDir, appLogDir } from '@tauri-apps/api/path';
+import { appConfigDir, appLogDir } from '@tauri-apps/api/path';
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import Checkbox from '../../components/Checkbox.vue';
 import { Config, useConfig } from '../../stores/config.ts';
@@ -101,7 +101,7 @@ async function downloadTroubleshooting() {
       troubleshootingProgress.value = x;
     });
     const zipPath = downloadPath.replace('.tar.gz', '.zip');
-    const appData = await appDataDir();
+    const config = await appConfigDir();
     const logDir = await appLogDir();
     await invokeWithTimeout(
       'create_zip',
@@ -109,7 +109,7 @@ async function downloadTroubleshooting() {
         zipName: zipPath,
         pathsWithPrefixes: [
           ['logs', logDir],
-          ['data', appData],
+          ['data', config],
           ['server', downloadPath],
         ],
       },
@@ -127,7 +127,7 @@ async function downloadTroubleshooting() {
 }
 
 Vue.onMounted(async () => {
-  const dataDir = await appDataDir();
+  const dataDir = await appConfigDir();
   localDataDir.value = `${dataDir}/${Db.relativeDir}`;
   localLogDir.value = await appLogDir();
 });

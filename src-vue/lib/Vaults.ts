@@ -1,6 +1,6 @@
 import { BitcoinLocks, type PalletVaultsVaultFrameRevenue, Vault } from '@argonprotocol/mainchain';
 import { bigNumberToBigInt, FrameIterator, JsonExt, MainchainClients } from '@argonprotocol/commander-core';
-import { BaseDirectory, readTextFile, rename, writeTextFile } from '@tauri-apps/plugin-fs';
+import { BaseDirectory, mkdir, readTextFile, rename, writeTextFile } from '@tauri-apps/plugin-fs';
 import { getMainchainClient, getMainchainClients } from '../stores/mainchain.ts';
 import { IBitcoinLockRecord } from './db/BitcoinLocksTable.ts';
 import { convertBigIntStringToNumber, createDeferred, IDeferred } from './Utils.ts';
@@ -263,14 +263,15 @@ export class Vaults {
     this.isSavingStats = true;
     try {
       const statsJson = JsonExt.stringify(this.stats, 2);
+      await mkdir(`${NETWORK_NAME}`, { baseDir: BaseDirectory.AppConfig, recursive: true }).catch(() => null);
       await writeTextFile(REVENUE_STATS_FILE + '.tmp', statsJson, {
-        baseDir: BaseDirectory.AppLocalData,
+        baseDir: BaseDirectory.AppConfig,
       }).catch(error => {
         console.error('Error saving vault stats:', error);
       });
       await rename(REVENUE_STATS_FILE + '.tmp', REVENUE_STATS_FILE, {
-        oldPathBaseDir: BaseDirectory.AppLocalData,
-        newPathBaseDir: BaseDirectory.AppLocalData,
+        oldPathBaseDir: BaseDirectory.AppConfig,
+        newPathBaseDir: BaseDirectory.AppConfig,
       }).catch(error => {
         console.error('Error renaming vault stats file:', error);
       });
@@ -282,7 +283,7 @@ export class Vaults {
   private async loadStatsFromFile(): Promise<IAllVaultStats> {
     console.log('load stats from file', REVENUE_STATS_FILE);
     const state = await readTextFile(REVENUE_STATS_FILE, {
-      baseDir: BaseDirectory.AppLocalData,
+      baseDir: BaseDirectory.AppConfig,
     }).catch(() => undefined);
     if (state) {
       return JsonExt.parse(state);

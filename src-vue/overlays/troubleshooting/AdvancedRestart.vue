@@ -141,7 +141,7 @@ const installer = useInstaller();
 const bot = useBot();
 
 const dbPromise = getDbPromise();
-const restarter = new Restarter(dbPromise);
+const restarter = new Restarter(dbPromise, config as any);
 const isRestarting = Vue.ref(false);
 
 const options = Vue.ref({

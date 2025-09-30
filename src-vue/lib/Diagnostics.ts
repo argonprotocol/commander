@@ -13,7 +13,7 @@ export class Diagnostics {
   public async load() {
     if (this.server) return;
     const connection = await SSH.getOrCreateConnection();
-    this.server = new Server(connection);
+    this.server = new Server(connection, this.config.serverDetails);
     console.log('Diagnostics IS LOADED');
   }
 
@@ -34,13 +34,15 @@ export class Diagnostics {
 
   public async remoteServerFilesAreUpToDate() {
     // TODO: Will finish sha256 check when Blake pushes his latest changes
-    const [outputRaw] = await SSH.runCommand('ls -la ~/server');
+    const workdir = this.config.serverDetails.workDir;
+    const [outputRaw] = await SSH.runCommand(`ls -la ${workdir}/server`);
     const files = this.extractCleanFiles(outputRaw);
     return { files };
   }
 
   public async remoteConfigFilesAreUpToDate() {
-    const [outputRaw] = await SSH.runCommand('ls -la ~/config');
+    const workdir = this.config.serverDetails.workDir;
+    const [outputRaw] = await SSH.runCommand(`ls -la ${workdir}/config`);
     const files = this.extractCleanFiles(outputRaw);
     return { files };
   }

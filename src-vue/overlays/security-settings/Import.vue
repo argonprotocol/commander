@@ -20,7 +20,6 @@
 </template>
 
 <script setup lang="ts">
-import * as Vue from 'vue';
 import { open as openFileOverlay } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import RecoveryFileIcon from '../../assets/recovery-file.svg?component';

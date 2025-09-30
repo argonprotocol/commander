@@ -33,13 +33,13 @@
       "identifier": "http:default",
       "allow": [
         {
-          "url": "http://127.0.0.1:*"
-        },
-        {
           "url": "http://*:3260/*"
         },
         {
           "url": "http://*:3261/*"
+        },
+        {
+          "url": "http://127.0.0.1:*/*"
         }
       ],
       "deny": []
@@ -54,10 +54,10 @@
           "path": "$APPLOG/**"
         },
         {
-          "path": "$APPDATA"
+          "path": "$APPCONFIG"
         },
         {
-          "path": "$APPDATA/**"
+          "path": "$APPCONFIG/**"
         },
         {
           "path": "$TEMP/**"
@@ -68,7 +68,7 @@
       "identifier": "fs:allow-app-write-recursive",
       "allow": [
         {
-          "path": "$APPDATA/**"
+          "path": "$APPCONFIG/**"
         },
         {
           "path": "$TEMP/**"

@@ -1,11 +1,11 @@
-import * as dotenv from 'dotenv';
+import { parse as parseEnv } from 'dotenv';
 import { IBiddingRules, JsonExt } from '@argonprotocol/commander-core';
 import { SSHConnection } from './SSHConnection';
 import { DEPLOY_ENV_FILE, INSTANCE_NAME, NETWORK_NAME, SERVER_ENV_VARS } from './Env.ts';
 import { KeyringPair$Json } from '@argonprotocol/mainchain';
 import { SSH } from './SSH';
-import { InstallStepKey } from '../interfaces/IConfig';
-import { appDataDir, join, tempDir } from '@tauri-apps/api/path';
+import { IConfigServerDetails, InstallStepKey } from '../interfaces/IConfig';
+import { appConfigDir, join, tempDir } from '@tauri-apps/api/path';
 import { LocalMachine } from './LocalMachine.ts';
 import { fetch } from '@tauri-apps/plugin-http';
 
@@ -54,13 +54,19 @@ export interface IArgonBlockChainInfo {
 
 export class Server {
   private readonly connection: SSHConnection;
+  private readonly serverDetails: IConfigServerDetails;
 
-  public constructor(connection: SSHConnection) {
+  public constructor(connection: SSHConnection, serverDetails: IConfigServerDetails) {
     this.connection = connection;
+    this.serverDetails = serverDetails;
+  }
+
+  private get workDir() {
+    return this.serverDetails.workDir;
   }
 
   public static async virtualMachineFolder(): Promise<string> {
-    let path = await join(await appDataDir(), NETWORK_NAME, INSTANCE_NAME, 'virtual-machine');
+    let path = await join(await appConfigDir(), NETWORK_NAME, INSTANCE_NAME, 'virtual-machine');
     // On Windows, convert to Docker-compatible path: replace backslashes, convert drive letter to /c/ form.
     if (typeof process !== 'undefined' && process.platform === 'win32') {
       // Replace backslashes with forward slashes
@@ -77,13 +83,16 @@ export class Server {
   }
 
   public async uploadAccountAddress(address: string): Promise<void> {
-    await this.connection.uploadFileWithTimeout(address, '~/account', 10e3);
+    await this.connection.uploadFileWithTimeout(address, `${this.workDir}/account`, 10e3);
   }
 
   public async downloadTroubleshootingPackage(onProgress: (progress: number) => void): Promise<string> {
     let totalProgress = 5;
     onProgress(totalProgress);
-    const [output] = await this.connection.runCommandWithTimeout('~/server/scripts/create_troubleshooting_gz.sh', 20e3);
+    const [output] = await this.connection.runCommandWithTimeout(
+      `INSTALL_LOG_DIR="${this.workDir}/logs" ${this.workDir}/server/scripts/create_troubleshooting_gz.sh`,
+      20e3,
+    );
     const file = output.match(/Bundle ready: (.+\.tar\.gz)/);
     if (!file || !file[1]) {
       console.error('Failed to create troubleshooting package:', output);
@@ -108,18 +117,21 @@ export class Server {
   }
 
   public async downloadAccountAddress(): Promise<string> {
-    const [address] = await this.connection.runCommandWithTimeout('cat ~/account 2>/dev/null || true', 10e3);
+    const [address] = await this.connection.runCommandWithTimeout(
+      `cat ${this.workDir}/account 2>/dev/null || true`,
+      10e3,
+    );
     return address.trim();
   }
 
   public async uploadBiddingRules(biddingRules: IBiddingRules): Promise<void> {
     const biddingRulesStr = JsonExt.stringify(biddingRules, 2);
-    await this.connection.uploadFileWithTimeout(biddingRulesStr, '~/config/biddingRules.json', 20e3);
+    await this.connection.uploadFileWithTimeout(biddingRulesStr, `${this.workDir}/config/biddingRules.json`, 20e3);
   }
 
   public async downloadBiddingRules(): Promise<IBiddingRules | undefined> {
     const [biddingRulesRaw] = await this.connection.runCommandWithTimeout(
-      'cat ~/config/biddingRules.json 2>/dev/null || true',
+      `cat ${this.workDir}/config/biddingRules.json 2>/dev/null || true`,
       20e3,
     );
     return biddingRulesRaw ? JsonExt.parse(biddingRulesRaw) : undefined;
@@ -127,15 +139,15 @@ export class Server {
 
   public async uploadEnvState(envState: { oldestFrameIdToSync: number }): Promise<void> {
     const envStateStr = `OLDEST_FRAME_ID_TO_SYNC=${envState.oldestFrameIdToSync || ''}\n`;
-    await this.connection.uploadFileWithTimeout(envStateStr, '~/config/.env.state', 10e3);
+    await this.connection.uploadFileWithTimeout(envStateStr, `${this.workDir}/config/.env.state`, 10e3);
   }
 
   public async downloadEnvState(): Promise<{ oldestFrameIdToSync: number }> {
     const [envStateRaw] = await this.connection.runCommandWithTimeout(
-      'cat ~/config/.env.state 2>/dev/null || true',
+      `cat ${this.workDir}/config/.env.state 2>/dev/null || true`,
       10e3,
     );
-    const envState = envStateRaw ? dotenv.parse(envStateRaw) : {};
+    const envState = envStateRaw ? parseEnv(envStateRaw) : {};
     return {
       oldestFrameIdToSync: Number(envState.OLDEST_FRAME_ID_TO_SYNC),
     };
@@ -200,7 +212,8 @@ export class Server {
   }
 
   public async startBotDocker(): Promise<void> {
-    await this.runComposeCommand(`up bot -d`, 10e3);
+    // do a restart to load the mounted file
+    await this.runComposeCommand(`restart bot`, 10e3);
   }
 
   public async restartDocker(): Promise<void> {
@@ -211,38 +224,39 @@ export class Server {
     const envSecurityStr =
       `SESSION_MINI_SECRET="${envSecurity.sessionMiniSecret}"\n` +
       `KEYPAIR_PASSPHRASE=${envSecurity.keypairPassphrase}`;
-    await this.connection.uploadFileWithTimeout(envSecurityStr, '~/config/.env.security', 10e3);
+    await this.connection.uploadFileWithTimeout(envSecurityStr, `${this.workDir}/config/.env.security`, 10e3);
   }
 
   public async uploadMiningWallet(miningWalletJson: KeyringPair$Json): Promise<void> {
     const walletMiningJson = JsonExt.stringify(miningWalletJson, 2);
-    await this.connection.uploadFileWithTimeout(walletMiningJson, '~/config/walletMining.json', 10e3);
+    await this.connection.uploadFileWithTimeout(walletMiningJson, `${this.workDir}/config/walletMining.json`, 10e3);
   }
 
   public async removeAllLogFiles(): Promise<void> {
-    await this.connection.runCommandWithTimeout('rm -rf ~/logs/*', 10e3);
+    await this.connection.runCommandWithTimeout(`rm -rf ${this.workDir}/logs/*`, 10e3);
   }
 
   public async removeLogStep(stepKey: string): Promise<void> {
-    await this.connection.runCommandWithTimeout(`rm -rf ~/logs/step-${stepKey}.*`, 10e3);
+    await this.connection.runCommandWithTimeout(`rm -rf ${this.workDir}/logs/step-${stepKey}.*`, 10e3);
   }
 
   public async startInstallerScript(): Promise<void> {
-    const remoteScriptPath = '~/server/scripts/installer.sh';
-    const remoteScriptLogPath = '~/logs/installer.log';
+    const remoteScriptPath = `${this.workDir}/server/scripts/installer.sh`;
+    const remoteScriptLogPath = `${this.workDir}/logs/installer.log`;
     await this.connection.runCommandWithTimeout(
-      `cd ~/server && cp ${DEPLOY_ENV_FILE} .env && echo "COMPOSE_PROJECT_NAME=${DOCKER_COMPOSE_PROJECT_NAME}" >> .env`,
+      `cd ${this.workDir}/server && cp ${DEPLOY_ENV_FILE} .env && echo "COMPOSE_PROJECT_NAME=${DOCKER_COMPOSE_PROJECT_NAME}" >> .env`,
       10e3,
     );
     if (this.connection.isDockerHostProxy) {
-      const fullPath = await Server.virtualMachineFolder();
+      const fullVmPath = await Server.virtualMachineFolder();
       // sed replace all instances of ../ with the fullPath
-      const sedCommand = `sed -i -e 's|^ROOT=.*|ROOT="${fullPath}"|' ~/server/.env`;
+      const sedCommand = `sed -i -e 's|^ROOT=.*|ROOT="${fullVmPath}/app"|' ${this.workDir}/server/.env`;
       await this.connection.runCommandWithTimeout(sedCommand, 10e3);
+      await this.connection.runCommandWithTimeout(`sedCommand`, 10e3);
     }
     if (await this.isInstallerScriptRunning()) {
       console.log('Restart the installer script: stopping existing one first');
-      await this.connection.runCommandWithTimeout('pkill -f ~/server/scripts/installer.sh || true', 10e3);
+      await this.connection.runCommandWithTimeout(`pkill -f ${this.workDir}/server/scripts/installer.sh || true`, 10e3);
       // wait a bit to ensure it's stopped
       await new Promise(r => setTimeout(r, 2000));
     }
@@ -250,26 +264,35 @@ export class Server {
     await this.connection.runCommandWithTimeout(shellCommand, 10e3);
 
     console.info(`started: ${shellCommand}`);
-    const [pid] = await this.connection.runCommandWithTimeout('pgrep -f ~/server/scripts/installer.sh || true', 10e3);
+    const [pid] = await this.connection.runCommandWithTimeout(
+      `pgrep -f ${this.workDir}/server/scripts/installer.sh || true`,
+      10e3,
+    );
     console.info('Installer PID:', pid);
   }
 
   public async createConfigDir(): Promise<void> {
-    await this.connection.runCommandWithTimeout('mkdir -p ~/config', 10e3);
+    await this.connection.runCommandWithTimeout(`mkdir -p ${this.workDir}/config`, 10e3);
   }
 
   public async createLogsDir(): Promise<void> {
-    await this.connection.runCommandWithTimeout('mkdir -p ~/logs', 10e3);
+    await this.connection.runCommandWithTimeout(`mkdir -p ${this.workDir}/logs`, 10e3);
   }
 
   public async downloadRemoteShasum(): Promise<string> {
-    const [version] = await this.connection.runCommandWithTimeout('cat ~/server/SHASUM256 2>/dev/null || true', 10e3);
+    const [version] = await this.connection.runCommandWithTimeout(
+      `cat ${this.workDir}/server/SHASUM256 2>/dev/null || true`,
+      10e3,
+    );
     return version.trim();
   }
 
   public async isInstallerScriptRunning(): Promise<boolean> {
     try {
-      const [pid] = await this.connection.runCommandWithTimeout('pgrep -f ~/server/scripts/installer.sh', 10e3);
+      const [pid] = await this.connection.runCommandWithTimeout(
+        `pgrep -f ${this.workDir}/server/scripts/installer.sh`,
+        10e3,
+      );
       return pid.trim() !== '';
     } catch {
       return false;
@@ -329,7 +352,7 @@ export class Server {
 
   public async downloadInstallStepStatuses(): Promise<IInstallStepStatuses> {
     const stepStatuses: IInstallStepStatuses = {};
-    const [output, code] = await SSH.runCommand('ls ~/logs/step-*');
+    const [output, code] = await SSH.runCommand(`ls ${this.workDir}/logs/step-*`);
     if (code !== 0) {
       return stepStatuses;
     }
@@ -354,7 +377,10 @@ export class Server {
 
   public async extractInstallStepFailureMessage(stepKey: InstallStepKey): Promise<string> {
     const stepName = InstallStepKey[stepKey];
-    const [output, code] = await this.connection.runCommandWithTimeout(`cat ~/logs/step-${stepName}.failed`, 10e3);
+    const [output, code] = await this.connection.runCommandWithTimeout(
+      `cat ${this.workDir}/logs/step-${stepName}.failed`,
+      10e3,
+    );
     if (code === 0) {
       return output.trim();
     }
@@ -362,11 +388,11 @@ export class Server {
   }
 
   public async deleteBotStorageFiles(): Promise<void> {
-    await this.connection.runCommandWithTimeout('rm -rf ~/data/bot-*', 10e3);
+    await this.connection.runCommandWithTimeout(`rm -rf ${this.workDir}/data/bot-*`, 10e3);
   }
 
   public async completelyWipeEverything(): Promise<void> {
-    const shellCommand = `~/server/scripts/wipe_server.sh `;
+    const shellCommand = `${this.workDir}/server/scripts/wipe_server.sh `;
 
     try {
       await this.connection.runCommandWithTimeout(shellCommand, 60e3);
@@ -379,7 +405,10 @@ export class Server {
   }
 
   private async runComposeCommand(command: string, timeoutMs = 60e3): Promise<[string, number]> {
-    return await this.connection.runCommandWithTimeout(`cd ~/server && docker compose ${command}`, timeoutMs);
+    return await this.connection.runCommandWithTimeout(
+      `cd ${this.workDir}/server && docker compose ${command}`,
+      timeoutMs,
+    );
   }
 
   private async fetchStatus<T>(service: 'argon' | 'bitcoin', path: string, timeoutMs = 10e3): Promise<T> {
@@ -397,9 +426,12 @@ export class Server {
     });
     clearTimeout(timeout);
     if (!response.ok) {
+      console.error(`[STATUS] ${response.status}: ${service}/${path}`, await response.text());
       throw new Error(`HTTP error ${response.status}`);
     }
-    return (await response.json()) as Promise<T>;
+    const data = (await response.json()) as Promise<T>;
+    console.debug(`[STATUS] ${service}/${path}`, data);
+    return data;
   }
 }
 

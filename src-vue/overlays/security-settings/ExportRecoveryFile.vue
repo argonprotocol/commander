@@ -54,7 +54,7 @@ const emit = defineEmits(['close', 'goTo']);
 
 async function exportAccount() {
   const filePath = await saveFileOverlay({
-    defaultPath: 'argon-commander-recovery.json.json',
+    defaultPath: 'argon-commander-recovery.json',
     filters: [{ name: 'JSON', extensions: ['json'] }],
   });
   if (!filePath) return; // user cancelled
