@@ -28,6 +28,9 @@ export default defineConfig({
           testTimeout: 240_000,
           hookTimeout: 120_000,
           include: ['bot/__test__/**/*.test.ts'],
+          env: {
+            STATUS_URL: 'na',
+          },
         },
       },
     ],

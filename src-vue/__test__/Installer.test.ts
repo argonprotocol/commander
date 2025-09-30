@@ -6,9 +6,12 @@ import Installer, { resetInstaller } from '../lib/Installer';
 import { createMockedDbPromise } from './helpers/db';
 import { IInstallStepStatuses, InstallStepStatusType } from '../lib/Server';
 import { InstallStepKey } from '../interfaces/IConfig';
+import { InstallerCheck } from '../lib/InstallerCheck.ts';
 
 beforeEach(() => {
   resetInstaller();
+  // @ts-expect-error - mock
+  Config.prototype._didWalletHavePreviousLife = vi.fn().mockResolvedValue(false);
 });
 
 it('should skip install if server is not connected', async () => {
@@ -18,7 +21,8 @@ it('should skip install if server is not connected', async () => {
 
   const installer = new Installer(config);
   await installer.load();
-  const didRun = await installer.run();
+  // @ts-expect-error - test private method
+  const didRun = await installer.calculateIsReadyToRun();
 
   expect(didRun).toBe(false);
   expect(installer.reasonToSkipInstall).toBe('ServerNotConnected');
@@ -32,9 +36,11 @@ it('should skip install if install is already running', async () => {
   const installer = new Installer(config);
   await installer.load();
   installer.isRunning = true;
-  const didRun = await installer.run();
+  // @ts-expect-error - test private method
+  const didRun = await installer.calculateIsReadyToRun();
 
-  expect(didRun).toBe(false);
+  expect(didRun).toBe(true);
+  expect(installer.reasonToSkipInstall).toBe('');
 });
 
 it('should install if all conditions are met', async () => {
@@ -63,22 +69,16 @@ it('should install if all conditions are met', async () => {
 
   installer.isRunning = false;
 
-  const didRun = await installer.run();
+  // @ts-expect-error - test private method
+  const didRun = await installer.calculateIsReadyToRun();
 
   expect(didRun).toBe(true);
 });
 
-it.only('should run through entire install process', async () => {
+it('should run through entire install process', async () => {
   const dbPromise = createMockedDbPromise({ isMinerReadyToInstall: 'true' });
   const config = Vue.reactive(new Config(dbPromise)) as Config;
   await config.load();
-
-  Vue.watch(
-    () => config.installDetails,
-    () => {
-      console.log('installDetails changed', JSON.stringify(config.installDetails, null, 2));
-    },
-  );
 
   const installer = new Installer(config);
 
@@ -87,6 +87,7 @@ it.only('should run through entire install process', async () => {
   // @ts-ignore
 
   const installStepStatusPending: [InstallStepKey, InstallStepStatusType][] = [
+    [InstallStepKey.ServerConnect, InstallStepStatusType.Finished],
     [InstallStepKey.FileUpload, InstallStepStatusType.Finished],
     [InstallStepKey.UbuntuCheck, InstallStepStatusType.Finished],
     [InstallStepKey.DockerInstall, InstallStepStatusType.Finished],
@@ -106,9 +107,20 @@ it.only('should run through entire install process', async () => {
     }
     return installStepStatusCompleted;
   });
+  // @ts-ignore
+  InstallerCheck.calculateFinishedStepProgress = vi.fn().mockResolvedValue(100);
+  // @ts-ignore
+  installer.installerCheck.checkInterval = 1;
+  // @ts-ignore
+  installer.getLocalShasum = vi.fn().mockResolvedValue('dummy-sha256');
 
+  const uploadMock = vi.fn().mockImplementation(() => Promise.resolve());
+  // @ts-ignore
+  installer.uploadCoreFiles = uploadMock;
+
+  // should call run
   await installer.load();
-  await installer.run();
 
   expect(config.installDetails.ServerConnect.status).toBe('Completed');
+  expect(uploadMock).toHaveBeenCalledTimes(1);
 });

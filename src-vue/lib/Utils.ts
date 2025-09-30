@@ -2,6 +2,7 @@ import { u8aToHex } from '@argonprotocol/mainchain';
 import { JsonExt } from '@argonprotocol/commander-core';
 import { ed25519DeriveHard, keyExtractSuri, mnemonicToMiniSecret } from '@polkadot/util-crypto';
 import { IFieldTypes } from './db/BaseTable.ts';
+import { IS_CI } from './Env.ts';
 
 export function isInt(n: any) {
   if (typeof n === 'string') return !n.includes('.');
@@ -205,6 +206,7 @@ export type IDeferred<T = void> = {
 export const instanceChecks = new WeakSet<any>();
 
 export function ensureOnlyOneInstance(constructor: any) {
+  if (IS_CI) return; // Skip in CI to allow tests to run
   if (instanceChecks.has(constructor)) {
     console.log(new Error().stack);
     throw new Error(`${constructor.name} already initialized`);

@@ -1,8 +1,13 @@
 import './helpers/mocks.ts';
-import { expect, it } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 import { Config } from '../lib/Config';
 import { createMockedDbPromise } from './helpers/db';
 import { instanceChecks } from '../lib/Utils.js';
+
+beforeAll(() => {
+  // @ts-expect-error - mock
+  Config.prototype._didWalletHavePreviousLife = vi.fn().mockResolvedValue(false);
+});
 
 it('can load config defaults', async () => {
   const dbPromise = createMockedDbPromise();

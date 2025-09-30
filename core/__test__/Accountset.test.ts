@@ -91,9 +91,9 @@ describeIntegration('Accountset tests', () => {
     expect(result.finalFee).toBeGreaterThan(6000);
     expect(result.successfulBids).toBe(5);
     expect(result.bidError).toBeFalsy();
-    const bids = await accountset.bids(result.blockHash);
-    console.log('Bids', bids);
-    expect(bids.filter(x => x.bidPlace !== undefined)).toHaveLength(5);
+    // check for bids or registered seats
+    const seats = await accountset.miningSeats(result.blockHash);
+    expect(seats.filter(x => !!x.seat || x.hasWinningBid)).toHaveLength(5);
   });
 
   it.sequential('can will handle a subset of failed bids', async () => {
