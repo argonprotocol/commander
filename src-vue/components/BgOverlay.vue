@@ -10,7 +10,7 @@
       :class="[enableTopBar ? 'top-14 bottom-0 inset-x-0' : 'inset-0', enableTopBar ? roundedBottomClass : roundedClass]"
       data-tauri-drag-region
     >
-      <div v-if="showWindowControls && !enableTopBar" @click.stop class="absolute top-[22px] left-0">
+      <div v-if="showWindowControls && !enableTopBar" @click.stop class="absolute left-0" :class="[getPlatform() === 'macos' ? 'top-[22px]' : 'top-[16px]']">
         <WindowControls />
       </div>
     </div>
@@ -20,6 +20,7 @@
 <script setup lang="ts">
 import * as Vue from 'vue';
 import WindowControls from '../tauri-controls/WindowControls.vue';
+import { platform as getPlatform } from '@tauri-apps/plugin-os';
 
 const props = withDefaults(
   defineProps<{
