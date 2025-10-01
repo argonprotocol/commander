@@ -578,14 +578,7 @@ export class Config {
     stringifiedData[dbFields.miningAccountAddress] = JsonExt.stringify(miningAccountAddress, 2);
     fieldsToSave.add(dbFields.miningAccountAddress);
 
-    const walletBalances = new WalletBalances(getMainchainClients());
-    await walletBalances.load({ miningAccountAddress });
-    await walletBalances.updateBalances();
-
-    const miningHasValue = WalletBalances.doesWalletHasValue(walletBalances.miningWallet);
-    const vaultingHasValue = WalletBalances.doesWalletHasValue(walletBalances.vaultingWallet);
-    const miningAccountHadPreviousLife = miningHasValue || vaultingHasValue;
-
+    const miningAccountHadPreviousLife = await this._didWalletHavePreviousLife(miningAccountAddress);
     loadedData.miningAccountHadPreviousLife = miningAccountHadPreviousLife;
     stringifiedData[dbFields.miningAccountHadPreviousLife] = JsonExt.stringify(miningAccountHadPreviousLife, 2);
     fieldsToSave.add(dbFields.miningAccountHadPreviousLife);
@@ -595,6 +588,16 @@ export class Config {
       stringifiedData[dbFields.showWelcomeOverlay] = JsonExt.stringify(false, 2);
       fieldsToSave.add(dbFields.showWelcomeOverlay);
     }
+  }
+
+  private async _didWalletHavePreviousLife(miningAccountAddress: string) {
+    const walletBalances = new WalletBalances(getMainchainClients());
+    await walletBalances.load({ miningAccountAddress });
+    await walletBalances.updateBalances();
+
+    const miningHasValue = WalletBalances.doesWalletHasValue(walletBalances.miningWallet);
+    const vaultingHasValue = WalletBalances.doesWalletHasValue(walletBalances.vaultingWallet);
+    return miningHasValue || vaultingHasValue;
   }
 
   private async _bootupFromMiningAccountPreviousHistory() {
