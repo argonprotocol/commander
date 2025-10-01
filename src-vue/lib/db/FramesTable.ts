@@ -1,7 +1,7 @@
 import { IFrameRecord } from '../../interfaces/db/IFrameRecord';
 import { BaseTable, IFieldTypes } from './BaseTable';
 import { convertFromSqliteFields, fromSqliteBigInt, toSqlParams } from '../Utils';
-import { bigNumberToBigInt } from '@argonprotocol/commander-core';
+import { bigNumberToBigInt, MiningFrames } from '@argonprotocol/commander-core';
 import BigNumber from 'bignumber.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -201,6 +201,8 @@ export class FramesTable extends BaseTable {
       return record;
     });
 
+    const ticksPerFrame = MiningFrames.ticksPerFrame;
+
     while (records.length < 365) {
       const lastRecord = records[records.length - 1];
       if (!lastRecord) break;
@@ -212,8 +214,8 @@ export class FramesTable extends BaseTable {
       const blankRecord: Omit<IDashboardFrameStats, 'score' | 'expected'> = {
         id: 0,
         date: previousDay.format('YYYY-MM-DD'),
-        firstTick: lastRecord.firstTick - 1_440,
-        lastTick: lastRecord.lastTick - 1_440,
+        firstTick: lastRecord.firstTick - ticksPerFrame,
+        lastTick: lastRecord.lastTick - ticksPerFrame,
         allMinersCount: 0,
         seatCountActive: 0,
         seatCostTotalFramed: 0n,

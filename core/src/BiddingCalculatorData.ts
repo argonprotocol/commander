@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js';
 import { Mining } from './Mining.js';
-import { TICKS_PER_COHORT } from './MiningFrames.js';
+import { MiningFrames } from './MiningFrames.js';
 import { PriceIndex } from './PriceIndex.js';
 import { bigIntMax, bigIntMin, bigNumberToBigInt } from './utils.js';
 import { MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
@@ -34,7 +34,7 @@ export default class BiddingCalculatorData {
     try {
       const priceIndex = new PriceIndex(mining.clients);
       const tickAtStartOfNextCohort = await mining.getTickAtStartOfNextCohort();
-      const tickAtEndOfNextCohort = tickAtStartOfNextCohort + TICKS_PER_COHORT;
+      const tickAtEndOfNextCohort = tickAtStartOfNextCohort + MiningFrames.ticksPerCohort;
 
       const activeMinersCount = await mining.getActiveMinersCount();
       const nextCohortSize = await mining.getNextCohortSize();
@@ -50,7 +50,8 @@ export default class BiddingCalculatorData {
       );
 
       const microgonsMinedPerBlock = await mining.fetchMicrogonsMinedPerBlockDuringNextCohort();
-      this.microgonsToMineThisSeat = (microgonsMinedPerBlock * 14_400n) / BigInt(maxPossibleMinersInNextEpoch);
+      this.microgonsToMineThisSeat =
+        (microgonsMinedPerBlock * BigInt(MiningFrames.ticksPerCohort)) / BigInt(maxPossibleMinersInNextEpoch);
       this.microgonsInCirculation = await priceIndex.fetchMicrogonsInCirculation();
       this.micronotsRequiredForBid = await mining.getMicronotsRequiredForBid();
 

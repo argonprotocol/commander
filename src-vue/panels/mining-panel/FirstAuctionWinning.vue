@@ -83,6 +83,7 @@ import {
   type IBiddingRules,
   BiddingCalculatorData,
   BiddingParamsHelper,
+  MiningFrames,
 } from '@argonprotocol/commander-core';
 import { type IWinningBid } from '@argonprotocol/commander-core';
 import CountdownClock from '../../components/CountdownClock.vue';
@@ -145,8 +146,9 @@ Vue.onMounted(async () => {
   if (!startOfAuctionClosing.value || !startOfNextCohort.value) {
     const tickAtStartOfAuctionClosing = await mainchain.getTickAtStartOfAuctionClosing();
     const tickAtStartOfNextCohort = await mainchain.getTickAtStartOfNextCohort();
-    startOfAuctionClosing.value = dayjs.utc(tickAtStartOfAuctionClosing * 60 * 1000);
-    startOfNextCohort.value = dayjs.utc(tickAtStartOfNextCohort * 60 * 1000);
+    const tickMillis = MiningFrames.tickMillis;
+    startOfAuctionClosing.value = dayjs.utc(tickAtStartOfAuctionClosing * tickMillis);
+    startOfNextCohort.value = dayjs.utc(tickAtStartOfNextCohort * tickMillis);
   }
 
   const seatCount = await biddingParamsHelper.getMaxSeats();

@@ -21,18 +21,25 @@ export class BotFetch {
     }
     const ipAddress = await SSH.getIpAddress();
     const url = `http://${ipAddress}:${SERVER_ENV_VARS.BOT_PORT}/${botPath}`;
-    console.log(`Fetching: ${url}`);
-    const result = await fetch(url).catch(e => {
-      console.error('Failed to fetch bot data:', e);
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const timeout = setTimeout(() => {
+      abortController.abort();
+    }, 10e3);
+    const result = await fetch(url, { signal }).catch(e => {
+      console.error(`[BOT] Error Fetching ${url}`, e);
       throw e;
     });
     if (!result.ok) {
+      console.error(`[BOT] Request Error: ${url}`, result.status, result.statusText);
       throw new Error(`HTTP GET command failed with status ${result.status}`);
     }
+    clearTimeout(timeout);
 
     try {
       const body = await result.text();
       const data = JsonExt.parse(body);
+      console.log(`[BOT]: ${url}`, { data, status: result.status });
 
       return {
         status: result.status,

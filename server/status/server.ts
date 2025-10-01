@@ -160,12 +160,7 @@ class BitcoinApis {
     const blockchainInfo = await this.blockchainInfo();
 
     let mainNodeBlockNumber = 0;
-    if (process.env.BITCOIN_CHAIN === 'signet') {
-      const peerinfo = await callBitcoinRpc<{ startingheight: number }[]>('getpeerinfo');
-      for (const peer of peerinfo) {
-        mainNodeBlockNumber = Math.max(peer.startingheight, mainNodeBlockNumber);
-      }
-    } else {
+    if (process.env.BITCOIN_CHAIN === 'mainnet') {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10_000);
       const response = await fetch('https://blockchain.info/latestblock', {
@@ -177,6 +172,11 @@ class BitcoinApis {
       }
       const data = await response.json();
       mainNodeBlockNumber = data.block_index;
+    } else {
+      const peerinfo = await callBitcoinRpc<{ startingheight: number }[]>('getpeerinfo');
+      for (const peer of peerinfo) {
+        mainNodeBlockNumber = Math.max(peer.startingheight, mainNodeBlockNumber);
+      }
     }
     cache.bitcoin = {
       latestBlocks: {

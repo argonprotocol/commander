@@ -19,7 +19,7 @@ afterAll(teardown);
 
 let clientAddress: string;
 beforeAll(async () => {
-  MiningFrames.setNetwork('localnet');
+  MiningFrames.setNetwork('dev-docker');
   const result = await startArgonTestNetwork('block-sync');
   clientAddress = result.archiveUrl;
 });

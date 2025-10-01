@@ -5,8 +5,6 @@ import { type ArgonClient, getTickFromHeader, type Header } from '@argonprotocol
 
 dayjs.extend(utc);
 
-export const TICKS_PER_COHORT = 14_400;
-
 /**
  * A frame is the period from noon EDT to the next noon EDT that a cohort of
  * miners rotates. The first frame (frame 0) was the period between bidding start and Frame 1 beginning.
@@ -14,6 +12,14 @@ export const TICKS_PER_COHORT = 14_400;
 export class MiningFrames {
   public static get tickMillis() {
     return this.getConfig().tickMillis;
+  }
+
+  public static get ticksPerCohort() {
+    return this.ticksPerFrame * 10;
+  }
+
+  public static get ticksPerFrame() {
+    return this.getConfig().ticksBetweenFrames;
   }
 
   private static networkName: keyof typeof NetworkConfig | undefined = undefined;
