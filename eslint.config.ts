@@ -6,7 +6,7 @@ export default tseslint.config(
   tseslint.configs.recommendedTypeChecked,
   importX.flatConfigs.recommended,
   importX.flatConfigs.typescript,
-  { ignores: ['**/node_modules/**', '**/lib/**/*.js', '**/target'] },
+  { ignores: ['**/node_modules/**', '**/lib/**/*.js', '**/target', 'e2e'] },
   {
     rules: {
       'import-x/no-named-as-default-member': 'off',

@@ -2,6 +2,7 @@
 <template>
   <SelectRoot v-model="selectedOption" @update:open="handleToggleOpen" @update:modelValue="handleUpdateModelValue">
     <SelectTrigger
+      data-testid="input-menu-trigger"
       ref="triggerInstance"
       class="inline-flex w-full items-center justify-between rounded-md px-[10px] text-xs leading-none h-[30px] gap-[5px] bg-white hover:bg-stone-50 border border-slate-700/50 data-[placeholder]:text-gray-600 outline-none"
     >
@@ -31,6 +32,7 @@
 
         <SelectViewport class="p-[5px]">
           <SelectItem
+            :data-testid="option.name"
             v-for="(option, index) in props.options"
             :key="index"
             :disabled="option.disabled"

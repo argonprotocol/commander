@@ -90,7 +90,7 @@ export class Server {
     let totalProgress = 5;
     onProgress(totalProgress);
     const [output] = await this.connection.runCommandWithTimeout(
-      `INSTALL_LOG_DIR="${this.workDir}/logs" ${this.workDir}/server/scripts/create_troubleshooting_gz.sh`,
+      `${this.workDir}/server/scripts/create_troubleshooting_gz.sh`,
       20e3,
     );
     const file = output.match(/Bundle ready: (.+\.tar\.gz)/);

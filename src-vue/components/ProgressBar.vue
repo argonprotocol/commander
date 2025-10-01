@@ -1,8 +1,8 @@
 <!-- prettier-ignore -->
 <template>
   <div class="Component ProgressBar relative" :hasError="props.hasError">
-    <div Bar :style="{ width: `calc(${progress}% + 2px)` }">
-      <span v-if="hasError">ERROR</span>
+    <div Bar :style="{ width: `calc(${progress}% + 2px)` }" :data-progress="progress">
+      <span v-if="hasError" class="error">ERROR</span>
       <span v-else :style="{ opacity: progress / 25 }">{{ progressLabel }}</span>
     </div>
     <span v-if="!hasError" :style="{ opacity: (50 - progress) / 90 }" class="absolute top-1/2 right-0 -translate-y-1/2 !text-black/30">{{ progressLabel }}</span>

@@ -55,6 +55,7 @@
                 </TabsTrigger>
 
                 <TabsTrigger
+                  data-testid="ServerConnectOverlay.selectedTab='local'()"
                   class="hover:text-argon-800 data-[state=active]:text-argon-600 flex h-[45px] flex-1 cursor-pointer items-center justify-center rounded-tl-md px-5 text-xl leading-none text-slate-500 outline-none select-none data-[state=active]:font-bold"
                   value="local">
                   Local Machine

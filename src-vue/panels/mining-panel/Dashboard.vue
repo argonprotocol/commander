@@ -1,6 +1,6 @@
 <!-- prettier-ignore -->
 <template>
-  <div class="flex flex-col h-full">
+  <div data-testid="Dashboard" class="flex flex-col h-full">
     <div :class="stats.isLoaded ? '' : 'opacity-30 pointer-events-none'" class="flex flex-col h-full px-2.5 py-2.5 gap-y-2 justify-stretch grow">
       <section class="flex flex-row gap-x-2 h-[14%]">
         <div box stat-box class="flex flex-col w-2/12 !py-4">
@@ -199,7 +199,7 @@
                   <div class="h-full w-[1px] bg-slate-400/30"></div>
 
                   <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30 pb-3">
-                    <span>{{ currentFrame.blocksMinedTotal }}</span>
+                    <span data-testid="TotalBlocksMined" :data-value=" currentFrame.blocksMinedTotal">{{ currentFrame.blocksMinedTotal }}</span>
                     <label class="relative block w-full" :title="'Expected Mined Blocks: ' + currentFrame.expected.blocksMinedTotal">
                       Blocks Mined
                       <HealthIndicatorBar :percent="getPercent(currentFrame.blocksMinedTotal, currentFrame.expected.blocksMinedTotal)" />

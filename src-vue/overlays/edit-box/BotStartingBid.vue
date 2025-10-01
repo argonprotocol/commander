@@ -22,7 +22,7 @@
     Formula Type
   </div>
   <div v-if="options.length" class="flex flex-row items-center justify-between">
-    <InputMenu v-model="config.biddingRules.startingBidFormulaType" :options="options" :selectFirst="true" class="w-full" />
+    <InputMenu data-testid="startingBidFormulaType" v-model="config.biddingRules.startingBidFormulaType" :options="options" :selectFirst="true" class="w-full" />
   </div>
 
   <template v-if="config.biddingRules.startingBidFormulaType === BidAmountFormulaType.Custom">

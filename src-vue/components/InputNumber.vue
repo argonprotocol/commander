@@ -14,6 +14,7 @@
       <div class="relative inline-block w-auto whitespace-nowrap">
         <div :class="[!inputValueInserted || currentInputValueFormatted.startsWith(inputValueInserted) ? 'opacity-50' : 'opacity-0']" class="inline-block w-auto py-[1px] min-w-1">{{ currentInputValueFormatted }}</div>
         <div
+          data-testid="input-number"
           :contenteditable="!props.disabled"
           ref="inputElem"
           @focus="handleFocus"

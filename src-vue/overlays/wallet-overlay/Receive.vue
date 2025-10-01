@@ -40,24 +40,24 @@
             </thead>
             <tbody class="selectable-text">
               <tr>
-                <td>{{ microgonToArgonNm(baseMicrogonCommitment).format('0,0.[00000000]') }} ARGN</td>
+                <td data-testid="Receive.microgonsNeeded" :data-value="baseMicrogonCommitment">{{ microgonToArgonNm(baseMicrogonCommitment).format('0,0.[00000000]') }} ARGN</td>
                 <td>{{ microgonToArgonNm(wallet.availableMicrogons).format('0,0.[00000000]') }}</td>
                 <td>{{ microgonToArgonNm(wallets.totalMiningMicrogons - wallet.availableMicrogons).format('0,0.[00000000]') }}</td>
                 <td>{{ microgonToArgonNm(bigIntMax(0n, baseMicrogonCommitment - wallets.totalMiningMicrogons)).format('0,0.[00000000]') }}</td>
                 <td v-if="!baseMicrogonCommitment" class="text-right">--</td>
-                <td v-else-if="wallets.totalMiningMicrogons >= baseMicrogonCommitment" class="text-right text-green-700 font-bold">success</td>
+                <td v-else-if="wallets.totalMiningMicrogons >= baseMicrogonCommitment" class="text-right text-green-700 font-bold" data-testid="Received.argons">success</td>
                 <td v-else class="fade-in-out text-right text-red-700 font-bold">
                   <template v-if="wallet.availableMicrogons > 0n">partially funded</template>
                   <template v-else>waiting</template>
                 </td>
               </tr>
               <tr>
-                <td>{{ micronotToArgonotNm(baseMicronotCommitment).format('0,0.[00000000]') }} ARGNOT</td>
+                <td data-testid="Receive.micronotsNeeded" :data-value="baseMicronotCommitment">{{ micronotToArgonotNm(baseMicronotCommitment).format('0,0.[00000000]') }} ARGNOT</td>
                 <td>{{ micronotToArgonotNm(wallet.availableMicronots).format('0,0.[00000000]') }}</td>
                 <td>{{ micronotToArgonotNm(wallet.reservedMicronots).format('0,0.[00000000]') }}</td>
                 <td>{{ micronotToArgonotNm(bigIntMax(0n, baseMicronotCommitment - wallet.availableMicronots)).format('0,0.[00000000]') }}</td>
                 <td v-if="!baseMicronotCommitment" class="text-right">--</td>
-                <td v-else-if="wallet.availableMicronots >= baseMicronotCommitment" class="text-right text-green-700 font-bold">success</td>
+                <td v-else-if="wallet.availableMicronots >= baseMicronotCommitment" class="text-right text-green-700 font-bold" data-testid="Received.argonots">success</td>
                 <td v-else class="fade-in-out text-right text-red-700 font-bold">
                   <template v-if="wallet.availableMicronots > 0n">partially funded</template>
                   <template v-else>waiting</template>
