@@ -3,10 +3,11 @@ name: Bitcoin Data Snapshot
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: '0 */12 * * *'
+    - cron: '0 4 * * *'
 
 env:
   GHCR_PROJECT: ghcr.io/argonprotocol/commander
+
 jobs:
   build:
     strategy:
@@ -42,12 +43,20 @@ jobs:
 
       - name: Clear out auto-restart from docker compose
         run: |
+          # Install yq
+          apt-get update && apt-get install -y yq
           # Replace any restart policy with "no"
-          yq -i '(.services[].restart) = "no"' docker-compose.yml
+          yq -i -y '.services."bitcoin-node".restart = "no"' docker-compose.yaml
         working-directory: server
 
       - name: Create network
         run: docker network create server-net || true
+        working-directory: server
+
+      - name: Clean up data dir
+        run: |
+          docker compose --env-file=${{ matrix.env_file }} down -v || true
+          rm -rf ../data/bitcoin/*
         working-directory: server
 
       - name: Bootstrap data
@@ -56,7 +65,7 @@ jobs:
 
       - name: Start bitcoin service
         run: |
-          STATUS_PORT=0 docker compose --env-file=${{ matrix.env_file }} --profile=all up -d bitcoin-node status
+          STATUS_PORT=0 docker compose --env-file=${{ matrix.env_file }} --profile=all up --build --force-recreate -d bitcoin-node status
         working-directory: server
 
       - name: Wait for sync via status service
@@ -93,17 +102,6 @@ jobs:
           exit 1
         working-directory: server
 
-      - name: Get UTXO Hash
-        id: data
-        run: |
-          INFO=$(docker compose --env-file=${{ matrix.env_file }} exec -T bitcoin-node sh -c 'bitcoin-cli --conf=$BITCOIN_CONFIG gettxoutsetinfo')
-          echo "UTXO info: $INFO"
-          UTXO_HASH=$(echo "$INFO" | jq -r '.hash_serialized_3 // .hash_serialized_2')
-          HEIGHT=$(echo "$INFO" | jq -r '.height')
-          echo "utxo_hash=$UTXO_HASH" >> $GITHUB_OUTPUT
-          echo "height=$HEIGHT" >> $GITHUB_OUTPUT
-        working-directory: server
-
       - name: Shutdown bitcoin cleanly
         run: |
           docker compose --env-file=${{ matrix.env_file }} exec bitcoin-node sh -c 'bitcoin-cli --conf=$BITCOIN_CONFIG stop'
@@ -121,7 +119,11 @@ jobs:
       - name: Restart and validate bitcoin
         run: |
           echo "Restarting bitcoin-node in isolated mode..."
-          docker compose --env-file=${{ matrix.env_file }} run --rm --network none bitcoin-node sh -euc '
+          # clear out the connections so we don't connect to peers
+          yq -i -y '.services."bitcoin-node".command += ["-maxconnections=0", "-listen=0", "-connect=0"]' docker-compose.yaml
+          docker compose --env-file=${{ matrix.env_file }} up -d bitcoin-node --wait
+          docker compose --env-file=${{ matrix.env_file }} exec -T bitcoin-node bash <<'EOSCRIPT'
+            set -euo pipefail
             # Query blockchain info
             info=$(bitcoin-cli --conf=$BITCOIN_CONFIG getblockchaininfo)
             ibd=$(echo "$info" | jq -r .initialblockdownload)
@@ -139,14 +141,34 @@ jobs:
 
             # Check index info
             indexes=$(bitcoin-cli --conf=$BITCOIN_CONFIG getindexinfo)
-            if echo "$indexes" | jq -e \
-              'to_entries | any(.value.synced == false or .value.best_block_height != '"$blocks"' or .value.best_block != "'"$besthash"'")'; then
+            if echo "$indexes" | jq -e --argjson blocks "$blocks" '
+              to_entries
+              | map(.value.synced == false or .value.best_block_height != $blocks)
+              | any
+              '; then
               echo "❌ Indexes not fully synced or mismatched tip"
               exit 1
             fi
 
             echo "✅ Validation complete: blockchain and indexes are consistent"
-          '
+          EOSCRIPT
+        working-directory: server
+
+      - name: Get UTXO Hash
+        id: data
+        run: |
+          INFO=$(docker compose --env-file=${{ matrix.env_file }} exec -T bitcoin-node sh -c 'bitcoin-cli --conf=$BITCOIN_CONFIG gettxoutsetinfo')
+          echo "UTXO info: $INFO"
+          UTXO_HASH=$(echo "$INFO" | jq -r '.hash_serialized_3 // .hash_serialized_2')
+          HEIGHT=$(echo "$INFO" | jq -r '.height')
+          echo "utxo_hash=$UTXO_HASH" >> $GITHUB_OUTPUT
+          echo "height=$HEIGHT" >> $GITHUB_OUTPUT
+        working-directory: server
+
+      - name: Always tear down bitcoin
+        if: always()
+        run: |
+          docker compose --env-file=${{ matrix.env_file }} down
         working-directory: server
 
       - name: Build snapshot image
@@ -160,6 +182,7 @@ jobs:
         env:
           SNAPSHOT_HEIGHT: ${{ steps.data.outputs.height }}
           BITCOIN_DATA_SLUG: ${{ matrix.image_name }}
+          BITCOIN_WORK_DIR: /mnt/data/bitcoin-data-work
 
       - name: Push snapshot image
         run: docker compose --env-file=${{ matrix.env_file }} push bitcoin-data
@@ -189,7 +212,8 @@ jobs:
 
       - name: Prune non-latest images
         run: |
-          docker images ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }} \
-            --format '{{.Repository}}:{{.Tag}}' \
-            | grep -v ':latest$' | xargs -r docker rmi -f \
-          && docker image prune -f
+          docker image prune -f || true
+          for img in $(docker images ghcr.io/argonprotocol/commander/bitcoin-data-signet \
+             --format '{{.Repository}}:{{.Tag}}' | grep -v ':latest$'); do
+            docker rmi -f "$img" || true
+          done

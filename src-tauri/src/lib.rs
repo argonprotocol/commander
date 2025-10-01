@@ -311,7 +311,7 @@ pub fn run() {
     let instance_name = Utils::get_instance_name();
     let enable_auto_update =
         option_env!("COMMANDER_ENABLE_AUTOUPDATE").map_or(true, |v| v == "true");
-    let is_ci = option_env!("CI").map_or(false, |v| v == "true" || v == "1");
+    let is_test = option_env!("CI").map_or(false, |v| v == "true" || v == "1");
     let logger = init_logger(&network_name, &instance_name);
 
     let relative_config_dir = Utils::get_relative_config_instance_dir();
@@ -335,7 +335,7 @@ pub fn run() {
             window.eval(format!("window.__ARGON_NETWORK_NAME__ = '{}'", network_name_clone)).expect("Failed to set network name in window");
             window.eval(format!("window.__COMMANDER_ENABLE_AUTOUPDATE__ = {}", enable_auto_update)).expect("Failed to set experimental flag in window");
             window.eval(format!("window.__SERVER_ENV_VARS__ = {}", env_vars_json)).expect("Failed to set env vars in window");
-            window.eval(format!("window.__IS_CI__ = {}", is_ci)).expect("Failed to set CI flag in window");
+            window.eval(format!("window.__IS_TEST__ = {}", is_test)).expect("Failed to set is test flag in window");
           })
         .setup(move |app| {
             let handle = app.handle();

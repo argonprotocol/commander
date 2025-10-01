@@ -5,8 +5,11 @@ ARG TAR_PATHS
 ARG REPO_URL
 
 RUN --mount=type=bind,from=data,source=/,target=/data \
-	mkdir /init-data && cd /data && \
-	tar cvf - ${TAR_PATHS} | split --bytes=5GB - /init-data/data.tar.
+    --mount=type=cache,target=/cache \
+	mkdir -p /init-data && cd /data && \
+    tar cvf - ${TAR_PATHS} | split -b 5G - /cache/data.tar. && \
+    # copy the finished splits into the layer, cheap compared to creating them
+    cp /cache/data.tar.* /init-data
 
 ########################
 
