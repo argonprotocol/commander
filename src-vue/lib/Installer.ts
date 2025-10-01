@@ -145,6 +145,8 @@ export default class Installer {
     if (this.remoteFilesNeedUpdating) {
       const stepsToClear = [
         InstallStepErrorType.FileUpload,
+        InstallStepErrorType.UbuntuCheck,
+        InstallStepErrorType.DockerInstall,
         InstallStepErrorType.BitcoinInstall,
         InstallStepErrorType.ArgonInstall,
         InstallStepErrorType.MiningLaunch,

@@ -17,4 +17,6 @@ declare const __SERVER_ENV_VARS__: {
   STATUS_PORT: string;
   BOT_PORT: string;
   ARGON_RPC_PORT: string;
+  BITCOIN_VERSION: string;
+  ARGON_VERSION: string;
 };

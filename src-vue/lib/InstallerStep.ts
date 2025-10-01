@@ -1,4 +1,5 @@
 import { InstallStepKey, InstallStepStatus } from '../interfaces/IConfig';
+import { SERVER_ENV_VARS } from './Env.ts';
 
 type IStepLabelList = [string, string, string];
 
@@ -47,17 +48,17 @@ export const stepLabels: IStepLabel[] = [
   {
     key: InstallStepKey.BitcoinInstall,
     options: [
-      `Install Bitcoin v28.1 and Sync Bitcoin Block Data`,
-      `Installing Bitcoin v28.1 and Syncing Bitcoin Block Data`,
-      `Installed Bitcoin v28.1 and Synced Bitcoin Block Data`,
+      `Install Bitcoin v${SERVER_ENV_VARS.BITCOIN_VERSION} and Sync Bitcoin Block Data`,
+      `Installing Bitcoin v${SERVER_ENV_VARS.BITCOIN_VERSION} and Syncing Bitcoin Block Data`,
+      `Installed Bitcoin v${SERVER_ENV_VARS.BITCOIN_VERSION} and Synced Bitcoin Block Data`,
     ],
   },
   {
     key: InstallStepKey.ArgonInstall,
     options: [
-      `Install Argon v1.1.0 and Sync Argon Block Data`,
-      `Installing Argon v1.1.0 and Syncing Argon Block Data`,
-      `Installed Argon v1.1.0 and Synced Argon Block Data`,
+      `Install Argon ${SERVER_ENV_VARS.ARGON_VERSION} and Sync Argon Block Data`,
+      `Installing Argon ${SERVER_ENV_VARS.ARGON_VERSION} and Syncing Argon Block Data`,
+      `Installed Argon ${SERVER_ENV_VARS.ARGON_VERSION} and Synced Argon Block Data`,
     ],
   },
   {
