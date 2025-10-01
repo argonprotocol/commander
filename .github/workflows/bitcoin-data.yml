@@ -50,7 +50,7 @@ jobs:
 
       - name: Start bitcoin service
         run: |
-          STATUS_PORT=0 docker compose --env-file=${{ matrix.env_file }} --profile=all up -d bitcoin status
+          STATUS_PORT=0 docker compose --env-file=${{ matrix.env_file }} --profile=all up -d bitcoin-node status
         working-directory: server
 
       - name: Wait for sync via status service
@@ -90,7 +90,7 @@ jobs:
       - name: Get UTXO Hash
         id: data
         run: |
-          INFO=$(docker compose --env-file=${{ matrix.env_file }} exec -T bitcoin sh -c 'bitcoin-cli --conf=$BITCOIN_CONFIG gettxoutsetinfo')
+          INFO=$(docker compose --env-file=${{ matrix.env_file }} exec -T bitcoin-node sh -c 'bitcoin-cli --conf=$BITCOIN_CONFIG gettxoutsetinfo')
           echo "UTXO info: $INFO"
           UTXO_HASH=$(echo "$INFO" | jq -r '.hash_serialized_3 // .hash_serialized_2')
           HEIGHT=$(echo "$INFO" | jq -r '.height')
@@ -100,10 +100,10 @@ jobs:
 
       - name: Shutdown bitcoin cleanly
         run: |
-          docker compose --env-file=${{ matrix.env_file }} exec bitcoin sh -c 'bitcoin-cli --conf=$BITCOIN_CONFIG stop'
+          docker compose --env-file=${{ matrix.env_file }} exec bitcoin-node sh -c 'bitcoin-cli --conf=$BITCOIN_CONFIG stop'
           echo "Waiting for bitcoin container to exit..."
           for i in {1..60}; do
-            if ! docker compose --env-file=${{ matrix.env_file }} ps -q bitcoin | xargs docker inspect -f '{{.State.Running}}' 2>/dev/null | grep true; then
+            if ! docker compose --env-file=${{ matrix.env_file }} ps -q bitcoin-node | xargs docker inspect -f '{{.State.Running}}' 2>/dev/null | grep true; then
               echo "bitcoin container has stopped"
               break
             fi

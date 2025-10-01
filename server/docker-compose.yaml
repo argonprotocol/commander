@@ -24,7 +24,7 @@ services:
       - ARGON_CHAIN=${ARGON_CHAIN}
       - ARGON_ARCHIVE_NODE=${ARGON_ARCHIVE_NODE}
       - ARGON_LOCAL_NODE=http://argon-miner:9944
-      - BITCOIN_RPC_URL=http://bitcoin:bitcoin@bitcoin:5000/
+      - BITCOIN_RPC_URL=http://bitcoin:bitcoin@bitcoin-node:5000/
       - BITCOIN_CHAIN=${BITCOIN_CHAIN}
       - LOGS_DIR=/logs
     healthcheck:
@@ -59,7 +59,7 @@ services:
     deploy:
       replicas: 1
 
-  bitcoin:
+  bitcoin-node:
     <<: *common-config
     restart: unless-stopped
     build:
@@ -70,6 +70,7 @@ services:
     command:
       - /usr/local/bin/bitcoind
       - -conf=${BITCOIN_CONFIG}
+      - --port=${BITCOIN_P2P_PORT}
     ports:
       - '${BITCOIN_P2P_PORT}:${BITCOIN_P2P_PORT}'
     environment:
@@ -98,10 +99,10 @@ services:
     user: '${UID}:${GID}'
     restart: unless-stopped
     depends_on:
-      - bitcoin
+      - bitcoin-node
       - status
     command:
-      - --bitcoin-rpc-url=http://bitcoin:bitcoin@bitcoin:5000
+      - --bitcoin-rpc-url=http://bitcoin:bitcoin@bitcoin-node:5000
       - --base-path=/data
       - --no-mdns
       - --no-telemetry

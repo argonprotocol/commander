@@ -177,15 +177,15 @@ export class Server {
   }
 
   public async stopBitcoinDocker(): Promise<void> {
-    await this.runComposeCommand(`stop bitcoin`, 60e3);
+    await this.runComposeCommand(`stop bitcoin-node`, 60e3);
   }
 
   public async startBitcoinDocker(): Promise<void> {
-    await this.runComposeCommand(`up bitcoin -d`, 60e3);
+    await this.runComposeCommand(`up bitcoin-node -d`, 60e3);
   }
 
   public async resyncBitcoin(): Promise<void> {
-    const dataDir = await this.getDataDir('bitcoin').catch(() => null);
+    const dataDir = await this.getDataDir('bitcoin-node').catch(() => null);
     if (dataDir) {
       await this.stopBitcoinDocker();
       console.info(`Wiping Bitcoin data directory: ${dataDir}`);
@@ -204,7 +204,7 @@ export class Server {
   }
 
   public async restartDocker(): Promise<void> {
-    await this.runComposeCommand(`restart argon-miner bitcoin bot`, 10e3);
+    await this.runComposeCommand(`restart argon-miner bitcoin-node bot`, 10e3);
   }
 
   public async uploadEnvSecurity(envSecurity: { sessionMiniSecret: string; keypairPassphrase: string }): Promise<void> {
