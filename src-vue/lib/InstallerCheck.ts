@@ -25,6 +25,7 @@ export class InstallerCheck {
   private cachedInstallStepStatuses: IInstallStepStatuses = {};
   private isCompletedPromise: Promise<void> | null = null;
   private shouldContinue = true;
+  private checkInterval = 1000;
 
   constructor(installer: Installer, config: Config) {
     this.installer = installer;
@@ -34,7 +35,7 @@ export class InstallerCheck {
   public start(): void {
     this.isCompletedPromise = new Promise(async (resolve, reject) => {
       const connection = await SSH.getOrCreateConnection();
-      this.server = new Server(connection);
+      this.server = new Server(connection, this.config.serverDetails);
 
       while (true) {
         await this.updateInstallStatus().catch(() => null);
@@ -49,7 +50,7 @@ export class InstallerCheck {
           return;
         }
 
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, this.checkInterval));
         if (!this.shouldContinue) {
           resolve();
           return;

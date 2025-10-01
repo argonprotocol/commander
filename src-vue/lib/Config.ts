@@ -76,6 +76,7 @@ export class Config {
         ipAddress: '',
         sshUser: '',
         type: ServerType.DigitalOcean,
+        workDir: '~',
       },
       installDetails: Config.getDefault(dbFields.installDetails) as IConfig['installDetails'],
       oldestFrameIdToSync: Config.getDefault(dbFields.oldestFrameIdToSync) as number,
@@ -115,10 +116,10 @@ export class Config {
   }
 
   public async load() {
-    console.log('Config: Loading configuration from database...');
     if (this._loadedDeferred.isSettled || this._loadedDeferred.isRunning) {
       return this._loadedDeferred.promise;
     }
+    console.log('Config: Loading configuration from database...');
     this._loadedDeferred.setIsRunning(true);
     try {
       const db = await this._dbPromise;
@@ -152,6 +153,7 @@ export class Config {
         if (key === dbFields.serverDetails) {
           // Ensure old serverDetails without type are set to DigitalOcean
           loadedData.serverDetails.type ??= ServerType.DigitalOcean;
+          loadedData.serverDetails.workDir ??= '~';
           fieldsToSave.add(key);
           rawData[dbFields.serverDetails] = JsonExt.stringify(loadedData.serverDetails, 2);
         }
@@ -680,6 +682,7 @@ const defaults: IConfigDefaults = {
       ipAddress: '',
       sshUser: 'root',
       type: ServerType.DigitalOcean,
+      workDir: '~',
     };
   },
   installDetails: () => {

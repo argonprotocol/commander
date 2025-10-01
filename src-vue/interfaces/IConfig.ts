@@ -48,6 +48,7 @@ export const ConfigServerDetailsSchema = z.object({
   port: z.number().optional(),
   sshUser: z.string(),
   type: z.nativeEnum(ServerType),
+  workDir: z.string(),
 });
 
 export const ConfigInstallStep = z.object({

@@ -264,7 +264,7 @@ export default class Installer {
     // getting it in every function that needs it.
     if (!this._server) {
       const connection = await SSH.getOrCreateConnection();
-      this._server = new Server(connection);
+      this._server = new Server(connection, this.config.serverDetails);
     }
     return this._server;
   }
@@ -449,8 +449,9 @@ export default class Installer {
       throw new Error('Failed to extract server tar name from SHASUM256 file');
     }
 
+    const workDir = this.config.serverDetails.workDir;
     const localServerTar = `resources/${serverTar}`;
-    const remoteDir = `~/server`;
+    const remoteDir = `${this.config.serverDetails.workDir}/server`;
     let totalProgress = 0;
     const totalCount = 120;
     try {
@@ -466,12 +467,12 @@ export default class Installer {
 
     try {
       console.log(`Uploading server to ${remoteDir}`);
-      await SSH.uploadEmbeddedFile(localServerTar, `~/${serverTar}`, (progress: number) => {
+      await SSH.uploadEmbeddedFile(localServerTar, `${workDir}/${serverTar}`, (progress: number) => {
         totalProgress += progress;
         progressFn?.(totalCount, totalProgress);
       });
 
-      const [remoteSha256] = await SSH.runCommand(`cd ~ && sha256sum ${serverTar}`);
+      const [remoteSha256] = await SSH.runCommand(`cd ${workDir} && sha256sum ${serverTar}`);
       if (remoteSha256.replace(/\s+/, ' ').trim() !== expectedSha.replace(/\s+/, ' ').trim()) {
         console.log(`Remote SHA256: ${remoteSha256}`);
         console.log(`Embedded SHA256: ${expectedSha}`);
@@ -486,11 +487,11 @@ export default class Installer {
 
     try {
       console.log(`Extracting server files to ${remoteDir}`);
-      const [result, status] = await SSH.runCommand(`tar -xzf ~/${serverTar} -C ${remoteDir}`);
+      const [result, status] = await SSH.runCommand(`tar -xzf ${workDir}/${serverTar} -C ${remoteDir}`);
       if (status !== 0) {
         throw new Error(`Failed to extract server files: ${result}`);
       }
-      await SSH.uploadFile(expectedSha, `~/server/SHASUM256`);
+      await SSH.uploadFile(expectedSha, `${workDir}/server/SHASUM256`);
       console.log(`FINISHED Extracting server files to ${remoteDir} - ${result}`);
       totalProgress += 10;
       progressFn?.(totalCount, totalProgress);

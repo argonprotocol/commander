@@ -4,7 +4,7 @@ import { remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { AdvancedRestartOption } from '../interfaces/IAdvancedRestartOption';
 import { SSH } from './SSH';
 import { Server } from './Server';
-import { useConfig } from '../stores/config.ts';
+import { Config } from './Config.ts';
 import { toRaw } from 'vue';
 import Installer from './Installer.ts';
 import { LocalMachine } from './LocalMachine.ts';
@@ -13,15 +13,17 @@ export default class Restarter {
   private dbPromise: Promise<Db>;
 
   private _server?: Server;
+  private _config: Config;
 
-  constructor(dbPromise: Promise<Db>) {
+  constructor(dbPromise: Promise<Db>, config: Config) {
     this.dbPromise = dbPromise;
+    this._config = config;
   }
 
   public async getServer() {
     if (!this._server) {
       const connection = await SSH.getOrCreateConnection();
-      this._server = new Server(connection);
+      this._server = new Server(connection, this._config.serverDetails);
     }
     return this._server;
   }
@@ -79,12 +81,12 @@ export default class Restarter {
 
   public async recreateLocalDatabase() {
     const db = await this.dbPromise;
-    const config = useConfig();
+    const config = this._config;
     const serverDetails = toRaw(config.serverDetails);
     await db.close();
 
     const dbPath = Db.relativePath;
-    await remove(dbPath, { baseDir: BaseDirectory.AppLocalData });
+    await remove(dbPath, { baseDir: BaseDirectory.AppConfig });
     await invoke('run_db_migrations');
     await db.reconnect();
     localStorage.setItem(

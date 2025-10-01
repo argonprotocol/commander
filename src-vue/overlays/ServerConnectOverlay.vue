@@ -774,6 +774,7 @@ async function addServer() {
         const { sshPort } = await LocalMachine.create(sshPublicKey.value);
         newServerDetails.ipAddress = `127.0.0.1`;
         newServerDetails.port = sshPort;
+        newServerDetails.workDir = '/app';
       } catch (err) {
         serverDetailsError.value = `Something went wrong trying to create your local Docker server. Try restarting Docker.`;
         console.error(`Error creating local docker machine`, err);

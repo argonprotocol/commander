@@ -2,7 +2,8 @@
 set -euo pipefail
 # set -x
 # Point this to your install logs directory (override with env if needed)
-INSTALL_LOG_DIR="${INSTALL_LOG_DIR:-$HOME/logs}"
+DIRNAME="$(dirname "$0")"
+INSTALL_LOG_DIR="$DIRNAME/../../logs"
 
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 HOST="$(hostname -s || echo host)"

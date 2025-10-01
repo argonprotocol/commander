@@ -31,7 +31,7 @@ export default class Importer {
       return;
     }
 
-    const restarter = new Restarter(this.dbPromise);
+    const restarter = new Restarter(this.dbPromise, this.config);
     await restarter.recreateLocalDatabase();
     await invokeWithTimeout('overwrite_security', { ...this.data.security }, 10_000);
     await this.config.load();
@@ -59,7 +59,7 @@ export default class Importer {
   }
 
   async importFromMnemonic(mnemonic: string) {
-    const restarter = new Restarter(this.dbPromise);
+    const restarter = new Restarter(this.dbPromise, this.config);
     await invokeWithTimeout('overwrite_mnemonic', { mnemonic }, 10_000);
     await restarter.recreateLocalDatabase();
     await restarter.restart();
@@ -71,6 +71,7 @@ export default class Importer {
       ipAddress,
       sshUser: this.config.serverDetails.sshUser,
       type: this.config.serverDetails.type,
+      workDir: this.config.serverDetails.workDir,
     };
 
     const serverData = await this.fetchServerData(serverDetails, this.config.security.sshPrivateKeyPath);

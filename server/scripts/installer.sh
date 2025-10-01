@@ -5,6 +5,8 @@ DEBUG_LOG="/tmp/installer_debug.log"
 
 SCRIPT_PATH="$(readlink -f "$0")"
 SCRIPTS_DIR="$(dirname "$SCRIPT_PATH")"
+SERVER_DIR="$(dirname "$SCRIPTS_DIR")"
+HOME_DIR="$(dirname "$SERVER_DIR")"
 NEEDS_FULL_SETUP=true
 export DOCKER_BUILDKIT=1
 LOCALHOST=127.0.0.1
@@ -102,7 +104,7 @@ fi
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Script path: $SCRIPT_PATH"
 } >> "$DEBUG_LOG"
 
-logs_dir=~/logs
+logs_dir="$HOME_DIR/logs"
 
 # Source the helpers file
 source "$(dirname "$0")/helpers.sh"
@@ -184,7 +186,7 @@ fi
 
 ########################################################################################
 
-cd server
+cd "$SERVER_DIR"
 
 ########################################################################################
 if ! (already_ran "DockerInstall"); then
