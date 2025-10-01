@@ -19,4 +19,4 @@ export const ESPLORA_HOST: string = networkConfig.esploraHost;
 export const BITCOIN_BLOCK_MILLIS: number = networkConfig.bitcoinBlockMillis;
 export const DEPLOY_ENV_FILE = `.env.${NETWORK_NAME}`;
 export const SECURITY = __COMMANDER_SECURITY__ as ISecurity;
-export const IS_CI = __IS_CI__ ?? false;
+export const IS_TEST = __IS_TEST__ ?? false;

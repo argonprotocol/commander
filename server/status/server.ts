@@ -230,7 +230,12 @@ class BitcoinApis {
     if (syncPercent >= 100 && !isTrulyComplete) {
       syncPercent = 99.9;
     }
-    return { syncPercent, mainNodeBlockNumber, localNodeBlockNumber };
+    return {
+      syncPercent,
+      mainNodeBlockNumber,
+      localNodeBlockNumber,
+      bitcoinNode: { indexinfo: localSyncedInfo, initialblockdownload, blocks, headers },
+    } as any;
   }
 
   static async recentBlocks(blockCount: number): Promise<IBitcoinBlockMeta[]> {

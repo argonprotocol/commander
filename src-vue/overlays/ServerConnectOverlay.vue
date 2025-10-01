@@ -652,7 +652,7 @@ import { enable as enableAutostart } from '@tauri-apps/plugin-autostart';
 import { platformType } from '../tauri-controls/utils/os.ts';
 import { open as tauriOpenUrl } from '@tauri-apps/plugin-shell';
 import { LocalMachine } from '../lib/LocalMachine.ts';
-import { IS_CI } from '../lib/Env.ts';
+import { IS_TEST } from '../lib/Env.ts';
 
 const config = useConfig();
 const installer = useInstaller();
@@ -801,7 +801,7 @@ async function addServer() {
     }
     config.serverDetails = newServerDetails;
     await config.save();
-    if (type === ServerType.Docker && !IS_CI) {
+    if (type === ServerType.Docker && !IS_TEST) {
       await invokeWithTimeout('toggle_nosleep', { enable: true }, 5000);
       await enableAutostart();
     }
