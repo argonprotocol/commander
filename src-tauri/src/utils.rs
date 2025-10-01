@@ -5,6 +5,7 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
+static ENV_DOCKER: &str = include_str!("../../server/.env.dev-docker");
 static ENV_LOCAL: &str = include_str!("../../server/.env.localnet");
 static ENV_MAINNET: &str = include_str!("../../server/.env.mainnet");
 static ENV_TESTNET: &str = include_str!("../../server/.env.testnet");
@@ -30,6 +31,7 @@ impl Utils {
 
     pub fn get_server_env_vars() -> Result<HashMap<String, String>, String> {
         let env_text = match Self::get_network_name().as_str() {
+            "dev-docker" => ENV_DOCKER,
             "localnet" => ENV_LOCAL,
             "mainnet" => ENV_MAINNET,
             "testnet" => ENV_TESTNET,

@@ -2,8 +2,6 @@ use crate::utils::Utils;
 use include_dir::{Dir, include_dir};
 use std::fs;
 use std::net::TcpListener;
-#[cfg(not(target_os = "windows"))]
-use std::os::unix::prelude::*;
 use std::path::PathBuf;
 use std::process::Command;
 use tauri::AppHandle;
@@ -39,20 +37,18 @@ pub fn check_needed_ports() -> Result<Vec<u16>, String> {
 }
 
 #[tauri::command]
-pub async fn create_local_vm(
-    app: AppHandle,
-    ssh_public_key: String,
-    env_text: String,
-) -> Result<u16, String> {
+pub async fn create_local_vm(app: AppHandle, env_text: String) -> Result<u16, String> {
     let vm_path = get_vm_path(&app);
-    let vm = Vm::create(vm_path, ssh_public_key, env_text)?;
+    let work_dir = get_vm_work_dir(&app);
+    let vm = Vm::create(vm_path, work_dir, env_text)?;
     Ok(vm.ssh_port)
 }
 
 #[tauri::command]
 pub async fn activate_local_vm(app: AppHandle) -> Result<u16, String> {
     let vm_path = get_vm_path(&app);
-    let vm = Vm::activate(&vm_path)?;
+    let work_dir = get_vm_work_dir(&app);
+    let vm = Vm::activate(&vm_path, &work_dir)?;
     Ok(vm.ssh_port)
 }
 
@@ -67,40 +63,49 @@ fn get_vm_path(app: &AppHandle) -> PathBuf {
     Utils::get_absolute_config_instance_dir(app).join("virtual-machine")
 }
 
+fn get_vm_work_dir(app: &AppHandle) -> PathBuf {
+    get_vm_path(app).join("app")
+}
+
+#[cfg(unix)]
+fn get_uid_gid() -> (u32, u32) {
+    (unsafe { libc::getuid() }, unsafe { libc::getgid() })
+}
+
+#[cfg(windows)]
+fn get_uid_gid() -> (u32, u32) {
+    // Windows has no UID/GID. Return a sentinel
+    (1000, 1000)
+}
+
 impl Vm {
-    pub fn activate(vm_path: &PathBuf) -> anyhow::Result<Vm, String> {
+    pub fn activate(vm_path: &PathBuf, work_dir: &PathBuf) -> anyhow::Result<Vm, String> {
         if !vm_path.exists() {
             return Err(format!("VM path {} does not exist", vm_path.display()));
         }
         Self::run_compose_command(vm_path, &["up", "-d"])?;
-        Self::run_compose_command(&vm_path.join("server"), &["up", "-d"])?;
+        Self::run_compose_command(work_dir, &["up", "-d"])?;
         Self::get_vm(vm_path)
     }
 
     pub fn create(
         vm_path: PathBuf,
-        ssh_public_key: String,
-        env_text: String,
+        work_dir: PathBuf,
+        mut env_text: String,
     ) -> anyhow::Result<Vm, String> {
         if vm_path.exists() {
             std::fs::remove_dir_all(&vm_path)
                 .map_err(|e| format!("Error removing VM directory {}: {}", vm_path.display(), e))?;
         }
-        let ssh_path = vm_path.join(".ssh");
 
-        if !ssh_path.exists() {
-            fs::create_dir_all(&ssh_path)
-                .map_err(|e| format!("Error creating directory {}: {}", ssh_path.display(), e))?;
-            Vm::set_permissions(&ssh_path, 0o700)?;
+        if !vm_path.exists() {
+            fs::create_dir_all(&vm_path)
+                .map_err(|e| format!("Error creating directory {}: {}", vm_path.display(), e))?;
         }
-        let keys_path = ssh_path.join("authorized_keys");
-
-        fs::write(&keys_path, ssh_public_key)
-            .map_err(|e| format!("Error writing file {}: {}", keys_path.display(), e))?;
-
-        Vm::set_permissions(&keys_path, 0o600)?;
 
         let env_path = vm_path.join(".env");
+        let (uid, gid) = get_uid_gid();
+        env_text.push_str(&format!("\nUID={}\nGID={}\n", uid, gid));
         fs::write(&env_path, env_text)
             .map_err(|e| format!("Error writing file {}: {}", env_path.display(), e))?;
 
@@ -111,7 +116,11 @@ impl Vm {
                 .map_err(|e| format!("Error copying file to {}: {}", target_path.display(), e))?;
         }
 
-        Self::run_compose_command(&vm_path, &["up", "-d", "--build", "--wait"])?;
+        if !work_dir.exists() {
+            fs::create_dir_all(&work_dir)
+                .map_err(|e| format!("Error creating directory {}: {}", work_dir.display(), e))?;
+        }
+        Self::run_compose_command(&vm_path, &["up", "--build", "-d", "--wait"])?;
         Self::get_vm(&vm_path)
     }
 
@@ -151,7 +160,12 @@ impl Vm {
             .args(["compose"].iter().chain(args))
             .current_dir(vm_path)
             .output()
-            .map_err(|e| format!("Failed to run docker compose: {}", e))?;
+            .map_err(|e| {
+                format!(
+                    "Failed to run docker compose: {} at {:?}. {:?}",
+                    e, vm_path, args
+                )
+            })?;
 
         if !output.status.success() {
             return Err(format!(
@@ -161,15 +175,5 @@ impl Vm {
             ));
         }
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-    }
-
-    fn set_permissions(path: &PathBuf, mode: u32) -> anyhow::Result<(), String> {
-        #[cfg(not(target_os = "windows"))]
-        {
-            let mut perms = fs::metadata(path).map_err(|e| e.to_string())?.permissions();
-            perms.set_mode(mode);
-            fs::set_permissions(path, perms).map_err(|e| e.to_string())?;
-        }
-        Ok(())
     }
 }

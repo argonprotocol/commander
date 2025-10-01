@@ -4,8 +4,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        SSH_PUBKEY: ${SSH_PUBKEY}
     ports:
       - "0:22"
+    cgroup: host   # required for systemd on real Linux hosts, ignored on Docker Desktop (Mac/Windows)
     cap_add:
       - SYS_ADMIN   # lets systemd manage cgroups
       - NET_ADMIN   # ufw / iptables rules
@@ -16,12 +19,14 @@ services:
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw    # required for systemd
       - /var/run/docker.sock:/var/run/docker.sock  # lets docker talk to host
-      - .:/root
+      - ./app:/app
     tmpfs:
       - /run  # Required by systemd and ufw
       - /run/lock
     environment:
-      DOCKER_HOST: unix:///var/run/docker.sock
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - UID=${UID}
+      - GID=${GID}
     healthcheck:
       # yamllint disable-line rule:line-length rule:brackets
       test: [ "CMD-SHELL", "systemctl is-active --quiet ssh && nc -z localhost 22" ]
