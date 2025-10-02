@@ -31,6 +31,7 @@ export const useWallets = defineStore('wallets', () => {
     address: '',
     availableMicrogons: 0n,
     availableMicronots: 0n,
+    reservedMicrogons: 0n,
     reservedMicronots: 0n,
   });
 
@@ -39,6 +40,7 @@ export const useWallets = defineStore('wallets', () => {
     address: '',
     availableMicrogons: 0n,
     availableMicronots: 0n,
+    reservedMicrogons: 0n,
     reservedMicronots: 0n,
   });
 
@@ -68,6 +70,11 @@ export const useWallets = defineStore('wallets', () => {
     return miningWallet.availableMicrogons + miningSeatValue.value + miningBidValue.value;
   });
 
+  const totalVaultingMicrogons = Vue.computed(() => {
+    // TBD: add in current vault value
+    return vaultingWallet.availableMicrogons + vaultingWallet.reservedMicrogons;
+  });
+
   const totalMiningResources = Vue.computed(() => {
     return (
       miningWallet.availableMicrogons +
@@ -81,6 +88,7 @@ export const useWallets = defineStore('wallets', () => {
   const totalVaultingResources = Vue.computed(() => {
     return (
       vaultingWallet.availableMicrogons +
+      vaultingWallet.reservedMicrogons +
       currency.micronotToMicrogon(vaultingWallet.availableMicronots) +
       currency.micronotToMicrogon(vaultingWallet.reservedMicronots)
     );
@@ -161,6 +169,7 @@ export const useWallets = defineStore('wallets', () => {
     miningSeatValue,
     miningBidValue,
     totalMiningMicrogons,
+    totalVaultingMicrogons,
     totalMiningResources,
     totalVaultingResources,
     totalNetWorth,

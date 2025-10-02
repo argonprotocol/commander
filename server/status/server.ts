@@ -10,7 +10,7 @@ const cache: {
     timestamp: number;
   };
   bitcoin?: {
-    latestBlocks: IBitcoinBlockNumbers;
+    latestBlocks: IBitcoinBlockNumbers & IBlockchainInfo;
     timestamp: number;
   };
 } = {};
@@ -151,7 +151,7 @@ class BitcoinApis {
     return getRoundedPercent(sum / (percents.length * 100));
   }
 
-  static async latestBlocks(): Promise<IBlockNumbers> {
+  static async latestBlocks(): Promise<IBlockNumbers & IBlockchainInfo> {
     const now = Date.now();
     if (cache.bitcoin && now - cache.bitcoin.timestamp < 2000) {
       return cache.bitcoin.latestBlocks;
@@ -183,6 +183,9 @@ class BitcoinApis {
         localNodeBlockNumber: blockchainInfo.blocks,
         mainNodeBlockNumber,
         localNodeBlockTime: blockchainInfo.time,
+        ...blockchainInfo,
+        softforks: undefined,
+        bip9_softforks: undefined,
       },
       timestamp: now,
     };
@@ -191,21 +194,32 @@ class BitcoinApis {
 
   static async syncStatus(): Promise<{ syncPercent: number } & IBlockNumbers> {
     let dockerPercent = await this.dockerPercentComplete().catch(() => 0);
-    const { localNodeBlockNumber, mainNodeBlockNumber } = await this.latestBlocks().catch(() => ({
-      localNodeBlockNumber: 0,
-      mainNodeBlockNumber: 0,
-    }));
+    const { localNodeBlockNumber, mainNodeBlockNumber, initialblockdownload, blocks, headers } =
+      await this.latestBlocks().catch(() => ({
+        localNodeBlockNumber: 0,
+        mainNodeBlockNumber: 0,
+        initialblockdownload: true,
+        blocks: 0,
+        headers: 0,
+      }));
     // if we have any blocks, docker is definitely done
     if (localNodeBlockNumber > 0) {
       dockerPercent = 100;
     }
 
     let blockSyncPercent = mainNodeBlockNumber ? getRoundedPercent(localNodeBlockNumber / mainNodeBlockNumber) : 0;
-    const localSyncedInfo = await callBitcoinRpc<Record<string, { synced: boolean }>>('getindexinfo').catch(() => ({
-      na: { synced: false },
+    const localSyncedInfo = await callBitcoinRpc<Record<string, { synced: boolean; best_block_height: number }>>(
+      'getindexinfo',
+    ).catch(() => ({
+      na: { synced: false, best_block_height: 0 },
     }));
-    const localSynced = Object.values(localSyncedInfo).every(index => index.synced);
-    if (!localSynced && blockSyncPercent >= 100) {
+    const indexesSynced =
+      Object.values(localSyncedInfo).every(index => index.synced && index.best_block_height === localNodeBlockNumber) &&
+      Object.keys(localSyncedInfo).length > 0;
+
+    const blocksSynced = initialblockdownload && blocks === headers;
+    // if we're not all the way synced, don't report 100%
+    if (blockSyncPercent >= 99 && (!blocksSynced || !indexesSynced)) {
       blockSyncPercent = 99;
     }
     const syncPercent = getRoundedPercent((dockerPercent * 0.7 + blockSyncPercent * 0.3) / 100, 1);
@@ -224,7 +238,7 @@ class BitcoinApis {
 function getRoundedPercent(num: number, decimals = 1): number {
   const factor = Math.pow(10, decimals);
 
-  const percent = Math.round(100 * num * factor) / factor;
+  const percent = Math.floor(100 * num * factor) / factor;
   return Math.min(percent, 100);
 }
 

@@ -144,7 +144,7 @@
                           <span>{{ rules.personalBtcPct }}%</span>
                           <EditIcon EditIcon />
                         </div>
-                        <div class="text-gray-500/60 text-md">
+                        <div class="text-gray-500/60 text-md font-mono">
                           Your Bitcoin Commitment
                         </div>
                       </div>

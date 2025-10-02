@@ -5,8 +5,8 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import { JsonExt } from '@argonprotocol/mainchain';
 import { Vaults } from '../src-vue/lib/Vaults.ts';
-import { getMining, setArchiveClientUrl } from '../src-vue/stores/mainchain.ts';
-import { NetworkConfig } from '@argonprotocol/commander-core';
+import { getMining, setArchiveClientUrl, setMainchainClients } from '../src-vue/stores/mainchain.ts';
+import { MainchainClients, NetworkConfig } from '@argonprotocol/commander-core';
 
 dayjs.extend(utc);
 
@@ -14,11 +14,11 @@ const rebuildBaseline = Boolean(JSON.parse(process.env.REBUILD_BASELINE ?? '0'))
 
 export default async function fetchVaultRevenue() {
   for (const chain of ['testnet', 'mainnet'] as const) {
-    await setArchiveClientUrl(NetworkConfig[chain].archiveUrl);
-    const mainchain = getMining();
+    const mainchain = new MainchainClients(NetworkConfig[chain].archiveUrl);
+    setMainchainClients(mainchain);
     const vaults = new Vaults(chain);
     await vaults.load();
-    const data = await vaults.refreshRevenue(mainchain.clients);
+    const data = await vaults.refreshRevenue(mainchain);
 
     // Write data to JSON file
     const filePath = path.join(process.cwd(), 'src-vue', 'data', `vaultRevenue.${chain}.json`);

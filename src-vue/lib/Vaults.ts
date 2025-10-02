@@ -303,22 +303,25 @@ export class Vaults {
           microgonLiquidityRealized: convertBigIntStringToNumber(baseline.microgonLiquidityRealized as any) ?? 0n,
           satoshis: convertBigIntStringToNumber(baseline.satoshis as any) ?? 0n,
         },
-        changesByFrame: changesByFrame.map((change: IVaultFrameStats) => ({
-          frameId: change.frameId,
-          satoshisAdded: convertBigIntStringToNumber(change.satoshisAdded as any) ?? 0n,
-          bitcoinLocksCreated: change.bitcoinLocksCreated,
-          microgonLiquidityAdded: convertBigIntStringToNumber(change.microgonLiquidityAdded as any) ?? 0n,
-          bitcoinFeeRevenue: convertBigIntStringToNumber(change.bitcoinFeeRevenue as any) ?? 0n,
-          securitization: convertBigIntStringToNumber(change.securitization as any) ?? 0n,
-          securitizationActivated: convertBigIntStringToNumber(change.securitizationActivated as any) ?? 0n,
-          treasuryPool: {
-            externalCapital: convertBigIntStringToNumber(change.treasuryPool.externalCapital as any) ?? 0n,
-            vaultCapital: convertBigIntStringToNumber(change.treasuryPool.vaultCapital as any) ?? 0n,
-            totalEarnings: convertBigIntStringToNumber(change.treasuryPool.totalEarnings as any) ?? 0n,
-            vaultEarnings: convertBigIntStringToNumber(change.treasuryPool.vaultEarnings as any) ?? 0n,
-          },
-          uncollectedEarnings: 0n,
-        })),
+        changesByFrame: changesByFrame.map(
+          change =>
+            ({
+              frameId: change.frameId,
+              satoshisAdded: convertBigIntStringToNumber(change.satoshisAdded as any) ?? 0n,
+              bitcoinLocksCreated: change.bitcoinLocksCreated,
+              microgonLiquidityAdded: convertBigIntStringToNumber(change.microgonLiquidityAdded as any) ?? 0n,
+              bitcoinFeeRevenue: convertBigIntStringToNumber(change.bitcoinFeeRevenue as any) ?? 0n,
+              securitization: convertBigIntStringToNumber(change.securitization as any) ?? 0n,
+              securitizationActivated: convertBigIntStringToNumber(change.securitizationActivated as any) ?? 0n,
+              treasuryPool: {
+                externalCapital: convertBigIntStringToNumber(change.treasuryPool.externalCapital as any) ?? 0n,
+                vaultCapital: convertBigIntStringToNumber(change.treasuryPool.vaultCapital as any) ?? 0n,
+                totalEarnings: convertBigIntStringToNumber(change.treasuryPool.totalEarnings as any) ?? 0n,
+                vaultEarnings: convertBigIntStringToNumber(change.treasuryPool.vaultEarnings as any) ?? 0n,
+              },
+              uncollectedEarnings: 0n,
+            }) as IVaultFrameStats,
+        ),
       };
     }
     for (const vault of Object.values(this.vaultsById)) {

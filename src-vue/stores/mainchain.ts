@@ -48,6 +48,11 @@ function setPrunedClientToLocal() {
   void SSH.getIpAddress().then(ip => mainchainClients.setPrunedClient(`ws://${ip}:${SERVER_ENV_VARS.ARGON_RPC_PORT}`));
 }
 
+export function setMainchainClients(clients: MainchainClients) {
+  mainchainClients = clients;
+  return mainchainClients;
+}
+
 export function getMainchainClients(): MainchainClients {
   if (!mainchainClients) {
     mainchainClients = new MainchainClients(NETWORK_URL);

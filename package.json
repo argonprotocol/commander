@@ -24,12 +24,14 @@
     "test": "vitest --run",
     "typecheck": "vue-tsc --noEmit && yarn workspaces foreach --all run tsc --noEmit",
     "update-data": "tsx data-generators/all.ts",
-    "docker:clean": "yarn docker:local down -v && yarn docker:argon down",
-    "docker:local": "docker compose -f docker-compose.yml",
-    "docker:argon": "docker compose -f ../mainchain/docker-compose.yml --profile=pricing --env-file=../mainchain/.env.local",
-    "docker:build": "yarn docker:argon up --build && yarn docker:local --build",
-    "docker:up": "yarn docker:clean && yarn docker:argon up -d && yarn docker:local up -d",
-    "prepare": "husky"
+    "docker:config": "tsx e2e/argon/updateConfig.ts",
+    "docker:miners": "docker compose --env-file=e2e/argon/.env -f miners.docker-compose.yml",
+    "docker:argon:download": "tsx e2e/argon/download.ts",
+    "docker:argon": "yarn docker:argon:download && cd e2e/argon && docker compose --profile=price-oracle",
+    "docker:down": "yarn docker:miners down -v --timeout=0 && yarn docker:argon down -v --timeout=0",
+    "docker:up": "yarn docker:down && yarn docker:argon up -d --pull=always --wait && yarn docker:config && yarn docker:miners up -d ",
+    "prepare": "husky",
+    "postversion": "yarn update-data && yarn build:version"
   },
   "dependencies": {
     "@argonprotocol/bitcoin": "^1.3.7",

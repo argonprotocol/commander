@@ -253,7 +253,7 @@ const mintPercent = Vue.computed(() => {
   if (!utxo) return 0n;
   const { mintAmount, mintPending } = utxo.ratchets[0];
   if (mintPending === 0n) return 100;
-  return Number(mintAmount - mintPending) / Number(mintAmount);
+  return (100 * Number(mintAmount - mintPending)) / Number(mintAmount);
 });
 
 const vaultCapital = Vue.computed(() => {

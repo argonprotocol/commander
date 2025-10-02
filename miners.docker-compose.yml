@@ -34,10 +34,6 @@ services:
     restart: on-failure
     volumes:
       - miner1-data:/accounts
-    profiles:
-      - miners
-      - all
-
   miner-2-bidder:
     <<: *cli
     command:
@@ -63,9 +59,6 @@ services:
         condition: service_healthy
     volumes:
       - miner2-data:/accounts
-    profiles:
-      - miners
-      - all
 
 networks:
   default:

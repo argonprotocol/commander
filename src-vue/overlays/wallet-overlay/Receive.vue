@@ -42,10 +42,10 @@
               <tr>
                 <td data-testid="Receive.microgonsNeeded" :data-value="baseMicrogonCommitment">{{ microgonToArgonNm(baseMicrogonCommitment).format('0,0.[00000000]') }} ARGN</td>
                 <td>{{ microgonToArgonNm(wallet.availableMicrogons).format('0,0.[00000000]') }}</td>
-                <td>{{ microgonToArgonNm(wallets.totalMiningMicrogons - wallet.availableMicrogons).format('0,0.[00000000]') }}</td>
-                <td>{{ microgonToArgonNm(bigIntMax(0n, baseMicrogonCommitment - wallets.totalMiningMicrogons)).format('0,0.[00000000]') }}</td>
+                <td>{{ microgonToArgonNm(walletAllocatedMicrogons - wallet.availableMicrogons).format('0,0.[00000000]') }}</td>
+                <td>{{ microgonToArgonNm(bigIntMax(0n, baseMicrogonCommitment - walletAllocatedMicrogons)).format('0,0.[00000000]') }}</td>
                 <td v-if="!baseMicrogonCommitment" class="text-right">--</td>
-                <td v-else-if="wallets.totalMiningMicrogons >= baseMicrogonCommitment" class="text-right text-green-700 font-bold" data-testid="Received.argons">success</td>
+                <td v-else-if="walletAllocatedMicrogons >= baseMicrogonCommitment" class="text-right text-green-700 font-bold" data-testid="Received.argons">success</td>
                 <td v-else class="fade-in-out text-right text-red-700 font-bold">
                   <template v-if="wallet.availableMicrogons > 0n">partially funded</template>
                   <template v-else>waiting</template>
@@ -139,6 +139,15 @@ const baseMicrogonCommitment = Vue.computed(() => {
     return config.biddingRules?.baseMicrogonCommitment || 0n;
   } else if (props.walletId === 'vaulting') {
     return config.vaultingRules?.baseMicrogonCommitment || 0n;
+  }
+  return 0n;
+});
+
+const walletAllocatedMicrogons = Vue.computed(() => {
+  if (props.walletId === 'mining') {
+    return wallets.totalMiningMicrogons || 0n;
+  } else if (props.walletId === 'vaulting') {
+    return wallets.totalVaultingMicrogons || 0n;
   }
   return 0n;
 });

@@ -6,6 +6,7 @@ import Fs from 'node:fs/promises';
 import docker from 'docker-compose';
 import { Options } from '@wdio/types';
 import { getClient } from '@argonprotocol/mainchain';
+import { ARGON_DOCKER_COMPOSE } from './argon';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -14,7 +15,6 @@ let tauriDriver: ChildProcess | undefined;
 let exit = false;
 
 const COMMANDER_ROOT = path.resolve(__dirname, process.env.COMMANDER_ROOT ?? '..');
-const ARGON_DOCKER_COMPOSE = Path.resolve(__dirname, 'argon', 'docker-compose.yml');
 const DOCKER_LOG = Boolean(JSON.parse(process.env.DOCKER_LOG ?? 'true'));
 let ARGON_RPC_URL = 'ws://localhost:9944';
 const ARGON_CHAIN = 'dev-docker';
@@ -57,7 +57,7 @@ export const config: Options.Testrunner & { capabilities: any } = {
   // ensure the rust project is built since we expect this binary to exist for the webdriver sessions
   async onPrepare() {
     try {
-      await loadDockerComposeConfig();
+      await import('./argon/download.js');
       await Fs.rm(CONFIG_DIR, {
         recursive: true,
         force: true,
@@ -178,18 +178,3 @@ function onShutdown(fn: () => Promise<void>) {
 
 // ensure tauri-driver is closed when our test process exits
 onShutdown(cleanupBeforeExit);
-
-async function loadDockerComposeConfig() {
-  if (
-    !(await Fs.stat(ARGON_DOCKER_COMPOSE)
-      .then(() => true)
-      .catch(() => false))
-  ) {
-    console.log('Downloading docker-compose.yml for argon dev-docker network');
-    const configResponse = await fetch(
-      `https://raw.githubusercontent.com/argonprotocol/mainchain/refs/heads/main/docker-compose.yml`,
-    );
-    if (!configResponse.ok) throw new Error(`Failed to fetch docker-compose.yml: ${configResponse.statusText}`);
-    await Fs.writeFile(ARGON_DOCKER_COMPOSE, await configResponse.text(), 'utf-8');
-  }
-}

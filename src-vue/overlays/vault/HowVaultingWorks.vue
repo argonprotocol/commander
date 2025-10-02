@@ -93,7 +93,7 @@
                       <td>$100,000 (+$0)</td>
                       <td>0.8</td>
                       <td>+$20,000 (price of Argons $80,000)</td>
-                      <td>₳{{  micronotToArgonNm(BigInt(100_000 * 1e6 *  (((0.5618 * 0.8) + 0.3944) / 0.8))).format('0,') }}</td>
+                      <td>₳{{  micronotToArgonNm(BigInt(Math.floor(100_000 * 1e6 *  (((0.5618 * 0.8) + 0.3944) / 0.8)))).format('0,') }}</td>
                     </tr>
                     </tbody>
                   </table>
@@ -120,7 +120,7 @@
                       <td class="text-left">{{ currency.symbol }}{{ microgonToMoneyNm(vault.poolEarnings).format('0,0.00') }}</td>
                     </tr>
                     <tr v-if="vaults.length === 0">
-                      <td colspan="4">Loading...</td>
+                      <td colspan="5">Loading...</td>
                     </tr>
                     </tbody>
                   </table>

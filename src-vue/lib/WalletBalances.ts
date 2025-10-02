@@ -12,6 +12,7 @@ export interface IWallet {
   address: string;
   availableMicrogons: bigint;
   availableMicronots: bigint;
+  reservedMicrogons: bigint;
   reservedMicronots: bigint;
 }
 
@@ -27,6 +28,7 @@ export class WalletBalances {
     address: '',
     availableMicrogons: 0n,
     availableMicronots: 0n,
+    reservedMicrogons: 0n,
     reservedMicronots: 0n,
   };
 
@@ -34,6 +36,7 @@ export class WalletBalances {
     address: '',
     availableMicrogons: 0n,
     availableMicronots: 0n,
+    reservedMicrogons: 0n,
     reservedMicronots: 0n,
   };
 
@@ -183,9 +186,11 @@ export class WalletBalances {
 
   private handleMicrogonBalanceChange(result: FrameSystemAccountInfo, wallet: IWallet) {
     const availableMicrogons = result.data.free.toBigInt();
-    const availableMicrogonsDiff = availableMicrogons - wallet.availableMicrogons;
+    const reservedMicrogons = result.data.reserved.toBigInt();
+    const availableMicrogonsDiff = availableMicrogons + reservedMicrogons - wallet.availableMicrogons;
 
     wallet.availableMicrogons = availableMicrogons;
+    wallet.reservedMicrogons = reservedMicrogons;
 
     this.totalWalletMicrogons += availableMicrogonsDiff;
     this.onBalanceChange?.();
@@ -207,6 +212,7 @@ export class WalletBalances {
     if (wallet.availableMicrogons > 0n) return true;
     if (wallet.availableMicronots > 0n) return true;
     if (wallet.reservedMicronots > 0n) return true;
+    if (wallet.reservedMicrogons > 0n) return true;
     return false;
   }
 }
