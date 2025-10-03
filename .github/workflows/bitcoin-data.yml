@@ -40,6 +40,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Clear out auto-restart from docker compose
+        run: |
+          # Replace any restart policy with "no"
+          yq -i '(.services[].restart) = "no"' docker-compose.yml
+        working-directory: server
+
       - name: Create network
         run: docker network create server-net || true
         working-directory: server
@@ -105,10 +111,42 @@ jobs:
           for i in {1..60}; do
             if ! docker compose --env-file=${{ matrix.env_file }} ps -q bitcoin-node | xargs docker inspect -f '{{.State.Running}}' 2>/dev/null | grep true; then
               echo "bitcoin container has stopped"
+              sleep 10 # wait a bit more for clean shutdown
               break
             fi
             sleep 2
           done
+        working-directory: server
+
+      - name: Restart and validate bitcoin
+        run: |
+          echo "Restarting bitcoin-node in isolated mode..."
+          docker compose --env-file=${{ matrix.env_file }} run --rm --network none bitcoin-node sh -euc '
+            # Query blockchain info
+            info=$(bitcoin-cli --conf=$BITCOIN_CONFIG getblockchaininfo)
+            ibd=$(echo "$info" | jq -r .initialblockdownload)
+            blocks=$(echo "$info" | jq -r .blocks)
+            headers=$(echo "$info" | jq -r .headers)
+            besthash=$(echo "$info" | jq -r .bestblockhash)
+
+            echo "blocks=$blocks headers=$headers ibd=$ibd"
+
+            # Check Core’s own sync flags
+            if [ "$ibd" != "false" ] || [ "$blocks" != "$headers" ]; then
+              echo "❌ Node still in IBD or not at header tip"
+              exit 1
+            fi
+
+            # Check index info
+            indexes=$(bitcoin-cli --conf=$BITCOIN_CONFIG getindexinfo)
+            if echo "$indexes" | jq -e \
+              'to_entries | any(.value.synced == false or .value.best_block_height != '"$blocks"' or .value.best_block != "'"$besthash"'")'; then
+              echo "❌ Indexes not fully synced or mismatched tip"
+              exit 1
+            fi
+
+            echo "✅ Validation complete: blockchain and indexes are consistent"
+          '
         working-directory: server
 
       - name: Build snapshot image
@@ -148,3 +186,10 @@ jobs:
           subject-name: ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}
           subject-digest: ${{ steps.digest.outputs.digest }}
           push-to-registry: true
+
+      - name: Prune non-latest images
+        run: |
+          docker images ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }} \
+            --format '{{.Repository}}:{{.Tag}}' \
+            | grep -v ':latest$' | xargs -r docker rmi -f \
+          && docker image prune -f

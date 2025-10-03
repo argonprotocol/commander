@@ -3,7 +3,8 @@ set -euo pipefail
 # set -x
 # Point this to your install logs directory (override with env if needed)
 DIRNAME="$(dirname "$0")"
-INSTALL_LOG_DIR="$DIRNAME/../../logs"
+ROOT_DIR="$(realpath "$DIRNAME/../..")"
+INSTALL_LOG_DIR="$ROOT_DIR/logs"
 
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 HOST="$(hostname -s || echo host)"
@@ -195,7 +196,7 @@ SINCE="$(date -u -d '48 hours ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -v -4
 
 # Data folders
 echo "[*] Copying data folders"
-rsync -a --delete "$HOME"/data/bot* ./data/ | true
+rsync -a --delete "$ROOT_DIR/data/argon/bot*" ./data/ | true
 
 echo "[*] Creating archive"
 ARCHIVE="${OUTROOT}.tar.gz"

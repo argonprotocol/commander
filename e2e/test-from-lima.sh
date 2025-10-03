@@ -5,6 +5,7 @@ set -euo pipefail
 DIRNAME=$(dirname "$0")
 cd "$DIRNAME" || exit 1
 
+
 # Check if limactl is installed
 if ! command -v limactl &> /dev/null; then
   echo "limactl could not be found. Please install Lima by running: brew install lima"
@@ -32,7 +33,7 @@ fi
 # Check if the Lima VM 'tauri-webdriver' exists
 if ! limactl list --json | jq -e 'select(.name=="tauri-webdriver" and .status=="Running")' > /dev/null; then
   echo "Creating Lima VM 'tauri-webdriver'..."
-  limactl start --name=tauri-webdriver -y --debug "$DIRNAME/lima.yaml"
+  limactl start --name=tauri-webdriver -y --debug ./lima.yaml
 fi
 
 # Remote dir inside Lima VM
