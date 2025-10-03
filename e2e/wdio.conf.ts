@@ -133,7 +133,12 @@ function closeTauriDriver() {
   tauriDriver?.kill();
 }
 
+let cleanupPromise: Promise<void> | null = null;
 async function cleanupBeforeExit() {
+  cleanupPromise ??= innerCleanupBeforeExit();
+  return cleanupPromise;
+}
+async function innerCleanupBeforeExit() {
   closeTauriDriver();
   console.log('Shutting down argon test network docker containers...');
   const serverDir = Path.join(CONFIG_DIR, 'virtual-machine', 'app', 'server');
@@ -149,19 +154,24 @@ async function cleanupBeforeExit() {
   } catch (e) {
     console.error('Failed to create troubleshooting archive', e);
   }
-  await docker.downAll({
-    log: DOCKER_LOG,
-    commandOptions: [`--volumes`, '--timeout=0'],
-    composeOptions: ['--profile=all'],
-    config: serverDir,
-    env: DOCKER_ENV,
-  });
-  await docker.downAll({
-    log: DOCKER_LOG,
-    commandOptions: [`--volumes`, '--timeout=0', '--remove-orphans'],
-    config: ARGON_DOCKER_COMPOSE,
-    env: DOCKER_ENV,
-  });
+
+  await docker
+    .downAll({
+      log: DOCKER_LOG,
+      commandOptions: [`--volumes`, '--timeout=0'],
+      composeOptions: ['--profile=all'],
+      config: serverDir,
+      env: DOCKER_ENV,
+    })
+    .catch(() => null);
+  await docker
+    .downAll({
+      log: DOCKER_LOG,
+      commandOptions: [`--volumes`, '--timeout=0', '--remove-orphans'],
+      config: ARGON_DOCKER_COMPOSE,
+      env: DOCKER_ENV,
+    })
+    .catch(() => null);
 }
 
 function onShutdown(fn: () => Promise<void>) {
