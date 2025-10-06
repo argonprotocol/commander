@@ -110,7 +110,8 @@
             </div>
           </div>
           <div stat-box class="flex flex-col text-center">
-            <span class="text-2xl font-bold" :class="[personalUtxo.status === 'initialized'? 'text-gray-500': '']">{{ currency.symbol }}{{ microgonToMoneyNm(personalUtxo.lockPrice).format('0,0.[00]') }}</span>
+            <span class="text-2xl font-bold" :class="[personalUtxo.status === 'initialized'? 'text-gray-500': '']">{{ currency.symbol
+              }}{{ microgonToMoneyNm(personalUtxo.liquidityPromised).format('0,0.[00]') }}</span>
             <label v-if="personalUtxo.status === 'initialized'">Liquidity Promised</label>
             <label v-else>Liquidity Unlocked</label>
             <div v-if="personalUtxo.status === 'initialized' && bitcoinPendingStatus" class="text-sm text-gray-400">({{bitcoinPendingStatus}})</div>

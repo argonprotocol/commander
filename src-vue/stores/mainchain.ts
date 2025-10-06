@@ -7,9 +7,9 @@ import {
   Mining,
   PriceIndex,
 } from '@argonprotocol/commander-core';
+import { ApiDecoration } from '@argonprotocol/mainchain';
 import { NETWORK_URL, SERVER_ENV_VARS } from '../lib/Env.ts';
 import { useConfig } from './config';
-import { ApiDecoration } from '@polkadot/api/types';
 import { botEmitter } from '../lib/Bot.ts';
 import { BotStatus } from '../lib/BotSyncer.ts';
 import { useBot } from './bot.ts';

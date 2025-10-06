@@ -1,6 +1,5 @@
-import { type ArgonClient } from '@argonprotocol/mainchain';
+import { type ArgonClient, getClient } from '@argonprotocol/mainchain';
 import { wrapApi } from './ClientWrapper.js';
-import { ApiPromise, WsProvider } from '@polkadot/api';
 import { createNanoEvents } from './utils.js';
 
 export class MainchainClients {
@@ -112,6 +111,5 @@ function getJson(a: unknown): any {
 }
 
 async function getMainchainClientOrThrow(host: string): Promise<ArgonClient> {
-  const provider = new WsProvider(host);
-  return (await ApiPromise.create({ provider, noInitWarn: true, throwOnConnect: true })) as unknown as ArgonClient;
+  return getClient(host, { throwOnConnect: true });
 }

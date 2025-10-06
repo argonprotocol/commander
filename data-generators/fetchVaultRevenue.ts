@@ -3,10 +3,9 @@ import * as fs from 'node:fs';
 import * as path from 'path';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
-import { JsonExt } from '@argonprotocol/mainchain';
+import { JsonExt, MainchainClients, NetworkConfig } from '@argonprotocol/commander-core';
 import { Vaults } from '../src-vue/lib/Vaults.ts';
-import { getMining, setArchiveClientUrl, setMainchainClients } from '../src-vue/stores/mainchain.ts';
-import { MainchainClients, NetworkConfig } from '@argonprotocol/commander-core';
+import { setMainchainClients } from '../src-vue/stores/mainchain.ts';
 
 dayjs.extend(utc);
 
@@ -36,12 +35,12 @@ export default async function fetchVaultRevenue() {
       for (const [_utxoId, utxo] of utxos) {
         const vaultId = utxo.unwrap().vaultId.toNumber();
         const satoshis = utxo.unwrap().satoshis.toBigInt();
-        const lockPrice = utxo.unwrap().lockPrice.toBigInt();
+        const liquidityPromised = utxo.unwrap().liquidityPromised.toBigInt();
         const vaultStats = data.vaultsById[vaultId].baseline;
         vaultStats.bitcoinLocks += 1;
         vaultStats.satoshis += satoshis;
-        vaultStats.microgonLiquidityRealized += lockPrice;
-        vaultStats.feeRevenue += vaults.vaultsById[vaultId].calculateBitcoinFee(lockPrice);
+        vaultStats.microgonLiquidityRealized += liquidityPromised;
+        vaultStats.feeRevenue += vaults.vaultsById[vaultId].calculateBitcoinFee(liquidityPromised);
       }
     }
 

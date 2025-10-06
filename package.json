@@ -34,10 +34,10 @@
     "postversion": "yarn update-data && yarn build:version"
   },
   "dependencies": {
-    "@argonprotocol/bitcoin": "^1.3.7",
+    "@argonprotocol/bitcoin": "^1.3.8",
     "@argonprotocol/commander-bot": "workspace:*",
     "@argonprotocol/commander-core": "workspace:*",
-    "@argonprotocol/mainchain": "^1.3.7",
+    "@argonprotocol/mainchain": "^1.3.8",
     "@chenfengyuan/vue-countdown": "^2.1.3",
     "@flaticon/flaticon-uicons": "^3.3.1",
     "@headlessui/vue": "^1.7.23",

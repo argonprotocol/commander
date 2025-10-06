@@ -2,12 +2,14 @@ import type { Accountset } from './Accountset.js';
 import {
   type ArgonClient,
   type ArgonPrimitivesBlockSealMiningRegistration,
-  type Header,
+  Bool,
   ExtrinsicError,
   formatArgons,
   getTickFromHeader,
+  type Header,
+  u64,
+  Vec,
 } from '@argonprotocol/mainchain';
-import { Bool, u64, Vec } from '@polkadot/types-codec';
 import { MiningFrames } from './MiningFrames.js';
 
 interface IBidDetail {

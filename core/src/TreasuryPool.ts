@@ -5,7 +5,8 @@ import { BlockWatch } from './BlockWatch.js';
 import {
   type ArgonClient,
   type ArgonPrimitivesBlockSealMiningRegistration,
-  convertPermillToBigNumber,
+  fromFixedNumber,
+  PERMILL_DECIMALS,
   type KeyringPair,
   type PalletLiquidityPoolsLiquidityPool,
   type PalletLiquidityPoolsLiquidityPoolCapital,
@@ -382,7 +383,7 @@ export class TreasuryPool {
       }
       this.setVaultFrameData(frameId, vaultIdNumber, {
         earnings: fund.distributedProfits.isSome ? fund.distributedProfits.unwrap().toBigInt() : undefined,
-        vaultSharingPercent: convertPermillToBigNumber(fund.vaultSharingPercent.toBigInt()),
+        vaultSharingPercent: fromFixedNumber(fund.vaultSharingPercent.toBigInt(), PERMILL_DECIMALS),
         contributors,
       });
     }

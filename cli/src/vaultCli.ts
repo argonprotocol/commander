@@ -1,8 +1,7 @@
 import { Command } from '@commander-js/extra-typings';
 import { VaultMonitor } from '@argonprotocol/commander-core';
 import { accountsetFromCli } from './index.js';
-import { BitcoinLocks, MICROGONS_PER_ARGON, TxSubmitter, Vault } from '@argonprotocol/mainchain';
-import { hexToU8a } from '@polkadot/util';
+import { hexToU8a, BitcoinLocks, MICROGONS_PER_ARGON, TxSubmitter, Vault } from '@argonprotocol/mainchain';
 
 export default function vaultCli() {
   const program = new Command('vaults').description('Monitor vaults and manage securitization');
@@ -88,7 +87,7 @@ export default function vaultCli() {
       const client = accountset.client;
       const resolvedTip = tip ? BigInt(tip * MICROGONS_PER_ARGON) : 0n;
       const microgons = BigInt(argons * MICROGONS_PER_ARGON);
-      const bitcoinLocks = new BitcoinLocks(Promise.resolve(client));
+      const bitcoinLocks = new BitcoinLocks(client);
       const existentialDeposit = client.consts.balances.existentialDeposit.toBigInt();
       const tickDuration = (await client.query.ticks.genesisTicker()).tickDurationMillis.toNumber();
 

@@ -1,6 +1,5 @@
 import { Accountset, type IMiningIndex, type ISubaccountMiner } from './Accountset.js';
-import { type Header } from '@polkadot/types/interfaces/runtime';
-import { GenericEvent } from '@polkadot/types';
+import { type Header, GenericEvent } from '@argonprotocol/mainchain';
 import { BlockWatch } from './BlockWatch.js';
 import { createNanoEvents } from './utils.js';
 import { MiningFrames } from './MiningFrames.js';
