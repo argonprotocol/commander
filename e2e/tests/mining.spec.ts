@@ -57,8 +57,8 @@ it('should be able to start a miner', async () => {
 
   // open server connect
   await waitAndClick('FinalSetupChecklist.openServerConnectOverlay()');
-  await waitAndClick("ServerConnectOverlay.selectedTab='local'()");
-  await waitAndClick('ServerConnectOverlay.addServer()');
+  await waitAndClick("ServerConnectOverlay.selectedTab='local'");
+  await waitAndClick('ServerConnectOverlay.connect()');
 
   // takes a second to create the local server
   const launchButton = await waitForVisible('FinalSetupChecklist.launchMiningBot()', 120e3);
