@@ -8,16 +8,18 @@
     <TourStepTwo @previousStep="loadStep(1)" @nextStep="loadStep(3)" :pos="tourPos" v-if="tour.currentStep === 2" />
     <TourStepThree @previousStep="loadStep(2)" @nextStep="loadStep(4)" :pos="tourPos" v-if="tour.currentStep === 3" />
     <TourStepFour @previousStep="loadStep(3)" @nextStep="loadStep(5)" :pos="tourPos" v-if="tour.currentStep === 4" />
+    <TourStepFive @previousStep="loadStep(4)" @nextStep="loadStep(6)" :pos="tourPos" v-if="tour.currentStep === 5" />
   </div>
 </template>
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import TourStepOne from './welcome-tour/StepOne.vue';
 import { ITourPos, useTour } from '../stores/tour';
+import TourStepOne from './welcome-tour/StepOne.vue';
 import TourStepTwo from './welcome-tour/StepTwo.vue';
 import TourStepThree from './welcome-tour/StepThree.vue';
 import TourStepFour from './welcome-tour/StepFour.vue';
+import TourStepFive from './welcome-tour/StepFive.vue';
 import { useConfig } from '../stores/config';
 import { useController } from '../stores/controller';
 import { PanelKey } from '../interfaces/IConfig';
@@ -37,8 +39,10 @@ function updateStepVars() {
   } else if (tour.currentStep === 2) {
     rect = tour.getPositionCheck('vaultingTab');
   } else if (tour.currentStep === 3) {
-    rect = tour.getPositionCheck('accountMenu');
+    rect = tour.getPositionCheck('currencyMenu');
   } else if (tour.currentStep === 4) {
+    rect = tour.getPositionCheck('accountMenu');
+  } else if (tour.currentStep === 5) {
     rect = tour.getPositionCheck('miningButton');
   }
 
@@ -56,7 +60,7 @@ function updateStepVars() {
 }
 
 async function loadStep(step: number) {
-  if (step === 5) {
+  if (step === 6) {
     step = 0;
     config.showWelcomeOverlay = false;
     await config.save();

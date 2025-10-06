@@ -44,7 +44,7 @@
       :class="[wallets.isLoaded ? '' : 'opacity-20']"
     >
       <div :class="[controller.panelKey === PanelKey.Mining && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><StatusMenu /></div>
-      <div :class="[controller.panelKey === PanelKey.Mining && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><CurrencyMenu /></div>
+      <div :class="[controller.panelKey === PanelKey.Mining && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><CurrencyMenu ref="currencyMenuRef" /></div>
       <div :class="[controller.panelKey === PanelKey.Mining && bot.isSyncing ? 'pointer-events-none' : 'pointer-events-auto']"><AccountMenu ref="accountMenuRef" /></div>
     </div>
   </div>
@@ -69,6 +69,8 @@ const tour = useTour();
 const bot = useBot();
 
 const toggleRef = Vue.ref<HTMLElement | null>(null);
+
+const currencyMenuRef = Vue.ref<InstanceType<typeof CurrencyMenu> | null>(null);
 const accountMenuRef = Vue.ref<InstanceType<typeof AccountMenu> | null>(null);
 
 tour.registerPositionCheck('miningTab', (): ITourPos => {
@@ -87,6 +89,16 @@ tour.registerPositionCheck('vaultingTab', () => {
   rect.top -= 10;
   rect.bottom += 10;
   return rect;
+});
+
+tour.registerPositionCheck('currencyMenu', () => {
+  const currencyMenuElem = currencyMenuRef.value?.$el;
+  const rect = currencyMenuElem?.getBoundingClientRect().toJSON() || { left: 0, right: 0, top: 0, bottom: 0 };
+  rect.left -= 10;
+  rect.right += 10;
+  rect.top -= 10;
+  rect.bottom += 7;
+  return { ...rect, blur: 5 };
 });
 
 tour.registerPositionCheck('accountMenu', () => {
