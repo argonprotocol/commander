@@ -2,12 +2,12 @@
 <template>
   <div class="h-screen w-screen flex flex-col overflow-hidden cursor-default">
     <TopBar />
-    <main v-if="controller.isLoaded && !controller.isImporting" class="flex-grow relative">
+    <main v-if="controller.isLoaded && !controller.isImporting" class="grow relative h-full overflow-scroll">
       <AlertBars />
       <MiningPanel v-if="showMiningPanel" />
       <VaultingPanel v-else-if="controller.panelKey === PanelKey.Vaulting" />
     </main>
-    <div v-else class="flex-grow relative">
+    <div v-else class="grow relative">
       <div class="flex flex-col items-center justify-center h-full">
         <div class="text-2xl font-bold text-slate-600/40 uppercase">Loading...</div>
       </div>
@@ -20,7 +20,6 @@
       <ServerConnectOverlay />
       <WalletOverlay />
       <ServerRemoveOverlay />
-      <ServerConfigureOverlay />
       <SecuritySettingsOverlay />
       <BotOverlay />
       <VaultOverlay />
@@ -49,7 +48,6 @@ import BotOverlay from './overlays/BotOverlay.vue';
 import VaultOverlay from './overlays/VaultOverlay.vue';
 import WalletOverlay from './overlays/WalletOverlay.vue';
 import ServerRemoveOverlay from './overlays/ServerRemoveOverlay.vue';
-import ServerConfigureOverlay from './overlays/ServerConfigureOverlay.vue';
 import SecuritySettingsOverlay from './overlays/SecuritySettingsOverlay.vue';
 import SyncingOverlay from './overlays/SyncingOverlay.vue';
 import TopBar from './navigation/TopBar.vue';

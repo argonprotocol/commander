@@ -8,7 +8,7 @@
       </div>
       <div class="absolute bottom-0 left-0 w-[200%] h-px bg-gradient-to-r from-slate-400/30 from-0% via-slate-400/30 via-50% to-transparent to-100%"></div>
     </div>
-    <div class="relative px-[15%] pt-2">
+    <div class="relative px-[15%] pt-2 pb-10">
       <div>
         <h1 class="text-4xl font-bold text-left mt-24 mb-4 whitespace-nowrap text-argon-text-primary">
           Three Steps Are Required to Begin Vaulting

@@ -24,6 +24,7 @@ import * as Vue from 'vue';
 import { useConfig } from '../../stores/config';
 import { useInstaller } from '../../stores/installer';
 import InstallProgress from '../../components/InstallProgress.vue';
+import { ServerType } from '../../interfaces/IConfig';
 
 const config = useConfig();
 const installer = useInstaller();
@@ -36,7 +37,7 @@ const hasError = Vue.computed(() => {
 });
 
 function serverType() {
-  if (serverDetails.value.type === 'Docker') {
+  if (serverDetails.value.type === ServerType.LocalComputer) {
     return 'Docker';
   }
 
@@ -44,10 +45,10 @@ function serverType() {
 }
 
 function serverIdentity() {
-  if (serverDetails.value.type === 'Docker') {
+  if (serverDetails.value.type === ServerType.LocalComputer) {
     return 'Docker machine';
   }
-  if (serverDetails.value.type === 'DigitalOcean') {
+  if (serverDetails.value.type === ServerType.DigitalOcean) {
     return `${serverDetails.value.ipAddress} server on DigitalOcean`;
   }
   return `${serverDetails.value.ipAddress} server`;

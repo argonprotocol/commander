@@ -36,9 +36,10 @@
       <label class="font-bold text-lg truncate grow text-left">FAILED to {{ getLabel(stepLabel, -1) }}</label>
       <button
         v-if="!isRetrying && stepLabel.key === InstallStepKey.ServerConnect"
+        @click="openServerConnectOverlay"
         class="text-argon-button font-bold px-4 py-0.5 border border-argon-button rounded cursor-pointer hover:border-argon-button-hover hover:text-argon-button-hover mr-2"
       >
-        Configure Cloud Machine
+        Configure Mining Machine
       </button>
       <button
         v-else-if="!isRetrying"
@@ -59,13 +60,12 @@
       v-if="stepLabel.key === InstallStepKey.ServerConnect"
       class="text-black/70 border-t border-dashed border-slate-400/50 pt-3 mt-3 pr-2.5 relative z-10"
     >
-      Commander could not connect to your server. Click the Configure Cloud Machine button if your IP address has
-      changed. You can also retry the connection. If this issue persists, you might need to remove the current server
+      Commander could not connect to your server. Click the Configure Mining Machine button to modify settings. You can also retry the connection. If this issue persists, you might need to remove the current server
       and start afresh with a new one.
     </p>
     <p v-else class="text-black/70 border-t border-dashed border-slate-400/50 pt-3 pb-5 mt-3 pr-2.5 relative z-10">
       Commander has encountered an unrecoverable error while trying to provision your server. Rerun this step by
-      clicking Retry. If the issue persists, you might need to remove the current server and start afresh with a new
+      clicking Retry. If the issue persists, you might need to remove the server and start afresh with a new
       one.
     </p>
   </li>
@@ -159,6 +159,10 @@ async function retryFailedStep(step: IStepLabel) {
 
 function openServerRemoveOverlay() {
   basicEmitter.emit('openServerRemoveOverlay');
+}
+
+function openServerConnectOverlay() {
+  basicEmitter.emit('openServerConnectOverlay');
 }
 </script>
 

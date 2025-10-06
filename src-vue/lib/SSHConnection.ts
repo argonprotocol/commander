@@ -26,7 +26,7 @@ export class SSHConnection {
     this.port = sshConfig.port ?? 22;
     this.username = sshConfig.sshUser;
     this.privateKeyPath = sshConfig.privateKeyPath;
-    this.isDockerHostProxy = sshConfig.type === ServerType.Docker;
+    this.isDockerHostProxy = sshConfig.type === ServerType.LocalComputer;
   }
 
   public async connect(retries = 3): Promise<void> {

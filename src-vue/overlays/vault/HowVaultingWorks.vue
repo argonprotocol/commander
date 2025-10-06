@@ -31,7 +31,7 @@
 
               <p>
                 Just like the mining side, there is no third-party company, authority, or server helping to run
-                this app. However, unlike the mining side, no cloud machine is required to operate a vault. Everything runs directly from this app on your local machine.
+                this app. However, unlike the mining side, no mining machine is required to operate a vault. Everything runs directly from this app on your local machine.
               </p>
 
               <p>Below is a brief overview of how it all works.</p>

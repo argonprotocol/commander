@@ -90,6 +90,7 @@ export class Config {
       hasReadMiningInstructions: Config.getDefault(dbFields.hasReadMiningInstructions) as boolean,
       isPreparingMinerSetup: Config.getDefault(dbFields.isPreparingMinerSetup) as boolean,
       isMinerReadyToInstall: Config.getDefault(dbFields.isMinerReadyToInstall) as boolean,
+      isMiningMachineCreated: Config.getDefault(dbFields.isMiningMachineCreated) as boolean,
       isMinerInstalled: Config.getDefault(dbFields.isMinerInstalled) as boolean,
       isMinerUpToDate: Config.getDefault(dbFields.isMinerUpToDate) as boolean,
       isMinerWaitingForUpgradeApproval: Config.getDefault(dbFields.isMinerWaitingForUpgradeApproval) as boolean,
@@ -164,7 +165,7 @@ export class Config {
         await this._injectFirstTimeAppData(loadedData, rawData, fieldsToSave);
       }
 
-      if (loadedData.serverDetails.type === ServerType.Docker && loadedData.isMinerInstalled) {
+      if (loadedData.serverDetails.type === ServerType.LocalComputer && loadedData.isMinerInstalled) {
         const { sshPort } = await LocalMachine.activate();
         await invokeWithTimeout('toggle_nosleep', { enable: true }, 5000);
         loadedData.serverDetails.ipAddress = `127.0.0.1`;
@@ -304,6 +305,17 @@ export class Config {
     return this._security;
   }
 
+  get serverCreation(): IConfig['serverCreation'] {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.serverCreation;
+  }
+
+  set serverCreation(value: IConfig['serverCreation']) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.serverCreation = value;
+    this._tryFieldsToSave(dbFields.serverCreation, value);
+  }
+
   get serverDetails(): IConfig['serverDetails'] {
     this._throwErrorIfNotLoaded();
     return this._loadedData.serverDetails;
@@ -379,6 +391,17 @@ export class Config {
     this._throwErrorIfNotLoaded();
     this._loadedData.isMinerReadyToInstall = value;
     this._tryFieldsToSave(dbFields.isMinerReadyToInstall, value);
+  }
+
+  get isMiningMachineCreated(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.isMiningMachineCreated;
+  }
+
+  set isMiningMachineCreated(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.isMiningMachineCreated = value;
+    this._tryFieldsToSave(dbFields.isMiningMachineCreated, value);
   }
 
   get isMinerUpToDate(): boolean {
@@ -632,7 +655,10 @@ export class Config {
   ): Partial<IConfigStringified> {
     const toSave = {} as IConfigStringified;
     for (const field of fieldsToSave) {
-      toSave[field as keyof IConfigStringified] = stringifiedData[field as keyof IConfig];
+      const value = stringifiedData[field as keyof IConfig];
+      if (value !== undefined) {
+        toSave[field as keyof IConfigStringified] = value;
+      }
     }
 
     return toSave;
@@ -648,6 +674,7 @@ const dbFields = {
   requiresPassword: 'requiresPassword',
   showWelcomeOverlay: 'showWelcomeOverlay',
 
+  serverCreation: 'serverCreation',
   serverDetails: 'serverDetails',
   installDetails: 'installDetails',
   oldestFrameIdToSync: 'oldestFrameIdToSync',
@@ -659,6 +686,7 @@ const dbFields = {
   hasReadMiningInstructions: 'hasReadMiningInstructions',
   isPreparingMinerSetup: 'isPreparingMinerSetup',
   isMinerReadyToInstall: 'isMinerReadyToInstall',
+  isMiningMachineCreated: 'isMiningMachineCreated',
   isMinerInstalled: 'isMinerInstalled',
   isMinerUpToDate: 'isMinerUpToDate',
   isMinerWaitingForUpgradeApproval: 'isMinerWaitingForUpgradeApproval',
@@ -680,6 +708,7 @@ const defaults: IConfigDefaults = {
   requiresPassword: () => false,
   showWelcomeOverlay: () => true,
 
+  serverCreation: () => undefined,
   serverDetails: () => {
     return {
       ipAddress: '',
@@ -716,6 +745,7 @@ const defaults: IConfigDefaults = {
   hasReadMiningInstructions: () => false,
   isPreparingMinerSetup: () => false,
   isMinerReadyToInstall: () => false,
+  isMiningMachineCreated: () => false,
   isMinerInstalled: () => false,
   isMinerUpToDate: () => false,
   isMinerWaitingForUpgradeApproval: () => false,

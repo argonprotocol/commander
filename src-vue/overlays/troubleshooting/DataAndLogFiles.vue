@@ -30,7 +30,7 @@
     </li>
     <li class="flex flex-col">
       <header>Troubleshoot Server</header>
-      <p>Download a troubleshooting package from your cloud machine:</p>
+      <p>Download a troubleshooting package from your mining machine:</p>
       <ProgressBar
         :progress="troubleshootingProgress"
         class="my-2"

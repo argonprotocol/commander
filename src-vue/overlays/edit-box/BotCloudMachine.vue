@@ -1,7 +1,7 @@
 <!-- prettier-ignore -->
 <template>
   <div v-if="config.isMinerInstalled">
-    <p>Your cloud machine is already set up. You cannot change the IP address at this time.</p>
+    <p>Your mining machine is already set up. You cannot change the IP address at this time.</p>
   </div>
   <div v-else>
     <RadioGroupRoot
@@ -48,7 +48,7 @@
     </RadioGroupRoot>
     
     <p v-if="setupType === 'new'" class="text-md mb-3 mt-5">
-      In the next step, we'll guide you through the process of setting up a new cloud machine. It's very easy, don't worry!
+      In the next step, we'll guide you through the process of setting up a new mining machine. It's very easy, don't worry!
     </p>
     <div v-else class="mt-5">
       <p class="mb-4">

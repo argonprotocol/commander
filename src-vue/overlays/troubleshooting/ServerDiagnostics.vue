@@ -3,10 +3,10 @@
     ref="containerRef"
     class="flex min-h-[90%] w-200 flex-col gap-4 overflow-x-hidden overflow-y-auto pt-3 pr-7 pb-5 pl-4">
     <DiagnosticStep ref="step1" :run="() => diagnostics.isConnected()">
-      <heading>Checking SSH connection to cloud machine</heading>
+      <heading>Checking SSH connection to mining machine</heading>
       <success>A successful connection was made to the server located at {{ config.serverDetails.ipAddress }}</success>
       <failure>
-        Failed to connect to {{ config.serverDetails.ipAddress }}. Your internet connection might be down or the cloud
+        Failed to connect to {{ config.serverDetails.ipAddress }}. Your internet connection might be down or the mining
         machine might be offline.
       </failure>
     </DiagnosticStep>
@@ -14,11 +14,11 @@
     <DiagnosticStep ref="step2" :run="() => diagnostics.accountAddressMatches()">
       <heading>Checking Argon Account Identifier Match</heading>
       <success>
-        Your app database and the cloud machine are correctly using the same wallet address of
+        Your app database and the mining machine are correctly using the same wallet address of
         {{ config.miningAccount.address }}.
       </success>
       <failure>
-        Your app database and the cloud machine are using different wallet addresses. Somehow you connected a server
+        Your app database and the mining machine are using different wallet addresses. Somehow you connected a server
         that is not compatible with the account associated with this Commander app.
       </failure>
     </DiagnosticStep>

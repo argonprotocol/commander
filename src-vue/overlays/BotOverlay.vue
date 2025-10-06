@@ -290,9 +290,9 @@
                   <div class="w-[1px] bg-slate-300/80 mx-2"></div>
 
                   <div MainWrapperParent ref="cloudMachineParent" class="flex flex-col items-center justify-center relative w-1/3">
-                    <tooltip asChild :calculateWidth="() => calculateElementWidth(cloudMachineParent)" side="top" content="You can leave this server configuration box as-is for now. Later in the process, we'll guide you through the step-by-step flow of how to set up a new Cloud Machine. Don't worry, it's easy.">
+                    <tooltip asChild :calculateWidth="() => calculateElementWidth(cloudMachineParent)" side="top" content="You can leave this server configuration box as-is for now. Later in the process, we'll guide you through the step-by-step flow of how to set up a new Mining Machine. Don't worry, it's easy.">
                       <div MainWrapper @click="openEditBoxOverlay('cloudMachine')" class="flex flex-col w-full h-full items-center justify-center px-8">
-                        <div StatHeader>Cloud Machine</div>
+                        <div StatHeader>Mining Machine</div>
                         <div MainRule class="tracking-widest w-full flex flex-row items-center justify-center">
                           <span>{{ config.serverDetails.ipAddress || '0.0.0.0' }}</span>
                           <EditIcon EditIcon />

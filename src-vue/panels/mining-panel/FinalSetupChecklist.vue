@@ -8,7 +8,7 @@
       </div>
       <div class="absolute bottom-0 left-0 w-[200%] h-px bg-gradient-to-r from-slate-400/30 from-0% via-slate-400/30 via-50% to-transparent to-100%"></div>
     </div>
-    <div class="relative px-[15%] pt-2">
+    <div class="relative px-[15%] pt-2 pb-10">
       <div :class="[isLaunchingMiningBot || !wallets.isLoaded ? 'opacity-30 pointer-events-none' : '']">
 
         <h1 class="text-4xl font-bold text-left mt-24 mb-4 whitespace-nowrap text-argon-text-primary">
@@ -136,14 +136,16 @@
           @click="openServerConnectOverlay"
           class="flex flex-row cursor-pointer border-b border-[#CCCEDA] py-6"
         >
-          <Checkbox :isChecked="wallets.isLoaded && !!config.serverDetails.ipAddress" />
+          <Checkbox :isChecked="wallets.isLoaded && hasMiningMachine" />
           <div class="px-4">
-            <h2 class="text-2xl text-[#A600D4] font-bold">Connect a Cloud Machine</h2>
-            <p v-if="!config.serverDetails.ipAddress">
-              Argon's mining software is runnable on cheap virtual cloud machines. We'll show you how to add one.
+            <h2 class="text-2xl text-[#A600D4] font-bold">Connect a Mining Machine</h2>
+            <p v-if="hasMiningMachine">
+              <template v-if="config.serverCreation?.localComputer">This local computer will be used to run your mining software. We've already checked its requirements.</template>
+              <template v-else-if="config.serverCreation?.digitalOcean">Your Digital Ocean API Key is ready to go. We will do all the work of creating and setting up your server.</template>
+              <template v-else>Your custom server is connected and verified. We'll do the work of installing and configuring the software.</template>
             </p>
             <p v-else>
-              Your cloud machine is connected, verified, and ready to go.
+              Argon's mining software is runnable on cheap virtual cloud machines. We'll show you how to add one.
             </p>
           </div>
         </section>
@@ -152,7 +154,7 @@
       <button
         @click="launchMiningBot"
         :class="[
-          walletIsFullyFunded && config.serverDetails.ipAddress
+          walletIsFullyFunded && hasMiningMachine
             ? 'text-white'
             : 'text-white/70 pointer-events-none opacity-30',
           isLaunchingMiningBot ? 'opacity-30 pointer-events-none' : '',
@@ -230,6 +232,11 @@ const walletIsFullyFunded = Vue.computed(() => {
   }
 
   return true;
+});
+
+const hasMiningMachine = Vue.computed(() => {
+  const x = config.serverCreation;
+  return !!x?.customServer || !!x?.localComputer || !!x?.digitalOcean;
 });
 
 function calculateAlignOffset(event: MouseEvent, parentElement: HTMLElement | null, align: 'start' | 'end') {

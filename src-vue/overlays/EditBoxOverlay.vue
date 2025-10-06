@@ -114,7 +114,7 @@ const titles = {
   rebiddingStrategy: 'Rebidding Strategy',
   capitalAllocation: 'Capital Allocation',
   expectedGrowth: 'Expected Growth',
-  cloudMachine: 'Cloud Machine',
+  cloudMachine: 'Mining Machine',
 
   projectedUtilization: 'Projected Utilization',
   btcLockingFees: 'Bitcoin Locking Fees',
