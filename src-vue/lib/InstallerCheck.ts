@@ -34,9 +34,6 @@ export class InstallerCheck {
 
   public start(): void {
     this.isCompletedPromise = new Promise(async (resolve, reject) => {
-      const connection = await SSH.getOrCreateConnection();
-      this.server = new Server(connection, this.config.serverDetails);
-
       while (true) {
         await this.updateInstallStatus().catch(() => null);
         if (this.hasError) {
@@ -57,6 +54,11 @@ export class InstallerCheck {
         }
       }
     });
+  }
+
+  public async activateServer(): Promise<void> {
+    const connection = await SSH.getOrCreateConnection();
+    this.server = new Server(connection, this.config.serverDetails);
   }
 
   public stop(): void {
@@ -124,7 +126,11 @@ export class InstallerCheck {
         stepNewData.status = InstallStepStatus.Failed;
         stepNewData.progress = stepOldData.progress;
         installDetailsPending.errorType = stepKey as unknown as InstallStepErrorType;
-        installDetailsPending.errorMessage = await this.server.extractInstallStepFailureMessage(stepKey);
+        if (stepKey === InstallStepKey.ServerConnect) {
+          installDetailsPending.errorMessage = this.installer.hasMiningMachineError;
+        } else if (this.server) {
+          installDetailsPending.errorMessage = await this.server.extractInstallStepFailureMessage(stepKey);
+        }
       } else if (prevStepHasCompleted && this.installer.isRunning) {
         stepNewData.status = InstallStepStatus.Working;
         stepNewData.startDate = stepOldData.startDate || dayjs.utc().toISOString();
@@ -165,8 +171,11 @@ export class InstallerCheck {
   ): InstallStepStatusType {
     const isServerConnectStep = stepName === InstallStepKey.ServerConnect;
     if (isServerConnectStep) {
+      if (this.installer.hasMiningMachineError) {
+        return InstallStepStatusType.Failed;
+      }
       const nextStepHasStarted = this.installer.fileUploadProgress > 0;
-      if (stepOldData.progress >= 100 || nextStepHasStarted) {
+      if (this.config.isMiningMachineCreated && (stepOldData.progress >= 100 || nextStepHasStarted)) {
         return InstallStepStatusType.Finished;
       } else {
         return InstallStepStatusType.Started;
@@ -212,7 +221,7 @@ export class InstallerCheck {
   }
 
   private async fetchInstallStepStatuses(): Promise<IInstallStepStatuses> {
-    if (this.hasCachedInstallSteps && this.shouldUseCachedInstallSteps) {
+    if (!this.server || (this.hasCachedInstallSteps && this.shouldUseCachedInstallSteps)) {
       return this.cachedInstallStepStatuses;
     }
 

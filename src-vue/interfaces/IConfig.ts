@@ -39,9 +39,25 @@ export enum PanelKey {
 
 export enum ServerType {
   DigitalOcean = 'DigitalOcean',
-  AnyServer = 'AnyServer',
-  Docker = 'Docker',
+  CustomServer = 'CustomServer',
+  LocalComputer = 'LocalComputer',
 }
+
+export const ConfigServerSetupDigitalOceanSchema = z.object({
+  apiKey: z.string(),
+});
+export const ConfigServerSetupLocalComputerSchema = z.object({});
+export const ConfigServerSetupCustomServerSchema = z.object({
+  port: z.number(),
+  sshUser: z.string(),
+  ipAddress: z.string().ip(),
+});
+
+export const ConfigServerSetupSchema = z.object({
+  localComputer: ConfigServerSetupLocalComputerSchema.optional(),
+  digitalOcean: ConfigServerSetupDigitalOceanSchema.optional(),
+  customServer: ConfigServerSetupCustomServerSchema.optional(),
+});
 
 export const ConfigServerDetailsSchema = z.object({
   ipAddress: z.string().ip(),
@@ -104,6 +120,7 @@ export const ConfigSchema = z.object({
   requiresPassword: z.boolean(),
   showWelcomeOverlay: z.boolean(),
 
+  serverCreation: ConfigServerSetupSchema.optional(),
   serverDetails: ConfigServerDetailsSchema,
   installDetails: ConfigInstallDetailsSchema,
   oldestFrameIdToSync: z.number(),
@@ -116,6 +133,7 @@ export const ConfigSchema = z.object({
   hasReadMiningInstructions: z.boolean(),
   isPreparingMinerSetup: z.boolean(),
   isMinerReadyToInstall: z.boolean(), // isConnected
+  isMiningMachineCreated: z.boolean(), // isMiningMachineCreated
   isMinerInstalled: z.boolean(), // isNewServer
   isMinerUpToDate: z.boolean(), // isInstalling
   isMinerWaitingForUpgradeApproval: z.boolean(), // isRequiringUpgrade
@@ -147,6 +165,11 @@ export type IMiningAccountPreviousHistoryBid = z.infer<typeof MiningAccountPrevi
 export type IMiningAccountPreviousHistorySeat = z.infer<typeof MiningAccountPreviousHistorySeatSchema>;
 export type IMiningAccountPreviousHistoryRecord = z.infer<typeof MiningAccountPreviousHistoryRecordSchema>;
 
+export type IConfigServerSetupDigitalOcean = z.infer<typeof ConfigServerSetupDigitalOceanSchema>;
+export type IConfigServerSetupLocalComputer = z.infer<typeof ConfigServerSetupLocalComputerSchema>;
+export type IConfigServerSetupCustomServer = z.infer<typeof ConfigServerSetupCustomServerSchema>;
+export type IConfigServerSetup = z.infer<typeof ConfigServerSetupSchema>;
+
 export type IConfigServerDetails = z.infer<typeof ConfigServerDetailsSchema>;
 export type IConfigInstallDetails = z.infer<typeof ConfigInstallDetailsSchema>;
 export type IConfigInstallStep = z.infer<typeof ConfigInstallStep>;
@@ -162,6 +185,7 @@ export interface IConfigDefaults {
   requiresPassword: () => IConfig['requiresPassword'];
   showWelcomeOverlay: () => IConfig['showWelcomeOverlay'];
 
+  serverCreation: () => IConfig['serverCreation'];
   serverDetails: () => IConfig['serverDetails'];
   installDetails: () => IConfig['installDetails'];
   oldestFrameIdToSync: () => IConfig['oldestFrameIdToSync'];
@@ -173,6 +197,7 @@ export interface IConfigDefaults {
   hasReadMiningInstructions: () => IConfig['hasReadMiningInstructions'];
   isPreparingMinerSetup: () => IConfig['isPreparingMinerSetup'];
   isMinerReadyToInstall: () => IConfig['isMinerReadyToInstall'];
+  isMiningMachineCreated: () => IConfig['isMiningMachineCreated'];
   isMinerInstalled: () => IConfig['isMinerInstalled'];
   isMinerUpToDate: () => IConfig['isMinerUpToDate'];
   isMinerWaitingForUpgradeApproval: () => IConfig['isMinerWaitingForUpgradeApproval'];

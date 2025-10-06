@@ -36,7 +36,7 @@
           @click="toggleOption(AdvancedRestartOption.RestartDockers)"
           class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold">
           <Checkbox :isChecked="options[AdvancedRestartOption.RestartDockers].isChecked" :size="5" />
-          <span>Restart Dockers on Cloud Machine</span>
+          <span>Restart Dockers on Mining Machine</span>
         </header>
         <p class="text-md ml-7 font-light">
           This restarts your bitcoin and argon nodes as well as your bidding bot. No data will be touched. This can
@@ -54,10 +54,10 @@
           @click="toggleOption(AdvancedRestartOption.ResyncBiddingDataOnCloudMachine)"
           class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold">
           <Checkbox :isChecked="options[AdvancedRestartOption.ResyncBiddingDataOnCloudMachine].isChecked" :size="5" />
-          <span>Resync Bidding Data on Cloud Machine</span>
+          <span>Resync Bidding Data on Mining Machine</span>
         </header>
         <p class="text-md ml-7 font-light">
-          This will delete the data on your cloud machine and recreate it from data on the Argon mainchain.
+          This will delete the data on your mining machine and recreate it from data on the Argon mainchain.
         </p>
       </li>
 
@@ -71,7 +71,7 @@
           @click="toggleOption(AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine)"
           class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold">
           <Checkbox :isChecked="options[AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine].isChecked" :size="5" />
-          <span>Resync Bitcoin Node on Cloud Machine</span>
+          <span>Resync Bitcoin Node on Mining Machine</span>
         </header>
         <p class="text-md ml-7 font-light">
           This will shutdown and restart your server. No data will be touched. This can sometimes fix issues where the
@@ -89,7 +89,7 @@
           @click="toggleOption(AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine)"
           class="mt-2 flex cursor-pointer flex-row items-center space-x-2 font-bold">
           <Checkbox :isChecked="options[AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine].isChecked" :size="5" />
-          <span>Resync Argon Node on Cloud Machine</span>
+          <span>Resync Argon Node on Mining Machine</span>
         </header>
         <p class="text-md ml-7 font-light">
           This will shutdown and restart your server. No data will be touched. This can sometimes fix issues where the
@@ -109,7 +109,7 @@
           <Checkbox
             :isChecked="options[AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine].isChecked"
             :size="5" />
-          <span>Completely Wipe and Reinstall Cloud Machine</span>
+          <span>Completely Wipe and Reinstall Mining Machine</span>
         </header>
         <p class="text-md ml-7 font-light">
           This will wipe everything on your server and reinstall it. This is a last resort option when all else fails.

@@ -37,11 +37,11 @@
             :style="{ cursor: draggable.isDragging ? 'grabbing' : 'grab' }"
             class="text-2xl font-bold text-slate-800/70 border-b border-slate-300 pt-6 pb-3 mb-3"
           >
-            Syncing Your Cloud Machine
+            Syncing Your Mining Machine
           </h2>
           <div v-if="syncErrorType" class="flex flex-row items-center gap-x-2">
             <AlertIcon class="w-4 h-4 text-red-600 relative inline-block" />
-            <div class="text-red-500">There was an error syncing your cloud machine.</div>
+            <div class="text-red-500">There was an error syncing your mining machine.</div>
             <button
               class="text-red-500 border border-red-500 rounded-md px-3 text-md cursor-pointer hover:bg-red-500 hover:text-white"
               @click="retrySync"

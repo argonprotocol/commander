@@ -85,7 +85,7 @@ const title = Vue.computed(() => {
   } else if (currentScreen.value === 'encrypt') {
     return 'Encryption Passphrase';
   } else if (currentScreen.value === 'ssh') {
-    return 'SSH Keys for Cloud Machine';
+    return 'SSH Keys for Mining Machine';
   } else if (currentScreen.value === 'mnemonics') {
     return 'Account Recovery Mnemonic';
   } else if (currentScreen.value === 'export') {

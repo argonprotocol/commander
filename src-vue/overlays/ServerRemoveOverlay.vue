@@ -32,7 +32,7 @@
           </h2>
 
           <p>
-            You are about to remove your cloud machine from Argon Commander. This action will not stop any active
+            You are about to remove your mining machine from Argon Commander. This action will not stop any active
             processes that are running on the server nor will it delete the server from your cloud provider.
           </p>
 
@@ -97,7 +97,7 @@ async function removeServer() {
   if (isRemoving.value) return;
   isRemoving.value = true;
 
-  const isLocalDocker = config.serverDetails.type === ServerType.Docker;
+  const isLocalDocker = config.serverDetails.type === ServerType.LocalComputer;
   config.isMinerReadyToInstall = false;
   config.isMinerInstalled = false;
   config.isMinerUpToDate = false;

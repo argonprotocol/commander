@@ -16,6 +16,7 @@ import { message as tauriMessage } from '@tauri-apps/plugin-dialog';
 import { exit as tauriExit } from '@tauri-apps/plugin-process';
 import { Server } from './Server';
 import { invokeWithTimeout } from './tauriApi.ts';
+import { MiningMachine, MiningMachineError } from './MiningMachine.ts';
 
 dayjs.extend(utc);
 
@@ -47,11 +48,11 @@ export default class Installer {
   public reasonToSkipInstall: string;
   public reasonToSkipInstallData: any;
 
-  public get isDockerHostProxy(): boolean {
-    return this.config.serverDetails.type === ServerType.Docker;
-  }
+  public hasMiningMachineError = '';
 
-  private hasApprovedUpgrade = false;
+  public get isDockerHostProxy(): boolean {
+    return this.config.serverDetails.type === ServerType.LocalComputer;
+  }
 
   private isLoadedDeferred!: IDeferred<void>;
   private config: Config;
@@ -78,27 +79,31 @@ export default class Installer {
   public async load(): Promise<void> {
     await this.config.isLoadedPromise;
 
-    if (this.config.isMinerReadyToInstall) {
-      await this.ensureIpAddressIsWhitelisted();
-      const server = await this.getServer();
-      const accountAddressOnServer = await server.downloadAccountAddress();
-      if (accountAddressOnServer && accountAddressOnServer !== this.config.miningAccount.address) {
-        await tauriMessage(
-          'The wallet address on the server does not match the wallet address in the local database. This app will shutdown.',
-          {
-            title: 'Wallet Address Mismatch',
-            kind: 'error',
-          },
-        );
-        await tauriExit(0);
-      }
+    if (this.config.isMinerReadyToInstall && !this.isRunning) {
+      if (this.config.isMiningMachineCreated) {
+        await this.ensureIpAddressIsWhitelisted();
+        const server = await this.getServer();
+        const accountAddressOnServer = await server.downloadAccountAddress();
+        if (accountAddressOnServer && accountAddressOnServer !== this.config.miningAccount.address) {
+          await tauriMessage(
+            'The wallet address on the server does not match the wallet address in the local database. This app will shutdown.',
+            {
+              title: 'Wallet Address Mismatch',
+              kind: 'error',
+            },
+          );
+          await tauriExit(0);
+        }
 
-      const isRunning = await this.calculateIsRunning();
-      const isReadyToRun = !isRunning && (await this.calculateIsReadyToRun(false));
-      if (isReadyToRun && !isRunning) {
-        await this.run(false);
+        const isRunning = await this.calculateIsRunning();
+        const isReadyToRun = !isRunning && (await this.calculateIsReadyToRun(false));
+        if (isReadyToRun && !isRunning) {
+          await this.run(false);
+        } else {
+          await this.activateInstallerCheck(false);
+        }
       } else {
-        await this.activateInstallerCheck(false);
+        await this.run(false);
       }
     }
 
@@ -120,18 +125,23 @@ export default class Installer {
       await this.isLoadedPromise;
     }
 
-    if ((this.isRunning ||= await this.calculateIsRunning())) {
-      console.log('CANNOT run because Installer is already running');
-      return;
-    }
+    if (this.config.isMiningMachineCreated) {
+      if ((this.isRunning ||= await this.calculateIsRunning())) {
+        console.log('CANNOT run because Installer is already running');
+        return;
+      }
 
-    if (!(this.isReadyToRun ||= await this.calculateIsReadyToRun(waitForLoaded))) {
-      console.log(
-        'CANNOT run because Installer is not runnable',
-        this.reasonToSkipInstall,
-        this.reasonToSkipInstallData,
-      );
-      this.isRunning = false;
+      if (!(this.isReadyToRun ||= await this.calculateIsReadyToRun(waitForLoaded))) {
+        console.log(
+          'CANNOT run because Installer is not runnable',
+          this.reasonToSkipInstall,
+          this.reasonToSkipInstallData,
+        );
+        this.isRunning = false;
+        return;
+      }
+    } else if (this.isRunning) {
+      console.log('CANNOT run because Installer is already running');
       return;
     }
 
@@ -154,15 +164,31 @@ export default class Installer {
       console.info('Clearing step files');
       await this.clearStepFiles(stepsToClear);
     }
-    await this.ensureIpAddressIsWhitelisted();
+
+    let errorMessage = '';
+
     this.installerCheck.shouldUseCachedInstallSteps = true;
     this.fileUploadProgress = 0;
     this.installerCheck.start();
 
-    let errorMessage = '';
-
     try {
-      console.info('Downloading account address');
+      console.info('Setting up mining machine');
+
+      if (!this.config.isMiningMachineCreated) {
+        try {
+          const serverDetails = await MiningMachine.setup(this.config);
+          this.config.serverDetails = serverDetails;
+          this.config.isMiningMachineCreated = true;
+          await this.config.save();
+        } catch (e: any) {
+          this.hasMiningMachineError = e.message;
+          throw e;
+        }
+      }
+
+      await this.ensureIpAddressIsWhitelisted();
+      await this.installerCheck.activateServer();
+
       const server = await this.getServer();
       const uploadedWalletAddress = await server.downloadAccountAddress();
       if (!uploadedWalletAddress) {
@@ -311,8 +337,6 @@ export default class Installer {
     }
 
     if (remoteFilesNeedUpdating) {
-      this.hasApprovedUpgrade = true;
-
       console.info('Clearing step files');
       const stepsToClear = [InstallStepErrorType.FileUpload, InstallStepErrorType.MiningLaunch];
       await this.clearStepFiles(stepsToClear, { setFirstStepToWorking: true });

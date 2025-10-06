@@ -11,7 +11,6 @@ type IBasicEmitter = {
   openProvisioningCompleteOverlay: void;
   openServerConnectOverlay: void;
   closeAllOverlays: void;
-  openServerConfigureOverlay: void;
   openAboutOverlay: void;
   openComplianceOverlay: void;
   openTroubleshootingOverlay: {

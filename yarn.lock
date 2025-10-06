@@ -3260,6 +3260,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@vueuse/core@npm:^13.9.0":
+  version: 13.9.0
+  resolution: "@vueuse/core@npm:13.9.0"
+  dependencies:
+    "@types/web-bluetooth": "npm:^0.0.21"
+    "@vueuse/metadata": "npm:13.9.0"
+    "@vueuse/shared": "npm:13.9.0"
+  peerDependencies:
+    vue: ^3.5.0
+  checksum: 10c0/f1e6c5e02584e018e53e0e5f93844afbcd33742c5a2454e57aaa3433e9068efbe84b7b423f34628738e28e3ba4bfe7d648f2edaae39706a236ae48bc1a22709b
+  languageName: node
+  linkType: hard
+
 "@vueuse/metadata@npm:10.11.1":
   version: 10.11.1
   resolution: "@vueuse/metadata@npm:10.11.1"
@@ -3271,6 +3284,13 @@ __metadata:
   version: 12.8.2
   resolution: "@vueuse/metadata@npm:12.8.2"
   checksum: 10c0/95d352506608d5f8ae9c99ce494e7e55d864707d903f20401fecf378b08c8ed96631d0b8b38f6cd1d04dda69d9c8d3e4fa37e33caae10692805a9566e316e39c
+  languageName: node
+  linkType: hard
+
+"@vueuse/metadata@npm:13.9.0":
+  version: 13.9.0
+  resolution: "@vueuse/metadata@npm:13.9.0"
+  checksum: 10c0/7e4620c6e5acbf8f2e5eba0db80a8de887f4816221b383e5d829ee833139d262b8a89e9709d58d7aacb263927ce2c55e262eb29372f784aa9138c8fa7a86506a
   languageName: node
   linkType: hard
 
@@ -3289,6 +3309,15 @@ __metadata:
   dependencies:
     vue: "npm:^3.5.13"
   checksum: 10c0/43a04cf44e3377ee7666787e597d45ddf83880d3e1835000201b0c471198ce83ad45e4f4a0182d68781c0a23c84a904aab253e4c6279400a235e0246b613bad2
+  languageName: node
+  linkType: hard
+
+"@vueuse/shared@npm:13.9.0":
+  version: 13.9.0
+  resolution: "@vueuse/shared@npm:13.9.0"
+  peerDependencies:
+    vue: ^3.5.0
+  checksum: 10c0/4820f71caab3c94bc88343270bb4408d8818baa9c0223e6f7499aeb05f9227a87724c15b792f2aaf308137ac996cccd93c0cbe338f7cf3ae50045981abc223a3
   languageName: node
   linkType: hard
 
@@ -3452,6 +3481,7 @@ __metadata:
     "@types/numeral": "npm:^2.0.5"
     "@types/qrcode": "npm:^1.5.5"
     "@vitejs/plugin-vue": "npm:^5.2.4"
+    "@vueuse/core": "npm:^13.9.0"
     bignumber.js: "npm:^9.3.1"
     buffer: "npm:^6.0.3"
     camelcase-keys: "npm:^9.1.3"

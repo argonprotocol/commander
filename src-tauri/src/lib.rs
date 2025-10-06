@@ -241,6 +241,15 @@ async fn create_zip(
     zip.finish().map_err(|e| e.to_string())?;
     Ok(zip_name)
 }
+
+#[tauri::command]
+fn calculate_free_space(path: Option<String>) -> Result<u64, String> {
+    let p = path
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::env::current_dir().unwrap());
+    fs2::available_space(&p).map_err(|e| e.to_string())
+}
+
 ////////////////////////////////////////////////////////////
 
 fn init_logger(network_name: &String, instance_name: &String) -> tauri_plugin_log::Builder {
@@ -398,6 +407,7 @@ pub fn run() {
             run_db_migrations,
             create_zip,
             toggle_nosleep,
+            calculate_free_space,
             vm::create_local_vm,
             vm::activate_local_vm,
             vm::remove_local_vm,
