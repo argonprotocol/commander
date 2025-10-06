@@ -145,7 +145,7 @@ export default class Installer {
       return;
     }
 
-    console.log('RUNNING INSTALLER');
+    console.log('RUNNING ACTUAL INSTALL');
     this.isRunning = true;
     this.isRunningInBackground = false;
     this.config.isMinerWaitingForUpgradeApproval = false;
@@ -443,6 +443,7 @@ export default class Installer {
     await this.installerCheck.updateInstallStatus();
     const isServerInstallComplete = this.installerCheck.isServerInstallComplete;
     const remoteFilesNeedUpdating = !(await this.isRemoteVersionLatest());
+    console.log('REMOTE FILES NEED UPDATING', remoteFilesNeedUpdating);
 
     return {
       isFreshInstall,
