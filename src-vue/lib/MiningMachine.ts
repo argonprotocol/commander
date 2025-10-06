@@ -177,7 +177,7 @@ export class MiningMachine {
   public static async runDockerChecks() {
     const response = {
       isDockerStarted: false,
-      needsOpenPorts: [] as number[],
+      blockedPorts: [] as number[],
     };
     try {
       response.isDockerStarted = await LocalMachine.isDockerRunning();
@@ -187,7 +187,7 @@ export class MiningMachine {
 
     // check for blocked ports
     try {
-      response.needsOpenPorts = await LocalMachine.checkBlockedPorts();
+      response.blockedPorts = await LocalMachine.checkBlockedPorts();
     } catch (e) {
       /* no action */
     }
@@ -207,9 +207,9 @@ export class MiningMachine {
     const dockerChecks = await this.runDockerChecks();
     if (!dockerChecks.isDockerStarted) {
       throw new MiningMachineError('Docker is not running');
-    } else if (dockerChecks.needsOpenPorts.length) {
+    } else if (dockerChecks.blockedPorts.length) {
       throw new MiningMachineError(
-        `Required ports are in use by other applications: ${String(dockerChecks.needsOpenPorts.join(', '))})`,
+        `Required ports are in use by other applications: ${String(dockerChecks.blockedPorts.join(', '))})`,
       );
     }
     try {

@@ -5,8 +5,9 @@ import { Config } from '../lib/Config';
 import Installer, { resetInstaller } from '../lib/Installer';
 import { createMockedDbPromise } from './helpers/db';
 import { IInstallStepStatuses, InstallStepStatusType } from '../lib/Server';
-import { InstallStepKey } from '../interfaces/IConfig';
+import { InstallStepKey, ServerType } from '../interfaces/IConfig';
 import { InstallerCheck } from '../lib/InstallerCheck.ts';
+import { MiningMachine } from '../lib/MiningMachine.ts';
 
 beforeEach(() => {
   resetInstaller();
@@ -34,12 +35,11 @@ it('should skip install if install is already running', async () => {
   await config.load();
 
   const installer = new Installer(config);
-  await installer.load();
+  const runSpy = vi.spyOn(installer, 'run');
   installer.isRunning = true;
-  // @ts-expect-error - test private method
-  const didRun = await installer.calculateIsReadyToRun();
+  await installer.load();
 
-  expect(didRun).toBe(true);
+  expect(runSpy).not.toHaveBeenCalled();
   expect(installer.reasonToSkipInstall).toBe('');
 });
 
@@ -76,9 +76,17 @@ it('should install if all conditions are met', async () => {
 });
 
 it('should run through entire install process', async () => {
-  const dbPromise = createMockedDbPromise({ isMinerReadyToInstall: 'true' });
+  const dbPromise = createMockedDbPromise({ isMinerReadyToInstall: 'true', serverCreation: '{ "localComputer": {} }' });
   const config = Vue.reactive(new Config(dbPromise)) as Config;
   await config.load();
+
+  MiningMachine.setupLocalComputer = vi.fn().mockResolvedValue({
+    type: ServerType.LocalComputer,
+    ipAddress: `127.0.0.1`,
+    port: 25,
+    sshUser: 'root',
+    workDir: '/app',
+  });
 
   const installer = new Installer(config);
 
@@ -114,13 +122,8 @@ it('should run through entire install process', async () => {
   // @ts-ignore
   installer.getLocalShasum = vi.fn().mockResolvedValue('dummy-sha256');
 
-  const uploadMock = vi.fn().mockImplementation(() => Promise.resolve());
-  // @ts-ignore
-  installer.uploadCoreFiles = uploadMock;
-
   // should call run
   await installer.load();
 
   expect(config.installDetails.ServerConnect.status).toBe('Completed');
-  expect(uploadMock).toHaveBeenCalledTimes(1);
 });

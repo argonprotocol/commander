@@ -1,19 +1,29 @@
 <template>
   <div class="mx-5 flex h-full grow flex-col p-3">
-    <DialogDescription class="mt-4 pr-10 font-light opacity-80">
+    <DialogDescription :class="[blockedPorts.length ? 'opacity-30' : 'opacity-80']" class="mt-4 pr-10 font-light">
       Argon Commander allows you to use your laptop or desktop computer as a server. In many ways this is the easiest
       and cheapest way to get started, but it comes with some caveats. It requires you to keep this app running and
       connected to the internet at all times. It also requires you to install Docker.
     </DialogDescription>
 
-    <div Warning>
-      <strong>WARNING:</strong>
-      If this app is closed for any reason, you will lose all revenue while its closed, and you will not be able to claw
-      it back. This is because blocks are only distributed to active miners. ONLY proceed if you can keep this app
-      running and connected to the internet at all times.
+    <div v-if="blockedPorts.length" Warning>
+      <strong>INELIGIBLE:</strong>
+      This option requires that port{{ blockedPorts.length === 1 ? '' : 's' }}
+      <strong class="font-bold">{{ formatPorts(blockedPorts) }}</strong>
+      be available for Argon's mining machine. It seems that some other application is using these ports. Please release
+      these ports on your computer or use another server option.
     </div>
 
-    <div class="mx-auto flex w-7/12 min-w-[630px] grow flex-col justify-center">
+    <div v-else Warning>
+      <strong>WARNING:</strong>
+      You should ONLY proceed if you can keep this app running and connected to the internet at all times. If this app
+      closes for any reason, you will lose all revenue while its closed, and you will not be able to claw it back. This
+      is because blocks are only distributed to active miners.
+    </div>
+
+    <div
+      :class="{ 'opacity-30': blockedPorts.length }"
+      class="mx-auto flex w-7/12 min-w-[630px] grow flex-col justify-center">
       <section class="-mt-5 flex w-full flex-row content-start items-start">
         <div class="relative mt-0.5 mr-4 w-14">
           <div
@@ -31,7 +41,11 @@
         </div>
 
         <div class="flex grow flex-col">
-          <header class="text-2xl font-bold text-slate-800/80">Found 100GB of Available Disk Space</header>
+          <header class="text-2xl font-bold text-slate-800/80">
+            <template v-if="isCheckingDiskSpace">Checking Available Disk Space</template>
+            <template v-if="hasEnoughDiskSpace">Found 100+ GB of Available Disk Space</template>
+            <template v-else>Could Not Find Enough Disk Space</template>
+          </header>
           <p class="mt-1">Argon Miner requires a minimum of 100GB of available hard disk space.</p>
           <div class="text-md mt-3 border-t border-b border-slate-400/40 py-1 font-mono uppercase">
             {{ numeral(availableGBs).format('0,0.[000]') }} GB of available space was found on this machine
@@ -66,10 +80,6 @@
           </div>
         </div>
       </section>
-      <!-- <p class="mt-5 text-lg font-bold text-red-700/60" v-if="needsOpenPorts.length">
-        There are some network ports in use on your machine that need to be freed up:
-        <span class="font-normal">{{ needsOpenPorts.join(', ') }}</span>
-      </p> -->
     </div>
   </div>
 </template>
@@ -93,7 +103,7 @@ import { MiningMachine } from '../../lib/MiningMachine.ts';
 const emit = defineEmits(['ready']);
 
 const isDockerStarted = Vue.ref(false);
-const needsOpenPorts = Vue.ref([] as number[]);
+const blockedPorts = Vue.ref([] as number[]);
 
 const isCheckingDiskSpace = Vue.ref(true);
 const hasEnoughDiskSpace = Vue.ref(false);
@@ -104,7 +114,7 @@ let checkDockerInterval: number | undefined;
 async function checkDockerDependencies() {
   const dockerChecks = await MiningMachine.runDockerChecks();
   isDockerStarted.value = dockerChecks.isDockerStarted;
-  needsOpenPorts.value = dockerChecks.needsOpenPorts;
+  blockedPorts.value = dockerChecks.blockedPorts;
   calculateIsReady();
 
   if (!isDockerStarted.value) {
@@ -113,11 +123,18 @@ async function checkDockerDependencies() {
 }
 
 function calculateIsReady() {
-  if (hasEnoughDiskSpace.value && isDockerStarted.value && !needsOpenPorts.value.length) {
+  if (hasEnoughDiskSpace.value && isDockerStarted.value && !blockedPorts.value.length) {
     emit('ready', true);
   } else {
     emit('ready', false);
   }
+}
+
+function formatPorts(ports: number[]): string {
+  if (ports.length === 0) return '';
+  if (ports.length === 1) return ports[0].toString();
+  if (ports.length === 2) return `${ports[0]} and ${ports[1]}`;
+  return `${ports.slice(0, -1).join(', ')}, and ${ports[ports.length - 1]}`;
 }
 
 function openDockerInstallLink() {
