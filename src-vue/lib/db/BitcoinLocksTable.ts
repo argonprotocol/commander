@@ -6,6 +6,7 @@ import { convertFromSqliteFields, toSqlParams } from '../Utils.ts';
 export interface IRatchet {
   mintAmount: bigint;
   mintPending: bigint;
+  peggedPrice: bigint;
   securityFee: bigint;
   txFee: bigint;
   burned: bigint;
@@ -26,7 +27,8 @@ export interface IBitcoinLockRecord {
   txid?: string;
   vout?: number;
   satoshis: bigint;
-  lockPrice: bigint;
+  liquidityPromised: bigint;
+  peggedPrice: bigint;
   ratchets: IRatchet[]; // array of ratchets
   cosignVersion: string;
   lockDetails: IBitcoinLock;
@@ -46,7 +48,7 @@ export interface IBitcoinLockRecord {
 
 export class BitcoinLocksTable extends BaseTable {
   private fieldTypes: IFieldTypes = {
-    bigint: ['satoshis', 'lockPrice', 'releaseBitcoinNetworkFee'],
+    bigint: ['satoshis', 'peggedPrice', 'liquidityPromised', 'releaseBitcoinNetworkFee'],
     json: ['lockDetails', 'ratchets'],
     date: ['createdAt', 'updatedAt'],
   };
@@ -56,15 +58,16 @@ export class BitcoinLocksTable extends BaseTable {
   ): Promise<IBitcoinLockRecord> {
     const result = await this.db.execute(
       `INSERT INTO BitcoinLocks (
-        utxoId, status, satoshis, lockPrice, cosignVersion, lockDetails, network, hdPath, vaultId, ratchets
+        utxoId, status, satoshis, liquidityPromised, peggedPrice, cosignVersion, lockDetails, network, hdPath, vaultId, ratchets
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
       )`,
       toSqlParams([
         lock.utxoId,
         lock.status || 'initialized',
         lock.satoshis,
-        lock.lockPrice,
+        lock.liquidityPromised,
+        lock.peggedPrice,
         lock.cosignVersion,
         lock.lockDetails,
         lock.network,
@@ -134,8 +137,8 @@ export class BitcoinLocksTable extends BaseTable {
 
   async saveNewRatchet(lock: IBitcoinLockRecord): Promise<void> {
     await this.db.execute(
-      `UPDATE BitcoinLocks SET lockPrice = $2, lockDetails = $3, ratchets = $4 WHERE utxoId = $1`,
-      toSqlParams([lock.utxoId, lock.lockPrice, lock.lockDetails, lock.ratchets]),
+      `UPDATE BitcoinLocks SET peggedPrice = $2, liquidityPromised = $3, lockDetails = $4, ratchets = $5 WHERE utxoId = $1`,
+      toSqlParams([lock.utxoId, lock.peggedPrice, lock.liquidityPromised, lock.lockDetails, lock.ratchets]),
     );
   }
 

@@ -1,7 +1,11 @@
 import BigNumber from 'bignumber.js';
-import { convertFixedU128ToBigNumber, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
+import {
+  type ApiDecoration,
+  FIXED_U128_DECIMALS,
+  fromFixedNumber,
+  MICROGONS_PER_ARGON,
+} from '@argonprotocol/mainchain';
 import { bigNumberToBigInt } from './utils.js';
-import type { ApiDecoration } from '@polkadot/api/types';
 import type { MainchainClients } from './MainchainClients.js';
 
 export class PriceIndex {
@@ -31,9 +35,9 @@ export class PriceIndex {
     }
 
     const priceIndex = priceIndexRaw.value;
-    const usdForArgon = convertFixedU128ToBigNumber(priceIndex.argonUsdPrice.toBigInt());
-    const usdForArgnot = convertFixedU128ToBigNumber(priceIndex.argonotUsdPrice.toBigInt());
-    const usdForBtc = convertFixedU128ToBigNumber(priceIndex.btcUsdPrice.toBigInt());
+    const usdForArgon = fromFixedNumber(priceIndex.argonUsdPrice.toBigInt(), FIXED_U128_DECIMALS);
+    const usdForArgnot = fromFixedNumber(priceIndex.argonotUsdPrice.toBigInt(), FIXED_U128_DECIMALS);
+    const usdForBtc = fromFixedNumber(priceIndex.btcUsdPrice.toBigInt(), FIXED_U128_DECIMALS);
 
     // These exchange rates should be relative to the argon
     const microgonsForUsd = this.calculateExchangeRateInMicrogons(BigNumber(1), usdForArgon);

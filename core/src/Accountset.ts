@@ -6,12 +6,12 @@ import {
   Keyring,
   type KeyringPair,
   TxSubmitter,
+  type SubmittableExtrinsic,
+  type ApiDecoration,
+  u8aToHex,
 } from '@argonprotocol/mainchain';
 import { AccountRegistry } from './AccountRegistry.js';
-import { type SubmittableExtrinsic } from '@polkadot/api/promise/types';
 import { AccountMiners } from './AccountMiners.js';
-import { type ApiDecoration } from '@polkadot/api/types';
-import { u8aToHex } from '@polkadot/util';
 
 export type SubaccountRange = readonly number[];
 

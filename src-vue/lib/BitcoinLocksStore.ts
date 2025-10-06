@@ -1,4 +1,4 @@
-import { getMainchainClient } from '../stores/mainchain.ts';
+import { getMainchainClient, getMainchainClientAt } from '../stores/mainchain.ts';
 import {
   addressBytesHex,
   BitcoinNetwork,
@@ -105,7 +105,7 @@ export default class BitcoinLocksStore {
       for (const lock of locks) {
         this.locksById[lock.utxoId] = lock;
       }
-      this.#bitcoinLocksApi ??= new BitcoinLocks(Promise.resolve(await getMainchainClient(true)));
+      this.#bitcoinLocksApi ??= new BitcoinLocks(await getMainchainClient(true));
       this.#config ??= await this.#bitcoinLocksApi.getConfig();
       const client = await getMainchainClient(false);
       this.#lockTicksPerDay = client.consts.bitcoinLocks.argonTicksPerDay.toNumber();
@@ -277,8 +277,9 @@ export default class BitcoinLocksStore {
       satoshis,
       ratchets: [
         {
-          mintAmount: utxo.lockPrice,
-          mintPending: utxo.lockPrice,
+          mintAmount: utxo.liquidityPromised,
+          mintPending: utxo.liquidityPromised,
+          peggedPrice: utxo.peggedPrice,
           blockHeight: createdAtHeight,
           burned: 0n,
           securityFee,
@@ -286,7 +287,8 @@ export default class BitcoinLocksStore {
           bitcoinBlockHeight: utxo.createdAtHeight,
         },
       ],
-      lockPrice: utxo.lockPrice,
+      liquidityPromised: utxo.liquidityPromised,
+      peggedPrice: utxo.peggedPrice,
       cosignVersion: 'v1',
       lockDetails: utxo,
       network: this.#config.bitcoinNetwork.toString(),
@@ -358,19 +360,24 @@ export default class BitcoinLocksStore {
       vault: vaults.vaultsById[lock.vaultId],
     });
 
-    const { burned, securityFee, bitcoinBlockHeight, blockHeight, newLockPrice, pendingMint, txFee } = result;
+    const { burned, securityFee, bitcoinBlockHeight, blockHeight, newPeggedPrice, pendingMint, txFee } = result;
+
+    const liquidityPromised = (result as any).liquidityPromised ?? pendingMint;
 
     lock.ratchets.push({
       mintAmount: pendingMint,
       mintPending: pendingMint,
+      peggedPrice: newPeggedPrice,
       txFee,
       burned,
       securityFee,
       blockHeight,
       bitcoinBlockHeight,
     });
-    lock.lockPrice = newLockPrice;
-    lock.lockDetails.lockPrice = newLockPrice;
+    lock.liquidityPromised = liquidityPromised;
+    lock.peggedPrice = newPeggedPrice;
+    lock.lockDetails.liquidityPromised = liquidityPromised;
+    lock.lockDetails.peggedPrice = newPeggedPrice;
     lock.status = 'pendingMint';
 
     await table.saveNewRatchet(lock);
@@ -409,8 +416,8 @@ export default class BitcoinLocksStore {
     }
 
     if (!lock.releaseToDestinationAddress) {
-      // const clientAt = await getMainchainClientAt(cosignature.blockHeight, true);
-      const signatureDetails = await this.#bitcoinLocksApi.getReleaseRequest(lock.utxoId, cosignature.blockHeight);
+      const clientAt = await getMainchainClientAt(cosignature.blockHeight, true);
+      const signatureDetails = await this.#bitcoinLocksApi.getReleaseRequest(lock.utxoId, clientAt);
       if (!signatureDetails) {
         throw new Error(`Release request for lock with ID ${lock.utxoId} not found.`);
       }

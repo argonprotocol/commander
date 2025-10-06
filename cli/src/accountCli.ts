@@ -1,8 +1,7 @@
 import { Command } from '@commander-js/extra-typings';
 import { filterUndefined, parseSubaccountRange } from '@argonprotocol/commander-core';
-import { mnemonicGenerate } from '@argonprotocol/mainchain';
+import { mnemonicGenerate, waitForLoad } from '@argonprotocol/mainchain';
 import { printTable } from 'console-table-printer';
-import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { writeFileSync } from 'node:fs';
 import type Env from './env.js';
 import * as process from 'node:process';
@@ -93,7 +92,7 @@ export default function accountCli() {
     .command('new-key-seed')
     .description('Create a new mnemonic for runtime keys')
     .action(async () => {
-      await cryptoWaitReady();
+      await waitForLoad();
       const mnemonic = mnemonicGenerate();
       console.log('New mnemonic (add this to your .env as KEYS_MNEMONIC):', mnemonic);
       process.exit(0);

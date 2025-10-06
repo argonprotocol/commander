@@ -1,7 +1,6 @@
 import type { MainchainClients } from './MainchainClients.js';
-import { type ArgonClient, convertFixedU128ToBigNumber } from '@argonprotocol/mainchain';
+import { type ApiDecoration, type ArgonClient, FIXED_U128_DECIMALS, fromFixedNumber } from '@argonprotocol/mainchain';
 import { bigIntMax, bigIntMin, bigNumberToBigInt } from './utils.js';
-import type { ApiDecoration } from '@polkadot/api/types';
 import { MiningFrames } from './MiningFrames.js';
 import type { IWinningBid } from './interfaces/index.js';
 
@@ -174,7 +173,7 @@ export class Mining {
   }
 
   public async getMicrogonsPerBlockForMiner(api: ApiDecoration<'promise'>) {
-    const minerPercent = convertFixedU128ToBigNumber(api.consts.blockRewards.minerPayoutPercent.toBigInt());
+    const minerPercent = fromFixedNumber(api.consts.blockRewards.minerPayoutPercent.toBigInt(), FIXED_U128_DECIMALS);
     const microgonsPerBlock = await api.query.blockRewards.argonsPerBlock().then(x => x.toBigInt());
     return bigNumberToBigInt(minerPercent.times(microgonsPerBlock));
   }
@@ -185,7 +184,10 @@ export class Mining {
     const client = await this.prunedClientOrArchivePromise;
     const ticksSinceGenesis = await this.getTicksSinceGenesis(currentTick);
     const initialReward = 500_000n; // Initial microgons reward per block
-    const amountToMiner = convertFixedU128ToBigNumber(client.consts.blockRewards.minerPayoutPercent.toBigInt());
+    const amountToMiner = fromFixedNumber(
+      client.consts.blockRewards.minerPayoutPercent.toBigInt(),
+      FIXED_U128_DECIMALS,
+    );
 
     // Calculate the number of intervals
     const numIntervals = Math.floor(ticksSinceGenesis / BLOCK_REWARD_INTERVAL);

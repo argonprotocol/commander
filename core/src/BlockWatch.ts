@@ -1,5 +1,11 @@
-import { type ArgonClient, type GenericEvent, getAuthorFromHeader, getTickFromHeader } from '@argonprotocol/mainchain';
-import type { Header, SignedBlock } from '@polkadot/types/interfaces';
+import {
+  type ArgonClient,
+  type GenericEvent,
+  getAuthorFromHeader,
+  getTickFromHeader,
+  type Header,
+  type SignedBlock,
+} from '@argonprotocol/mainchain';
 import { createNanoEvents, formatArgons } from './utils.js';
 
 function eventDataToJson(event: GenericEvent): any {
@@ -14,7 +20,10 @@ function eventDataToJson(event: GenericEvent): any {
 export type BlockWatchEvents = {
   block: (header: Header, digests: { tick: number; author: string }, events: GenericEvent[]) => void;
   'vaults-updated': (header: Header, vaultIds: Set<number>) => void;
-  'bitcoin-verified': (header: Header, lockedBitcoin: { utxoId: number; vaultId: number; lockPrice: bigint }) => void;
+  'bitcoin-verified': (
+    header: Header,
+    lockedBitcoin: { utxoId: number; vaultId: number; liquidityPromised: bigint; peggedPrice: bigint },
+  ) => void;
   'mining-bid': (header: Header, bid: { amount: bigint; accountId: string }) => void;
   'mining-bid-ousted': (
     header: Header,
@@ -31,7 +40,8 @@ export class BlockWatch {
   public readonly locksById: {
     [utxoId: number]: {
       vaultId: number;
-      lockPrice: bigint;
+      peggedPrice: bigint;
+      liquidityPromised: bigint;
     };
   } = {};
   private unsubscribe?: () => void;
@@ -113,12 +123,14 @@ BLOCK #${header.number.toNumber()}, ${header.hash.toHuman()}`);
         }
       } else if (event.section === 'bitcoinLocks') {
         if (client.events.bitcoinLocks.BitcoinLockCreated.is(event)) {
-          const { lockPrice, utxoId, accountId, vaultId } = event.data;
+          const { liquidityPromised, peggedPrice, utxoId, accountId, vaultId } = event.data;
           this.locksById[utxoId.toNumber()] = {
             vaultId: vaultId.toNumber(),
-            lockPrice: lockPrice.toBigInt(),
+            peggedPrice: peggedPrice.toBigInt(),
+            liquidityPromised: liquidityPromised.toBigInt(),
           };
-          data.lockPrice = formatArgons(lockPrice.toBigInt());
+          data.liquidityPromised = formatArgons(liquidityPromised.toBigInt());
+          data.peggedPrice = formatArgons(peggedPrice.toBigInt());
           data.accountId = accountId.toHuman();
           reloadVaults.add(vaultId.toNumber());
         }
@@ -151,10 +163,12 @@ BLOCK #${header.number.toNumber()}, ${header.hash.toHuman()}`);
           this.events.emit('bitcoin-verified', header, {
             utxoId: utxoId.toNumber(),
             vaultId: details.vaultId,
-            lockPrice: details.lockPrice,
+            liquidityPromised: details.liquidityPromised,
+            peggedPrice: details.peggedPrice,
           });
 
-          data.lockPrice = formatArgons(details.lockPrice);
+          data.liquidityPromised = formatArgons(details.liquidityPromised);
+          data.peggedPrice = formatArgons(details.peggedPrice);
           reloadVaults.add(details.vaultId);
         }
       } else if (event.section === 'system') {
@@ -202,14 +216,15 @@ BLOCK #${header.number.toNumber()}, ${header.hash.toHuman()}`);
   private async getBitcoinLockDetails(
     utxoId: number,
     blockHash: Uint8Array,
-  ): Promise<{ vaultId: number; lockPrice: bigint }> {
+  ): Promise<{ vaultId: number; peggedPrice: bigint; liquidityPromised: bigint }> {
     const client = this.mainchain;
     const api = await client.at(blockHash);
     if (!this.locksById[utxoId]) {
       const lock = await api.query.bitcoinLocks.locksByUtxoId(utxoId);
       this.locksById[utxoId] = {
         vaultId: lock.value.vaultId.toNumber(),
-        lockPrice: lock.value.lockPrice.toBigInt(),
+        peggedPrice: lock.value.peggedPrice.toBigInt(),
+        liquidityPromised: lock.value.liquidityPromised.toBigInt(),
       };
     }
     return this.locksById[utxoId];

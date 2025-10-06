@@ -109,7 +109,7 @@ export class MyVault {
       });
       const table = await this.getTable();
       const client = await getMainchainClient(true);
-      this.#bitcoinLocks ??= new BitcoinLocks(Promise.resolve(client));
+      this.#bitcoinLocks ??= new BitcoinLocks(client);
       this.data.metadata = (await table.get()) ?? null;
       // prefetch the config
       const timeToCollectFrames = client.consts.vaults.revenueCollectionExpirationFrames.toNumber();

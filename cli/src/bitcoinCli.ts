@@ -1,8 +1,7 @@
 import { Command } from '@commander-js/extra-typings';
 import { VaultMonitor } from '@argonprotocol/commander-core';
-import { BitcoinLocks, formatArgons, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
+import { BitcoinLocks, formatArgons, hexToU8a, MICROGONS_PER_ARGON } from '@argonprotocol/mainchain';
 import { accountsetFromCli } from './index.js';
-import { hexToU8a } from '@polkadot/util';
 
 export default function bitcoinCli() {
   const program = new Command('bitcoin').description('Wait for bitcoin space');
@@ -60,7 +59,7 @@ export default function bitcoinCli() {
         }
 
         try {
-          const bitcoinLock = new BitcoinLocks(Promise.resolve(accountset.client));
+          const bitcoinLock = new BitcoinLocks(accountset.client);
           let satoshis = await bitcoinLock.requiredSatoshisForArgonLiquidity(amount);
           satoshis -= 500n;
           const { securityFee, txResult } = await bitcoinLock.initializeLock({

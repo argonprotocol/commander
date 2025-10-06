@@ -1,11 +1,9 @@
 import { Accountset, CohortBidder, type ICohortBidderOptions, MiningBids, parseSubaccountRange } from '../src/index.js';
 import { startArgonTestNetwork } from './startArgonTestNetwork.js';
 import { describeIntegration, sudo, teardown } from '@argonprotocol/testing';
-import { Keyring } from '@polkadot/api';
-import { mnemonicGenerate } from '@polkadot/util-crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { inspect } from 'util';
-import { getClient } from '@argonprotocol/mainchain';
+import { getClient, Keyring, mnemonicGenerate } from '@argonprotocol/mainchain';
 
 // set the default log depth to 10
 inspect.defaultOptions.depth = 10;

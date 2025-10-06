@@ -205,8 +205,8 @@ onMounted(async () => {
   void cosignReleaseAsNeeded();
   if (props.lock.status !== 'vaultCosigned' && props.lock.status !== 'releaseRequested') {
     const redemptionRate = await vaults.getRedemptionRate(BigInt(props.lock.satoshis));
-    if (redemptionRate > props.lock.lockPrice) {
-      releasePrice.value = BigInt(props.lock.lockPrice);
+    if (redemptionRate > props.lock.liquidityPromised) {
+      releasePrice.value = BigInt(props.lock.liquidityPromised);
     } else {
       releasePrice.value = redemptionRate;
     }

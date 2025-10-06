@@ -1,8 +1,14 @@
-import { type ArgonClient, type ArgonPrimitivesVault, formatArgons, Option, Vault } from '@argonprotocol/mainchain';
+import {
+  type ArgonClient,
+  type ArgonPrimitivesVault,
+  formatArgons,
+  Option,
+  u8aToHex,
+  Vault,
+} from '@argonprotocol/mainchain';
 import { Accountset, BlockWatch, MiningBids } from './index.js';
 import { printTable } from 'console-table-printer';
 import { createNanoEvents, formatPercent } from './utils.js';
-import { u8aToHex } from '@polkadot/util';
 
 export class VaultMonitor {
   public events = createNanoEvents<{

@@ -204,7 +204,10 @@ export class Vaults {
   ): Promise<{ burnAmount: bigint; ratchetingFee: bigint; marketRate: bigint }> {
     const vault = this.vaultsById[lock.vaultId];
     if (!vault) throw new Error('Vault not found');
-    const ratchetPrice = await new BitcoinLocks(getMainchainClient(false)).getRatchetPrice(lock.lockDetails, vault);
+    const ratchetPrice = await new BitcoinLocks(await getMainchainClient(false)).getRatchetPrice(
+      lock.lockDetails,
+      vault,
+    );
 
     return {
       ...ratchetPrice,
@@ -212,17 +215,17 @@ export class Vaults {
   }
 
   public async getRedemptionRate(satoshis: bigint): Promise<bigint> {
-    return await new BitcoinLocks(getMainchainClient(false)).getRedemptionRate(satoshis);
+    return await new BitcoinLocks(await getMainchainClient(false)).getRedemptionRate(satoshis);
   }
 
   public async getMarketRate(satoshis: bigint): Promise<bigint> {
-    return await new BitcoinLocks(getMainchainClient(false)).getMarketRate(satoshis);
+    return await new BitcoinLocks(await getMainchainClient(false)).getMarketRate(satoshis);
   }
 
-  public async calculateReleasePrice(satoshis: bigint, lockPrice: bigint): Promise<bigint> {
+  public async calculateReleasePrice(satoshis: bigint, peggedPrice: bigint): Promise<bigint> {
     let lowestPrice = await this.getRedemptionRate(satoshis);
-    if (lockPrice < lowestPrice) {
-      lowestPrice = lockPrice;
+    if (peggedPrice < lowestPrice) {
+      lowestPrice = peggedPrice;
     }
     return lowestPrice;
   }
