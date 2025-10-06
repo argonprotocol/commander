@@ -247,10 +247,11 @@ export class FrameIterator {
     if (isFirstJump) {
       // First jump: use tick-based estimation
       const ticksDiff = frameTickStart - currentBlockData.blockTick;
+      const ticksPerFrame = 1_400; // if first jump, we'll jump by a whole frame
       if (ticksDiff > 0) {
-        jumpBy = Math.min(1_440, ticksDiff);
+        jumpBy = Math.min(ticksPerFrame, ticksDiff);
       } else if (ticksDiff < 0) {
-        jumpBy = Math.max(-1_440, ticksDiff);
+        jumpBy = Math.max(-ticksPerFrame, ticksDiff);
       } else {
         jumpBy = 0;
       }
@@ -279,7 +280,8 @@ export class FrameIterator {
       }
       jumpBy = blockNumber - currentBlockData.blockNumber;
       if (!earliestSearchData) {
-        jumpBy = Math.max(-50, jumpBy);
+        const ticksPerHour = 60; // if we don't have an earlier bound, jump by an hour
+        jumpBy = Math.max(-ticksPerHour, jumpBy);
       }
     }
 
