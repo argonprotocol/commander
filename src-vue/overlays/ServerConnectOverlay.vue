@@ -35,7 +35,7 @@
                     Local Computer
                   </TabsTrigger>
                   <TabsTrigger
-                  data-testid="ServerConnectOverlay.selectedTab='local'()"
+                    data-testid="ServerConnectOverlay.selectedTab='local'()"
                     class="hover:text-argon-700/60 data-[state=active]:text-argon-600 flex flex-1 cursor-pointer items-center justify-center rounded-tl-md px-5 leading-none outline-none select-none data-[state=active]:font-bold"
                     value="customServer">
                     Custom Server
