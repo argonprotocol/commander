@@ -48,12 +48,16 @@ services:
         - SNAPSHOT_NETWORK=${SNAPSHOT_NETWORK}
         - UTXO_HASH=${UTXO_HASH}
         - COMMIT_SHA=${COMMIT_SHA}
+        - DATA_PATH=${DATA_PATH}
+        - BITCOIN_DATA_FOLDER=${BITCOIN_DATA_FOLDER}
       tags:
         - ghcr.io/argonprotocol/commander/${BITCOIN_DATA_SLUG}:height-${SNAPSHOT_HEIGHT}
-      additional_contexts:
-        - data=$BITCOIN_DATA_FOLDER
     volumes:
       - $BITCOIN_DATA_FOLDER:/data
+    environment:
+      - DATA_PATH=${DATA_PATH}
+      - BITCOIN_DATA_FOLDER=${BITCOIN_DATA_FOLDER}
+      - TAR_PATHS=${BITCOIN_TAR_PATHS}
     profiles:
       - data
     deploy:

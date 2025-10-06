@@ -108,11 +108,16 @@ class ArgonApis {
     }
 
     let blockSyncPercent = mainNodeBlockNumber ? getRoundedPercent(localNodeBlockNumber / mainNodeBlockNumber) : 0;
-    if (blockSyncPercent >= 100) {
-      const complete = await this.isComplete().catch(() => false);
-      if (complete !== true) blockSyncPercent = 99;
+    let syncPercent = getRoundedPercent((dockerPercent * 0.2 + blockSyncPercent * 0.8) / 100, 1);
+    // if we're not all the way synced, don't report 100%
+    if (syncPercent >= 100) {
+      if (localNodeBlockNumber < mainNodeBlockNumber) {
+        syncPercent = 99.9;
+      } else {
+        const complete = await this.isComplete().catch(() => false);
+        if (complete !== true) syncPercent = 99.9;
+      }
     }
-    const syncPercent = getRoundedPercent((dockerPercent * 0.2 + blockSyncPercent * 0.8) / 100, 1);
     return { syncPercent, mainNodeBlockNumber, localNodeBlockNumber };
   }
 
@@ -217,13 +222,20 @@ class BitcoinApis {
       Object.values(localSyncedInfo).every(index => index.synced && index.best_block_height === localNodeBlockNumber) &&
       Object.keys(localSyncedInfo).length > 0;
 
-    const blocksSynced = initialblockdownload && blocks === headers;
+    let syncPercent = getRoundedPercent((dockerPercent * 0.7 + blockSyncPercent * 0.3) / 100, 1);
+
+    const isTrulyComplete =
+      indexesSynced && !initialblockdownload && blocks === headers && localNodeBlockNumber >= mainNodeBlockNumber;
     // if we're not all the way synced, don't report 100%
-    if (blockSyncPercent >= 99 && (!blocksSynced || !indexesSynced)) {
-      blockSyncPercent = 99;
+    if (syncPercent >= 100 && !isTrulyComplete) {
+      syncPercent = 99.9;
     }
-    const syncPercent = getRoundedPercent((dockerPercent * 0.7 + blockSyncPercent * 0.3) / 100, 1);
-    return { syncPercent, mainNodeBlockNumber, localNodeBlockNumber };
+    return {
+      syncPercent,
+      mainNodeBlockNumber,
+      localNodeBlockNumber,
+      bitcoinNode: { indexinfo: localSyncedInfo, initialblockdownload, blocks, headers },
+    } as any;
   }
 
   static async recentBlocks(blockCount: number): Promise<IBitcoinBlockMeta[]> {

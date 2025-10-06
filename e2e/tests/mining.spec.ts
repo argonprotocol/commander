@@ -57,20 +57,27 @@ it('should be able to start a miner', async () => {
 
   // open server connect
   await waitAndClick('FinalSetupChecklist.openServerConnectOverlay()');
-  await waitAndClick("ServerConnectOverlay.selectedTab='local'()");
-  await waitAndClick('ServerConnectOverlay.addServer()');
+  await waitAndClick("ServerConnectOverlay.selectedTab='local'");
+  await waitAndClick('ServerConnectOverlay.connect()');
 
   // takes a second to create the local server
   const launchButton = await waitForVisible('FinalSetupChecklist.launchMiningBot()', 120e3);
   await launchButton.waitForClickable({ timeout: 60e3 });
   await launchButton.click();
 
+  async function didFinishInstall() {
+    if (await withTestid('Dashboard').isDisplayed()) {
+      return true;
+    }
+    return await withTestid('FirstAuction').isDisplayed();
+  }
+
   await $('.InstallProgress').waitForDisplayed();
   await browser.waitUntil(
     async () => {
       const steps = $$('.InstallProgressStep');
       if ((await steps.length) === 0) {
-        return await withTestid('Dashboard').isDisplayed();
+        return didFinishInstall();
       }
       await expect($('.InstallProgressStep.Failed')).not.toBeExisting();
       let incompleteSteps = 0;
@@ -78,7 +85,12 @@ it('should be able to start a miner', async () => {
         const status = await step.getAttribute('data-status');
         expect(status).not.toBe('Failed');
         const text = await step.getText();
-        const progress = await step.$('.Bar').getAttribute('data-progress');
+        const bar = await step.$('.ProgressBar > div');
+        if (!(await bar.isExisting())) {
+          console.log(`Step ${text} has no progress bar, retry and check if we're done`);
+          return didFinishInstall();
+        }
+        const progress = await bar.getAttribute('data-progress');
         console.log(`Step ${text} is ${status} (${progress}%)`);
         expect(Number.isNaN(progress)).toBe(false);
         if (parseInt(progress, 10) < 100) {
@@ -90,7 +102,7 @@ it('should be able to start a miner', async () => {
     { timeout: 10 * 60e3, interval: 1e3 },
   );
 
-  await waitForVisible('Dashboard');
+  await waitForVisible('Dashboard', 30e3);
   // should wait for a block mined?
   await browser.waitUntil(
     async () => {

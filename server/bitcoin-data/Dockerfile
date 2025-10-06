@@ -3,10 +3,13 @@
 FROM --platform=linux/amd64 debian AS init-data
 ARG TAR_PATHS
 ARG REPO_URL
+ARG DATA_PATH
 
-RUN --mount=type=bind,from=data,source=/,target=/data \
-	mkdir /init-data && cd /data && \
-	tar cvf - ${TAR_PATHS} | split --bytes=5GB - /init-data/data.tar.
+RUN --mount=type=bind,source=${DATA_PATH},target=/data,ro \
+    --mount=type=cache,target=/cache \
+	mkdir -p /cache /init-data && cd /data && \
+    tar cvf - ${TAR_PATHS} | split -b 5G - /cache/data.tar. && \
+    mv /cache/data.tar.* /init-data/
 
 ########################
 

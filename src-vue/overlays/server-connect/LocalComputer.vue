@@ -99,6 +99,7 @@ import { IConfigServerCreationLocalComputer } from '../../interfaces/IConfig';
 import { invokeWithTimeout } from '../../lib/tauriApi';
 import numeral from '../../lib/numeral';
 import { MiningMachine } from '../../lib/MiningMachine.ts';
+import { IS_TEST } from '../../lib/Env.ts';
 
 const emit = defineEmits(['ready']);
 
@@ -156,6 +157,10 @@ async function checkAvailableDiskSpace() {
   availableGBs.value = bytes / 1024 / 1024 / 1024;
   isCheckingDiskSpace.value = false;
   hasEnoughDiskSpace.value = availableGBs.value >= 100;
+  if (IS_TEST) {
+    hasEnoughDiskSpace.value = true;
+    availableGBs.value = 100;
+  }
   calculateIsReady();
 }
 

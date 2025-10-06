@@ -5,7 +5,7 @@ import { LocalMachine } from './LocalMachine';
 import { SSH } from './SSH';
 import { invokeWithTimeout } from './tauriApi';
 import { SSHFingerprint } from './SSHFingerprint';
-import { IS_CI } from './Env';
+import { IS_TEST } from './Env';
 
 export class MiningMachineError extends Error {
   constructor(message: string) {
@@ -221,7 +221,7 @@ export class MiningMachine {
       );
     }
 
-    if (!IS_CI) {
+    if (!IS_TEST) {
       await invokeWithTimeout('toggle_nosleep', { enable: true }, 5000);
       await enableAutostart();
     }

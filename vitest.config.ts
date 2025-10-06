@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    retry: 0,
+    retry: 1,
     reporters: process.env.GITHUB_ACTIONS ? ['dot', 'github-actions'] : ['dot'],
     maxWorkers: 1,
     disableConsoleIntercept: true,

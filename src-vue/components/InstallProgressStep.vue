@@ -181,8 +181,8 @@ li.Component.InstallProgressStep {
 
   @apply flex-1 py-2;
 
-  &[status='Working'],
-  &[status='Completing'] {
+  &[data-status='Working'],
+  &[data-status='Completing'] {
     label {
       @apply relative font-bold text-gray-700;
     }
@@ -196,13 +196,13 @@ li.Component.InstallProgressStep {
     }
   }
 
-  &[status='Failed'] {
+  &[data-status='Failed'] {
     label {
       @apply text-argon-600;
     }
   }
 
-  &[status='Completed'] {
+  &[data-status='Completed'] {
     .ProgressBar {
       @apply opacity-70;
     }

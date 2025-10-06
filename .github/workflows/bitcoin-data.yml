@@ -3,10 +3,11 @@ name: Bitcoin Data Snapshot
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: '0 */12 * * *'
+    - cron: '0 4 * * *'
 
 env:
   GHCR_PROJECT: ghcr.io/argonprotocol/commander
+
 jobs:
   build:
     strategy:
@@ -40,8 +41,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Clear out auto-restart from docker compose
+        run: |
+          # Install yq
+          apt-get update && apt-get install -y yq
+          # Replace any restart policy with "no"
+          yq -i -y '.services."bitcoin-node".restart = "no"' docker-compose.yaml
+        working-directory: server
+
       - name: Create network
         run: docker network create server-net || true
+        working-directory: server
+
+      - name: Clean up data dir
+        run: |
+          docker compose --env-file=${{ matrix.env_file }} down -v || true
+          rm -rf ../data/bitcoin/*
+          mkdir -p ../data/bitcoin
         working-directory: server
 
       - name: Bootstrap data
@@ -50,7 +66,7 @@ jobs:
 
       - name: Start bitcoin service
         run: |
-          STATUS_PORT=0 docker compose --env-file=${{ matrix.env_file }} --profile=all up -d bitcoin-node status
+          STATUS_PORT=0 docker compose --env-file=${{ matrix.env_file }} --profile=all up --build --force-recreate -d bitcoin-node status
         working-directory: server
 
       - name: Wait for sync via status service
@@ -87,6 +103,58 @@ jobs:
           exit 1
         working-directory: server
 
+      - name: Shutdown bitcoin cleanly
+        run: |
+          docker compose --env-file=${{ matrix.env_file }} exec bitcoin-node sh -c 'bitcoin-cli --conf=$BITCOIN_CONFIG stop'
+          echo "Waiting for bitcoin container to exit..."
+          for i in {1..60}; do
+            if ! docker compose --env-file=${{ matrix.env_file }} ps -q bitcoin-node | xargs docker inspect -f '{{.State.Running}}' 2>/dev/null | grep true; then
+              echo "bitcoin container has stopped"
+              sleep 10 # wait a bit more for clean shutdown
+              break
+            fi
+            sleep 2
+          done
+        working-directory: server
+
+      - name: Restart and validate bitcoin
+        run: |
+          echo "Restarting bitcoin-node in isolated mode..."
+          # clear out the connections so we don't connect to peers
+          yq -i -y '.services."bitcoin-node".command += ["-maxconnections=0", "-listen=0", "-connect=0"]' docker-compose.yaml
+          docker compose --env-file=${{ matrix.env_file }} up -d bitcoin-node --wait
+          docker compose --env-file=${{ matrix.env_file }} exec -T bitcoin-node bash <<'EOSCRIPT'
+            set -euo pipefail
+            # Query blockchain info
+            info=$(bitcoin-cli --conf=$BITCOIN_CONFIG getblockchaininfo)
+            ibd=$(echo "$info" | jq -r .initialblockdownload)
+            blocks=$(echo "$info" | jq -r .blocks)
+            headers=$(echo "$info" | jq -r .headers)
+            besthash=$(echo "$info" | jq -r .bestblockhash)
+
+            echo "blocks=$blocks headers=$headers ibd=$ibd"
+
+            # Check Core’s own sync flags
+            if [ "$ibd" != "false" ] || [ "$blocks" != "$headers" ]; then
+              echo "❌ Node still in IBD or not at header tip"
+              exit 1
+            fi
+
+            # Check index info
+            indexes=$(bitcoin-cli --conf=$BITCOIN_CONFIG getindexinfo)
+            if echo "$indexes" | jq -e --argjson blocks "$blocks" '
+              to_entries
+              | map(.value.synced == false or .value.best_block_height != $blocks)
+              | any
+              '; then
+              echo "❌ Indexes not fully synced or mismatched tip"
+              exit 1
+            fi
+
+            echo "✅ Validation complete: blockchain and indexes are consistent"
+          EOSCRIPT
+        working-directory: server
+
       - name: Get UTXO Hash
         id: data
         run: |
@@ -98,37 +166,28 @@ jobs:
           echo "height=$HEIGHT" >> $GITHUB_OUTPUT
         working-directory: server
 
-      - name: Shutdown bitcoin cleanly
+      - name: Always tear down bitcoin
+        if: always()
         run: |
-          docker compose --env-file=${{ matrix.env_file }} exec bitcoin-node sh -c 'bitcoin-cli --conf=$BITCOIN_CONFIG stop'
-          echo "Waiting for bitcoin container to exit..."
-          for i in {1..60}; do
-            if ! docker compose --env-file=${{ matrix.env_file }} ps -q bitcoin-node | xargs docker inspect -f '{{.State.Running}}' 2>/dev/null | grep true; then
-              echo "bitcoin container has stopped"
-              break
-            fi
-            sleep 2
-          done
+          docker compose --env-file=${{ matrix.env_file }} down --profile=all -v || true
         working-directory: server
 
       - name: Build snapshot image
         run: |
-          docker compose --env-file=${{ matrix.env_file }} build bitcoin-data \
-            --build-arg SNAPSHOT_HEIGHT=${{ steps.data.outputs.height }} \
-            --build-arg SNAPSHOT_NETWORK=${{ matrix.network }} \
-            --build-arg UTXO_HASH=${{ steps.data.outputs.utxo_hash }} \
-            --build-arg COMMIT_SHA=${{ github.sha }}
+          docker compose --env-file=${{ matrix.env_file }} --profile=data  config > expanded.yml
+          docker buildx bake \ 
+            --allow=fs.read=${{ env.DATA_PATH }} \
+            -f expanded.yml bitcoin-data --push --load
         working-directory: server
         env:
+          BUILDKIT_TMPDIR: /mnt/data/tmp
           SNAPSHOT_HEIGHT: ${{ steps.data.outputs.height }}
+          SNAPSHOT_NETWORK: ${{ matrix.network }}
+          UTXO_HASH: ${{ steps.data.outputs.utxo_hash }}
+          COMMIT_SHA: ${{ github.sha }}
           BITCOIN_DATA_SLUG: ${{ matrix.image_name }}
-
-      - name: Push snapshot image
-        run: docker compose --env-file=${{ matrix.env_file }} push bitcoin-data
-        working-directory: server
-        env:
-          SNAPSHOT_HEIGHT: ${{ steps.data.outputs.height }}
-          BITCOIN_DATA_SLUG: ${{ matrix.image_name }}
+          DATA_PATH: ${{ github.workspace }}/data/bitcoin
+          BITCOIN_DATA_FOLDER: ../data/bitcoin
 
       # --- Attestation ---
       - name: Install Cosign
@@ -148,3 +207,12 @@ jobs:
           subject-name: ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }}
           subject-digest: ${{ steps.digest.outputs.digest }}
           push-to-registry: true
+
+      - name: Prune non-latest images
+        run: |
+          docker image prune -f || true
+          docker buildx prune -af || true
+          for img in $(docker images ghcr.io/argonprotocol/commander/bitcoin-data-signet \
+             --format '{{.Repository}}:{{.Tag}}' | grep -v ':latest$'); do
+            docker rmi -f "$img" || true
+          done
