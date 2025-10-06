@@ -43,20 +43,20 @@ export enum ServerType {
   LocalComputer = 'LocalComputer',
 }
 
-export const ConfigServerSetupDigitalOceanSchema = z.object({
+export const ConfigServerCreationDigitalOceanSchema = z.object({
   apiKey: z.string(),
 });
-export const ConfigServerSetupLocalComputerSchema = z.object({});
-export const ConfigServerSetupCustomServerSchema = z.object({
+export const ConfigServerCreationLocalComputerSchema = z.object({});
+export const ConfigServerCreationCustomServerSchema = z.object({
   port: z.number(),
   sshUser: z.string(),
   ipAddress: z.string().ip(),
 });
 
-export const ConfigServerSetupSchema = z.object({
-  localComputer: ConfigServerSetupLocalComputerSchema.optional(),
-  digitalOcean: ConfigServerSetupDigitalOceanSchema.optional(),
-  customServer: ConfigServerSetupCustomServerSchema.optional(),
+export const ConfigServerCreationSchema = z.object({
+  localComputer: ConfigServerCreationLocalComputerSchema.optional(),
+  digitalOcean: ConfigServerCreationDigitalOceanSchema.optional(),
+  customServer: ConfigServerCreationCustomServerSchema.optional(),
 });
 
 export const ConfigServerDetailsSchema = z.object({
@@ -120,7 +120,7 @@ export const ConfigSchema = z.object({
   requiresPassword: z.boolean(),
   showWelcomeOverlay: z.boolean(),
 
-  serverCreation: ConfigServerSetupSchema.optional(),
+  serverCreation: ConfigServerCreationSchema.optional(),
   serverDetails: ConfigServerDetailsSchema,
   installDetails: ConfigInstallDetailsSchema,
   oldestFrameIdToSync: z.number(),
@@ -165,10 +165,10 @@ export type IMiningAccountPreviousHistoryBid = z.infer<typeof MiningAccountPrevi
 export type IMiningAccountPreviousHistorySeat = z.infer<typeof MiningAccountPreviousHistorySeatSchema>;
 export type IMiningAccountPreviousHistoryRecord = z.infer<typeof MiningAccountPreviousHistoryRecordSchema>;
 
-export type IConfigServerSetupDigitalOcean = z.infer<typeof ConfigServerSetupDigitalOceanSchema>;
-export type IConfigServerSetupLocalComputer = z.infer<typeof ConfigServerSetupLocalComputerSchema>;
-export type IConfigServerSetupCustomServer = z.infer<typeof ConfigServerSetupCustomServerSchema>;
-export type IConfigServerSetup = z.infer<typeof ConfigServerSetupSchema>;
+export type IConfigServerCreationDigitalOcean = z.infer<typeof ConfigServerCreationDigitalOceanSchema>;
+export type IConfigServerCreationLocalComputer = z.infer<typeof ConfigServerCreationLocalComputerSchema>;
+export type IConfigServerCreationCustomServer = z.infer<typeof ConfigServerCreationCustomServerSchema>;
+export type IConfigServerCreation = z.infer<typeof ConfigServerCreationSchema>;
 
 export type IConfigServerDetails = z.infer<typeof ConfigServerDetailsSchema>;
 export type IConfigInstallDetails = z.infer<typeof ConfigInstallDetailsSchema>;

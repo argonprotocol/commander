@@ -49,9 +49,9 @@
             </a>
             .
           </p>
-          <p class="mt-3">If you're already installed Docker, make sure it is running.</p>
+          <p class="mt-3">If you've already installed Docker, make sure it is running.</p>
           <div class="text-md mt-3 border-t border-b border-slate-400/40 py-1 font-mono uppercase">
-            {{ isDockerStarted ? 'DOCKER VERSON 27+ WAS FOUND RUNNING ON THIS MACHINE' : 'CHECKING FOR DOCKER...' }}
+            {{ isDockerStarted ? 'DOCKER VERSION 27+ WAS FOUND RUNNING ON THIS MACHINE' : 'CHECKING FOR DOCKER...' }}
           </div>
         </div>
       </section>
@@ -72,7 +72,7 @@ import CheckmarkIcon from '../../assets/checkmark.svg?component';
 import { open as tauriOpenUrl } from '@tauri-apps/plugin-shell';
 import { platformType } from '../../tauri-controls/utils/os.ts';
 import { IServerConnectChildExposed } from '../ServerConnectOverlay.vue';
-import { IConfigServerSetupLocalComputer } from '../../interfaces/IConfig';
+import { IConfigServerCreationLocalComputer } from '../../interfaces/IConfig';
 import { invokeWithTimeout } from '../../lib/tauriApi';
 import numeral from '../../lib/numeral';
 import { MiningMachine } from '../../lib/MiningMachine.ts';
@@ -108,7 +108,7 @@ function openDockerInstallLink() {
   void tauriOpenUrl(url);
 }
 
-async function connect(): Promise<IConfigServerSetupLocalComputer> {
+async function connect(): Promise<IConfigServerCreationLocalComputer> {
   return {};
 }
 

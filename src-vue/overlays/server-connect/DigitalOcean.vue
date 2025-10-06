@@ -142,7 +142,7 @@
               <div StepContent>
                 —>
                 <a MainLink href="https://m.do.co/c/3fc891051aa9" target="_blank">
-                  Open Digitial Ocean's $200 in free credits.
+                  Open Digital Ocean's $200 in free credits.
                 </a>
               </div>
             </div>
@@ -392,7 +392,7 @@ import {
 } from 'reka-ui';
 import SecureIcon from '../../assets/secure.svg?component';
 import { IServerConnectChildExposed } from '../ServerConnectOverlay.vue';
-import { IConfigServerSetupDigitalOcean } from '../../interfaces/IConfig';
+import { IConfigServerCreationDigitalOcean } from '../../interfaces/IConfig';
 import { MiningMachine } from '../../lib/MiningMachine';
 import { ExclamationTriangleIcon } from '@heroicons/vue/20/solid';
 import { useConfig } from '../../stores/config';
@@ -436,7 +436,7 @@ function toggle(step: number) {
   }
 }
 
-async function connect(): Promise<IConfigServerSetupDigitalOcean> {
+async function connect(): Promise<IConfigServerCreationDigitalOcean> {
   if (!apiKey.value) {
     throw new Error('API Key is required');
   }

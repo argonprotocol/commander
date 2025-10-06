@@ -146,7 +146,7 @@ import CopyToClipboard from '../../components/CopyToClipboard.vue';
 import { useTextareaAutosize } from '@vueuse/core';
 import { SSH } from '../../lib/SSH';
 import { IServerConnectChildExposed } from '../ServerConnectOverlay.vue';
-import { IConfigServerSetupCustomServer, ServerType } from '../../interfaces/IConfig';
+import { IConfigServerCreationCustomServer, ServerType } from '../../interfaces/IConfig';
 
 const emit = defineEmits(['ready']);
 
@@ -176,7 +176,7 @@ const addSshPublicKey = Vue.computed(() => {
   return `echo "${key}" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
 });
 
-async function connect(): Promise<IConfigServerSetupCustomServer> {
+async function connect(): Promise<IConfigServerCreationCustomServer> {
   if (!isValidIPv4WithOptionalPort(ipAddressAndMaybePort.value)) {
     throw new Error('The IP Address cannot be left blank');
   } else if (!sshUser.value) {
@@ -185,7 +185,7 @@ async function connect(): Promise<IConfigServerSetupCustomServer> {
 
   const [ipAddress, maybePort] = ipAddressAndMaybePort.value.split(':');
   const port = maybePort ? parseInt(maybePort.trim(), 10) : 22;
-  const serverCreation = {
+  const serverCreation: IConfigServerCreationCustomServer = {
     port,
     sshUser: sshUser.value,
     ipAddress: ipAddress,
@@ -193,6 +193,7 @@ async function connect(): Promise<IConfigServerSetupCustomServer> {
   const newServerDetails = {
     type: ServerType.CustomServer,
     ...serverCreation,
+    workDir: '~',
   };
 
   const serverMeta = await (async () => {
@@ -207,7 +208,7 @@ async function connect(): Promise<IConfigServerSetupCustomServer> {
     throw new Error('The server has a different wallet address than your mining account.');
   }
 
-  return newServerDetails;
+  return serverCreation;
 }
 
 function highlightCopiedContent() {

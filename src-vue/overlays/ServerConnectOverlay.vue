@@ -107,14 +107,15 @@
 
 <script lang="ts">
 import {
-  IConfigServerSetupCustomServer,
-  IConfigServerSetupDigitalOcean,
-  IConfigServerSetupLocalComputer,
+  IConfigServerCreation,
+  IConfigServerCreationCustomServer,
+  IConfigServerCreationDigitalOcean,
+  IConfigServerCreationLocalComputer,
 } from '../interfaces/IConfig';
 
 export interface IServerConnectChildExposed {
   connect: () => Promise<
-    IConfigServerSetupDigitalOcean | IConfigServerSetupLocalComputer | IConfigServerSetupCustomServer
+    IConfigServerCreationDigitalOcean | IConfigServerCreationLocalComputer | IConfigServerCreationCustomServer
   >;
 }
 </script>
@@ -201,7 +202,7 @@ async function connect() {
   serverCreationError.value = '';
 
   try {
-    config.serverCreation = await extractServerSetup();
+    config.serverCreation = await extractServerCreation();
     await config.save();
   } catch (error: any) {
     serverCreationError.value = error.message;
@@ -213,14 +214,14 @@ async function connect() {
   closeOverlay();
 }
 
-async function extractServerSetup() {
+async function extractServerCreation(): Promise<IConfigServerCreation> {
   if (selectedTab.value === 'digitalOcean') {
-    return { digitalOcean: (await digitalOceanRef.value?.connect()) as IConfigServerSetupDigitalOcean };
+    return { digitalOcean: (await digitalOceanRef.value?.connect()) as IConfigServerCreationDigitalOcean };
   }
   if (selectedTab.value === 'localComputer') {
-    return { localComputer: (await localComputerRef.value?.connect()) as IConfigServerSetupLocalComputer };
+    return { localComputer: (await localComputerRef.value?.connect()) as IConfigServerCreationLocalComputer };
   }
-  return { customServer: (await customServerRef.value?.connect()) as IConfigServerSetupCustomServer };
+  return { customServer: (await customServerRef.value?.connect()) as IConfigServerCreationCustomServer };
 }
 
 Vue.watch(selectedTab, () => {
