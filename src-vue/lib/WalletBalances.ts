@@ -120,12 +120,14 @@ export class WalletBalances {
       });
     }
 
-    await new FrameIterator(this.clients, true).forEachFrame(async (frameId, api, _meta, _abortController) => {
-      Object.assign(seatsByFrameId, await this.fetchSeatData(api, accountSubaccounts));
-      const framesProcessed = latestFrameId - frameId;
-      const framesToProcess = latestFrameId - earliestPossibleFrameId;
-      this.onLoadHistoryProgress?.(Math.max((100 * framesProcessed) / framesToProcess, 0));
-    });
+    await new FrameIterator(this.clients, true).forEachFrame(
+      async (frameId, _firstBlockMeta, api, _abortController) => {
+        Object.assign(seatsByFrameId, await this.fetchSeatData(api as ArgonClient, accountSubaccounts));
+        const framesProcessed = latestFrameId - frameId;
+        const framesToProcess = latestFrameId - earliestPossibleFrameId;
+        this.onLoadHistoryProgress?.(Math.max((100 * framesProcessed) / framesToProcess, 0));
+      },
+    );
 
     this.onLoadHistoryProgress?.(100);
 
