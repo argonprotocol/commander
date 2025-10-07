@@ -65,6 +65,10 @@ export class Server {
     return this.serverDetails.workDir;
   }
 
+  private get installerScriptPath() {
+    return `${this.workDir}/server/scripts/installer.sh`;
+  }
+
   public static async virtualMachineFolder(): Promise<string> {
     let path = await join(await appConfigDir(), NETWORK_NAME, INSTANCE_NAME, 'virtual-machine');
     // On Windows, convert to Docker-compatible path: replace backslashes, convert drive letter to /c/ form.
@@ -241,7 +245,7 @@ export class Server {
   }
 
   public async startInstallerScript(): Promise<void> {
-    const remoteScriptPath = `${this.workDir}/server/scripts/installer.sh`;
+    const remoteScriptPath = this.installerScriptPath;
     const remoteScriptLogPath = `${this.workDir}/logs/installer.log`;
     await this.connection.runCommandWithTimeout(
       `cd ${this.workDir}/server && cp ${DEPLOY_ENV_FILE} .env && echo "COMPOSE_PROJECT_NAME=${DOCKER_COMPOSE_PROJECT_NAME}" >> .env`,
@@ -256,7 +260,7 @@ export class Server {
     }
     if (await this.isInstallerScriptRunning()) {
       console.log('Restart the installer script: stopping existing one first');
-      await this.connection.runCommandWithTimeout(`pkill -f ${this.workDir}/server/scripts/installer.sh || true`, 10e3);
+      await this.connection.runCommandWithTimeout(`pkill -f ${remoteScriptPath} || true`, 10e3);
       // wait a bit to ensure it's stopped
       await new Promise(r => setTimeout(r, 2000));
     }
@@ -264,10 +268,7 @@ export class Server {
     await this.connection.runCommandWithTimeout(shellCommand, 10e3);
 
     console.info(`started: ${shellCommand}`);
-    const [pid] = await this.connection.runCommandWithTimeout(
-      `pgrep -f ${this.workDir}/server/scripts/installer.sh || true`,
-      10e3,
-    );
+    const [pid] = await this.connection.runCommandWithTimeout(`pgrep -f ${remoteScriptPath} || true`, 10e3);
     console.info('Installer PID:', pid);
   }
 
@@ -289,10 +290,7 @@ export class Server {
 
   public async isInstallerScriptRunning(): Promise<boolean> {
     try {
-      const [pid] = await this.connection.runCommandWithTimeout(
-        `pgrep -f ${this.workDir}/server/scripts/installer.sh`,
-        10e3,
-      );
+      const [pid] = await this.connection.runCommandWithTimeout(`pgrep -f ${this.installerScriptPath}`, 10e3);
       return pid.trim() !== '';
     } catch {
       return false;

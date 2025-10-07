@@ -31,6 +31,7 @@ export class FrameIterator {
   constructor(
     public readonly clients: MainchainClients,
     readonly iterateByEpoch: boolean = false,
+    private name: string = 'FrameIterator',
   ) {}
 
   public async forEachFrame<T>(callback: ICallbackForFrame<T>): Promise<T[]> {
@@ -66,15 +67,11 @@ export class FrameIterator {
         shouldIterateThisFrame = i === 0 && !hasAlreadySeenThisFrame;
       }
 
-      const iterateThisFrame = async () => {
-        console.log(`Exploring frame ${currentFrameId} (blockNumber = ${blockNumber})`);
+      if (shouldIterateThisFrame) {
+        console.log(`[${this.name}] Exploring frame ${currentFrameId} (blockNumber = ${blockNumber})`);
         const firstBlockMeta = { specVersion, blockNumber, blockHash, blockTick };
         const result = await callback(currentFrameId, firstBlockMeta, api as any, abortController);
         results.push(result);
-      };
-
-      if (shouldIterateThisFrame) {
-        await iterateThisFrame();
         if (abortController.signal.aborted || currentFrameId <= 1) {
           break; // Stop processing if the abort signal is triggered
         }
@@ -120,7 +117,7 @@ export class FrameIterator {
         currentBlockNumber = firstBlockMeta.blockNumber;
       }
       currentFrameId = frameId;
-      console.log(`Exploring frame ${currentFrameId} (blockNumber = ${currentBlockNumber}) --`);
+      console.log(`[${this.name}] Exploring frame ${currentFrameId} (blockNumber = ${currentBlockNumber}) --`);
       await callback(currentFrameId, firstBlockMeta, api, abortController);
     }
 
@@ -167,7 +164,7 @@ export class FrameIterator {
         isFirstBlockOfFrame = await this.isFirstBlockOfFrame(frameIdToFind, blockNumber, archiveClient);
       }
       if (jump.hasExhaustedSearch && !isFirstBlockOfFrame) {
-        console.log(`Exhausted search for first block of frame '${frameIdToFind}'`);
+        console.log(`[${this.name}] Exhausted search for first block of frame '${frameIdToFind}'`);
         return [frameIdToFind, null, null];
       }
     }

@@ -120,7 +120,7 @@ export class WalletBalances {
       });
     }
 
-    await new FrameIterator(this.clients, true).forEachFrame(
+    await new FrameIterator(this.clients, true, 'WalletHistory').forEachFrame(
       async (frameId, _firstBlockMeta, api, _abortController) => {
         Object.assign(seatsByFrameId, await this.fetchSeatData(api as ArgonClient, accountSubaccounts));
         const framesProcessed = latestFrameId - frameId;

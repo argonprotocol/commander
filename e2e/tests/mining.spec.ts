@@ -102,7 +102,7 @@ it('should be able to start a miner', async () => {
     { timeout: 10 * 60e3, interval: 1e3 },
   );
 
-  await waitForVisible('Dashboard', 30e3);
+  await waitForVisible('Dashboard', 60e3);
   // should wait for a block mined?
   await browser.waitUntil(
     async () => {

@@ -106,24 +106,26 @@ export class Vaults {
     console.log('Synching vault revenue stats back to frame ', oldestFrameToGet);
 
     const currentFrameId = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
-    await new FrameIterator(clients, false).forEachFrame(async (frameId, firstBlockMeta, api, abortController) => {
-      if (firstBlockMeta.specVersion < 129) {
-        abortController.abort();
-        return;
-      }
-      const vaultRevenues = await api.query.vaults.revenuePerFrameByVault.entries();
-      for (const [vaultIdRaw, frameRevenues] of vaultRevenues) {
-        const vaultId = vaultIdRaw.args[0].toNumber();
-        await this.updateVaultRevenue(vaultId, frameRevenues, true);
-      }
+    await new FrameIterator(clients, false, 'VaultRevenueStats').forEachFrame(
+      async (frameId, firstBlockMeta, api, abortController) => {
+        if (firstBlockMeta.specVersion < 129) {
+          abortController.abort();
+          return;
+        }
+        const vaultRevenues = await api.query.vaults.revenuePerFrameByVault.entries();
+        for (const [vaultIdRaw, frameRevenues] of vaultRevenues) {
+          const vaultId = vaultIdRaw.args[0].toNumber();
+          await this.updateVaultRevenue(vaultId, frameRevenues, true);
+        }
 
-      const isDone = frameId <= oldestFrameToGet || firstBlockMeta.specVersion < 123;
+        const isDone = frameId <= oldestFrameToGet || firstBlockMeta.specVersion < 123;
 
-      if (isDone) {
-        console.log(`Synched vault revenue to frame ${frameId}`);
-        abortController.abort();
-      }
-    });
+        if (isDone) {
+          console.log(`Synched vault revenue to frame ${frameId}`);
+          abortController.abort();
+        }
+      },
+    );
     revenue.synchedToFrame = currentFrameId - 1;
     void this.saveStats();
     return revenue;
