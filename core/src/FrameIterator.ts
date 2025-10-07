@@ -82,7 +82,7 @@ export class FrameIterator {
       const isLastFrame = i === frameStartBlockNumbers.length - 1;
       if (isLastFrame) {
         frameStartBlockNumbers = await this.getFrameStartBlockNumbers(api);
-        i = 0;
+        i = -1;
       }
     }
 
