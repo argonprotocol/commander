@@ -16,4 +16,4 @@ echo "Splitting Bitcoin data from $BITCOIN_DATA_DIR into $OUTDIR ($BITCOIN_TAR_P
 
 cd "$BITCOIN_DATA_DIR" || exit 1
 
-tar cvf - ${BITCOIN_TAR_PATHS} | split -b 9500M - "$OUTDIR/data.tar."
+tar cvf - "${BITCOIN_TAR_PATHS}" | split -b 9500M - "$OUTDIR/data.tar."
