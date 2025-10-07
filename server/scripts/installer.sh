@@ -4,10 +4,11 @@
 DEBUG_LOG="/tmp/installer_debug.log"
 
 SCRIPT_PATH="$(readlink -f "$0")"
-SCRIPTS_DIR="$(dirname "$SCRIPT_PATH")"
-SERVER_DIR="$(dirname "$SCRIPTS_DIR")"
-HOME_DIR="$(dirname "$SERVER_DIR")"
+SCRIPTS_DIR="$(dirname "$0")"
+SERVER_DIR="$SCRIPTS_DIR/.."
+HOME_DIR="$SERVER_DIR/.."
 NEEDS_FULL_SETUP=true
+logs_dir="$HOME_DIR/logs"
 export DOCKER_BUILDKIT=1
 LOCALHOST=127.0.0.1
 if [ "$IS_DOCKER_HOST_PROXY" = "true" ]; then
@@ -23,8 +24,8 @@ if [ "$PPID" != "1" ]; then
 fi
 
 # load the env file up one directory
-if [ -f "$SCRIPTS_DIR/../.env" ]; then
-  . "$SCRIPTS_DIR/../.env"
+if [ -f "$SERVER_DIR/.env" ]; then
+  . "$SERVER_DIR/.env"
 fi
 
 # Debug logging
@@ -104,10 +105,8 @@ fi
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Script path: $SCRIPT_PATH"
 } >> "$DEBUG_LOG"
 
-logs_dir="$HOME_DIR/logs"
-
 # Source the helpers file
-source "$(dirname "$0")/helpers.sh"
+source "$SCRIPTS_DIR/helpers.sh"
 
 ########################################################################################
 reset "FileUpload"
@@ -186,7 +185,7 @@ fi
 
 ########################################################################################
 
-cd "$SERVER_DIR"
+cd "$SERVER_DIR" || exit 1
 
 ########################################################################################
 if ! (already_ran "DockerInstall"); then

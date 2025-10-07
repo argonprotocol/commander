@@ -6,8 +6,8 @@
     "esploraHost": "http://localhost:55200",
     "ticksBetweenFrames": 10,
     "slotBiddingStartAfterTicks": 0,
-    "genesisTick": 879676612,
-    "biddingStartTick": 879676612
+    "genesisTick": 879927808,
+    "biddingStartTick": 879927808
   },
   "localnet": {
     "archiveUrl": "ws://localhost:9944",
@@ -16,8 +16,8 @@
     "esploraHost": "http://localhost:3002",
     "ticksBetweenFrames": 10,
     "slotBiddingStartAfterTicks": 0,
-    "genesisTick": 879676371,
-    "biddingStartTick": 879676371
+    "genesisTick": 879927808,
+    "biddingStartTick": 879927808
   },
   "testnet": {
     "archiveUrl": "wss://rpc.testnet.argonprotocol.org",

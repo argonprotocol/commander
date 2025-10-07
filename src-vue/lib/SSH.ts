@@ -32,6 +32,7 @@ export class SSH {
 
   public static async getOrCreateConnection(retries = 3): Promise<SSHConnection> {
     await this.config.isLoadedPromise;
+    console.log('Getting or creating SSH connection to', { ...this.config.serverDetails });
     this.connection ??= new SSHConnection({
       ...this.config.serverDetails,
       privateKeyPath: this.config.security.sshPrivateKeyPath,

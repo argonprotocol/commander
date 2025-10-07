@@ -121,6 +121,8 @@ it('should run through entire install process', async () => {
   installer.installerCheck.checkInterval = 1;
   // @ts-ignore
   installer.getLocalShasum = vi.fn().mockResolvedValue('dummy-sha256');
+  // @ts-ignore
+  installer.uploadCoreFiles = vi.fn().mockResolvedValue();
 
   // should call run
   await installer.load();

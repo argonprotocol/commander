@@ -19,7 +19,7 @@ export async function startArgonTestNetwork(
   MiningFrames.setNetwork('dev-docker' as any);
   const config = [
     Path.join(Path.dirname(require.resolve('@argonprotocol/testing')), 'docker-compose.yml'),
-    Path.resolve(__dirname, '..', '..', 'miners.docker-compose.yml'),
+    // Path.resolve(__dirname, '..', '..', 'miners.docker-compose.yml'),
   ];
   const env = {
     VERSION: 'dev',

@@ -624,6 +624,7 @@ export class Config {
   }
 
   private async _bootupFromMiningAccountPreviousHistory() {
+    console.log('Config: Booting up from mining account previous history...');
     const walletBalances = new WalletBalances(getMainchainClients());
     await walletBalances.load({ miningAccountAddress: this.miningAccount.address });
     walletBalances.onLoadHistoryProgress = (loadPct: number) => {

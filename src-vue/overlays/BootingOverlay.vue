@@ -94,8 +94,16 @@ async function applyRestoredServer(details: string) {
         if (!parseResult.success) return;
 
         value = parseResult.data;
-        await SSH.tryConnection(parseResult.data, config.security.sshPrivateKeyPath);
-        config.isMinerUpToDate = false;
+        try {
+          await SSH.tryConnection(parseResult.data, config.security.sshPrivateKeyPath);
+          config.isMinerUpToDate = false;
+        } catch (err) {
+          console.error(
+            `Couldn't reconnect to stored server at ${parseResult.data.ipAddress}:${parseResult.data.port}`,
+            err,
+          );
+          continue;
+        }
       }
 
       (config as any)[key] = value as any;

@@ -179,6 +179,7 @@ export default class Installer {
           const serverDetails = await MiningMachine.setup(this.config);
           this.config.serverDetails = serverDetails;
           this.config.isMiningMachineCreated = true;
+          this.remoteFilesNeedUpdating = true;
           await this.config.save();
         } catch (e: any) {
           this.hasMiningMachineError = e.message;
@@ -429,8 +430,9 @@ export default class Installer {
 
   private async extractTmpInstallChecks(): Promise<TmpInstallChecks> {
     const server = await this.getServer();
-    const isFreshInstall = !(await server.downloadAccountAddress());
-    console.log('IS FRESH INSTALL', isFreshInstall);
+    const existingAddress = await server.downloadAccountAddress();
+    const isFreshInstall = !existingAddress;
+    console.log('IS FRESH INSTALL', isFreshInstall, { existingAddress });
 
     if (isFreshInstall) {
       return {
