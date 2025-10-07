@@ -289,12 +289,15 @@ async function runSelectedOptions() {
 }
 
 function updateDisabledOptions() {
-  const isDisabled = !config.isMinerInstalled || installer.isRunning;
+  const isMinerDisabled = !config.isMinerInstalled || installer.isRunning;
+  const isServerDisabled = !config.isMiningMachineCreated;
+
   options.value[AdvancedRestartOption.RecreateLocalDatabase].isDisabled = installer.isRunning;
-  options.value[AdvancedRestartOption.RestartDockers].isDisabled = isDisabled;
-  options.value[AdvancedRestartOption.ResyncBiddingDataOnCloudMachine].isDisabled = isDisabled;
-  options.value[AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine].isDisabled = isDisabled;
-  options.value[AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine].isDisabled = isDisabled;
+  options.value[AdvancedRestartOption.RestartDockers].isDisabled = isMinerDisabled;
+  options.value[AdvancedRestartOption.ResyncBiddingDataOnCloudMachine].isDisabled = isMinerDisabled;
+  options.value[AdvancedRestartOption.ResyncBitcoinBlocksOnCloudMachine].isDisabled = isMinerDisabled;
+  options.value[AdvancedRestartOption.ResyncArgonBlocksOnCloudMachine].isDisabled = isMinerDisabled;
+  options.value[AdvancedRestartOption.CompletelyWipeAndReinstallCloudMachine].isDisabled = isServerDisabled;
 }
 updateDisabledOptions();
 

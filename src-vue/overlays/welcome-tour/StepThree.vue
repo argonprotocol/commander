@@ -30,13 +30,13 @@
           OverlayBox
           class="absolute top-0 right-0 flex w-[30rem] flex-col rounded border border-black/60 bg-white px-4 font-light shadow-lg">
           <h3 class="mb-4 flex flex-row justify-between border-b border-slate-300/60 py-4 text-lg font-bold">
-            <div class="text-lg font-bold text-slate-700">Your Account Menu</div>
-            <div class="text-slate-500/40">Step 3 of 4</div>
+            <div class="text-lg font-bold text-slate-700">Currency Selector</div>
+            <div class="text-slate-500/40">Step 3 of 5</div>
           </h3>
 
           <p>
-            This icon controls a menu from which you can reopen this Tour. It also contains a number of other helpful
-            settings, such as managing your crypto keys, wallet recovery, and troubleshooting help.
+            Commander uses Argon as its default currency, however, you can change it here. This allows you to view your
+            portfolio's value in other currencies, such as the Dollar, Euro, or Rupee.
           </p>
 
           <div class="mt-3 flex flex-row justify-end space-x-3 border-t border-slate-300/60 px-3 pb-3">
