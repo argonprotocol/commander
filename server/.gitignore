@@ -5,3 +5,4 @@ tars
 data
 /bot/src/
 !scripts/conf/*
+bitcoin-data/splits/*

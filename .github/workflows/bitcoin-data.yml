@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: '0 4 * * *'
 
+concurrency:
+  group: bitcoin-data-snapshot
+  cancel-in-progress: true
+
 env:
   GHCR_PROJECT: ghcr.io/argonprotocol/commander
 
@@ -169,25 +173,35 @@ jobs:
       - name: Always tear down bitcoin
         if: always()
         run: |
-          docker compose --env-file=${{ matrix.env_file }} down --profile=all -v || true
+          docker compose --env-file=${{ matrix.env_file }} --profile=all down -v || true
+        working-directory: server
+
+      - name: Create split tar of data
+        run: |
+          bitcoin-data/split.sh ${{ matrix.env_file }}
+          ls -lhart bitcoin-data/splits/
         working-directory: server
 
       - name: Build snapshot image
         run: |
-          docker compose --env-file=${{ matrix.env_file }} --profile=data  config > expanded.yml
-          docker buildx bake \ 
-            --allow=fs.read=${{ env.DATA_PATH }} \
-            -f expanded.yml bitcoin-data --push --load
+          docker compose --env-file=${{ matrix.env_file }} build bitcoin-data \
+            --build-arg SNAPSHOT_HEIGHT=${{ steps.data.outputs.height }} \
+            --build-arg SNAPSHOT_NETWORK=${{ matrix.network }} \
+            --build-arg UTXO_HASH=${{ steps.data.outputs.utxo_hash }} \
+            --build-arg COMMIT_SHA=${{ github.sha }}
         working-directory: server
         env:
-          BUILDKIT_TMPDIR: /mnt/data/tmp
+          SNAPSHOT_HEIGHT: ${{ steps.data.outputs.height }}
+          BITCOIN_DATA_SLUG: ${{ matrix.image_name }}
+
+      - name: Push snapshot image
+        run: docker compose --env-file=${{ matrix.env_file }} push bitcoin-data
+        working-directory: server
+        env:
           SNAPSHOT_HEIGHT: ${{ steps.data.outputs.height }}
           SNAPSHOT_NETWORK: ${{ matrix.network }}
           UTXO_HASH: ${{ steps.data.outputs.utxo_hash }}
           COMMIT_SHA: ${{ github.sha }}
-          BITCOIN_DATA_SLUG: ${{ matrix.image_name }}
-          DATA_PATH: ${{ github.workspace }}/data/bitcoin
-          BITCOIN_DATA_FOLDER: ../data/bitcoin
 
       # --- Attestation ---
       - name: Install Cosign
@@ -210,9 +224,10 @@ jobs:
 
       - name: Prune non-latest images
         run: |
+          rm server/bitcoin-data/splits/* || true
           docker image prune -f || true
           docker buildx prune -af || true
-          for img in $(docker images ghcr.io/argonprotocol/commander/bitcoin-data-signet \
-             --format '{{.Repository}}:{{.Tag}}' | grep -v ':latest$'); do
+          for img in $(docker images --format '{{.Repository}}:{{.Tag}}' ${{ env.GHCR_PROJECT }}/${{ matrix.image_name }} \
+              | grep -v ':latest$'); do
             docker rmi -f "$img" || true
           done
