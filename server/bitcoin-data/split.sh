@@ -16,4 +16,10 @@ echo "Splitting Bitcoin data from $BITCOIN_DATA_DIR into $OUTDIR ($BITCOIN_TAR_P
 
 cd "$BITCOIN_DATA_DIR" || exit 1
 
-tar cvf - "${BITCOIN_TAR_PATHS}" | split -b 9500M - "$OUTDIR/data.tar."
+pwd
+
+rm -f "$OUTDIR/data.tar."*
+
+# shellcheck disable=SC2086
+# No double quote because we want word splitting
+tar cvf - ${BITCOIN_TAR_PATHS} | split -b 9500M - "$OUTDIR/data.tar."
