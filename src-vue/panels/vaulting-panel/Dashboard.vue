@@ -63,7 +63,7 @@
         </div>
         <div v-else class="flex flex-row px-3 items-center w-full h-full">
           <SuccessIcon class="w-10 h-10 text-argon-600 mr-4 relative opacity-80" />
-          <div class="opacity-60 relative top-px">You have no critical alerts. It seems your vault is operational and in good order!</div>
+          <div class="opacity-60 relative top-px">Your vault is operational and in good order!</div>
         </div>
       </section>
 
@@ -107,54 +107,82 @@
           <header class="text-[18px] font-bold py-2 text-slate-900/80 border-b border-slate-400/30">
             Asset Breakdown
           </header>
-          <ul class="relative flex flex-col items-center whitespace-nowrap w-full h-6/12 mb-4 text-md">
-            <li class="flex flex-row items-center w-full h-[calc(100%/7)] py-2">
-              <ArgonIcon class="w-7 h-7 text-argon-600/70 mr-2" />
-              <div class="grow">{{ numeral(wallets.vaultingWallet.availableMicrogons).formatIfElse('< 100', '0,0.[00]', '0,0') }} Argons</div>
-              <div class="pr-1">
-                {{ currency.symbol
-                }}{{ microgonToMoneyNm(wallets.vaultingWallet.availableMicrogons).format('0,0.00') }}
+          <ul class="relative flex flex-col items-center whitespace-nowrap w-full min-h-6/12 mb-4 text-md">
+            <li class="flex flex-col w-full min-h-[calc(100%/7)] py-2">
+              <div class="flex flex-row items-center w-full">
+                <ArgonIcon class="w-7 h-7 text-argon-600/70 mr-2" />
+                <div class="grow">Unused Argons</div>
+                <div class="pr-1">
+                  {{ currency.symbol
+                  }}{{ microgonToMoneyNm(wallets.vaultingWallet.availableMicrogons).format('0,0.00') }}
+                </div>
+              </div>
+              <div class="flex flex-col ml-9 gap-y-1 text-slate-900/60">
+                <div class="border-t border-gray-600/20 border-dashed pt-2 relative">
+                  <ArrowTurnDownRightIcon class="w-5 h-5 text-slate-600/40 absolute top-1/2 -translate-y-1/2 -translate-x-[130%] left-0" />
+                  {{ numeral(wallets.vaultingWallet.availableMicrogons).formatIfElse('< 100', '0,0.[00]', '0,0') }} Not Allocated
+                </div>
+                <div class="border-t border-gray-600/20 border-dashed pt-2 relative">
+                  <ArrowTurnDownRightIcon class="w-5 h-5 text-slate-600/40 absolute top-1/2 -translate-y-1/2 -translate-x-[130%] left-0" />
+                  0 Waiting to Mint
+                </div>
               </div>
             </li>
-            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
-              <ArgonotIcon class="w-7 h-7 text-argon-600/70 mr-2" />
-              <div class="grow">{{ numeral(wallets.vaultingWallet.availableMicronots).formatIfElse('< 100', '0,0.[00]', '0,0') }} Argonots</div>
-              <div class="pr-1">
-                {{ currency.symbol
-                }}{{ micronotToMoneyNm(wallets.vaultingWallet.availableMicronots).format('0,0.00') }}
+            <li class="flex flex-col w-full border-t border-gray-600/20 border-dashed py-2">
+              <div class="flex flex-row items-center w-full">
+                <ArgonotIcon class="w-7 h-7 text-argon-600/70 mr-2" />
+                <div class="grow">Bitcoin Security</div>
+                <div class="pr-1">
+                  {{ currency.symbol
+                  }}{{ micronotToMoneyNm(activatedSecuritization + pendingSecuritization).format('0,0.00') }}
+                </div>
+              </div>
+              <div class="flex flex-col ml-9 gap-y-1 text-slate-900/60">
+                <div class="border-t border-gray-600/20 border-dashed pt-2 relative">
+                  <ArrowTurnDownRightIcon class="w-5 h-5 text-slate-600/40 absolute top-1/2 -translate-y-1/2 -translate-x-[130%] left-0" />
+                  {{ microgonToArgonNm(activatedSecuritization).format('0,0.[00]') }} Argons Used
+                </div>
+                <div class="border-t border-gray-600/20 border-dashed pt-2 relative">
+                  <ArrowTurnDownRightIcon class="w-5 h-5 text-slate-600/40 absolute top-1/2 -translate-y-1/2 -translate-x-[130%] left-0" />
+                  {{ microgonToArgonNm(pendingSecuritization).format('0,0.[00]') }} Waiting to Use
+                </div>
               </div>
             </li>
-            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
-              <ArgonotLockedIcon class="w-7 h-7 text-argon-600/70 mr-2" />
-              <div class="grow">{{ numeral(wallets.vaultingWallet.reservedMicrogons - vault.data.pendingCollectRevenue).formatIfElse('< 100', '0,0.[00]', '0,0') }} <span class="hidden xl:inline">Locked</span><span class="inline xl:hidden">L'd</span> Argons</div>
-              <div class="pr-1">
-                {{ currency.symbol
-                }}{{ micronotToMoneyNm(wallets.vaultingWallet.reservedMicrogons - vault.data.pendingCollectRevenue).format('0,0.00') }}
+            <li class="flex flex-col w-full border-t border-gray-600/20 border-dashed py-2">
+              <div class="flex flex-row items-center w-full">
+                <ArgonotIcon class="w-7 h-7 text-argon-600/70 mr-2" />
+                <div class="grow">Treasury Bonds</div>
+                <div class="pr-1">
+                  {{ currency.symbol
+                  }}{{ micronotToMoneyNm(ownTreasuryPoolCapitalDeployed + pendingTreasuryPool).format('0,0.00') }}
+                </div>
+              </div>
+              <div class="flex flex-col ml-9 gap-y-1 text-slate-900/60">
+                <div class="border-t border-gray-600/20 border-dashed pt-2 relative">
+                  <ArrowTurnDownRightIcon class="w-5 h-5 text-slate-600/40 absolute top-1/2 -translate-y-1/2 -translate-x-[130%] left-0" />
+                  {{ microgonToArgonNm(ownTreasuryPoolCapitalDeployed).format('0,0.[00]') }} Argons Used
+                </div>
+                <div class="border-t border-gray-600/20 border-dashed pt-2 relative">
+                  <ArrowTurnDownRightIcon class="w-5 h-5 text-slate-600/40 absolute top-1/2 -translate-y-1/2 -translate-x-[130%] left-0" />
+                  {{ microgonToArgonNm(pendingTreasuryPool).format('0,0.[00]') }} Waiting to Use
+                </div>
               </div>
             </li>
-            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
-              <ArgonotLockedIcon class="w-7 h-7 text-argon-600/70 mr-2" />
-              <div class="grow">{{ numeral(wallets.vaultingWallet.reservedMicronots).formatIfElse('< 100', '0,0.[00]', '0,0') }} <span class="hidden xl:inline">Locked</span><span class="inline xl:hidden">L'd</span> Argonots</div>
-              <div class="pr-1">
-                {{ currency.symbol
-                }}{{ micronotToMoneyNm(wallets.vaultingWallet.reservedMicronots).format('0,0.00') }}
-              </div>
-            </li>
-            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/50 py-2 text-red-900/70">
-              <div class="grow pl-1"><span class="hidden xl:inline">Future Cost to</span> Release Bitcoin</div>
+            <li class="flex flex-row items-center w-full  border-t border-gray-600/50 py-2 text-red-900/70">
+              <div class="grow pl-1"><span class="hidden xl:inline">Cost to</span> Unlock Bitcoin</div>
               <div class="pr-1">
                 -{{ currency.symbol
                 }}{{ microgonToMoneyNm(costToRelease).format('0,0.[00]') }}
               </div>
             </li>
-            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2 text-red-900/70">
+            <li class="flex flex-row items-center w-full border-t border-gray-600/20 border-dashed py-2 text-red-900/70">
               <div class="grow pl-1"><span class="hidden xl:inline">Operational</span> Expenses</div>
               <div class="pr-1">
                 -{{ currency.symbol
                 }}{{ microgonToMoneyNm(vault.metadata?.operationalFeeMicrogons ?? 0n).format('0,0.00') }}
               </div>
             </li>
-            <li class="flex flex-row items-center justify-between w-full h-[calc(100%/7)] border-t border-b border-gray-600/50 py-2 font-bold">
+            <li class="flex flex-row items-center justify-between w-full border-t border-b border-gray-600/50 py-2 font-bold">
               <div class="grow pl-1">Total Value</div>
               <div class="pr-1">
                 {{ currency.symbol
@@ -196,12 +224,12 @@
                 <div class="opacity-40">
                   {{ currency.symbol}}{{ microgonToMoneyNm(personalUtxo?.liquidityPromised ?? 0n).format('0,0.[00]') }} Liquidity
                   /
-                  {{ currency.symbol }}{{ microgonToMoneyNm(costToRelease).format('0,0.[00]') }} To Release
+                  {{ currency.symbol }}{{ microgonToMoneyNm(costToRelease).format('0,0.[00]') }} To Unlock
                 </div>
               </div>
               <div class="flex flex-col gap-x-3 xl:flex-row-reverse items-center justify-center whitespace-nowrap">
                 <div class="flex flex-row space-x-2 items-center justify-center">
-                  <button @click="showReleaseOverlay=true" class="bg-argon-600 hover:bg-argon-700 text-white text-lg font-bold px-4 py-2 rounded-md cursor-pointer">Release</button>
+                  <button @click="showReleaseOverlay=true" class="bg-argon-600 hover:bg-argon-700 text-white text-lg font-bold px-4 py-2 rounded-md cursor-pointer">Unlock Bitcoin</button>
                   <!-- <span class="opacity-40">or</span>
                   <button class="bg-argon-600 hover:bg-argon-700 text-white text-lg font-bold px-4 py-2 rounded-md cursor-pointer">Ratchet</button> -->
                 </div>
@@ -452,6 +480,7 @@ import BigNumber from 'bignumber.js';
 import { MiningFrames } from '@argonprotocol/commander-core';
 import { bigIntMin } from '@argonprotocol/commander-core/src/utils.ts';
 import ProgressBar from '../../components/ProgressBar.vue';
+import { ArrowTurnDownRightIcon } from '@heroicons/vue/24/outline';
 
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
@@ -481,7 +510,7 @@ const frameSliderRef = Vue.ref<InstanceType<typeof FrameSlider> | null>(null);
 const frameRecords = Vue.ref<IFrameRecord[]>([]);
 const chartItems = Vue.ref<IChartItem[]>([]);
 
-const { microgonToMoneyNm, micronotToMoneyNm } = createNumeralHelpers(currency);
+const { microgonToMoneyNm, micronotToMoneyNm, microgonToArgonNm } = createNumeralHelpers(currency);
 
 // For the Vault UI countdown clock
 const nextCollectDueDate = Vue.computed(() => {
@@ -536,14 +565,13 @@ const vaultCapital = Vue.computed(() => {
   return microgonsForVaulting;
 });
 
+const activatedSecuritization = Vue.computed(() => {
+  return vault.createdVault?.activatedSecuritization() ?? 0n;
+});
+
 const pendingSecuritization = Vue.computed(() => {
   const { microgonsForSecuritization } = MyVault.getMicrogoonSplit(config.vaultingRules);
   return microgonsForSecuritization - (vault.createdVault?.activatedSecuritization() ?? 0n);
-});
-
-const pendingTreasuryPool = Vue.computed(() => {
-  const { microgonsForTreasury } = MyVault.getMicrogoonSplit(config.vaultingRules);
-  return microgonsForTreasury - ownTreasuryPoolCapitalDeployed.value;
 });
 
 const ownTreasuryPoolCapitalDeployed = Vue.computed(() => {
@@ -554,9 +582,13 @@ const ownTreasuryPoolCapitalDeployed = Vue.computed(() => {
     .reduce((acc, change) => acc + (change.treasuryPool.vaultCapital ?? 0n), 0n);
 });
 
+const pendingTreasuryPool = Vue.computed(() => {
+  const { microgonsForTreasury } = MyVault.getMicrogoonSplit(config.vaultingRules);
+  return microgonsForTreasury - ownTreasuryPoolCapitalDeployed.value;
+});
+
 const capitalInUse = Vue.computed(() => {
-  let activatedSecuritization = vault.createdVault?.activatedSecuritization() ?? 0n;
-  return activatedSecuritization + ownTreasuryPoolCapitalDeployed.value;
+  return activatedSecuritization.value + ownTreasuryPoolCapitalDeployed.value;
 });
 
 const apy = Vue.computed(() => {

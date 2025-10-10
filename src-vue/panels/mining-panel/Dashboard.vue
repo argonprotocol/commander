@@ -38,34 +38,58 @@
           <header class="text-[18px] font-bold py-2 text-slate-900/80 border-b border-slate-400/30">
             Asset Breakdown
           </header>
-          <ul class="relative flex flex-col items-center whitespace-nowrap w-full h-6/12 mb-4 text-md">
-            <li class="flex flex-row items-center w-full h-[calc(100%/7)] py-2">
-              <ArgonIcon class="w-7 h-7 text-argon-600/70 mr-2" />
-              <div class="grow">{{ numeral(wallets.miningWallet.availableMicrogons).formatIfElse('< 100', '0,0.[00]', '0,0') }} Argons</div>
-              <div class="pr-1">
-                {{ currency.symbol
-                }}{{ microgonToMoneyNm(wallets.miningWallet.availableMicrogons).format('0,0.00') }}
+          <ul class="relative flex flex-col items-center whitespace-nowrap w-full min-h-6/12 mb-4 text-md">
+            <li class="flex flex-col w-full min-h-[calc(100%/7)] pt-2 pb-4">
+              <div class="flex flex-row items-center w-full">
+                <ArgonIcon class="w-7 h-7 text-argon-600/70 mr-2" />
+                <div class="grow">Unused Argons</div>
+                <div class="pr-1">
+                  {{ currency.symbol
+                  }}{{ microgonToMoneyNm(wallets.miningWallet.availableMicrogons).format('0,0.00') }}
+                </div>
+              </div>
+              <div class="flex flex-col ml-9 gap-y-1 text-slate-900/60 pb-3">
+                <div class="border-t border-gray-600/20 border-dashed pt-2 relative">
+                  <ArrowTurnDownRightIcon class="w-5 h-5 text-slate-600/40 absolute top-1/2 -translate-y-1/2 -translate-x-[130%] left-0" />
+                  0 Waiting to Use
+                </div>
+                <div class="border-t border-gray-600/20 border-dashed pt-2 relative">
+                  <ArrowTurnDownRightIcon class="w-5 h-5 text-slate-600/40 absolute top-1/2 -translate-y-1/2 -translate-x-[130%] left-0" />
+                  {{microgonToArgonNm(wallets.miningWallet.availableMicrogons).format('0,0.[00]')}} Not Allocated
+                </div>
               </div>
             </li>
-            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
-              <ArgonotIcon class="w-7 h-7 text-argon-600/70 mr-2" />
-              <div class="grow">{{ numeral(wallets.miningWallet.availableMicronots).formatIfElse('< 100', '0,0.[00]', '0,0') }} Argonots</div>
-              <div class="pr-1">
-                {{ currency.symbol
-                }}{{ micronotToMoneyNm(wallets.miningWallet.availableMicronots).format('0,0.00') }}
+            <li class="flex flex-col w-full min-h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
+              <div class="flex flex-row items-center w-full">
+                <ArgonotIcon class="w-7 h-7 text-argon-600/70 mr-2" />
+                <div class="grow">Unused Argonots</div>
+                <div class="pr-1">
+                  {{ currency.symbol
+                  }}{{ micronotToMoneyNm(wallets.miningWallet.availableMicronots).format('0,0.00') }}
+                </div>
+              </div>
+              <div class="flex flex-col ml-9 gap-y-1 text-slate-900/60 pb-6">
+                <div class="border-t border-gray-600/20 border-dashed pt-2 relative">
+                  <ArrowTurnDownRightIcon class="w-5 h-5 text-slate-600/40 absolute top-1/2 -translate-y-1/2 -translate-x-[130%] left-0" />
+                  0 Waiting to Use
+                </div>
+                <div class="border-t border-gray-600/20 border-dashed pt-2 relative">
+                  <ArrowTurnDownRightIcon class="w-5 h-5 text-slate-600/40 absolute top-1/2 -translate-y-1/2 -translate-x-[130%] left-0" />
+                  {{microgonToArgonNm(wallets.miningWallet.availableMicronots).format('0,0.[00]')}} Not Allocated
+                </div>
               </div>
             </li>
-            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
+            <!-- <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
               <ArgonotLockedIcon class="w-7 h-7 text-argon-600/70 mr-2" />
-              <div class="grow">{{ numeral(wallets.miningWallet.reservedMicronots).formatIfElse('< 100', '0,0.[00]', '0,0') }} Locked Argonots</div>
+              <div class="grow">Locked Argonots</div>
               <div class="pr-1">
                 {{ currency.symbol
                 }}{{ micronotToMoneyNm(wallets.miningWallet.reservedMicronots).format('0,0.00') }}
               </div>
-            </li>
+            </li> -->
             <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
               <MiningBidIcon class="w-7 h-7 text-argon-600/70 mr-2" />
-              <div class="grow">{{ numeral(stats.myMiningBids.bidCount).format('0,0') }} Winning <span class="hidden 2xl:inline">Mining</span> Bids</div>
+              <div class="grow">Winning <span class="hidden 2xl:inline">Mining</span> Bids ({{ numeral(stats.myMiningBids.bidCount).format('0,0') }})</div>
               <div class="pr-1">
                 {{ currency.symbol
                 }}{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}
@@ -73,20 +97,20 @@
             </li>
             <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/20 border-dashed py-2">
               <MiningSeatIcon class="w-7 h-7 text-argon-600/70 mr-2" />
-              <div class="grow">{{ numeral(stats.myMiningSeats.seatCount).format('0,0') }} Active <span class="hidden 2xl:inline">Mining</span> Seats</div>
+              <div class="grow">Active <span class="hidden 2xl:inline">Mining</span> Seats ({{ numeral(stats.myMiningSeats.seatCount).format('0,0') }})</div>
               <div class="pr-1">
                 {{ currency.symbol
                 }}{{ microgonToMoneyNm(wallets.miningSeatValue).format('0,0.00') }}
               </div>
             </li>
-            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/50 py-2 text-red-900/70">
+            <li class="flex flex-row items-center w-full h-[calc(100%/7)] border-t border-gray-600/40 py-2 text-red-900/70">
               <div class="grow pl-1"><span class="hidden 2xl:inline">Operational</span> Expenses</div>
               <div class="pr-1">
                 -{{ currency.symbol
                 }}{{ microgonToMoneyNm(stats.myMiningSeats.transactionFeesTotal).format('0,0.00') }}
               </div>
             </li>
-            <li class="flex flex-row items-center justify-between w-full h-[calc(100%/7)] border-t border-b border-gray-600/50 py-2 font-bold">
+            <li class="flex flex-row items-center justify-between w-full h-[calc(100%/7)] border-t border-b border-gray-600/40 py-2 font-bold">
               <div class="grow pl-1">Total Value</div>
               <div class="pr-1">
                 {{ currency.symbol
@@ -309,6 +333,7 @@
 import * as Vue from 'vue';
 import { IDashboardFrameStats } from '../../interfaces/IStats.ts';
 import dayjs from 'dayjs';
+import { ArrowTurnDownRightIcon } from '@heroicons/vue/24/outline';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import utc from 'dayjs/plugin/utc';
 
@@ -390,7 +415,7 @@ function getPercent(value: bigint | number, total: bigint | number): number {
   return BigNumber(value).dividedBy(total).multipliedBy(100).toNumber();
 }
 
-const { microgonToMoneyNm, micronotToMoneyNm } = createNumeralHelpers(currency);
+const { microgonToMoneyNm, micronotToMoneyNm, microgonToArgonNm } = createNumeralHelpers(currency);
 
 const globalMicrogonsEarned = Vue.computed(() => {
   const {

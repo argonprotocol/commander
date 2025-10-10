@@ -44,6 +44,12 @@
                 {{ activity.message }}
               </td>
             </tr>
+            <tr v-for="i in 10 - activities.length" :key="i">
+              <td class="text-left text-gray-300"><div class="w-full h-5 bg-gray-100" /></td>
+              <td class="text-left text-gray-300 pr-2"><div class="w-full h-5 bg-gray-100" /></td>
+              <td class="text-left text-gray-300 pr-2"><div class="w-full h-5 bg-gray-100" /></td>
+              <td class="text-right text-gray-300"><div class="w-full h-5 bg-gray-100" /></td>
+            </tr>
           </tbody>
         </table>
       </div>
