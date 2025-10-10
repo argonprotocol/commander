@@ -50,7 +50,7 @@
                     <PopoverContent side="bottom" class="rounded-lg p-5 -translate-y-1 w-[400px] bg-white shadow-sm border border-slate-800/30 z-1000">
                       <p class="text-gray-800 font-light">We recommend first-time vaulters start with a brief tour of how to use this overlay.</p>
                       <div class="flex flex-row space-x-2 mt-6">
-                        <button @click="isSuggestingTour = false" tabindex="-1" class="cursor-pointer grow rounded-md border border-slate-500/30 px-4 py-1 focus:outline-none">Not Now</button>
+                        <button @click="stopSuggestingTour" tabindex="-1" class="cursor-pointer grow rounded-md border border-slate-500/30 px-4 py-1 focus:outline-none">Not Now</button>
                         <button @click="startTour" tabindex="0" class="cursor-pointer grow rounded-md bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-4 py-1 focus:outline-none">Start Tour</button>
                       </div>
                       <PopoverArrow :width="24" :height="12" class="fill-white stroke-gray-400/50 shadow-2xl -mt-px" />
@@ -325,9 +325,11 @@ import PiechartIcon from '../assets/piechart.svg?component';
 import EditIcon from '../assets/edit.svg?component';
 import Tooltip from '../components/Tooltip.vue';
 import { ITourPos } from '../stores/tour';
+import { useController } from '../stores/controller';
 
 const config = useConfig();
 const currency = useCurrency();
+const controller = useController();
 const { microgonToMoneyNm, microgonToArgonNm } = createNumeralHelpers(currency);
 
 let previousVaultingRules: string | null = null;
@@ -339,7 +341,7 @@ const rules = Vue.computed(() => {
 const calculator = getVaultCalculator();
 
 const isBrandNew = Vue.ref(true);
-const isSuggestingTour = Vue.ref(isBrandNew.value);
+const isSuggestingTour = Vue.ref(false);
 const currentTourStep = Vue.ref<number>(0);
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
@@ -506,6 +508,11 @@ function closeTour() {
   currentTourStep.value = 0;
 }
 
+function stopSuggestingTour() {
+  controller.stopSuggestingVaultTour = true;
+  isSuggestingTour.value = false;
+}
+
 Vue.watch(
   rules,
   () => {
@@ -520,6 +527,7 @@ basicEmitter.on('openVaultOverlay', async () => {
   if (isOpen.value) return;
   isLoaded.value = false;
   isBrandNew.value = !config.hasSavedVaultingRules;
+  isSuggestingTour.value = isBrandNew.value && !controller.stopSuggestingVaultTour;
 
   await calculator.load(rules.value);
   previousVaultingRules = JsonExt.stringify(config.vaultingRules);

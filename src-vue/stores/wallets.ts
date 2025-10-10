@@ -112,11 +112,13 @@ export const useWallets = defineStore('wallets', () => {
     miningWallet.availableMicrogons = walletBalances.miningWallet.availableMicrogons;
     miningWallet.availableMicronots = walletBalances.miningWallet.availableMicronots;
     miningWallet.reservedMicronots = walletBalances.miningWallet.reservedMicronots;
+    miningWallet.reservedMicrogons = walletBalances.miningWallet.reservedMicrogons;
 
     vaultingWallet.address = walletBalances.vaultingWallet.address;
     vaultingWallet.availableMicrogons = walletBalances.vaultingWallet.availableMicrogons;
     vaultingWallet.availableMicronots = walletBalances.vaultingWallet.availableMicronots;
     vaultingWallet.reservedMicronots = walletBalances.vaultingWallet.reservedMicronots;
+    vaultingWallet.reservedMicrogons = walletBalances.vaultingWallet.reservedMicrogons;
   };
 
   async function load() {

@@ -27,6 +27,7 @@ import { bigNumberToBigInt, MiningFrames } from '@argonprotocol/commander-core';
 
 export class MyVault {
   public data: {
+    isReady: boolean;
     createdVault: Vault | null;
     creatingVaultPromise?: Promise<{ vault: Vault; txResult: TxResult }>;
     metadata: IVaultRecord | null;
@@ -63,6 +64,7 @@ export class MyVault {
     readonly vaults: Vaults,
   ) {
     this.data = {
+      isReady: false,
       createdVault: null,
       metadata: null,
       stats: null,
@@ -123,6 +125,7 @@ export class MyVault {
         console.log('Stats on load:', toRaw(this.data.stats));
       }
 
+      this.data.isReady = true;
       this.#waitForLoad.resolve();
     } catch (error) {
       this.#waitForLoad.reject(error as Error);

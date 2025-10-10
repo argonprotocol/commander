@@ -103,7 +103,6 @@
         </div>
 
         <div class="flex flex-col grow gap-y-2">
-
           <section box class="flex flex-col text-center px-2 h-[15%]">
             <div class="flex flex-row pt-2 pb-1 h-full">
               <div class="flex flex-col w-4/12 items-center justify-center gap-x-2 pb-2 pt-3">
@@ -199,7 +198,7 @@
                   <div class="h-full w-[1px] bg-slate-400/30"></div>
 
                   <div stat-box class="flex flex-col w-1/3 h-full border-b border-slate-400/30 pb-3">
-                    <span data-testid="TotalBlocksMined" :data-value=" currentFrame.blocksMinedTotal">{{ currentFrame.blocksMinedTotal }}</span>
+                    <span data-testid="TotalBlocksMined" :data-value=" currentFrame.blocksMinedTotal">{{ numeral(currentFrame.blocksMinedTotal).format('0,0') }}</span>
                     <label class="relative block w-full" :title="'Expected Mined Blocks: ' + currentFrame.expected.blocksMinedTotal">
                       Blocks Mined
                       <HealthIndicatorBar :percent="getPercent(currentFrame.blocksMinedTotal, currentFrame.expected.blocksMinedTotal)" />
@@ -298,8 +297,7 @@
           </section>
 
           <section box class="relative flex flex-col h-[35%] min-h-32 !pb-0.5 px-2">
-            <Chart ref="chartRef" />
-            <NibSlider ref="nibSliderRef" position="right" :pos="sliderLeftPosX" :isActive="false" @pointerdown="startDrag($event)" @pointermove="onDrag($event)" @pointerup="stopDrag($event)" />
+            <FrameSlider ref="frameSliderRef" :chartItems="chartItems" @changedFrame="updateSliderFrame" />
           </section>
         </div>
       </section>
@@ -308,17 +306,13 @@
 </template>
 
 <script lang="ts">
-import type { IBlock } from '../../stores/blockchain';
-import { IDashboardFrameStats } from '../../interfaces/IStats.ts';
 import * as Vue from 'vue';
-import Chart from '../../components/Chart.vue';
-import NibSlider from '../../components/NibSlider.vue';
+import { IDashboardFrameStats } from '../../interfaces/IStats.ts';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import utc from 'dayjs/plugin/utc';
 
 // storing refs outside of setup to avoid re-creation on each setup call and speed ui load
-const blocks = Vue.ref<IBlock[]>([]);
 const currentFrame = Vue.ref<IDashboardFrameStats>({
   id: 0,
   date: '',
@@ -350,13 +344,7 @@ const currentFrame = Vue.ref<IDashboardFrameStats>({
   },
 });
 const sliderFrameIndex = Vue.ref(0);
-const sliderLeftPosX = Vue.ref(0);
-const isDragging = Vue.ref(false);
 
-let dragMeta: any = {};
-
-const chartRef = Vue.ref<InstanceType<typeof Chart> | null>(null);
-const nibSliderRef = Vue.ref<InstanceType<typeof NibSlider> | null>(null);
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
 </script>
@@ -386,11 +374,16 @@ import MiningBidIcon from '../../assets/resources/mining-bid.svg?component';
 import MiningSeatIcon from '../../assets/resources/mining-seat.svg?component';
 import ArgonBlocksOverlay from '../../overlays/ArgonBlocksOverlay.vue';
 import BitcoinBlocksOverlay from '../../overlays/BitcoinBlocksOverlay.vue';
+import FrameSlider from '../../components/FrameSlider.vue';
+import { IChartItem } from '../../components/FrameSlider.vue';
 
 const stats = useStats();
 const currency = useCurrency();
 
 const wallets = useWallets();
+
+const frameSliderRef = Vue.ref<InstanceType<typeof FrameSlider> | null>(null);
+const chartItems = Vue.ref<IChartItem[]>([]);
 
 function getPercent(value: bigint | number, total: bigint | number): number {
   if (total === 0n || total === 0) return 0;
@@ -490,14 +483,12 @@ const hasPrevFrame = Vue.computed(() => {
   return sliderFrameIndex.value > 0;
 });
 
-async function goToPrevFrame() {
-  const newFrameIndex = Math.max(sliderFrameIndex.value - 1, 0);
-  updateFrameSliderPos(newFrameIndex);
+function goToPrevFrame() {
+  frameSliderRef.value?.goToPrevFrame();
 }
 
-async function goToNextFrame() {
-  const newFrameIndex = Math.min(sliderFrameIndex.value + 1, stats.frames.length - 1);
-  updateFrameSliderPos(newFrameIndex);
+function goToNextFrame() {
+  frameSliderRef.value?.goToNextFrame();
 }
 
 function openBotOverlay() {
@@ -527,72 +518,12 @@ function loadChartData() {
     item.next = items[index + 1];
   }
 
-  chartRef.value?.reloadData(items);
-  updateFrameSliderPos(items.length - 1, false);
+  chartItems.value = items;
 }
 
-function startDrag(event: PointerEvent) {
-  const elementLeftPos = sliderLeftPosX.value; // TODO: This is not correct
-  const cursor = window.getComputedStyle(event.target as Element).cursor;
-  const startX = event.clientX;
-
-  isDragging.value = true;
-  dragMeta = {
-    startX,
-    elemOffset: elementLeftPos - startX,
-    elemLeftPos: elementLeftPos,
-    startIndex: sliderFrameIndex.value,
-    hasShiftKey: event.metaKey || event.shiftKey,
-  };
-
-  if (cursor === 'grab') {
-    document.body.classList.add('isGrabbing');
-  } else if (cursor === 'col-resize') {
-    document.body.classList.add('isResizing');
-  }
-}
-
-function onDrag(event: PointerEvent) {
-  if (!isDragging.value) return;
-
-  const rawX = event.clientX;
-  const currentX = rawX + dragMeta.elemOffset;
-  const currentIndex = chartRef.value?.getItemIndexFromEvent(event, { x: currentX });
-
-  dragMeta.wasDragged = dragMeta.wasDragged || currentIndex !== dragMeta.startIndex;
-
-  updateFrameSliderPos(currentIndex || 0);
-}
-
-function stopDrag(event: PointerEvent) {
-  isDragging.value = false;
-
-  const rawX = event.clientX;
-  const currentX = rawX + dragMeta.elemOffset;
-  const currentIndex = chartRef.value?.getItemIndexFromEvent(event, { x: currentX });
-
-  updateFrameSliderPos(currentIndex || 0);
-
-  document.body.classList.remove('isGrabbing');
-  document.body.classList.remove('isResizing');
-}
-
-let isUserNavigatingHistory = false;
-
-function updateFrameSliderPos(index: number, isUserAction = true) {
-  if (isUserNavigatingHistory && !isUserAction) return;
-  index = Math.max(index || 0, 0);
-  sliderFrameIndex.value = index;
-  // if back to latest frame, reset user chosen pos
-  isUserNavigatingHistory = index < stats.frames.length - 1;
-
-  const item = stats.frames[index];
-  if (!item) return;
-
-  const pointPosition = chartRef.value?.getPointPosition(index);
-
-  currentFrame.value = item;
-  sliderLeftPosX.value = pointPosition?.x || 0;
+function updateSliderFrame(newFrameIndex: number) {
+  sliderFrameIndex.value = newFrameIndex;
+  currentFrame.value = stats.frames[newFrameIndex];
 }
 
 Vue.watch(
@@ -603,19 +534,6 @@ Vue.watch(
 Vue.onMounted(() => {
   stats.subscribeToDashboard();
   stats.subscribeToActivity();
-
-  function handleKeyDown(e: KeyboardEvent) {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-      const action = e.key === 'ArrowRight' ? goToNextFrame : goToPrevFrame;
-      action();
-    }
-  }
-
-  window.addEventListener('keydown', handleKeyDown);
-
-  Vue.onUnmounted(() => {
-    window.removeEventListener('keydown', handleKeyDown);
-  });
   loadChartData();
 });
 

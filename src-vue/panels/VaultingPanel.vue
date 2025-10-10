@@ -1,9 +1,16 @@
 <!-- prettier-ignore -->
 <template>
-  <Dashboard v-if="myVault.data.createdVault" />
-  <BlankSlate v-else-if="!config.isPreparingVaultSetup && !config.hasSavedVaultingRules" />
-  <FinalSetupChecklist v-else-if="!config.isVaultReadyToCreate" />
-  <VaultIsInstalling v-else-if="config.isVaultReadyToCreate" />
+  <template v-if="myVault.data.isReady">
+    <Dashboard v-if="myVault.data.createdVault" />
+    <BlankSlate v-else-if="!config.isPreparingVaultSetup && !config.hasSavedVaultingRules" />
+    <FinalSetupChecklist v-else-if="!config.isVaultReadyToCreate" />
+    <VaultIsInstalling v-else-if="config.isVaultReadyToCreate" />
+  </template>
+  <template v-else>
+    <div class="flex flex-col items-center justify-center h-full">
+      <div class="text-2xl font-bold text-slate-600/40 uppercase">Loading...</div>
+    </div>
+  </template>
 </template>
 
 <script setup lang="ts">

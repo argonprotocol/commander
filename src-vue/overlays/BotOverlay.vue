@@ -19,13 +19,21 @@
         />
         <BotTour v-if="currentTourStep" @close="closeTour" @changeStep="currentTourStep = $event" :getPositionCheck="getTourPositionCheck" />
         <div
-          ref="dialogPanel"
+          :ref="draggable.setModalRef"
+          :style="{
+            // top: `calc(50% + ${draggable.modalPosition.y}px)`,
+            // left: `calc(50% + ${draggable.modalPosition.x}px)`,
+            // transform: 'translate(-50%, -50%)',
+            // cursor: draggable.isDragging ? 'grabbing' : 'default',
+          }"
           class="BotOverlay absolute top-[40px] left-3 right-3 bottom-3 flex flex-col rounded-md border border-black/30 inner-input-shadow bg-argon-menu-bg text-left z-20 transition-all focus:outline-none"
-          style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255, 255, 255, 1)">
+          style="box-shadow: 0px -1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 2px 0 rgba(255, 255, 255, 1)"
+        >
           <BgOverlay v-if="editBoxOverlayId" @close="editBoxOverlayId = null" :showWindowControls="false" rounded="md" class="z-100" />
           <div v-if="isSuggestingTour" class="absolute inset-0 bg-black/20 z-20 rounded-md"></div>
           <div class="flex flex-col h-full w-full">
             <h2
+              @mousedown="draggable.onMouseDown($event)" 
               class="relative text-3xl font-bold text-left border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 text-[#672D73]"
               style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)"
             >
@@ -51,7 +59,7 @@
                     <PopoverContent side="bottom" class="rounded-lg p-5 -translate-y-1 w-[400px] bg-white shadow-sm border border-slate-800/30 z-1000">
                       <p class="text-gray-800 font-light">We recommend first-time miners start with a brief tour of how to use this overlay.</p>
                       <div class="flex flex-row space-x-2 mt-6">
-                        <button @click="isSuggestingTour = false" tabindex="-1" class="cursor-pointer grow rounded-md border border-slate-500/30 px-4 py-1 focus:outline-none">Not Now</button>
+                        <button @click="stopSuggestingTour" tabindex="-1" class="cursor-pointer grow rounded-md border border-slate-500/30 px-4 py-1 focus:outline-none">Not Now</button>
                         <button @click="startTour" tabindex="0" class="cursor-pointer grow rounded-md bg-argon-button border border-argon-button-hover hover:bg-argon-button-hover text-white font-bold inner-button-shadow px-4 py-1 focus:outline-none">Start Tour</button>
                       </div>
                       <PopoverArrow :width="24" :height="12" class="fill-white stroke-gray-400/50 shadow-2xl -mt-px" />
@@ -376,6 +384,8 @@ import EditIcon from '../assets/edit.svg?component';
 import Tooltip from '../components/Tooltip.vue';
 import { ITourPos } from '../stores/tour.ts';
 import BotTour from './BotTour.vue';
+import { useController } from '../stores/controller';
+import Draggable from './helpers/Draggable.ts';
 
 const calculator = getBiddingCalculator();
 const calculatorData = getBiddingCalculatorData();
@@ -385,7 +395,9 @@ let previousBiddingRules: string | null = null;
 const currency = useCurrency();
 const config = useConfig();
 const bot = useBot();
+const controller = useController();
 
+const draggable = Vue.reactive(new Draggable());
 const { microgonToMoneyNm, microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
 
 const rules = Vue.computed(() => {
@@ -393,7 +405,7 @@ const rules = Vue.computed(() => {
 });
 
 const isBrandNew = Vue.ref(true);
-const isSuggestingTour = Vue.ref(isBrandNew.value);
+const isSuggestingTour = Vue.ref(false);
 const currentTourStep = Vue.ref<number>(0);
 const isOpen = Vue.ref(false);
 const isLoaded = Vue.ref(false);
@@ -424,7 +436,6 @@ const editBoxOverlayId = Vue.ref<IEditBoxOverlayTypeForMining | null>(null);
 const editBoxOverlayPosition = Vue.ref<{ top?: number; left?: number; width?: number } | undefined>(undefined);
 const editBoxOverlayPreviousId = Vue.ref<IEditBoxOverlayTypeForMining | undefined>();
 const editBoxOverlayNextId = Vue.ref<IEditBoxOverlayTypeForMining | undefined>();
-const dialogPanel = Vue.ref(null);
 
 const probableMinSeats = Vue.ref(0);
 const probableMaxSeats = Vue.ref(0);
@@ -633,6 +644,11 @@ function closeTour() {
   currentTourStep.value = 0;
 }
 
+function stopSuggestingTour() {
+  controller.stopSuggestingBotTour = true;
+  isSuggestingTour.value = false;
+}
+
 Vue.watch(
   rules,
   () => {
@@ -649,6 +665,7 @@ basicEmitter.on('openBotOverlay', async () => {
   isOpen.value = true;
 
   isBrandNew.value = !config.hasSavedBiddingRules;
+  isSuggestingTour.value = isBrandNew.value && !controller.stopSuggestingBotTour;
   calculatorData.isInitializedPromise.then(() => {
     previousBiddingRules = JsonExt.stringify(config.biddingRules);
     capitalToCommitMicrogons.value = minimumCapitalCommitment.value;

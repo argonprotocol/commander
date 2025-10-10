@@ -395,18 +395,16 @@ export class Stats {
     }
 
     const maxProfitPct = Math.min(Math.max(...lastYear.map(x => x.profitPct)), 1_000);
-    return lastYear
-      .map(x => {
-        let score = Math.min(x.profitPct, 1_000);
-        if (score > 0) {
-          score = (200 * score) / maxProfitPct;
-        }
-        return {
-          ...x,
-          score,
-        };
-      })
-      .reverse();
+    return lastYear.map(x => {
+      let score = Math.min(x.profitPct, 1_000);
+      if (score > 0) {
+        score = (200 * score) / maxProfitPct;
+      }
+      return {
+        ...x,
+        score,
+      };
+    });
   }
 
   private async fetchGlobalFromDb(): Promise<IDashboardGlobalStats> {
