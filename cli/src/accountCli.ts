@@ -1,5 +1,5 @@
 import { Command } from '@commander-js/extra-typings';
-import { filterUndefined, parseSubaccountRange } from '@argonprotocol/commander-core';
+import { filterUndefined, miniSecretFromUri, parseSubaccountRange } from '@argonprotocol/commander-core';
 import { mnemonicGenerate, waitForLoad } from '@argonprotocol/mainchain';
 import { printTable } from 'console-table-printer';
 import { writeFileSync } from 'node:fs';
@@ -64,7 +64,11 @@ export default function accountCli() {
     .action(async ({ registerKeysTo, path }) => {
       const { accountPassphrase, accountSuri, accountFilePath } = globalOptions(program);
       const accountset = await accountsetFromCli(program);
-      process.env.KEYS_MNEMONIC ||= mnemonicGenerate();
+      if (accountSuri && !accountset.sessionMiniSecretOrMnemonic) {
+        const mnemonic = miniSecretFromUri(`${accountSuri}//session`);
+        accountset.sessionMiniSecretOrMnemonic = mnemonic;
+        process.env.SESSION_MINI_SECRET = mnemonic;
+      }
       if (registerKeysTo) {
         await accountset.registerKeys(registerKeysTo);
         console.log('Keys registered to', registerKeysTo);
@@ -73,7 +77,7 @@ export default function accountCli() {
         ACCOUNT_JSON_PATH: accountFilePath,
         ACCOUNT_SURI: accountSuri,
         ACCOUNT_PASSPHRASE: accountPassphrase,
-        KEYS_MNEMONIC: process.env.KEYS_MNEMONIC,
+        SESSION_MINI_SECRET: process.env.SESSION_MINI_SECRET,
         SUBACCOUNT_RANGE: '0-49',
       });
       let envfile = '';
@@ -89,12 +93,13 @@ export default function accountCli() {
     });
 
   program
-    .command('new-key-seed')
-    .description('Create a new mnemonic for runtime keys')
-    .action(async () => {
+    .command('new-session-seed')
+    .description('Create a new mini secret for runtime session keys')
+    .option('--mnemonic <path>', 'Optionally provide a mnemonic to convert to a mini secret')
+    .action(async ({ mnemonic }) => {
       await waitForLoad();
-      const mnemonic = mnemonicGenerate();
-      console.log('New mnemonic (add this to your .env as KEYS_MNEMONIC):', mnemonic);
+      const minisecret = miniSecretFromUri(`${mnemonic ?? mnemonicGenerate()}//session`);
+      console.log('New mnemonic (add this to your .env as SESSION_MINI_SECRET):', minisecret);
       process.exit(0);
     });
 

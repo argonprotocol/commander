@@ -4,8 +4,8 @@ export default interface Env {
   ACCOUNT_JSON_PATH?: string;
   SUBACCOUNT_RANGE?: string;
   MAINCHAIN_URL?: string;
-  // A mnemonic seed to use for the runtime keys
-  KEYS_MNEMONIC?: string;
+  // A mini secret for session keys
+  SESSION_MINI_SECRET?: string;
   // A version number for the keys
   KEYS_VERSION?: string;
 }

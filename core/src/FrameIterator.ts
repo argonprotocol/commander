@@ -1,8 +1,12 @@
 import type { MainchainClients } from './MainchainClients.js';
-import { getTickFromHeader, type ArgonClient } from '@argonprotocol/mainchain';
-import { type ApiDecoration } from '@polkadot/api/types';
+import {
+  getTickFromHeader,
+  type ArgonClient,
+  type ApiDecoration,
+  type BlockHash,
+  type Header as BlockHeader,
+} from '@argonprotocol/mainchain';
 import { MiningFrames } from './MiningFrames.js';
-import type { BlockHash, Header as BlockHeader } from '@polkadot/types/interfaces';
 
 export type { ApiDecoration };
 

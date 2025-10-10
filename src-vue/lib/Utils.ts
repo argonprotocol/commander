@@ -1,6 +1,4 @@
-import { u8aToHex } from '@argonprotocol/mainchain';
 import { JsonExt } from '@argonprotocol/commander-core';
-import { ed25519DeriveHard, keyExtractSuri, mnemonicToMiniSecret } from '@polkadot/util-crypto';
 import { IFieldTypes } from './db/BaseTable.ts';
 import { IS_TEST } from './Env.ts';
 
@@ -216,14 +214,4 @@ export function ensureOnlyOneInstance(constructor: any) {
 
 export function resetOnlyOneInstance(constructor: any) {
   constructor.isInitialized = false;
-}
-
-export function miniSecretFromUri(uri: string, password?: string): string {
-  const { phrase, path } = keyExtractSuri(uri);
-  let mini = mnemonicToMiniSecret(phrase, password); // base 32B
-  for (const j of path) {
-    if (!j.isHard) throw new Error('ed25519 soft derivation not supported');
-    mini = ed25519DeriveHard(mini, j.chainCode);
-  }
-  return u8aToHex(mini);
 }

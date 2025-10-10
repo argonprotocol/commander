@@ -13,7 +13,8 @@ export default defineConfig({
   shims: false,
   splitting: false,
   treeshake: true,
-  external: [/^@polkadot\//],
+  skipNodeModulesBundle: true,
+  noExternal: [/@argonprotocol\/commander-core/],
   esbuildPlugins: [
     wasmLoader({
       mode: 'deferred',

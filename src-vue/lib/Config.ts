@@ -15,11 +15,12 @@ import {
   BidAmountFormulaType,
   JsonExt,
   MicronotPriceChangeType,
+  miniSecretFromUri,
   SeatGoalInterval,
   SeatGoalType,
 } from '@argonprotocol/commander-core';
 import { message as tauriMessage } from '@tauri-apps/plugin-dialog';
-import { createDeferred, ensureOnlyOneInstance, miniSecretFromUri } from './Utils';
+import { createDeferred, ensureOnlyOneInstance } from './Utils';
 import IDeferred from '../interfaces/IDeferred';
 import { CurrencyKey } from './Currency';
 import { bip39 } from '@argonprotocol/bitcoin';

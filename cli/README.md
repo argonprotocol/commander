@@ -17,7 +17,7 @@ ACCOUNT_SURI=# a suri for the account
 ACCOUNT_JSON_PATH=# a path to a polkadotjs extracted account json
 ACCOUNT_PASSPHRASE=# a passphrase for the pjs json account
 SUBACCOUNT_RANGE=# number of subaccounts to manage
-KEYS_MNEMONIC=# a mnemonic for the keys to generate
+SESSION_MINI_SECRET=# a mnemonic for the keys to generate
 ```
 
 ### Setup

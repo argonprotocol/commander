@@ -283,6 +283,7 @@ async function loadVaults() {
   }
   treasuryPools.value = Object.values(statsByFrame);
   treasuryPools.value.sort((a, b) => b.frameId - a.frameId);
+  treasuryPools.value.length = 10;
   nextVaults.sort((a, b) => Number(b.activatedSecuritization - a.activatedSecuritization));
   vaults.value = nextVaults;
 }

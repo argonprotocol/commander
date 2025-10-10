@@ -6,7 +6,7 @@ import vaultCli from './vaultCli.js';
 import miningCli from './miningCli.js';
 import treasuryCli from './treasuryCli.js';
 import bitcoinCli from './bitcoinCli.js';
-import { Accountset, parseSubaccountRange } from '@argonprotocol/commander-core';
+import { Accountset, MiningFrames, parseSubaccountRange } from '@argonprotocol/commander-core';
 import { getClient, keyringFromSuri, type KeyringPair } from '@argonprotocol/mainchain';
 import { keyringFromFile, saveKeyringPair } from './keyringStore.js';
 
@@ -25,6 +25,11 @@ export function buildCli() {
         .env('MAINCHAIN_URL'),
     )
     .addOption(
+      new Option('--network <name>', 'The network to connect to')
+        .choices(['mainnet', 'testnet', 'dev-docker', 'localnet'])
+        .env('ARGON_NETWORK_NAME'),
+    )
+    .addOption(
       new Option('--account-file-path <jsonPath>', 'The path to your json seed file from polkadotjs').env(
         'ACCOUNT_JSON_PATH',
       ),
@@ -36,6 +41,11 @@ export function buildCli() {
       new Option('--account-passphrase <password>', 'The password for your seed file').env('ACCOUNT_PASSPHRASE'),
     )
     .addOption(new Option('--account-passphrase-file <path>', 'The path to a password for your seed file'))
+    .addOption(
+      new Option('--session-mini-secret-or-mnemonic <value>', 'A mini secret or mnemonic for session keys').env(
+        'SESSION_MINI_SECRET',
+      ),
+    )
     .addOption(
       new Option('-s, --subaccounts <range>', 'Restrict this operation to a subset of the subaccounts (eg, 0-10)')
         .env('SUBACCOUNT_RANGE')
@@ -67,17 +77,38 @@ export async function accountsetFromCli(program: Command, proxyForAddress?: stri
   }
 
   const client = await getClient(opts.mainchainUrl);
+  if (!opts.network) {
+    const chain = await client.rpc.system.chain().then(x => x.toString());
+    if (chain === 'Argon Testnet') {
+      opts.network = 'testnet';
+    } else if (chain === 'Argon') {
+      opts.network = 'mainnet';
+    } else if (chain.includes('Local Testnet')) {
+      opts.network = 'localnet';
+    } else if (chain.includes('Development')) {
+      opts.network = 'dev-docker';
+    }
+    if (!opts.network) {
+      throw new Error(`No --network provided and could not infer from chain name: ${chain}`);
+    }
+    process.env.ARGON_NETWORK_NAME = opts.network;
+    process.env.ARGON_CHAIN = opts.network;
+    MiningFrames.setNetwork(opts.network);
+  }
+
   if (proxyForAddress) {
     return new Accountset({
       client,
       isProxy: true,
       seedAddress: proxyForAddress,
       txSubmitter: keypair,
+      sessionMiniSecretOrMnemonic: opts.sessionMiniSecretOrMnemonic,
     });
   } else {
     return new Accountset({
       seedAccount: keypair,
       client,
+      sessionMiniSecretOrMnemonic: opts.sessionMiniSecretOrMnemonic,
     });
   }
 }

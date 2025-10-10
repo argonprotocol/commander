@@ -21,4 +21,5 @@ COPY core/ ./core/
 
 RUN yarn build:workspace
 
-CMD ["node", "cli/lib/cli.js"]
+ENTRYPOINT ["node", "cli/lib/cli.js"]
+CMD []

@@ -1,7 +1,9 @@
-src
-src-tauri
+src-vue
+**/*.rs
 dist
-node_modules
+**/node_modules
 .idea
 .gitignore
 bun.lockb
+data
+**/target

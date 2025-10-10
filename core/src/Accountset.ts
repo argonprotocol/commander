@@ -10,6 +10,8 @@ import {
   type ApiDecoration,
   u8aToHex,
 } from '@argonprotocol/mainchain';
+import { ed25519DeriveHard, keyExtractSuri, mnemonicToMiniSecret } from '@polkadot/util-crypto';
+import { DEV_PHRASE } from '@polkadot/keyring';
 import { AccountRegistry } from './AccountRegistry.js';
 import { AccountMiners } from './AccountMiners.js';
 
@@ -48,7 +50,7 @@ export class Accountset {
     return this.accountRegistry.namedAccounts;
   }
 
-  private readonly sessionMiniSecretOrMnemonic: string | undefined;
+  public sessionMiniSecretOrMnemonic: string | undefined;
 
   constructor(
     options: {
@@ -539,6 +541,19 @@ export function parseSubaccountRange(range?: string): number[] | undefined {
     }
   }
   return indices;
+}
+
+export function miniSecretFromUri(uri: string, password?: string): string {
+  if (uri.startsWith('//')) {
+    uri = DEV_PHRASE + uri;
+  }
+  const { phrase, path } = keyExtractSuri(uri);
+  let mini = mnemonicToMiniSecret(phrase, password); // base 32B
+  for (const j of path) {
+    if (!j.isHard) throw new Error('ed25519 soft derivation not supported');
+    mini = ed25519DeriveHard(mini, j.chainCode);
+  }
+  return u8aToHex(mini);
 }
 
 export type IAccountAndKey = {
