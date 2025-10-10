@@ -41,16 +41,16 @@ onMounted(async () => {
   const masterXpubPath = "m/84'/0'/0'";
   console.log('Loading installing page', config.vaultingAccount.address);
   try {
-    // await vault.create({
-    //   argonKeyring: toRaw(config.vaultingAccount),
-    //   rules: config.vaultingRules,
-    //   masterXpubPath,
-    //   xprivSeed: toRaw(config.bitcoinXprivSeed),
-    //   progressCallback(progress: number, message) {
-    //     console.log(`Vault creation progress: Step ${progress} - ${message}`);
-    //     createStep.value = progress * 100;
-    //   },
-    // });
+    await vault.create({
+      argonKeyring: toRaw(config.vaultingAccount),
+      rules: config.vaultingRules,
+      masterXpubPath,
+      xprivSeed: toRaw(config.bitcoinXprivSeed),
+      progressCallback(progress: number, message) {
+        console.log(`Vault creation progress: Step ${progress} - ${message}`);
+        createStep.value = progress * 100;
+      },
+    });
   } catch (error: any) {
     console.error('Error creating vault:', error);
     errorMessage.value = error.message || 'Unknown error occurred while creating vault.';

@@ -35,8 +35,7 @@
             </h2>
 
             <div class="mb-6 text-red-700" v-if="errorMessage">{{ errorMessage }}</div>
-            <!-- Step 1: Confirmation -->
-            <div v-if="lock.status !== 'vaultCosigned'" class="flex flex-col space-y-6 px-3 pt-3">
+            <div class="flex flex-col space-y-6 px-3 pt-3">
               <template v-if="canAfford">
                 <div class="mb-6">
                   <p class="mb-4 text-gray-700">
@@ -87,14 +86,14 @@
 
                 <button
                   @click="sendReleaseRequest"
-                  :disabled="!canSendRequest || isLoading"
+                  :disabled="!canSendRequest || isLoading || isFinalizing"
                   class="w-full rounded-lg py-3 font-medium transition-all"
                   :class="
                     canSendRequest && !isLoading
                       ? 'bg-red-500 text-white hover:bg-red-600'
                       : 'cursor-not-allowed bg-gray-200 text-gray-400'
                   ">
-                  <span v-if="isLoading">
+                  <span v-if="isLoading || isFinalizing">
                     <svg class="mr-2 inline h-5 w-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <circle
                         cx="12"
@@ -112,7 +111,7 @@
                   <span v-else>Initiate Release</span>
                 </button>
                 <ProgressBar
-                  v-if="isLoading"
+                  v-if="isLoading || isFinalizing"
                   :progress="releaseProgress"
                   :has-error="errorMessage != ''"
                   class="mr-2 inline-block h-4 w-24" />
@@ -127,48 +126,6 @@
                 </button>
               </template>
             </div>
-            <div v-else class="py-8 text-center">
-              <div class="mb-6">
-                <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                  <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                </div>
-
-                <h3 class="mb-2 text-lg font-semibold">Bitcoin Partially Released</h3>
-                <ProgressBar
-                  :progress="releaseProgress"
-                  :has-error="errorMessage != ''"
-                  class="mr-2 inline-block h-4 w-24" />
-                <p class="text-sm text-gray-600">
-                  You must import this raw transaction into your bitcoin wallet to broadcast it to the Bitcoin network.
-                </p>
-
-                <div class="mt-4 flex flex-col items-center">
-                  <div class="flex w-full max-w-44 flex-col items-center">
-                    <BitcoinQrCode class="mb-3 h-44 w-44" :size="200" :bytes="releasedTxBytes" v-if="releasedTxBytes" />
-                    <CopyToClipboard :content="releasedTxHex" class="relative mr-5 mb-3 cursor-pointer">
-                      <span class="opacity-80">
-                        {{ abbreviateAddress(releasedTxHex, 10) }}
-                        <CopyIcon class="ml-1 inline-block h-4 w-4" />
-                      </span>
-                      <template #copied>
-                        <div class="pointer-events-none absolute top-0 left-0 h-full w-full">
-                          {{ abbreviateAddress(releasedTxHex, 10) }}
-                          <CopyIcon class="ml-1 inline-block h-4 w-4" />
-                        </div>
-                      </template>
-                    </CopyToClipboard>
-                  </div>
-                </div>
-              </div>
-
-              <button @click="$emit('close')" class="rounded-lg bg-gray-200 px-6 py-2 hover:bg-gray-300">Close</button>
-            </div>
           </Motion>
         </DialogContent>
       </AnimatePresence>
@@ -178,25 +135,20 @@
 
 <script setup lang="ts">
 import * as Vue from 'vue';
-import { computed, onMounted, ref, onUnmounted } from 'vue';
-import { abbreviateAddress } from '../lib/Utils';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { IBitcoinLockRecord } from '../lib/db/BitcoinLocksTable.ts';
 import { useBitcoinLocks } from '../stores/bitcoin.ts';
 import { useMyVault, useVaults } from '../stores/vaults.ts';
 import { useConfig } from '../stores/config.ts';
-import CopyIcon from '../assets/copy.svg?component';
-import CopyToClipboard from '../components/CopyToClipboard.vue';
-import BitcoinQrCode from '../components/BitcoinQrCode.vue';
 import BitcoinLocksStore from '../lib/BitcoinLocksStore.ts';
 import { createNumeralHelpers } from '../lib/numeral.ts';
 import { useCurrency } from '../stores/currency.ts';
 import numeral from 'numeral';
-import { u8aToHex } from '@argonprotocol/mainchain';
 import { useWallets } from '../stores/wallets.ts';
 import ProgressBar from '../components/ProgressBar.vue';
 import Draggable from './helpers/Draggable';
 import BgOverlay from '../components/BgOverlay.vue';
-import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle, DialogClose } from 'reka-ui';
+import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui';
 import { AnimatePresence, Motion } from 'motion-v';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
 
@@ -226,12 +178,11 @@ const feeRates = ref([
 const selectedFeeRate = ref('medium');
 const destinationAddress = ref('');
 const isLoading = ref(false);
+const isFinalizing = Vue.computed(() => waitForReleasedUtxoId.value !== null);
 const errorMessage = ref('');
 
 const releasePrice = ref(0n);
 const releaseProgress = ref(0);
-const releasedTxHex = ref('');
-const releasedTxBytes = ref<Uint8Array | null>(null);
 
 const canAfford = computed(() => {
   return neededMicrogons.value <= 0n;
@@ -281,14 +232,14 @@ onMounted(async () => {
   }
 });
 
-let waitForReleasedUtxoId: string | null = null;
+const waitForReleasedUtxoId = ref<string | null>(null);
 let releasedUtxoCheckInterval: ReturnType<typeof setInterval> | null = null;
 async function checkReleaseStatus() {
   const utxo = props.lock;
-  console.log(utxo.status, waitForReleasedUtxoId);
-  if (!waitForReleasedUtxoId) return;
+  console.log(utxo.status, waitForReleasedUtxoId.value);
+  if (!waitForReleasedUtxoId.value) return;
   if (utxo.status === 'vaultCosigned') {
-    const status = await bitcoinLocks.checkTxidStatus(utxo, waitForReleasedUtxoId);
+    const status = await bitcoinLocks.checkTxidStatus(utxo, waitForReleasedUtxoId.value);
     if (status.isConfirmed) {
       if (releasedUtxoCheckInterval) clearInterval(releasedUtxoCheckInterval);
       emit('close');
@@ -300,7 +251,7 @@ onUnmounted(() => {
   if (releasedUtxoCheckInterval) {
     clearInterval(releasedUtxoCheckInterval);
   }
-  waitForReleasedUtxoId = null;
+  waitForReleasedUtxoId.value = null;
 });
 
 async function cosignReleaseAsNeeded() {
@@ -341,10 +292,8 @@ async function cosignReleaseAsNeeded() {
       errorMessage.value = '';
 
       const { txid, bytes } = await bitcoinLocks.cosignAndGenerateTxBytes(props.lock, config.bitcoinXprivSeed);
-      releasedTxBytes.value = bytes;
-      waitForReleasedUtxoId = txid;
-      releasedTxHex.value = u8aToHex(releasedTxBytes.value, undefined, false);
-      console.log('Generated PSBT:', releasedTxHex.value);
+      waitForReleasedUtxoId.value = txid;
+      await bitcoinLocks.broadcastTransaction(bytes);
       releasedUtxoCheckInterval = setInterval(checkReleaseStatus, 5000);
     }
   } catch (error) {

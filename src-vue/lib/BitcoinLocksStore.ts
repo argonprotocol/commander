@@ -15,6 +15,7 @@ import {
   ITxProgressCallback,
   KeyringPair,
   TxResult,
+  u8aToHex,
   Vault,
 } from '@argonprotocol/mainchain';
 import { Db } from './Db.ts';
@@ -24,7 +25,6 @@ import { createDeferred, IDeferred } from './Utils.ts';
 import { BITCOIN_BLOCK_MILLIS, ESPLORA_HOST } from './Env.ts';
 import { type AddressTxsUtxo } from '@mempool/mempool.js/lib/interfaces/bitcoin/addresses';
 import { type TxStatus } from '@mempool/mempool.js/lib/interfaces/bitcoin/transactions';
-import { MiningFrames } from '@argonprotocol/commander-core';
 
 export default class BitcoinLocksStore {
   data: {
@@ -381,6 +381,24 @@ export default class BitcoinLocksStore {
     lock.status = 'pendingMint';
 
     await table.saveNewRatchet(lock);
+  }
+
+  async broadcastTransaction(txBytes: Uint8Array): Promise<string> {
+    const api = this.getMempoolApi();
+    const response = await fetch(`${api}tx`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: u8aToHex(txBytes, undefined, false),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to broadcast transaction: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+    const txid = (await response.text()).trim();
+    if (!txid.match(/^[0-9a-fA-F]{64}$/)) {
+      throw new Error(`Invalid transaction ID returned from broadcast: ${txid}`);
+    }
+    return txid;
   }
 
   /**

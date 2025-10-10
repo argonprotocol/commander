@@ -66,7 +66,7 @@
           <div class="opacity-60 relative top-px">You have no critical alerts. It seems your vault is operational and in good order!</div>
         </div>
       </section>
-      
+
       <section class="flex flex-row gap-x-2 h-[14%]">
         <div box stat-box class="flex flex-col w-2/12 !py-4">
           <span>
@@ -178,13 +178,13 @@
                 <div class="text-xl font-bold opacity-60">{{ numeral(currency.satsToBtc(personalUtxo?.satoshis ?? 0n)).format('0,0.[00000000]') }}</div>
                 <div>Personal Bitcoin In Process of Locking</div>
                 <div class="opacity-40">
-                  {{ currency.symbol }}{{ microgonToMoneyNm(btcMarketRate).format('0,0.[00]') }} Value 
+                  {{ currency.symbol }}{{ microgonToMoneyNm(btcMarketRate).format('0,0.[00]') }} Value
                   /
                   {{ currency.symbol}}{{ microgonToMoneyNm(personalUtxo?.liquidityPromised ?? 0n).format('0,0.[00]') }} Liquidity
                 </div>
               </div>
               <div class="flex flex-col items-center justify-center">
-                <button class="bg-argon-600 text-white text-lg font-bold px-4 py-2 rounded-md cursor-pointer">Finish Locking</button>
+                <button @click="showCompleteLockOverlay = true" class="bg-argon-600 text-white text-lg font-bold px-4 py-2 rounded-md cursor-pointer">Finish Locking</button>
                 <div class="opacity-40 italic mt-1">Expires in 27 hrs</div>
               </div>
             </div>
@@ -221,17 +221,13 @@
             <div v-else class="grow flex flex-row items-center justify-start px-[5%] py-2 border-2 border-dashed border-slate-900/30 m-0.5">
               <BitcoinIcon class="w-20 h-20 inline-block mr-5 -rotate-24" />
               <div class="flex flex-col items-start justify-center grow">
-                <div class="text-xl font-bold opacity-60">{{ numeral(currency.satsToBtc(personalUtxo?.satoshis ?? 0n)).format('0,0.[00000000]') }}</div>
-                <div>Personal Bitcoin In Process of Locking</div>
-                <div class="opacity-40">
-                  {{ currency.symbol }}{{ microgonToMoneyNm(btcMarketRate).format('0,0.[00]') }} Market Value 
-                  /
-                  {{ currency.symbol}}{{ microgonToMoneyNm(personalUtxo?.liquidityPromised ?? 0n).format('0,0.[00]') }} Liquidity
-                </div>
+                <div class="text-xl font-bold opacity-60">{{ numeral(currency.satsToBtc(0n)).format('0,0.[00000000]') }}</div>
+                <div>No Bitcoin In Process of Locking</div>
+
               </div>
               <div class="flex flex-col items-center justify-center">
-                <button class="bg-argon-600 text-white text-lg font-bold px-4 py-2 rounded-md cursor-pointer">Finish Locking</button>
-                <div class="opacity-40 italic mt-1">Expires in 27 hrs</div>
+                <button class="bg-argon-600 text-white text-lg font-bold px-4 py-2 rounded-md cursor-pointer">Configure Locking</button>
+
               </div>
             </div>
           </section>
@@ -255,11 +251,11 @@
             <div class="grow flex flex-col items-center justify-center">
               <div class="pt-5 border-b border-slate-400/20 pb-5 w-full text-slate-800/70">
                 This frame's payout is
-                <span class="font-bold text-argon-600 font-mono">{{ currency.symbol }}{{ microgonToMoneyNm(currentFrame.totalTreasuryPayout).format('0,0.00') }}</span> (and growing), 
-                of which your take is <span class="font-bold text-argon-600 font-mono">0%</span>, 
+                <span class="font-bold text-argon-600 font-mono">{{ currency.symbol }}{{ microgonToMoneyNm(currentFrame.totalTreasuryPayout).format('0,0.00') }}</span> (and growing),
+                of which your take is <span class="font-bold text-argon-600 font-mono">0%</span>,
                 equaling <span class="font-bold text-argon-600 font-mono">{{ currency.symbol }}{{ microgonToMoneyNm(currentFrame.myTreasuryPayout).format('0,0.00') }}</span> <span class="hidden lg:inline">in earnings</span>
               </div>
-              
+
               <div class="flex flex-row w-full grow gap-x-2 mt-2">
                 <div stat-box class="flex flex-col w-1/3 h-full">
                   <div class="relative size-28">
@@ -307,7 +303,7 @@
               </div>
             </div>
           </section>
-          
+
           <section box class="relative flex flex-col h-[35%] min-h-32 !pb-0.5 px-2">
             <FrameSlider ref="frameSliderRef" :chartItems="chartItems" @changedFrame="updateSliderFrame" />
           </section>
@@ -384,7 +380,7 @@
           Initializing your personal bitcoin lock...
         </div>
       </div> -->
-    
+
     </div>
   </div>
 
@@ -392,7 +388,7 @@
   <BitcoinLockCompleteOverlay
     v-if="showCompleteLockOverlay && personalUtxo"
     :lock="personalUtxo"
-    @close="showCompleteLockOverlay = false" 
+    @close="showCompleteLockOverlay = false"
   />
 
   <BitcoinReleaseOverlay
@@ -408,12 +404,15 @@
 </template>
 
 <script lang="ts">
-const currentFrame = Vue.ref<any>({
+const currentFrame = Vue.ref({
   id: 0,
   date: '',
   firstTick: 0,
   lastTick: 0,
   score: 0,
+  progress: 0,
+  totalTreasuryPayout: 0n,
+  myTreasuryPayout: 0n,
 });
 
 const sliderFrameIndex = Vue.ref(0);
@@ -467,8 +466,19 @@ const stats = useStats();
 
 const rules = config.vaultingRules;
 
+interface IFrameRecord {
+  id: number;
+  date: string;
+  firstTick: number;
+  lastTick: number;
+  score: number;
+  progress: number;
+  totalTreasuryPayout: bigint;
+  myTreasuryPayout: bigint;
+}
+
 const frameSliderRef = Vue.ref<InstanceType<typeof FrameSlider> | null>(null);
-const frameRecords = Vue.ref<any[]>([]);
+const frameRecords = Vue.ref<IFrameRecord[]>([]);
 const chartItems = Vue.ref<IChartItem[]>([]);
 
 const { microgonToMoneyNm, micronotToMoneyNm } = createNumeralHelpers(currency);
@@ -701,9 +711,9 @@ async function loadChartData() {
   const currentTick = MiningFrames.calculateCurrentTickFromSystemTime();
   const startingDate = dayjs.utc().startOf('day');
   const startingTickRange = MiningFrames.getTickRangeForFrame(stats.latestFrameId);
-  const progress = ((currentTick - startingTickRange[0]) / (startingTickRange[1] - startingTickRange[0])) * 100;
+  const progress = ((currentTick - startingTickRange[0]) / ticksPerFrame) * 100;
 
-  const records: any[] = [
+  const records: IFrameRecord[] = [
     {
       id: stats.latestFrameId,
       date: startingDate.format('YYYY-MM-DD'),
@@ -729,6 +739,8 @@ async function loadChartData() {
       date: previousDay.format('YYYY-MM-DD'),
       firstTick: earliestRecord.firstTick - ticksPerFrame,
       lastTick: earliestRecord.lastTick - ticksPerFrame,
+      myTreasuryPayout: 0n,
+      totalTreasuryPayout: 0n,
       score: 0,
       progress: 100,
     };
@@ -738,7 +750,7 @@ async function loadChartData() {
   let isFiller = true;
   const items: any[] = [];
   for (const [index, frame] of records.entries()) {
-    if (isFiller && frame.seatCountActive > 0) {
+    if (isFiller && frame.score > 0) {
       const previousItem = items[index - 1];
       previousItem && (previousItem.isFiller = false);
       isFiller = false;
@@ -746,6 +758,10 @@ async function loadChartData() {
     const item = {
       date: frame.date,
       score: frame.score,
+      progress: frame.progress,
+      frameId: frame.id,
+      totalTreasuryPayout: frame.totalTreasuryPayout,
+      myTreasuryPayout: frame.myTreasuryPayout,
       isFiller,
       previous: items[index - 1],
       next: undefined,
@@ -766,11 +782,11 @@ Vue.onMounted(async () => {
   await vault.subscribe();
   await bitcoinLocks.load();
   await bitcoinLocks.subscribe();
+
   updateLockExpiration();
 
   try {
     updateVaultErrorMessage.value = '';
-
     await vault.saveVaultRules({
       argonKeyring: config.vaultingAccount,
       bitcoinLocksStore: bitcoinLocks,

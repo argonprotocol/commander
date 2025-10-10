@@ -461,6 +461,7 @@ export class MyVault {
     const blockHash = await txResult.inBlockPromise;
     const api = await client.at(blockHash);
     const tick = await api.query.ticks.currentTick();
+    txResult.txProgressCallback = undefined;
 
     console.log('Saving vault updates', {
       microgonsForTreasury,
