@@ -202,8 +202,8 @@
               <div class="flex flex-col gap-x-3 xl:flex-row-reverse items-center justify-center whitespace-nowrap">
                 <div class="flex flex-row space-x-2 items-center justify-center">
                   <button @click="showReleaseOverlay=true" class="bg-argon-600 hover:bg-argon-700 text-white text-lg font-bold px-4 py-2 rounded-md cursor-pointer">Release</button>
-                  <span class="opacity-40">or</span>
-                  <button class="bg-argon-600 hover:bg-argon-700 text-white text-lg font-bold px-4 py-2 rounded-md cursor-pointer">Ratchet</button>
+                  <!-- <span class="opacity-40">or</span>
+                  <button class="bg-argon-600 hover:bg-argon-700 text-white text-lg font-bold px-4 py-2 rounded-md cursor-pointer">Ratchet</button> -->
                 </div>
                 <div class="opacity-40 italic mt-1">
                   Expires in
