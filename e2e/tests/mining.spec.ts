@@ -14,7 +14,7 @@ it('should be able to start a miner', async () => {
   // open the bot rules
   await waitAndClick('FinalSetupChecklist.openBotOverlay()');
   // cancel the tour
-  await waitAndClick('BotOverlay.isSuggestingTour = false');
+  await waitAndClick('BotOverlay.stopSuggestingTour()');
   // set starting bid to 0
   await waitAndClick("BotOverlay.openEditBoxOverlay('startingBid')");
   await waitAndClick('input-menu-trigger');
