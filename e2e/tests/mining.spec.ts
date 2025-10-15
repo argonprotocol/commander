@@ -12,11 +12,11 @@ it('should be able to start a miner', async () => {
   await waitAndClick('FinalSetupChecklist.openHowMiningWorksOverlay()'); // click for tour
   await waitAndClick('HowMiningWorks.cancelOverlay()');
   // open the bot rules
-  await waitAndClick('FinalSetupChecklist.openBotOverlay()');
+  await waitAndClick('FinalSetupChecklist.openBotCreateOverlay()');
   // cancel the tour
-  await waitAndClick('BotOverlay.isSuggestingTour = false');
+  await waitAndClick('BotCreateOverlay.isSuggestingTour = false');
   // set starting bid to 0
-  await waitAndClick("BotOverlay.openEditBoxOverlay('startingBid')");
+  await waitAndClick("BotCreateOverlay.openEditBoxOverlay('startingBid')");
   await waitAndClick('input-menu-trigger');
   await waitAndClick('Custom Amount');
   const startingBidInput = await waitForVisible('input-number');
@@ -25,7 +25,7 @@ it('should be able to start a miner', async () => {
   expect(text).toBe('0.00');
   await waitAndClick('EditBoxOverlay.saveOverlay()');
 
-  await waitAndClick('BotOverlay.saveRules()');
+  await waitAndClick('BotCreateOverlay.saveRules()');
   // fund the wallet
   await waitAndClick('FinalSetupChecklist.openFundMiningAccountOverlay()');
   const micronotsNeededElem = await waitForVisible('Receive.micronotsNeeded');

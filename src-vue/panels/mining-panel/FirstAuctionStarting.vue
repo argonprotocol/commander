@@ -103,7 +103,7 @@ function handleAuctionClosingTick(totalSecondsRemaining: number) {
 }
 
 function openBiddingBudgetOverlay() {
-  basicEmitter.emit('openBotOverlay');
+  basicEmitter.emit('openBotCreateOverlay');
 }
 
 Vue.onMounted(async () => {

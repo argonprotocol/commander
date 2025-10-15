@@ -69,7 +69,7 @@
   <div
     MaxBudgetTooLow
     v-else-if="maxBudgetIsTooLow"
-    @click="openBotOverlay"
+    @click="openBotCreateOverlay"
     class="group flex flex-row items-center gap-x-3 cursor-pointer bg-argon-error hover:bg-argon-error-darker text-white px-3.5 py-2 border-b border-argon-error-darkest"
     style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
   >
@@ -86,7 +86,7 @@
   <div
     MaxBidTooLow
     v-else-if="maxBidIsTooLow"
-    @click="openBotOverlay"
+    @click="openBotCreateOverlay"
     class="group flex flex-row items-center gap-x-3 cursor-pointer bg-argon-error hover:bg-argon-error-darker text-white px-3.5 py-2 border-b border-argon-error-darkest"
     style="box-shadow: inset 0 2px 2px rgba(0, 0, 0, 0.1)"
   >
@@ -152,8 +152,8 @@ const showInstallerInBackgroundAlert = Vue.computed(() => {
   return installer.isRunning && installer.isRunningInBackground && !hideInstallerInBackgroundAlert.value;
 });
 
-function openBotOverlay() {
-  basicEmitter.emit('openBotOverlay');
+function openBotCreateOverlay() {
+  basicEmitter.emit('openBotCreateOverlay');
 }
 
 async function restartDatabase() {

@@ -174,7 +174,7 @@
               <div class="mt-1 flex flex-row items-center gap-x-3">
                 <div class="text-argon-600 cursor-pointer" @click="openFundMiningAccountOverlay">Add More Capital</div>
                 <div class="h-4 w-px bg-slate-400/80"></div>
-                <div class="text-argon-600 cursor-pointer" @click="openBotOverlay">Modify Bidding Rules</div>
+                <div class="text-argon-600 cursor-pointer" @click="openBotCreateOverlay">Modify Bidding Rules</div>
               </div>
               <!-- <table class="w-full text-left mt-3 mb-5 whitespace-nowrap">
                 <thead>
@@ -420,13 +420,13 @@ function openFundVaultingAccountOverlay() {
   basicEmitter.emit('openWalletOverlay', { walletId: 'vaulting', screen: 'receive' });
 }
 
-function openBotOverlay() {
+function openBotCreateOverlay() {
   isOpen.value = false;
-  basicEmitter.emit('openBotOverlay');
+  basicEmitter.emit('openBotCreateOverlay');
 }
 
 function createStabilizationVault() {
-  basicEmitter.emit('openVaultOverlay');
+  basicEmitter.emit('openVaultCreateOverlay');
 }
 
 const eyeballXPosition = Vue.ref(50);
