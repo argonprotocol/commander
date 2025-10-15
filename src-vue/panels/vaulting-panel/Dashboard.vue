@@ -843,7 +843,7 @@ Vue.onMounted(async () => {
 
   if (personalUtxo.value) {
     const utxo = personalUtxo.value;
-    btcMarketRate.value = await vaults.getMarketRate(utxo.satoshis).catch(() => 0n);
+    btcMarketRate.value = await vaults.getRedemptionRate(utxo).catch(() => 0n);
     if (utxo.status === 'releaseRequested' || utxo.status === 'vaultCosigned') {
       showReleaseOverlay.value = true;
     }
@@ -853,7 +853,7 @@ Vue.onMounted(async () => {
     lockInitializeExpirationTime.value = dayjs(bitcoinLocks.verifyExpirationTime(utxo));
   }
 
-  loadChartData();
+  await loadChartData();
 });
 
 function openVaultOverlay() {

@@ -209,12 +209,7 @@ onMounted(async () => {
   await bitcoinLocks.load();
   void cosignReleaseAsNeeded();
   if (props.lock.status !== 'vaultCosigned' && props.lock.status !== 'releaseRequested') {
-    const redemptionRate = await vaults.getRedemptionRate(BigInt(props.lock.satoshis));
-    if (redemptionRate > props.lock.liquidityPromised) {
-      releasePrice.value = BigInt(props.lock.liquidityPromised);
-    } else {
-      releasePrice.value = redemptionRate;
-    }
+    releasePrice.value = await vaults.getRedemptionRate(props.lock);
     const latestFeeRates = await BitcoinLocksStore.getFeeRates();
     console.log(latestFeeRates);
     feeRates.value = Object.entries(latestFeeRates).map(([key, rate]) => {

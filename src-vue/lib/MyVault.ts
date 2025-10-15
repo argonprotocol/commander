@@ -13,17 +13,19 @@ import {
 } from '@argonprotocol/mainchain';
 import { BitcoinNetwork, CosignScript, getBitcoinNetworkFromApi, getChildXpriv, HDKey } from '@argonprotocol/bitcoin';
 import { Db } from './Db.ts';
-import { getMining, getMainchainClient } from '../stores/mainchain.ts';
+import { getMainchainClient, getMining } from '../stores/mainchain.ts';
 import { createDeferred, IDeferred } from './Utils.ts';
 import { IVaultRecord, VaultsTable } from './db/VaultsTable.ts';
 import { IVaultingRules } from '../interfaces/IVaultingRules.ts';
-
 import BigNumber from 'bignumber.js';
 import { Vaults } from './Vaults.ts';
 import { IVaultStats } from '../interfaces/IVaultStats.ts';
 import { toRaw } from 'vue';
 import BitcoinLocksStore from './BitcoinLocksStore.ts';
 import { bigNumberToBigInt, MiningFrames } from '@argonprotocol/commander-core';
+
+const FEE_ESTIMATE = 75_000n;
+export const DEFAULT_MASTER_XPUB_PATH = "m/84'/0'/0'";
 
 export class MyVault {
   public data: {
@@ -318,7 +320,7 @@ export class MyVault {
           annualPercentRate: rules.btcPctFee / 100,
           baseFee: rules.btcFlatFee,
           bitcoinXpub: masterXpub,
-          liquidityPoolProfitSharing: rules.profitSharingPct / 100,
+          treasuryProfitSharing: rules.profitSharingPct / 100,
           txProgressCallback: args.progressCallback,
         },
         { tickDurationMillis: this.vaults.tickDuration },
@@ -356,7 +358,7 @@ export class MyVault {
     this.data.ownTreasuryPoolCapitalDeployed = 0n;
     this.data.pendingCollectRevenue = 0n;
     for (const frameRevenue of frameRevenues) {
-      this.data.ownTreasuryPoolCapitalDeployed += frameRevenue.liquidityPoolVaultCapital.toBigInt();
+      this.data.ownTreasuryPoolCapitalDeployed += frameRevenue.treasuryVaultCapital.toBigInt();
       this.data.pendingCollectRevenue += frameRevenue.uncollectedRevenue.toBigInt();
     }
     const data = this.vaults.stats?.vaultsById?.[vaultId];
@@ -378,7 +380,7 @@ export class MyVault {
     }
     const client = await getMainchainClient(false);
     const vaultId = this.createdVault.vaultId;
-    const prebondedToPool = await client.query.liquidityPools.prebondedByVaultId(vaultId);
+    const prebondedToPool = await client.query.treasury.prebondedByVaultId(vaultId);
     const activePoolFunds =
       this.data.stats?.changesByFrame
         .slice(0, 10)
@@ -430,7 +432,7 @@ export class MyVault {
       needsPrebondIncrease = active < microgonsForTreasury;
     }
     if (needsPrebondIncrease) {
-      const tx = client.tx.liquidityPools.vaultOperatorPrebond(vaultId, microgonsForTreasury / 10n);
+      const tx = client.tx.treasury.vaultOperatorPrebond(vaultId, microgonsForTreasury / 10n);
       txs.push(tx);
     }
     let bitcoinArgs: { satoshis: bigint; hdPath: string; securityFee: bigint } | undefined;
@@ -488,7 +490,7 @@ export class MyVault {
   }
 
   public static getMicrogoonSplit(rules: IVaultingRules, existingFees: bigint = 0n) {
-    const estimatedOperationalFees = existingFees + 75_000n;
+    const estimatedOperationalFees = existingFees + FEE_ESTIMATE;
     const microgonsForVaulting = rules.baseMicrogonCommitment - estimatedOperationalFees;
     const microgonsForSecuritization = BigInt(
       BigNumber(rules.capitalForSecuritizationPct).div(100).times(microgonsForVaulting).toFixed(),

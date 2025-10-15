@@ -5,17 +5,17 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"@argonprotocol/bitcoin@npm:^1.3.8":
-  version: 1.3.8
-  resolution: "@argonprotocol/bitcoin@npm:1.3.8"
+"@argonprotocol/bitcoin@npm:^1.3.9":
+  version: 1.3.9
+  resolution: "@argonprotocol/bitcoin@npm:1.3.9"
   dependencies:
-    "@argonprotocol/mainchain": "npm:1.3.8"
+    "@argonprotocol/mainchain": "npm:1.3.9"
     "@noble/secp256k1": "npm:^2.3.0"
     "@scure/bip32": "npm:^1.7.0"
     "@scure/bip39": "npm:^1.6.0"
     "@scure/btc-signer": "npm:^1.8.1"
     bignumber.js: "npm:^9.3.1"
-  checksum: 10c0/8b1326eedec185df14773c0c1375fd81e4a066a8d256dfcc40fd3aec1f1ff5d74eb8cf01f5bb0b49b3cda7dd338c97c008fc4eb7f68e17f6059e40ee92e3644d
+  checksum: 10c0/776b76708b6b0c0638570122db3e356fc40b3868a52f581c44f366b9c438f66214fd3bdde31a922ca98472cbbadb0be6f7973480b02272eae16beac7afce93a7
   languageName: node
   linkType: hard
 
@@ -24,8 +24,8 @@ __metadata:
   resolution: "@argonprotocol/cli@workspace:cli"
   dependencies:
     "@argonprotocol/commander-core": "workspace:*"
-    "@argonprotocol/mainchain": "npm:^1.3.8"
-    "@argonprotocol/testing": "npm:^1.3.8"
+    "@argonprotocol/mainchain": "npm:^1.3.9"
+    "@argonprotocol/testing": "npm:^1.3.9"
     "@commander-js/extra-typings": "npm:^13.1.0"
     bignumber.js: "npm:^9.3.1"
     commander: "npm:^13.1.0"
@@ -45,8 +45,8 @@ __metadata:
   resolution: "@argonprotocol/commander-bot@workspace:bot"
   dependencies:
     "@argonprotocol/commander-core": "workspace:*"
-    "@argonprotocol/mainchain": "npm:^1.3.8"
-    "@argonprotocol/testing": "npm:^1.3.8"
+    "@argonprotocol/mainchain": "npm:^1.3.9"
+    "@argonprotocol/testing": "npm:^1.3.9"
     "@types/cors": "npm:^2.8.19"
     "@types/express": "npm:^5.0.3"
     bignumber.js: "npm:^9.3.1"
@@ -67,8 +67,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@argonprotocol/commander-core@workspace:core"
   dependencies:
-    "@argonprotocol/mainchain": "npm:^1.3.8"
-    "@argonprotocol/testing": "npm:^1.3.8"
+    "@argonprotocol/mainchain": "npm:^1.3.9"
+    "@argonprotocol/testing": "npm:^1.3.9"
     bignumber.js: "npm:^9.3.1"
     console-table-printer: "npm:^2.14.6"
     dayjs: "npm:^1.11.13"
@@ -78,9 +78,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@argonprotocol/mainchain@npm:1.3.8, @argonprotocol/mainchain@npm:^1.3.8":
-  version: 1.3.8
-  resolution: "@argonprotocol/mainchain@npm:1.3.8"
+"@argonprotocol/mainchain@npm:1.3.9, @argonprotocol/mainchain@npm:^1.3.9":
+  version: 1.3.9
+  resolution: "@argonprotocol/mainchain@npm:1.3.9"
   dependencies:
     "@polkadot/api": "npm:^16.4.4"
     "@polkadot/api-base": "npm:^16.4.4"
@@ -93,15 +93,15 @@ __metadata:
     "@polkadot/util-crypto": "npm:^13.5.5"
     bignumber.js: "npm:^9.3.1"
     bs58check: "npm:^4.0.0"
-  checksum: 10c0/5dd88dc34964973d20391e44dfb2563d6406ec69409c38e01e7b65d85784f18bed60b091f56c584494fd8a5bd29a4203b7475ce0abb6f04528eeb02e8515f1ca
+  checksum: 10c0/f3f9563b2b9363d818a4b69fcb9c22531a15d356068a5834258bc79bbe7f017604eb2ebf553a0ac5feae96087efcddbe88a5fda7985f4cb6b1ff5ef2c7e434be
   languageName: node
   linkType: hard
 
-"@argonprotocol/testing@npm:^1.3.8":
-  version: 1.3.8
-  resolution: "@argonprotocol/testing@npm:1.3.8"
+"@argonprotocol/testing@npm:^1.3.9":
+  version: 1.3.9
+  resolution: "@argonprotocol/testing@npm:1.3.9"
   dependencies:
-    "@argonprotocol/mainchain": "npm:1.3.8"
+    "@argonprotocol/mainchain": "npm:1.3.9"
     bitcoin-core: "npm:^5.0.0"
     detect-port: "npm:^2.1.0"
     docker-compose: "npm:^1.2.0"
@@ -110,7 +110,7 @@ __metadata:
     pg: "npm:^8.16.3"
     proper-lockfile: "npm:^4.1.2"
     vitest: "npm:^3.2.4"
-  checksum: 10c0/15f9534030c1bcd1b664b361b208e8b51dd4592d371372759743be48809a6249f926b2cb3e902d3791a043bc183802d5e12b88725889bb84609decf1ef907d1b
+  checksum: 10c0/2a700f3c50125946b31fe97bfb87d627e3fb8d5762134e0cc14a32a590eea535c1d147fa74f8eaf0789046342294edf5e1c88152f6a96dfd8fee17792f847b0a
   languageName: node
   linkType: hard
 
@@ -3445,10 +3445,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "argon-commander@workspace:."
   dependencies:
-    "@argonprotocol/bitcoin": "npm:^1.3.8"
+    "@argonprotocol/bitcoin": "npm:^1.3.9"
     "@argonprotocol/commander-bot": "workspace:*"
     "@argonprotocol/commander-core": "workspace:*"
-    "@argonprotocol/mainchain": "npm:^1.3.8"
+    "@argonprotocol/mainchain": "npm:^1.3.9"
     "@chenfengyuan/vue-countdown": "npm:^2.1.3"
     "@flaticon/flaticon-uicons": "npm:^3.3.1"
     "@headlessui/vue": "npm:^1.7.23"

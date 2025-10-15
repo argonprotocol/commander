@@ -24,6 +24,7 @@ import { onMounted, ref, toRaw } from 'vue';
 import { useConfig } from '../../stores/config';
 import { useMyVault } from '../../stores/vaults.ts';
 import ProgressBar from '../../components/ProgressBar.vue';
+import { DEFAULT_MASTER_XPUB_PATH } from '../../lib/MyVault.ts';
 
 const config = useConfig();
 const vault = useMyVault();
@@ -38,7 +39,7 @@ onMounted(async () => {
     return;
   }
 
-  const masterXpubPath = "m/84'/0'/0'";
+  const masterXpubPath = DEFAULT_MASTER_XPUB_PATH;
   console.log('Loading installing page', config.vaultingAccount.address);
   try {
     await vault.create({

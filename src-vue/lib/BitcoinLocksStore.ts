@@ -11,6 +11,7 @@ import {
 import {
   BitcoinLocks,
   Header,
+  IBitcoinLock,
   type IBitcoinLockConfig,
   ITxProgressCallback,
   KeyringPair,
@@ -25,6 +26,7 @@ import { createDeferred, IDeferred } from './Utils.ts';
 import { BITCOIN_BLOCK_MILLIS, ESPLORA_HOST } from './Env.ts';
 import { type AddressTxsUtxo } from '@mempool/mempool.js/lib/interfaces/bitcoin/addresses';
 import { type TxStatus } from '@mempool/mempool.js/lib/interfaces/bitcoin/transactions';
+import { PriceIndex } from '@argonprotocol/commander-core';
 
 export default class BitcoinLocksStore {
   data: {
@@ -51,8 +53,13 @@ export default class BitcoinLocksStore {
   #bitcoinLocksApi!: BitcoinLocks;
   #subscription?: () => void;
   #waitForLoad?: IDeferred;
+  #priceIndex: PriceIndex;
 
-  constructor(readonly dbPromise: Promise<Db>) {
+  constructor(
+    readonly dbPromise: Promise<Db>,
+    priceIndex: PriceIndex,
+  ) {
+    this.#priceIndex = priceIndex;
     this.data = {
       locksById: {},
       bitcoinBlockHeight: 0,
@@ -227,11 +234,15 @@ export default class BitcoinLocksStore {
       });
       microgonLiquidity = availableBtcSpace;
     }
-    let satoshis = await this.#bitcoinLocksApi.requiredSatoshisForArgonLiquidity(microgonLiquidity);
+    let satoshis = await this.#bitcoinLocksApi.requiredSatoshisForArgonLiquidity(
+      this.#priceIndex.current,
+      microgonLiquidity,
+    );
     while (satoshis >= minimumSatoshis) {
       try {
         const { txFee } = await this.#bitcoinLocksApi.createInitializeLockTx({
           vault,
+          priceIndex: this.#priceIndex.current,
           ownerBitcoinPubkey,
           argonKeyring,
           satoshis,
@@ -251,6 +262,7 @@ export default class BitcoinLocksStore {
     }
     const { tx, securityFee } = await this.#bitcoinLocksApi.createInitializeLockTx({
       ...args,
+      priceIndex: this.#priceIndex.current,
       ownerBitcoinPubkey,
       satoshis,
     });
@@ -258,23 +270,22 @@ export default class BitcoinLocksStore {
     return { hdPath, tx, ownerBitcoinPubkey, satoshis, securityFee };
   }
 
-  public async saveBitcoinLock(args: {
+  public async saveUtxo(args: {
     vaultId: number;
     hdPath: string;
-    satoshis: bigint;
-    txResult: TxResult;
     securityFee: bigint;
-  }): Promise<IBitcoinLockRecord> {
-    const { txResult, vaultId, hdPath, satoshis, securityFee } = args;
-
-    const { lock: utxo, createdAtHeight } = await this.#bitcoinLocksApi.getBitcoinLockFromTxResult(txResult);
+    txFee: bigint;
+    utxo: IBitcoinLock;
+    blockNumber: number;
+  }) {
+    const { utxo, txFee, vaultId, hdPath, blockNumber: createdAtHeight, securityFee } = args;
 
     const table = await this.getTable();
 
     const record = await table.insert({
       utxoId: utxo.utxoId,
       status: 'initialized',
-      satoshis,
+      satoshis: utxo.satoshis,
       ratchets: [
         {
           mintAmount: utxo.liquidityPromised,
@@ -283,7 +294,7 @@ export default class BitcoinLocksStore {
           blockHeight: createdAtHeight,
           burned: 0n,
           securityFee,
-          txFee: txResult.finalFee ?? 0n,
+          txFee,
           bitcoinBlockHeight: utxo.createdAtHeight,
         },
       ],
@@ -293,10 +304,23 @@ export default class BitcoinLocksStore {
       lockDetails: utxo,
       network: this.#config.bitcoinNetwork.toString(),
       hdPath,
-      vaultId: vaultId,
+      vaultId,
     });
     this.locksById[record.utxoId] = record;
     return record;
+  }
+
+  public async saveBitcoinLock(args: {
+    vaultId: number;
+    hdPath: string;
+    satoshis: bigint;
+    txResult: TxResult;
+    securityFee: bigint;
+  }): Promise<IBitcoinLockRecord> {
+    const { txResult } = args;
+
+    const { lock: utxo, createdAtHeight } = await this.#bitcoinLocksApi.getBitcoinLockFromTxResult(txResult);
+    return this.saveUtxo({ ...args, utxo, blockNumber: createdAtHeight, txFee: txResult.finalFee ?? 0n });
   }
 
   async calculateBitcoinNetworkFee(
@@ -332,6 +356,7 @@ export default class BitcoinLocksStore {
     const { lock, bitcoinNetworkFee, toScriptPubkey, argonKeyring, tip = 0n, txProgressCallback } = args;
     const release = await this.#bitcoinLocksApi.requestRelease({
       lock: lock.lockDetails,
+      priceIndex: this.#priceIndex.current,
       releaseRequest: {
         toScriptPubkey: addressBytesHex(toScriptPubkey, this.bitcoinNetwork),
         bitcoinNetworkFee,
@@ -355,6 +380,7 @@ export default class BitcoinLocksStore {
 
     const result = await this.#bitcoinLocksApi.ratchet({
       lock: lock.lockDetails,
+      priceIndex: this.#priceIndex.current,
       argonKeyring,
       tip,
       vault: vaults.vaultsById[lock.vaultId],
@@ -530,7 +556,7 @@ export default class BitcoinLocksStore {
       }
     | undefined
   > {
-    const baseUrl = `${ESPLORA_HOST ?? 'https://mempool.space/api'}/`;
+    const baseUrl = this.getMempoolApi();
 
     const payToScriptAddress = lock.lockDetails.p2wshScriptHashHex;
     const response = await fetch(`${baseUrl}address/${this.formatP2swhAddress(payToScriptAddress)}/utxo`);

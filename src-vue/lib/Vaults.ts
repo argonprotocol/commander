@@ -1,5 +1,5 @@
 import { BitcoinLocks, type PalletVaultsVaultFrameRevenue, Vault } from '@argonprotocol/mainchain';
-import { bigNumberToBigInt, FrameIterator, JsonExt, MainchainClients } from '@argonprotocol/commander-core';
+import { bigNumberToBigInt, FrameIterator, JsonExt, MainchainClients, PriceIndex } from '@argonprotocol/commander-core';
 import { BaseDirectory, mkdir, readTextFile, rename, writeTextFile } from '@tauri-apps/plugin-fs';
 import { getMainchainClient, getMainchainClients } from '../stores/mainchain.ts';
 import { IBitcoinLockRecord } from './db/BitcoinLocksTable.ts';
@@ -17,10 +17,17 @@ export class Vaults {
   public tickDuration?: number;
   public stats?: IAllVaultStats;
 
-  constructor(public network = NETWORK_NAME) {}
+  constructor(
+    public network = NETWORK_NAME,
+    public priceIndex: PriceIndex,
+  ) {}
 
   private waitForLoad?: IDeferred;
   private isSavingStats: boolean = false;
+
+  private get bitcoinLocks(): Promise<BitcoinLocks> {
+    return getMainchainClient(false).then(x => new BitcoinLocks(x));
+  }
 
   public async load(reload = false): Promise<void> {
     if (this.waitForLoad && !reload) return this.waitForLoad.promise;
@@ -68,10 +75,10 @@ export class Vaults {
         bitcoinFeeRevenue: frameRevenue.bitcoinLockFeeRevenue.toBigInt(),
         bitcoinLocksCreated: frameRevenue.bitcoinLocksCreated.toNumber(),
         treasuryPool: {
-          totalEarnings: frameRevenue.liquidityPoolTotalEarnings.toBigInt(),
-          vaultEarnings: frameRevenue.liquidityPoolVaultEarnings.toBigInt(),
-          externalCapital: frameRevenue.liquidityPoolExternalCapital.toBigInt(),
-          vaultCapital: frameRevenue.liquidityPoolVaultCapital.toBigInt(),
+          totalEarnings: frameRevenue.treasuryTotalEarnings.toBigInt(),
+          vaultEarnings: frameRevenue.treasuryVaultEarnings.toBigInt(),
+          externalCapital: frameRevenue.treasuryExternalCapital.toBigInt(),
+          vaultCapital: frameRevenue.treasuryVaultCapital.toBigInt(),
         },
         securitization: frameRevenue.securitization.toBigInt(),
         securitizationActivated: frameRevenue.securitizationActivated.toBigInt(),
@@ -206,30 +213,25 @@ export class Vaults {
   ): Promise<{ burnAmount: bigint; ratchetingFee: bigint; marketRate: bigint }> {
     const vault = this.vaultsById[lock.vaultId];
     if (!vault) throw new Error('Vault not found');
-    const ratchetPrice = await new BitcoinLocks(await getMainchainClient(false)).getRatchetPrice(
-      lock.lockDetails,
-      vault,
-    );
+    await this.priceIndex.fetchMicrogonExchangeRatesTo();
+    const bitcoinLocks = await this.bitcoinLocks;
+    const ratchetPrice = await bitcoinLocks.getRatchetPrice(lock.lockDetails, this.priceIndex.current, vault);
 
     return {
       ...ratchetPrice,
     };
   }
 
-  public async getRedemptionRate(satoshis: bigint): Promise<bigint> {
-    return await new BitcoinLocks(await getMainchainClient(false)).getRedemptionRate(satoshis);
+  public async getRedemptionRate(lock: { satoshis: bigint; peggedPrice?: bigint }): Promise<bigint> {
+    await this.priceIndex.fetchMicrogonExchangeRatesTo();
+    const bitcoinLocks = await this.bitcoinLocks;
+    return await bitcoinLocks.getRedemptionRate(this.priceIndex.current, lock);
   }
 
   public async getMarketRate(satoshis: bigint): Promise<bigint> {
-    return await new BitcoinLocks(await getMainchainClient(false)).getMarketRate(satoshis);
-  }
-
-  public async calculateReleasePrice(satoshis: bigint, peggedPrice: bigint): Promise<bigint> {
-    let lowestPrice = await this.getRedemptionRate(satoshis);
-    if (peggedPrice < lowestPrice) {
-      lowestPrice = peggedPrice;
-    }
-    return lowestPrice;
+    await this.priceIndex.fetchMicrogonExchangeRatesTo();
+    const bitcoinLocks = await this.bitcoinLocks;
+    return await bitcoinLocks.getMarketRate(this.priceIndex.current, satoshis);
   }
 
   public getTreasuryFillPct(vaultId: number): number {
@@ -361,7 +363,7 @@ export class Vaults {
     let participatingVaults = 0;
     for (const [_vaultId, revenue] of vaultRevenue) {
       for (const entry of revenue) {
-        const capital = entry.liquidityPoolVaultCapital.toBigInt() + entry.liquidityPoolExternalCapital.toBigInt();
+        const capital = entry.treasuryVaultCapital.toBigInt() + entry.treasuryExternalCapital.toBigInt();
         if (capital > 0n) {
           participatingVaults++;
           totalActivatedCapital += capital;

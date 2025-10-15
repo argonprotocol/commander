@@ -248,7 +248,7 @@ export class FrameIterator {
     if (isFirstJump) {
       // First jump: use tick-based estimation
       const ticksDiff = frameTickStart - currentBlockData.blockTick;
-      const ticksPerFrame = 1_400; // if first jump, we'll jump by a whole frame
+      const ticksPerFrame = MiningFrames.ticksPerFrame; // if first jump, we'll jump by a whole frame
       if (ticksDiff > 0) {
         jumpBy = Math.min(ticksPerFrame, ticksDiff);
       } else if (ticksDiff < 0) {
