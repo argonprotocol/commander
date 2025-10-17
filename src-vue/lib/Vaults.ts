@@ -23,6 +23,7 @@ export class Vaults {
   ) {}
 
   private waitForLoad?: IDeferred;
+  private refreshingPromise?: Promise<IAllVaultStats>;
   private isSavingStats: boolean = false;
 
   private get bitcoinLocks(): Promise<BitcoinLocks> {
@@ -115,36 +116,51 @@ export class Vaults {
     await this.load();
     clients ??= getMainchainClients();
     const client = await clients.prunedClientOrArchivePromise;
+    if (this.refreshingPromise) return this.refreshingPromise;
+    const refreshingDeferred = createDeferred<IAllVaultStats>();
+    this.refreshingPromise = refreshingDeferred.promise;
 
-    const revenue = this.stats ?? { synchedToFrame: 0, vaultsById: {} };
-    const oldestFrameToGet = revenue.synchedToFrame;
-
-    console.log('Synching vault revenue stats back to frame ', oldestFrameToGet);
-
-    const currentFrameId = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
-    await new FrameIterator(clients, false, 'VaultRevenueStats').forEachFrame(
-      async (frameId, firstBlockMeta, api, abortController) => {
-        if (firstBlockMeta.specVersion < 129) {
-          abortController.abort();
-          return;
+    const scheduleClearance = () => {
+      setTimeout(() => {
+        if (this.refreshingPromise === refreshingDeferred.promise) {
+          this.refreshingPromise = undefined;
         }
-        const vaultRevenues = await api.query.vaults.revenuePerFrameByVault.entries();
-        for (const [vaultIdRaw, frameRevenues] of vaultRevenues) {
-          const vaultId = vaultIdRaw.args[0].toNumber();
-          await this.updateVaultRevenue(vaultId, frameRevenues, true);
-        }
+      }, 30e3);
+    };
+    try {
+      const revenue = this.stats ?? { synchedToFrame: 0, vaultsById: {} };
+      const oldestFrameToGet = revenue.synchedToFrame;
 
-        const isDone = frameId <= oldestFrameToGet || firstBlockMeta.specVersion < 123;
+      const currentFrameId = await client.query.miningSlot.nextFrameId().then(x => x.toNumber() - 1);
+      console.log(`Syncing vault revenue stats from ${oldestFrameToGet}->${currentFrameId}`);
+      await new FrameIterator(clients, 'VaultRevenueStats').forEachFrame(
+        async (frameId, firstBlockMeta, api, abortController) => {
+          if (firstBlockMeta.specVersion < 129) {
+            abortController.abort();
+            return;
+          }
+          const vaultRevenues = await api.query.vaults.revenuePerFrameByVault.entries();
+          for (const [vaultIdRaw, frameRevenues] of vaultRevenues) {
+            const vaultId = vaultIdRaw.args[0].toNumber();
+            await this.updateVaultRevenue(vaultId, frameRevenues, true);
+          }
 
-        if (isDone) {
-          console.log(`Synched vault revenue to frame ${frameId}`);
-          abortController.abort();
-        }
-      },
-    );
-    revenue.synchedToFrame = currentFrameId - 1;
-    void this.saveStats();
-    return revenue;
+          if (frameId <= oldestFrameToGet) {
+            console.log(`Synced vault revenue to frame ${frameId}`);
+            abortController.abort();
+          }
+        },
+      );
+      revenue.synchedToFrame = currentFrameId - 1;
+      void this.saveStats();
+      refreshingDeferred.resolve(revenue);
+      scheduleClearance();
+      return revenue;
+    } catch (error) {
+      refreshingDeferred.reject(error as Error);
+      scheduleClearance();
+      throw error;
+    }
   }
 
   public contributedTreasuryCapital(vaultId: number, maxFrames = 10): bigint {

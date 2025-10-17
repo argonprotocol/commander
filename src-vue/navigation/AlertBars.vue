@@ -159,8 +159,7 @@ function openBotCreateOverlay() {
 async function restartDatabase() {
   await config.isLoadedPromise;
   const restarter = new Restarter(dbPromise, config as any);
-  await restarter.recreateLocalDatabase();
-  await restarter.restart();
+  await restarter.recreateLocalDatabase(true);
 }
 
 async function restartBot() {

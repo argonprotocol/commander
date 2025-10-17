@@ -14,7 +14,6 @@ let myVault: MyVault;
 export function useVaults(): Vaults {
   if (!vaults) {
     vaults = new Vaults(NETWORK_NAME, getPriceIndex());
-    vaults.load().catch(handleUnknownFatalError);
   }
 
   return vaults;
@@ -25,7 +24,6 @@ export function useMyVault(): MyVault {
     const dbPromise = getDbPromise();
     myVault = new MyVault(dbPromise, useVaults());
     myVault.data = reactive(myVault.data) as any;
-    myVault.load().catch(handleUnknownFatalError);
   }
 
   return myVault;

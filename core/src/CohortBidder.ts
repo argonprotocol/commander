@@ -508,7 +508,10 @@ export class CohortBidder {
 
     if (this.evaluateInterval) clearInterval(this.evaluateInterval);
     this.log(`Scheduling next evaluation in ${delay}ms`);
-    this.evaluateInterval = setInterval(() => this.checkWinningBids().catch(this.error.bind(this)), delay);
+    this.evaluateInterval = setInterval(
+      () => this.checkWinningBids().catch(err => this.error('Error checking winning bids', err)),
+      delay,
+    );
   }
 
   private updateBidList(

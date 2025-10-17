@@ -13,7 +13,7 @@ import {
 } from '@argonprotocol/mainchain';
 import { BitcoinNetwork, CosignScript, getBitcoinNetworkFromApi, getChildXpriv, HDKey } from '@argonprotocol/bitcoin';
 import { Db } from './Db.ts';
-import { getMainchainClient, getMining } from '../stores/mainchain.ts';
+import { getMainchainClient, getMainchainClients, getMining } from '../stores/mainchain.ts';
 import { createDeferred, IDeferred } from './Utils.ts';
 import { IVaultRecord, VaultsTable } from './db/VaultsTable.ts';
 import { IVaultingRules } from '../interfaces/IVaultingRules.ts';
@@ -23,8 +23,10 @@ import { IVaultStats } from '../interfaces/IVaultStats.ts';
 import { toRaw } from 'vue';
 import BitcoinLocksStore from './BitcoinLocksStore.ts';
 import { bigNumberToBigInt, MiningFrames } from '@argonprotocol/commander-core';
+import { MyVaultRecovery } from './MyVaultRecovery.ts';
+import { IBitcoinLockRecord } from './db/BitcoinLocksTable.ts';
 
-const FEE_ESTIMATE = 75_000n;
+export const FEE_ESTIMATE = 75_000n;
 export const DEFAULT_MASTER_XPUB_PATH = "m/84'/0'/0'";
 
 export class MyVault {
@@ -300,7 +302,7 @@ export class MyVault {
       return this.data.creatingVaultPromise;
     }
 
-    console.log('creating a vault with address', args.argonKeyring.address);
+    console.log('Creating a vault with address', args.argonKeyring.address);
 
     const createVaultDeferred = createDeferred<{ vault: Vault; txResult: TxResult }>();
     this.data.creatingVaultPromise = createVaultDeferred.promise;
@@ -310,7 +312,6 @@ export class MyVault {
       const vaultXpriv = await this.getVaultXpub(xprivSeed, masterXpubPath);
       const masterXpub = vaultXpriv.publicExtendedKey;
       const client = await getMainchainClient(false);
-
       const { vault, txResult } = await Vault.create(
         client,
         argonKeyring,
@@ -392,6 +393,82 @@ export class MyVault {
     return { active: activePoolFunds, maxAmountPerFrame };
   }
 
+  public async recoverAccountVault(
+    bitcoinLocksStore: BitcoinLocksStore,
+    args: { vaultingAddress: string; bitcoinXprivSeed: Uint8Array; onProgress: (progress: number) => void },
+  ): Promise<IVaultingRules | undefined> {
+    const { vaultingAddress, bitcoinXprivSeed, onProgress } = args;
+    console.log('Recovering vault for address', vaultingAddress);
+    const mainchainClients = getMainchainClients();
+    const client = await mainchainClients.archiveClientPromise;
+    onProgress(0);
+    console.log('find vault operator');
+    const foundVault = await MyVaultRecovery.findOperatorVault(
+      mainchainClients,
+      bitcoinLocksStore.bitcoinNetwork,
+      vaultingAddress,
+      bitcoinXprivSeed,
+    );
+    onProgress(50);
+    if (!foundVault) {
+      onProgress(100);
+      return;
+    }
+
+    const vault = foundVault.vault;
+    const vaultId = vault.vaultId;
+    const table = await this.getTable();
+
+    this.data.metadata = await table.insert(
+      vault.vaultId,
+      foundVault.masterXpubPath,
+      foundVault.createBlockNumber,
+      foundVault.txFee,
+    );
+    this.data.createdVault = vault;
+    this.vaults.vaultsById[vault.vaultId] = vault;
+
+    const prebond = await MyVaultRecovery.findPrebonded({
+      client,
+      vaultId,
+      vaultingAddress,
+      vaultCreatedBlockNumber: foundVault.createBlockNumber,
+    });
+    if (prebond) {
+      // add fee from update
+      this.metadata!.prebondedMicrogons = prebond.prebondedMicrogons;
+      this.metadata!.prebondedMicrogonsAtTick = prebond.tick;
+      this.metadata!.operationalFeeMicrogons ??= 0n;
+      this.metadata!.operationalFeeMicrogons += prebond.txFee ?? 0n;
+    }
+    onProgress(75);
+
+    let bitcoin: IBitcoinLockRecord | undefined;
+    if (vault.activatedSecuritization() > 0n && prebond.blockNumber) {
+      const bitcoins = await MyVaultRecovery.recoverPersonalBitcoin({
+        mainchainClients,
+        bitcoinLocksStore,
+        vaultSetupBlockNumber: prebond.blockNumber,
+        bip39Seed: bitcoinXprivSeed,
+        vault,
+      });
+
+      if (bitcoins.length) {
+        bitcoin = bitcoins[0];
+        this.metadata!.personalUtxoId = bitcoin.utxoId;
+      }
+    }
+
+    await table.save(this.metadata!);
+    onProgress(100);
+    return MyVaultRecovery.rebuildRules({
+      feesInMicrogons: (foundVault.txFee ?? 0n) + (prebond.txFee ?? 0n),
+      vault,
+      bitcoin,
+      treasuryMicrogons: prebond?.prebondedMicrogons,
+    });
+  }
+
   public async initialActivate(args: {
     argonKeyring: KeyringPair;
     rules: IVaultingRules;
@@ -399,7 +476,7 @@ export class MyVault {
     bitcoinLocksStore: BitcoinLocksStore;
     txProgressCallback: ITxProgressCallback;
     tip?: bigint;
-  }) {
+  }): Promise<{ txResult: TxResult } | undefined> {
     const vaultId = this.createdVault?.vaultId;
     if (!vaultId) {
       throw new Error('No vault created to prebond treasury pool');
@@ -465,16 +542,16 @@ export class MyVault {
     const tick = await api.query.ticks.currentTick();
     txResult.txProgressCallback = undefined;
 
+    this.metadata!.prebondedMicrogons = microgonsForTreasury;
+    this.metadata!.prebondedMicrogonsAtTick = tick.toNumber();
+    this.metadata!.operationalFeeMicrogons ??= 0n;
+    this.metadata!.operationalFeeMicrogons += txResult.finalFee ?? 0n;
     console.log('Saving vault updates', {
       microgonsForTreasury,
       microgonsForSecuritization,
       tip,
       meta: this.metadata,
     });
-    this.metadata!.prebondedMicrogons = microgonsForTreasury;
-    this.metadata!.prebondedMicrogonsAtTick = tick.toNumber();
-    this.metadata!.operationalFeeMicrogons ??= 0n;
-    this.metadata!.operationalFeeMicrogons += txResult.finalFee ?? 0n;
     await table.save(this.metadata!);
     if (bitcoinArgs) {
       const record = await bitcoinLocksStore.saveBitcoinLock({ vaultId, txResult, ...bitcoinArgs });

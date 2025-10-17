@@ -129,7 +129,6 @@ export const useWallets = defineStore('wallets', () => {
           miningAccountAddress: config.miningAccount.address,
           vaultingAccountAddress: config.vaultingAccount.address,
         });
-        await walletBalances.updateBalances();
         await walletBalances.subscribeToBalanceUpdates();
         await Promise.all([stats.isLoadedPromise, currency.isLoadedPromise]);
         isLoadedResolve();
