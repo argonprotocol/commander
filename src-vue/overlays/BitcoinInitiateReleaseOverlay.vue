@@ -1,5 +1,5 @@
-  <!-- prettier-ignore -->
-  <template>
+<!-- prettier-ignore -->
+<template>
   <DialogRoot class="absolute inset-0 z-10" :open="true">
     <DialogPortal>
       <AnimatePresence>
