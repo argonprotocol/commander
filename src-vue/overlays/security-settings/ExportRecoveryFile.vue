@@ -45,6 +45,7 @@ import { useConfig } from '../../stores/config';
 import { save as saveFileOverlay } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { JsonExt } from '@argonprotocol/commander-core';
+import { IRecoveryFile } from '../../interfaces/IRecoveryFile.ts';
 
 const config = useConfig();
 const isSavingExport = Vue.ref(false);
@@ -60,7 +61,7 @@ async function exportAccount() {
   if (!filePath) return; // user cancelled
 
   isSavingExport.value = true;
-  const data = {
+  const data: IRecoveryFile = {
     security: config.security,
     oldestFrameIdToSync: config.oldestFrameIdToSync,
     biddingRules: config.biddingRules,

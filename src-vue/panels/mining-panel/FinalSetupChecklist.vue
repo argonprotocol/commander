@@ -37,9 +37,9 @@
         </section>
 
         <section
-          @click="openBotOverlay"
+          @click="openBotCreateOverlay"
           class="flex flex-row cursor-pointer border-t border-[#CCCEDA] py-6 hover:bg-argon-menu-hover"
-          ref="botOverlayReferenceElement"
+          ref="botCreateOverlayReferenceElement"
         >
           <Checkbox :isChecked="wallets.isLoaded && config.hasSavedBiddingRules" />
           <div class="px-4">
@@ -50,14 +50,14 @@
             <p v-else>
               You set up bidding rules and
               <BotCapital align="start" :alignOffset="alignOffsetForBotCapital">
-                <span @mouseenter="alignOffsetForBotCapital = calculateAlignOffset($event, botOverlayReferenceElement, 'start')" class="underline decoration-dashed underline-offset-4 decoration-slate-600/80 cursor-pointer">
+                <span @mouseenter="alignOffsetForBotCapital = calculateAlignOffset($event, botCreateOverlayReferenceElement, 'start')" class="underline decoration-dashed underline-offset-4 decoration-slate-600/80 cursor-pointer">
                   committed
                   {{ currency.symbol }}{{ microgonToArgonNm(config.biddingRules?.baseMicrogonCommitment || 0n).format('0,0.[00]') }} in capital
                 </span>
               </BotCapital>
               with an
               <BotReturns align="end" :alignOffset="alignOffsetForBotReturns">
-                <span @mouseenter="alignOffsetForBotReturns = calculateAlignOffset($event, botOverlayReferenceElement, 'end')" class="inline-block underline decoration-dashed underline-offset-4 decoration-slate-600/80 cursor-pointer">
+                <span @mouseenter="alignOffsetForBotReturns = calculateAlignOffset($event, botCreateOverlayReferenceElement, 'end')" class="inline-block underline decoration-dashed underline-offset-4 decoration-slate-600/80 cursor-pointer">
                   average expected return of {{ numeral(averageAPY).formatIfElseCapped('>=100', '0,0', '0,0.00', 999_999) }}%
                 </span>
               </BotReturns>
@@ -195,7 +195,7 @@ const calculatorData = getBiddingCalculatorData();
 
 const { microgonToArgonNm, micronotToArgonotNm } = createNumeralHelpers(currency);
 
-const botOverlayReferenceElement = Vue.ref<HTMLElement | null>(null);
+const botCreateOverlayReferenceElement = Vue.ref<HTMLElement | null>(null);
 const alignOffsetForBotReturns = Vue.ref(0);
 const alignOffsetForBotCapital = Vue.ref(0);
 
@@ -248,7 +248,7 @@ function calculateAlignOffset(event: MouseEvent, parentElement: HTMLElement | nu
   const elementRect = element.getBoundingClientRect();
   const parentRect = parentElement.getBoundingClientRect();
 
-  // Calculate the difference between the right edge of element and the right edge of botOverlayReferenceElement
+  // Calculate the difference between the right edge of element and the right edge of botCreateOverlayReferenceElement
   const elementRightEdge = elementRect.left + (align === 'start' ? 0 : elementRect.width);
   const parentRightEdge = parentRect.left + (align === 'start' ? 0 : parentRect.width);
   const offset = elementRightEdge - parentRightEdge;
@@ -256,8 +256,8 @@ function calculateAlignOffset(event: MouseEvent, parentElement: HTMLElement | nu
   return align === 'start' ? -offset : offset;
 }
 
-function openBotOverlay() {
-  basicEmitter.emit('openBotOverlay');
+function openBotCreateOverlay() {
+  basicEmitter.emit('openBotCreateOverlay');
 }
 
 function openFundMiningAccountOverlay() {

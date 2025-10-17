@@ -93,7 +93,7 @@ async function importAccount() {
 
   isImporting.value = true;
 
-  controller.importFromMnemonic(mnemonic.value.join(' '));
+  await controller.importFromMnemonic(mnemonic.value.join(' '));
 
   isImporting.value = false;
   emit('close');

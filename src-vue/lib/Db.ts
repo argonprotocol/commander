@@ -49,7 +49,12 @@ export class Db {
     }
   }
 
+  private writesPaused = false;
+
   async execute(query: string, bindValues?: unknown[]): Promise<QueryResult> {
+    if (this.writesPaused) {
+      return { rowsAffected: 0 };
+    }
     try {
       return await this.sql.execute(query, bindValues);
     } catch (error) {
@@ -69,6 +74,10 @@ export class Db {
 
   public async close() {
     await this.sql.close();
+  }
+
+  public pauseWrites() {
+    this.writesPaused = true;
   }
 
   public async reconnect() {

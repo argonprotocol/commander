@@ -119,7 +119,7 @@ END;
 
 CREATE TABLE BitcoinLocks (
   utxoId INTEGER NOT NULL PRIMARY KEY,
-  status TEXT NOT NULL CHECK(status IN ('initialized', 'pendingMint', 'verificationFailed', 'minted', 'releaseRequested', 'vaultCosigned', 'released')),
+  status TEXT NOT NULL CHECK(status IN ('Initialized', 'BitcoinReceivedWrongAmount', 'LockedAndMinting', 'LockedAndMinted', 'ReleaseSubmittedToArgon', 'ReleaseApprovedByVault', 'ReleaseComplete')),
   txid TEXT,
   vout INTEGER,
   satoshis INTEGER NOT NULL,

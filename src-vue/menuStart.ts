@@ -86,7 +86,7 @@ export default async function menuStart() {
       {
         id: 'configure-mining-bot',
         text: 'Configure Mining Bot',
-        action: () => basicEmitter.emit('openBotOverlay'),
+        action: () => basicEmitter.emit('openBotCreateOverlay'),
       },
     ],
   });
@@ -108,7 +108,7 @@ export default async function menuStart() {
       {
         id: 'configure-vault-settings',
         text: 'Configure Vault Settings',
-        action: () => basicEmitter.emit('openVaultOverlay'),
+        action: () => basicEmitter.emit('openVaultCreateOverlay'),
       },
     ],
   });

@@ -61,6 +61,8 @@ export default class Draggable {
 
       newX = Math.max(-maxOffsetX, Math.min(maxOffsetX, newX));
       newY = Math.max(-maxOffsetY, Math.min(maxOffsetY, newY));
+    } else {
+      console.log('NO MODAL ELEM');
     }
 
     this.modalPosition.x = newX;

@@ -17,6 +17,8 @@ export const useController = defineStore('controller', () => {
   const panelKey = Vue.ref<PanelKey>('' as PanelKey);
 
   const isImporting = Vue.ref(false);
+  const stopSuggestingBotTour = Vue.ref(false);
+  const stopSuggestingVaultTour = Vue.ref(false);
 
   function setPanelKey(value: PanelKey) {
     if (panelKey.value === value) return;
@@ -54,6 +56,8 @@ export const useController = defineStore('controller', () => {
     isLoaded,
     isLoadedPromise,
     isImporting,
+    stopSuggestingBotTour,
+    stopSuggestingVaultTour,
     importFromFile,
     importFromMnemonic,
     setPanelKey,

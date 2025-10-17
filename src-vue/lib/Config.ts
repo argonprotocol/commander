@@ -31,6 +31,7 @@ import { WalletBalances } from './WalletBalances';
 import { SECURITY } from './Env.ts';
 import { invokeWithTimeout } from './tauriApi.ts';
 import { LocalMachine } from './LocalMachine.ts';
+import { VaultRecoveryFn } from './MyVaultRecovery.ts';
 
 export class Config {
   public readonly version: string = packageJson.version;
@@ -53,11 +54,14 @@ export class Config {
   private _rawData = {} as IConfigStringified;
   private _masterAccount!: KeyringPair;
   private _miningAccount!: KeyringPair;
-  private _miningAccountPreviousHistoryLoadPct: number = 0;
+  private _walletPreviousHistoryLoadPct: number = 0;
   private _vaultingAccount!: KeyringPair;
   private _miningSessionMiniSecret!: string;
 
-  constructor(dbPromise: Promise<Db>) {
+  constructor(
+    dbPromise: Promise<Db>,
+    private vaultRecoveryFn?: VaultRecoveryFn,
+  ) {
     ensureOnlyOneInstance(this.constructor);
     this._loadedDeferred = createDeferred<void>(false);
     this.hasDbMigrationError = false;
@@ -83,7 +87,8 @@ export class Config {
       oldestFrameIdToSync: Config.getDefault(dbFields.oldestFrameIdToSync) as number,
       latestFrameIdProcessed: Config.getDefault(dbFields.latestFrameIdProcessed) as number,
       miningAccountAddress: Config.getDefault(dbFields.miningAccountAddress) as string,
-      miningAccountHadPreviousLife: Config.getDefault(dbFields.miningAccountHadPreviousLife) as boolean,
+      walletAccountsHadPreviousLife: Config.getDefault(dbFields.walletAccountsHadPreviousLife) as boolean,
+      walletPreviousLifeRecovered: Config.getDefault(dbFields.walletPreviousLifeRecovered) as boolean,
       miningAccountPreviousHistory: Config.getDefault(
         dbFields.miningAccountPreviousHistory,
       ) as IConfig['miningAccountPreviousHistory'],
@@ -99,6 +104,7 @@ export class Config {
       hasReadVaultingInstructions: Config.getDefault(dbFields.hasReadVaultingInstructions) as boolean,
       isPreparingVaultSetup: Config.getDefault(dbFields.isPreparingVaultSetup) as boolean,
       isVaultReadyToCreate: Config.getDefault(dbFields.isVaultReadyToCreate) as boolean,
+      isVaultActivated: Config.getDefault(dbFields.isVaultActivated) as boolean,
 
       hasMiningSeats: Config.getDefault(dbFields.hasMiningSeats) as boolean,
       hasMiningBids: Config.getDefault(dbFields.hasMiningBids) as boolean,
@@ -117,8 +123,8 @@ export class Config {
     };
   }
 
-  public async load() {
-    if (this._loadedDeferred.isSettled || this._loadedDeferred.isRunning) {
+  public async load(force = false) {
+    if (!force && (this._loadedDeferred.isSettled || this._loadedDeferred.isRunning)) {
       return this._loadedDeferred.promise;
     }
     console.log('Config: Loading configuration from database...');
@@ -191,8 +197,8 @@ export class Config {
       this._loadedData = loadedData as IConfig;
       this._rawData = rawData;
       this._loadedDeferred.resolve();
-      if (this.miningAccountHadPreviousLife && !this.miningAccountPreviousHistory) {
-        await this._bootupFromMiningAccountPreviousHistory();
+      if (this.walletAccountsHadPreviousLife && !this.walletPreviousLifeRecovered) {
+        await this._bootupFromAccountPreviousHistory();
       }
     } catch (e) {
       this._loadedDeferred.reject(e);
@@ -226,15 +232,35 @@ export class Config {
     return this._miningAccount;
   }
 
-  get miningAccountHadPreviousLife(): IConfig['miningAccountHadPreviousLife'] {
-    this._throwErrorIfNotLoaded();
-    return this._loadedData.miningAccountHadPreviousLife;
+  get vaultingAccount(): KeyringPair {
+    if (this._vaultingAccount) return this._vaultingAccount;
+
+    const vaultingAccount = this.masterAccount.derive(`//vaulting`);
+    if (!this.isLoaded) return vaultingAccount;
+    this._vaultingAccount = vaultingAccount;
+    return this._vaultingAccount;
   }
 
-  set miningAccountHadPreviousLife(value: IConfig['miningAccountHadPreviousLife']) {
+  get walletAccountsHadPreviousLife(): IConfig['walletAccountsHadPreviousLife'] {
     this._throwErrorIfNotLoaded();
-    this._loadedData.miningAccountHadPreviousLife = value;
-    this._tryFieldsToSave(dbFields.miningAccountHadPreviousLife, value);
+    return this._loadedData.walletAccountsHadPreviousLife;
+  }
+
+  set walletAccountsHadPreviousLife(value: IConfig['walletAccountsHadPreviousLife']) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.walletAccountsHadPreviousLife = value;
+    this._tryFieldsToSave(dbFields.walletAccountsHadPreviousLife, value);
+  }
+
+  get walletPreviousLifeRecovered(): IConfig['walletPreviousLifeRecovered'] {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.walletPreviousLifeRecovered;
+  }
+
+  set walletPreviousLifeRecovered(value: IConfig['walletPreviousLifeRecovered']) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.walletPreviousLifeRecovered = value;
+    this._tryFieldsToSave(dbFields.walletPreviousLifeRecovered, value);
   }
 
   get miningAccountPreviousHistory(): IConfig['miningAccountPreviousHistory'] {
@@ -248,18 +274,13 @@ export class Config {
     this._tryFieldsToSave(dbFields.miningAccountPreviousHistory, value);
   }
 
-  get isBootingUpFromMiningAccountPreviousHistory(): boolean {
-    return this._loadedData.miningAccountHadPreviousLife && !this._loadedData.miningAccountPreviousHistory;
+  get isBootingUpPreviousWalletHistory(): boolean {
+    return this._loadedData.walletAccountsHadPreviousLife && !this._loadedData.walletPreviousLifeRecovered;
   }
 
-  get miningAccountPreviousHistoryLoadPct(): number {
-    if (!this.isBootingUpFromMiningAccountPreviousHistory) return 100;
-    return Math.min(this._miningAccountPreviousHistoryLoadPct, 100);
-  }
-
-  get vaultingAccount(): KeyringPair {
-    this._throwErrorIfNotLoaded();
-    return (this._vaultingAccount ||= this.masterAccount.derive(`//vaulting`));
+  get walletPreviousHistoryLoadPct(): number {
+    if (!this.isBootingUpPreviousWalletHistory) return 100;
+    return Math.min(this._walletPreviousHistoryLoadPct, 100);
   }
 
   get bitcoinXprivSeed(): Uint8Array {
@@ -471,6 +492,17 @@ export class Config {
     this._tryFieldsToSave(dbFields.isVaultReadyToCreate, value);
   }
 
+  get isVaultActivated(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.isVaultActivated;
+  }
+
+  set isVaultActivated(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.isVaultActivated = value;
+    this._tryFieldsToSave(dbFields.isVaultActivated, value);
+  }
+
   get hasMiningSeats(): boolean {
     this._throwErrorIfNotLoaded();
     return this._loadedData.hasMiningSeats;
@@ -602,52 +634,88 @@ export class Config {
     stringifiedData[dbFields.miningAccountAddress] = JsonExt.stringify(miningAccountAddress, 2);
     fieldsToSave.add(dbFields.miningAccountAddress);
 
-    const miningAccountHadPreviousLife = await this._didWalletHavePreviousLife(miningAccountAddress);
-    loadedData.miningAccountHadPreviousLife = miningAccountHadPreviousLife;
-    stringifiedData[dbFields.miningAccountHadPreviousLife] = JsonExt.stringify(miningAccountHadPreviousLife, 2);
-    fieldsToSave.add(dbFields.miningAccountHadPreviousLife);
+    const walletHadPreviousLife = await this._didWalletHavePreviousLife({
+      miningAccountAddress,
+      vaultingAccountAddress: this.vaultingAccount.address,
+    });
+    loadedData.walletAccountsHadPreviousLife = walletHadPreviousLife;
+    stringifiedData[dbFields.walletAccountsHadPreviousLife] = JsonExt.stringify(walletHadPreviousLife, 2);
+    fieldsToSave.add(dbFields.walletAccountsHadPreviousLife);
 
-    if (miningAccountHadPreviousLife) {
+    if (walletHadPreviousLife) {
       loadedData.showWelcomeOverlay = false;
       stringifiedData[dbFields.showWelcomeOverlay] = JsonExt.stringify(false, 2);
       fieldsToSave.add(dbFields.showWelcomeOverlay);
     }
   }
 
-  private async _didWalletHavePreviousLife(miningAccountAddress: string) {
+  private async _didWalletHavePreviousLife(addresses: {
+    miningAccountAddress: string;
+    vaultingAccountAddress: string;
+  }) {
     const walletBalances = new WalletBalances(getMainchainClients());
-    await walletBalances.load({ miningAccountAddress });
-    await walletBalances.updateBalances();
+    await walletBalances.load(addresses);
 
-    const miningHasValue = WalletBalances.doesWalletHasValue(walletBalances.miningWallet);
-    const vaultingHasValue = WalletBalances.doesWalletHasValue(walletBalances.vaultingWallet);
+    const miningHasValue = WalletBalances.doesWalletHaveValue(walletBalances.miningWallet);
+    const vaultingHasValue = WalletBalances.doesWalletHaveValue(walletBalances.vaultingWallet);
     return miningHasValue || vaultingHasValue;
   }
 
-  private async _bootupFromMiningAccountPreviousHistory() {
-    console.log('Config: Booting up from mining account previous history...');
+  private async _bootupFromAccountPreviousHistory() {
+    console.log('Config: Booting up from account previous history...', {
+      miningAccountAddress: this.miningAccount.address,
+      vaultingAccountAddress: this.vaultingAccount.address,
+    });
     const walletBalances = new WalletBalances(getMainchainClients());
-    await walletBalances.load({ miningAccountAddress: this.miningAccount.address });
+    await walletBalances.load({
+      miningAccountAddress: this.miningAccount.address,
+      vaultingAccountAddress: this.vaultingAccount.address,
+    });
     walletBalances.onLoadHistoryProgress = (loadPct: number) => {
-      this._miningAccountPreviousHistoryLoadPct = loadPct;
+      this._walletPreviousHistoryLoadPct = loadPct;
     };
-    const historyItems = await walletBalances.loadHistory(this.miningAccount);
-    const frameIdsProcessed = historyItems?.map(x => x.frameId) || [];
-    const oldestFrameIdProcessed = frameIdsProcessed.length ? Math.min(...frameIdsProcessed) : 0;
-    if (historyItems.length === 1 && !historyItems[0].seats.length) {
-      // We only found bids for today, which means today was the start
-      this.oldestFrameIdToSync = oldestFrameIdProcessed;
-      this.hasMiningBids = true;
-    } else if (historyItems.length) {
-      // We found seat history, so we can set the oldestFrameIdToSync to the previous frame of the oldest we have
-      // It must be previous frame because we can't have a seat for today if we didn't bid yesterday
-      this.oldestFrameIdToSync = oldestFrameIdProcessed - 1;
-      this.hasMiningBids = true;
-      this.hasMiningSeats = true;
+
+    const { miningHistory, vaultingRules } = await walletBalances.loadHistory(
+      this.miningAccount,
+      this.bitcoinXprivSeed,
+      this.vaultRecoveryFn,
+    );
+    if (!miningHistory?.length && !vaultingRules) {
+      console.warn('Config: No previous history found');
+      this.walletAccountsHadPreviousLife = false;
+      return;
+    }
+    if (miningHistory) {
+      console.log('Config: Previous mining history found');
+      const frameIdsProcessed = miningHistory.map(x => x.frameId);
+      const oldestFrameIdProcessed = frameIdsProcessed.length ? Math.min(...frameIdsProcessed) : 0;
+      if (miningHistory.length === 1 && !miningHistory[0].seats.length) {
+        // We only found bids for today, which means today was the start
+        this.oldestFrameIdToSync = oldestFrameIdProcessed;
+        this.hasMiningBids = true;
+      } else if (miningHistory.length) {
+        // We found seat history, so we can set the oldestFrameIdToSync to the previous frame of the oldest we have
+        // It must be previous frame because we can't have a seat for today if we didn't bid yesterday
+        this.oldestFrameIdToSync = oldestFrameIdProcessed - 1;
+        this.hasMiningBids = true;
+        this.hasMiningSeats = true;
+      }
+      this.miningAccountPreviousHistory = miningHistory;
+      this.isPreparingMinerSetup = true;
+      this.hasReadMiningInstructions = miningHistory.length > 0;
     }
 
-    this._loadedData.miningAccountPreviousHistory = historyItems;
-    this._tryFieldsToSave(dbFields.miningAccountPreviousHistory, historyItems);
+    if (vaultingRules) {
+      console.log('Config: Previous vaulting rules found');
+      this.vaultingRules = vaultingRules;
+      this.isVaultReadyToCreate = true;
+      this.isPreparingVaultSetup = true;
+      this.hasReadVaultingInstructions = true;
+
+      this._tryFieldsToSave(dbFields.vaultingRules, vaultingRules);
+    }
+
+    this.walletPreviousLifeRecovered = true;
     await this.save();
   }
 
@@ -682,8 +750,9 @@ const dbFields = {
   oldestFrameIdToSync: 'oldestFrameIdToSync',
   latestFrameIdProcessed: 'latestFrameIdProcessed',
   miningAccountAddress: 'miningAccountAddress',
-  miningAccountHadPreviousLife: 'miningAccountHadPreviousLife',
   miningAccountPreviousHistory: 'miningAccountPreviousHistory',
+  walletAccountsHadPreviousLife: 'walletAccountsHadPreviousLife',
+  walletPreviousLifeRecovered: 'walletPreviousLifeRecovered',
 
   hasReadMiningInstructions: 'hasReadMiningInstructions',
   isPreparingMinerSetup: 'isPreparingMinerSetup',
@@ -696,6 +765,7 @@ const dbFields = {
   hasReadVaultingInstructions: 'hasReadVaultingInstructions',
   isPreparingVaultSetup: 'isPreparingVaultSetup',
   isVaultReadyToCreate: 'isVaultReadyToCreate',
+  isVaultActivated: 'isVaultActivated',
 
   hasMiningSeats: 'hasMiningSeats',
   hasMiningBids: 'hasMiningBids',
@@ -741,8 +811,9 @@ const defaults: IConfigDefaults = {
   oldestFrameIdToSync: () => 0,
   latestFrameIdProcessed: () => 0,
   miningAccountAddress: () => '',
-  miningAccountHadPreviousLife: () => false,
   miningAccountPreviousHistory: () => null,
+  walletAccountsHadPreviousLife: () => false,
+  walletPreviousLifeRecovered: () => false,
 
   hasReadMiningInstructions: () => false,
   isPreparingMinerSetup: () => false,
@@ -755,6 +826,7 @@ const defaults: IConfigDefaults = {
   hasReadVaultingInstructions: () => false,
   isPreparingVaultSetup: () => false,
   isVaultReadyToCreate: () => false,
+  isVaultActivated: () => false,
 
   hasMiningSeats: () => false,
   hasMiningBids: () => false,

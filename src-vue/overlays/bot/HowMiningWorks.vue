@@ -230,7 +230,7 @@
             <div class="flex flex-row justify-end border-t border-slate-300 mx-4 py-4 space-x-4 rounded-b-lg">
               <div class="flex flex-row space-x-4 justify-center items-center">
                 <button @click="cancelOverlay" class="border border-argon-button/50 hover:border-argon-button text-xl font-bold text-gray-500 px-7 py-1 rounded-md cursor-pointer">
-                  <span>Close Window</span>
+                  <span>Finished Reading</span>
                 </button>
               </div>
             </div>

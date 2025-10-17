@@ -79,7 +79,7 @@ export class MainchainClients {
         }
       },
       onSuccess: (path, result, ...args) => {
-        if (!path.startsWith('query') && !path.startsWith('rpc')) {
+        if (!path.includes('query.') && !path.includes('rpc.')) {
           return; // not api calls
         }
         apiError = undefined;

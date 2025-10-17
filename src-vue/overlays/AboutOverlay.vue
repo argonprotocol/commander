@@ -23,7 +23,7 @@
               cursor: draggable.isDragging ? 'grabbing' : 'default',
             }"
             class="absolute z-50 bg-white text-md border border-black/40 px-4 pt-6 pb-4 rounded-lg text-center shadow-xl w-80 overflow-scroll focus:outline-none"
-            >
+          >
             <img src="/app-icon.png" class="w-14 h-14 rounded-lg mx-auto" />
             <DialogTitle class="font-bold mt-4">Argon Commander</DialogTitle>
             <div class="flex flex-col gap-2 border-y border-black/10 py-4 mt-4">

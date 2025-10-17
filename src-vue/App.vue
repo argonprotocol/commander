@@ -15,14 +15,14 @@
     <template v-if="config.isLoaded">
       <template v-if="showMiningPanel">
         <SyncingOverlay v-if="bot.isSyncing" />
-        <BootingOverlay v-else-if="config.isBootingUpFromMiningAccountPreviousHistory" />
+        <BootingOverlay v-else-if="config.isBootingUpPreviousWalletHistory" />
       </template>
       <ServerConnectOverlay />
       <WalletOverlay />
       <ServerRemoveOverlay />
       <SecuritySettingsOverlay />
-      <BotOverlay />
-      <VaultOverlay />
+      <BotCreateOverlay />
+      <VaultCreateOverlay />
       <!-- <ProvisioningCompleteOverlay /> -->
       <AboutOverlay />
       <ComplianceOverlay />
@@ -44,8 +44,8 @@ import menuStart from './menuStart.ts';
 import MiningPanel from './panels/MiningPanel.vue';
 import VaultingPanel from './panels/VaultingPanel.vue';
 import ServerConnectOverlay from './overlays/ServerConnectOverlay.vue';
-import BotOverlay from './overlays/BotOverlay.vue';
-import VaultOverlay from './overlays/VaultOverlay.vue';
+import BotCreateOverlay from './overlays/BotCreateOverlay.vue';
+import VaultCreateOverlay from './overlays/VaultCreateOverlay.vue';
 import WalletOverlay from './overlays/WalletOverlay.vue';
 import ServerRemoveOverlay from './overlays/ServerRemoveOverlay.vue';
 import SecuritySettingsOverlay from './overlays/SecuritySettingsOverlay.vue';

@@ -402,27 +402,41 @@ describeIntegration('Cohort Integration Bidder tests', () => {
       async onBiddingStart(cohortStartingFrameId) {
         if (bobBidder) return;
         console.log(`Cohort ${cohortStartingFrameId} started bidding`);
-        bobBidder = new CohortBidder(bob, cohortStartingFrameId, await bob.getAvailableMinerAccounts(10), {
-          minBid: 10_000n,
-          maxBid: 5_000_000n,
-          maxBudget: 25_000_000n,
-          bidIncrement: 1_000_000n,
-          bidDelay: 0,
-        });
-        aliceBidder = new CohortBidder(alice, cohortStartingFrameId, await alice.getAvailableMinerAccounts(10), {
-          minBid: 10_000n,
-          maxBid: 4_000_000n,
-          maxBudget: 40_000_000n,
-          bidIncrement: 1_000_000n,
-          bidDelay: 0,
-        });
+        bobBidder = new CohortBidder(
+          bob,
+          cohortStartingFrameId,
+          await bob.getAvailableMinerAccounts(10),
+          {
+            minBid: 10_000n,
+            maxBid: 5_000_000n,
+            maxBudget: 25_000_000n,
+            bidIncrement: 1_000_000n,
+            bidDelay: 0,
+          },
+          undefined,
+          `Bob #${cohortStartingFrameId}`,
+        );
+        aliceBidder = new CohortBidder(
+          alice,
+          cohortStartingFrameId,
+          await alice.getAvailableMinerAccounts(10),
+          {
+            minBid: 10_000n,
+            maxBid: 4_000_000n,
+            maxBudget: 40_000_000n,
+            bidIncrement: 1_000_000n,
+            bidDelay: 0,
+          },
+          undefined,
+          `Alice #${cohortStartingFrameId}`,
+        );
         await bobBidder.start();
         await aliceBidder.start();
       },
       async onBiddingEnd(cohortStartingFrameId) {
         console.log(`Cohort ${cohortStartingFrameId} ended bidding`);
-        await aliceBidder.stop();
-        await bobBidder.stop();
+        await aliceBidder.stop(true);
+        await bobBidder.stop(true);
         waitForStopPromise();
       },
     });
@@ -469,8 +483,10 @@ describeIntegration('Cohort Integration Bidder tests', () => {
     };
     console.log({ cohortStartingFrameId, aliceStats, bobStats });
 
-    const bobActive = bobMiners.filter(x => x.seat !== undefined);
-    const aliceActive = aliceMiners.filter(x => x.seat !== undefined);
+    const bobActive = bobMiners.filter(x => x.seat !== undefined && x.seat.startingFrameId === cohortStartingFrameId);
+    const aliceActive = aliceMiners.filter(
+      x => x.seat !== undefined && x.seat.startingFrameId === cohortStartingFrameId,
+    );
 
     expect(bobActive.length).toBe(bobStats.seatsWon);
     expect(bobBidder!.bidsAttempted).toBeGreaterThanOrEqual(4);

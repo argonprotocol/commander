@@ -19,8 +19,8 @@
           class="data-[side=bottom]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=left]:animate-slideRightAndFade data-[side=top]:animate-slideDownAndFad z-50 data-[state=open]:transition-all">
           <div
             class="bg-argon-menu-bg flex shrink flex-col rounded p-1 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20">
-            <DropdownMenuItem
-              @click="() => openBotOverlay()"
+            <!-- <DropdownMenuItem
+              @click="() => openBotCreateOverlay()"
               :class="[installer.isRunning ? 'pointer-events-none opacity-30' : '']"
               class="pt-3 pb-3"
               :disabled="installer.isRunning">
@@ -30,17 +30,17 @@
                 <br />
                 parameters for a new bitcoin vault
               </p>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
-            <DropdownMenuItem @click="() => openVaultOverlay()" class="pt-2 pb-3">
+            </DropdownMenuItem> -->
+            <!-- <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" /> -->
+            <!-- <DropdownMenuItem @click="() => openVaultCreateOverlay()" class="pt-2 pb-3">
               <header>Configure Your Stabilization Vault</header>
               <p>
                 Set securitization ratios, profit sharing,
                 <br />
                 and other parameters for your vault.
               </p>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" />
+            </DropdownMenuItem> -->
+            <!-- <DropdownMenuSeparator divider class="my-1 h-[1px] w-full bg-slate-400/30" /> -->
             <DropdownMenuSub>
               <DropdownMenuSubTrigger class="relative py-2">
                 <ChevronLeftIcon class="absolute top-1/2 left-0.5 h-5 w-5 -translate-y-1/2 text-gray-400" />
@@ -196,13 +196,13 @@ function clickOutside(e: PointerDownOutsideEvent) {
   return false;
 }
 
-function openVaultOverlay() {
-  basicEmitter.emit('openVaultOverlay');
+function openVaultCreateOverlay() {
+  basicEmitter.emit('openVaultCreateOverlay');
   isOpen.value = false;
 }
 
-function openBotOverlay() {
-  basicEmitter.emit('openBotOverlay');
+function openBotCreateOverlay() {
+  basicEmitter.emit('openBotCreateOverlay');
   isOpen.value = false;
 }
 
