@@ -392,7 +392,7 @@ export class MyVault {
     return { active: activePoolFunds, maxAmountPerFrame };
   }
 
-  public async saveVaultRules(args: {
+  public async initialActivate(args: {
     argonKeyring: KeyringPair;
     rules: IVaultingRules;
     bip39Seed: Uint8Array;

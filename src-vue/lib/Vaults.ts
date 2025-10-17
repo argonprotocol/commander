@@ -1,4 +1,4 @@
-import { BitcoinLocks, type PalletVaultsVaultFrameRevenue, Vault } from '@argonprotocol/mainchain';
+import { BitcoinLocks, type PalletVaultsVaultFrameRevenue, u128, Vault } from '@argonprotocol/mainchain';
 import { bigNumberToBigInt, FrameIterator, JsonExt, MainchainClients, PriceIndex } from '@argonprotocol/commander-core';
 import { BaseDirectory, mkdir, readTextFile, rename, writeTextFile } from '@tauri-apps/plugin-fs';
 import { getMainchainClient, getMainchainClients } from '../stores/mainchain.ts';
@@ -68,6 +68,13 @@ export class Vaults {
       const frameId = frameRevenue.frameId.toNumber();
       const existing = frameChanges.find(x => frameId === x.frameId);
 
+      const oldFrameRevenue = frameRevenue as unknown as {
+        liquidityPoolTotalEarnings: u128;
+        liquidityPoolVaultEarnings: u128;
+        liquidityPoolExternalCapital: u128;
+        liquidityPoolVaultCapital: u128;
+      };
+
       const entry = {
         satoshisAdded: frameRevenue.bitcoinLocksTotalSatoshis.toBigInt() - frameRevenue.satoshisReleased.toBigInt(),
         frameId,
@@ -75,10 +82,12 @@ export class Vaults {
         bitcoinFeeRevenue: frameRevenue.bitcoinLockFeeRevenue.toBigInt(),
         bitcoinLocksCreated: frameRevenue.bitcoinLocksCreated.toNumber(),
         treasuryPool: {
-          totalEarnings: frameRevenue.treasuryTotalEarnings.toBigInt(),
-          vaultEarnings: frameRevenue.treasuryVaultEarnings.toBigInt(),
-          externalCapital: frameRevenue.treasuryExternalCapital.toBigInt(),
-          vaultCapital: frameRevenue.treasuryVaultCapital.toBigInt(),
+          totalEarnings: (oldFrameRevenue.liquidityPoolTotalEarnings ?? frameRevenue.treasuryTotalEarnings).toBigInt(),
+          vaultEarnings: (oldFrameRevenue.liquidityPoolVaultEarnings ?? frameRevenue.treasuryVaultEarnings).toBigInt(),
+          externalCapital: (
+            oldFrameRevenue.liquidityPoolExternalCapital ?? frameRevenue.treasuryExternalCapital
+          ).toBigInt(),
+          vaultCapital: (oldFrameRevenue.liquidityPoolVaultCapital ?? frameRevenue.treasuryVaultCapital).toBigInt(),
         },
         securitization: frameRevenue.securitization.toBigInt(),
         securitizationActivated: frameRevenue.securitizationActivated.toBigInt(),

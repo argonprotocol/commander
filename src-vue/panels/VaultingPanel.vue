@@ -1,7 +1,7 @@
 <!-- prettier-ignore -->
 <template>
   <template v-if="myVault.data.isReady">
-    <Dashboard v-if="myVault.data.createdVault" />
+    <Dashboard v-if="config.isVaultActivated" />
     <BlankSlate v-else-if="!config.isPreparingVaultSetup && !config.hasSavedVaultingRules" />
     <FinalSetupChecklist v-else-if="!config.isVaultReadyToCreate" />
     <VaultIsInstalling v-else-if="config.isVaultReadyToCreate" />

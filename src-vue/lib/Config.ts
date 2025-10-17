@@ -99,6 +99,7 @@ export class Config {
       hasReadVaultingInstructions: Config.getDefault(dbFields.hasReadVaultingInstructions) as boolean,
       isPreparingVaultSetup: Config.getDefault(dbFields.isPreparingVaultSetup) as boolean,
       isVaultReadyToCreate: Config.getDefault(dbFields.isVaultReadyToCreate) as boolean,
+      isVaultActivated: Config.getDefault(dbFields.isVaultActivated) as boolean,
 
       hasMiningSeats: Config.getDefault(dbFields.hasMiningSeats) as boolean,
       hasMiningBids: Config.getDefault(dbFields.hasMiningBids) as boolean,
@@ -471,6 +472,17 @@ export class Config {
     this._tryFieldsToSave(dbFields.isVaultReadyToCreate, value);
   }
 
+  get isVaultActivated(): boolean {
+    this._throwErrorIfNotLoaded();
+    return this._loadedData.isVaultActivated;
+  }
+
+  set isVaultActivated(value: boolean) {
+    this._throwErrorIfNotLoaded();
+    this._loadedData.isVaultActivated = value;
+    this._tryFieldsToSave(dbFields.isVaultActivated, value);
+  }
+
   get hasMiningSeats(): boolean {
     this._throwErrorIfNotLoaded();
     return this._loadedData.hasMiningSeats;
@@ -696,6 +708,7 @@ const dbFields = {
   hasReadVaultingInstructions: 'hasReadVaultingInstructions',
   isPreparingVaultSetup: 'isPreparingVaultSetup',
   isVaultReadyToCreate: 'isVaultReadyToCreate',
+  isVaultActivated: 'isVaultActivated',
 
   hasMiningSeats: 'hasMiningSeats',
   hasMiningBids: 'hasMiningBids',
@@ -755,6 +768,7 @@ const defaults: IConfigDefaults = {
   hasReadVaultingInstructions: () => false,
   isPreparingVaultSetup: () => false,
   isVaultReadyToCreate: () => false,
+  isVaultActivated: () => false,
 
   hasMiningSeats: () => false,
   hasMiningBids: () => false,

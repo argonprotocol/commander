@@ -11,19 +11,24 @@ export interface IRatchet {
   txFee: bigint;
   burned: bigint;
   blockHeight: number;
-  bitcoinBlockHeight: number;
+  oracleBitcoinBlockHeight: number;
+}
+
+export enum BitcoinLockStatus {
+  Initialized = 'Initialized', // Submitted to the Argon chain & vault's securitization has been locked
+  BitcoinReceivedWrongAmount = 'BitcoinReceivedWrongAmount', // Submitted to bitcoin network with wrong amount
+  BitcoinProcessing = 'BitcoinProcessing', // TODO:Submitted to bitcoin network but not yet confirmed
+  LockedAndMinting = 'LockedAndMinting', // LockedAndMinting (BitcoinLocksStore has pendingMints)
+  LockedAndMinted = 'LockedAndMinted', // LockedAndMinted
+  ReleaseSubmittedToArgon = 'ReleaseSubmittedToArgon', // ReleaseSubmittedToArgon
+  ReleaseApprovedByVault = 'ReleaseApprovedByVault', //
+  ReleaseSubmmittedToBitcoin = 'ReleaseSubmmittedToBitcoin', // TODO: ReleaseSubmmittedToBitcoin
+  ReleaseComplete = 'ReleaseComplete',
 }
 
 export interface IBitcoinLockRecord {
   utxoId: number;
-  status:
-    | 'initialized'
-    | 'verificationFailed'
-    | 'pendingMint'
-    | 'minted'
-    | 'releaseRequested'
-    | 'vaultCosigned'
-    | 'released';
+  status: BitcoinLockStatus;
   txid?: string;
   vout?: number;
   satoshis: bigint;
@@ -64,7 +69,7 @@ export class BitcoinLocksTable extends BaseTable {
       )`,
       toSqlParams([
         lock.utxoId,
-        lock.status || 'initialized',
+        lock.status || BitcoinLockStatus.Initialized,
         lock.satoshis,
         lock.liquidityPromised,
         lock.peggedPrice,
@@ -103,12 +108,12 @@ export class BitcoinLocksTable extends BaseTable {
     toDestinationAddress: string,
     networkFee: bigint,
   ): Promise<void> {
-    lock.status = 'releaseRequested';
+    lock.status = BitcoinLockStatus.ReleaseSubmittedToArgon;
     lock.requestedReleaseAtHeight = height;
     lock.releaseToDestinationAddress = toDestinationAddress;
     lock.releaseBitcoinNetworkFee = networkFee;
     await this.db.execute(
-      `UPDATE BitcoinLocks SET status = 'releaseRequested', requestedReleaseAtHeight=$2, releaseToDestinationAddress=$3, releaseBitcoinNetworkFee=$4 WHERE utxoId = $1`,
+      `UPDATE BitcoinLocks SET status = 'ReleaseSubmittedToArgon', requestedReleaseAtHeight=$2, releaseToDestinationAddress=$3, releaseBitcoinNetworkFee=$4 WHERE utxoId = $1`,
       toSqlParams([
         lock.utxoId,
         lock.requestedReleaseAtHeight,
@@ -151,7 +156,7 @@ export class BitcoinLocksTable extends BaseTable {
   }
 
   async recordCosigned(lock: IBitcoinLockRecord, signature: Uint8Array, atHeight: number): Promise<void> {
-    lock.status = 'vaultCosigned';
+    lock.status = BitcoinLockStatus.ReleaseApprovedByVault;
     lock.releaseCosignSignature = signature;
     lock.releaseCosignHeight = atHeight;
     await this.db.execute(

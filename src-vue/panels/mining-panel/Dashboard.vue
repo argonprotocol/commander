@@ -96,7 +96,7 @@
                 <HoverCardRoot :openDelay="200" :closeDelay="100">
                   <HoverCardTrigger as="div" class="border-t border-gray-600/20 border-dashed pt-2 relative hover:text-argon-600">
                     <ArrowTurnDownRightIcon class="w-5 h-5 text-slate-600/40 absolute top-1/2 -translate-y-1/2 -translate-x-[130%] left-0" />
-                    {{microgonToArgonNm(wallets.miningWallet.availableMicrogons).format('0,0.[00]')}} Needing Allocation
+                    {{microgonToArgonNm(wallets.miningWallet.availableMicrogons).format('0,0.[00]')}} Needs Allocation
                   </HoverCardTrigger>
                   <HoverCardContent align="start" :alignOffset="-20" side="right" :avoidCollisions="false" class="bg-white border border-gray-800/20 rounded-md shadow-2xl z-50 p-4 w-md text-slate-900/60">
                     <p class="break-words whitespace-normal">
@@ -146,7 +146,7 @@
                 <HoverCardRoot :openDelay="200" :closeDelay="100">
                   <HoverCardTrigger as="div" class="border-t border-gray-600/20 border-dashed pt-2 relative hover:text-argon-600">
                     <ArrowTurnDownRightIcon class="w-5 h-5 text-slate-600/40 absolute top-1/2 -translate-y-1/2 -translate-x-[130%] left-0" />
-                    {{microgonToArgonNm(wallets.miningWallet.availableMicronots).format('0,0.[00]')}} Needing Allocation
+                    {{microgonToArgonNm(wallets.miningWallet.availableMicronots).format('0,0.[00]')}} Needs Allocation
                   </HoverCardTrigger>
                   <HoverCardContent align="start" :alignOffset="-20" side="right" :avoidCollisions="false" class="bg-white border border-gray-800/20 rounded-md shadow-2xl z-50 p-4 w-md text-slate-900/60">
                     <p class="break-words whitespace-normal">
@@ -200,18 +200,20 @@
                         <th class="w-1/4 h-10 text-right">Value</th>
                       </tr>
                     </thead>
-                    <tr>
-                      <td class="pr-5 border-t border-gray-600/20 h-10">Argons</td>
-                      <td class="border-t border-gray-600/20 text-right">{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}</td>
-                      <td class="border-t border-gray-600/20 text-right">{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}</td>
-                      <td class="border-t border-gray-600/20 text-right">{{ currency.symbol }}{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}</td>
-                    </tr>
-                    <tr>
-                      <td class="pr-5 border-y border-gray-600/20 h-10">Argonots</td>
-                      <td class="border-y border-gray-600/20 text-right">{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}</td>
-                      <td class="border-y border-gray-600/20 text-right">{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}</td>
-                      <td class="border-y border-gray-600/20 text-right">{{ currency.symbol }}{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}</td>
-                    </tr>
+                    <tbody>
+                      <tr>
+                        <td class="pr-5 border-t border-gray-600/20 h-10">Argons</td>
+                        <td class="border-t border-gray-600/20 text-right">{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}</td>
+                        <td class="border-t border-gray-600/20 text-right">{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}</td>
+                        <td class="border-t border-gray-600/20 text-right">{{ currency.symbol }}{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}</td>
+                      </tr>
+                      <tr>
+                        <td class="pr-5 border-y border-gray-600/20 h-10">Argonots</td>
+                        <td class="border-y border-gray-600/20 text-right">{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}</td>
+                        <td class="border-y border-gray-600/20 text-right">{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}</td>
+                        <td class="border-y border-gray-600/20 text-right">{{ currency.symbol }}{{ microgonToMoneyNm(wallets.miningBidValue).format('0,0.00') }}</td>
+                      </tr>
+                    </tbody>
                   </table>
 
                   <p class="break-words whitespace-normal">

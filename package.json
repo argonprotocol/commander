@@ -46,6 +46,7 @@
     "@flaticon/flaticon-uicons": "^3.3.1",
     "@headlessui/vue": "^1.7.23",
     "@heroicons/vue": "^2.2.0",
+    "@iconify/vue": "^5.0.0",
     "@mempool/mempool.js": "^3.0.0",
     "@ngraveio/bc-ur": "^1.1.13",
     "@tailwindcss/vite": "^4.1.12",

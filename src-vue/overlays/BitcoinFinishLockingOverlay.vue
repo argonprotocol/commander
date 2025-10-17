@@ -1,4 +1,5 @@
-<template>
+  <!-- prettier-ignore -->
+  <template>
   <DialogRoot class="absolute inset-0 z-10" :open="true">
     <DialogPortal>
       <AnimatePresence>
@@ -33,65 +34,58 @@
               </div>
             </h2>
 
-            <p class="mb-4 text-gray-600 select-text">
-              You must send exactly
-              {{ numeral(currency.satsToBtc(props.lock.lockDetails.satoshis)).format('0,0.[00000000]') }} BTC ({{
-                props.lock.lockDetails.satoshis
-              }}
-              sats) to the cosign address below.
-            </p>
+            <div class="px-3">
+              <p class="mt-5 mb-4 text-gray-600 select-text">
+                You must send exactly
+                <strong>
+                  {{ numeral(currency.satsToBtc(props.lock.lockDetails.satoshis)).format('0,0.[00000000]') }} BTC
+                </strong>
+                (or
+                {{ numeral(props.lock.lockDetails.satoshis).format('0,0') }}
+                sats) to the cosign address listed below. Make sure you send the exact amount. Failure to do so could
+                result in a rejected transaction and possibly the loss of your bitcoin.
+              </p>
 
-            <div class="py-8 text-center">
-              <div class="mb-6">
-                <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                  <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                </div>
-                <h3 class="mb-2 text-lg font-semibold">Send your BTC to the Cosign Address</h3>
-                <p class="mb-4 text-gray-600 select-text">
-                  You must send {{ formattedSatoshis }}
-                  <select v-model="amountUnit" class="rounded border-l border-gray-300 bg-gray-100">
-                    <option value="BTC">BTC</option>
-                    <option value="sats">sats</option>
-                  </select>
-                  to:
-                </p>
-
-                <div class="mb-4 rounded-lg bg-gray-100 p-4">
-                  <CopyToClipboard :content="scriptPaytoAddress" class="relative mr-5 mb-3 cursor-pointer">
-                    <span class="opacity-80">
-                      {{ abbreviateAddress(scriptPaytoAddress, 10) }}
-                      <CopyIcon class="ml-1 inline-block h-4 w-4" />
-                    </span>
-                    <template #copied>
-                      <div class="pointer-events-none absolute top-0 left-0 h-full w-full">
-                        {{ abbreviateAddress(scriptPaytoAddress, 10) }}
-                        <CopyIcon class="ml-1 inline-block h-4 w-4" />
-                      </div>
-                    </template>
-                  </CopyToClipboard>
-                </div>
-
-                <div class="mb-4 flex flex-col items-center text-sm text-gray-500">
-                  <p>You can scan the QR code below in many Bitcoin wallets to fund your lock.</p>
-                  <BitcoinQrCode class="mb-3 h-44 w-44 text-center" :bip21="fundingBip21" v-if="fundingBip21" />
-                  <CopyToClipboard :content="fundingBip21" class="relative mr-5 mb-3 cursor-pointer">
-                    <span class="opacity-80">
-                      {{ abbreviateAddress(fundingBip21, 10) }}
-                      <CopyIcon class="ml-1 inline-block h-4 w-4" />
-                    </span>
-                    <template #copied>
-                      <div class="pointer-events-none absolute top-0 left-0 h-full w-full">
-                        {{ abbreviateAddress(fundingBip21, 10) }}
-                        <CopyIcon class="ml-1 inline-block h-4 w-4" />
-                      </div>
-                    </template>
-                  </CopyToClipboard>
-                </div>
+              <div class="mb-4 rounded-lg border border-gray-300 p-4 font-mono">
+                <CopyToClipboard :content="scriptPaytoAddress" class="relative cursor-pointer">
+                  <span class="opacity-80">
+                    {{ scriptPaytoAddress }}
+                    <CopyIcon class="absolute top-1/2 right-0 h-4 w-4 -translate-y-1/2" />
+                  </span>
+                  <template #copied>
+                    <div class="pointer-events-none absolute top-0 left-0 h-full w-full">
+                      {{ scriptPaytoAddress }}
+                      <CopyIcon class="absolute top-1/2 right-0 h-4 w-4 -translate-y-1/2" />
+                    </div>
+                  </template>
+                </CopyToClipboard>
               </div>
 
-              <button @click="$emit('close')" class="rounded-lg bg-gray-200 px-6 py-2 hover:bg-gray-300">Close</button>
+              <div class="mb-4 flex flex-col items-center text-gray-500">
+                <p>
+                  Alternatively, many Bitcoin wallets allow you scan the following QR code to pre-fill the transfer
+                  details.
+                </p>
+                <BitcoinQrCode class="mt-5 h-44 w-44 text-center" :bip21="fundingBip21" v-if="fundingBip21" />
+                <CopyToClipboard :content="fundingBip21" class="relative mb-4 cursor-pointer">
+                  <span class="opacity-80">
+                    {{ abbreviateAddress(fundingBip21, 10) }}
+                    <CopyIcon class="ml-1 inline-block h-4 w-4" />
+                  </span>
+                  <template #copied>
+                    <div class="pointer-events-none absolute top-0 left-0 h-full w-full">
+                      {{ abbreviateAddress(fundingBip21, 10) }}
+                      <CopyIcon class="ml-1 inline-block h-4 w-4" />
+                    </div>
+                  </template>
+                </CopyToClipboard>
+              </div>
+
+              <button
+                @click="$emit('close')"
+                class="mb-2 w-full cursor-pointer rounded-lg bg-gray-200 px-6 py-2 hover:bg-gray-300">
+                Close
+              </button>
             </div>
           </Motion>
         </DialogContent>
@@ -115,6 +109,7 @@ import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } f
 import Draggable from './helpers/Draggable';
 import BgOverlay from '../components/BgOverlay.vue';
 import { XMarkIcon } from '@heroicons/vue/24/outline';
+import { AnimatePresence, Motion } from 'motion-v';
 
 const emit = defineEmits<{
   close: [];
@@ -129,16 +124,8 @@ const currency = useCurrency();
 
 const draggable = Vue.reactive(new Draggable());
 
-const amountUnit = Vue.ref<'BTC' | 'sats'>('BTC');
 const fundingBip21 = Vue.ref('');
 const scriptPaytoAddress = Vue.ref('');
-
-const formattedSatoshis = Vue.computed(() => {
-  const sats = props.lock.lockDetails.satoshis;
-  return amountUnit.value === 'sats'
-    ? numeral(Number(sats)).format()
-    : numeral(currency.satsToBtc(sats)).format('0,0.[00000000]');
-});
 
 function closeOverlay() {
   emit('close');
@@ -155,7 +142,7 @@ Vue.onMounted(async () => {
   const btcAmount = numeral(Number(props.lock.satoshis) / Number(SATS_PER_BTC)).format('0,0.[00000000]');
   const label = encodeURIComponent(`Argon Vault #${props.lock.vaultId} (utxo id=${props.lock.utxoId})`);
   const message = encodeURIComponent(
-    `Personal BTC funding for Vault #${props.lock.vaultId}, Utxo Id #${props.lock.utxoId}`,
+    `Personal BTC Funding for Vault #${props.lock.vaultId}, Utxo Id #${props.lock.utxoId}`,
   );
   fundingBip21.value = `bitcoin:${scriptPaytoAddress.value}?amount=${btcAmount}&label=${label}&message=${message}`;
 });

@@ -141,6 +141,7 @@ export const ConfigSchema = z.object({
   hasReadVaultingInstructions: z.boolean(),
   isPreparingVaultSetup: z.boolean(),
   isVaultReadyToCreate: z.boolean(),
+  isVaultActivated: z.boolean(),
 
   hasMiningSeats: z.boolean(), // hasMiningSeats
   hasMiningBids: z.boolean(), // hasMiningBids
@@ -205,6 +206,7 @@ export interface IConfigDefaults {
   hasReadVaultingInstructions: () => IConfig['hasReadVaultingInstructions'];
   isPreparingVaultSetup: () => IConfig['isPreparingVaultSetup'];
   isVaultReadyToCreate: () => IConfig['isVaultReadyToCreate'];
+  isVaultActivated: () => IConfig['isVaultActivated'];
 
   hasMiningSeats: () => IConfig['hasMiningSeats'];
   hasMiningBids: () => IConfig['hasMiningBids'];
