@@ -127,7 +127,8 @@ export const ConfigSchema = z.object({
   latestFrameIdProcessed: z.number(),
 
   miningAccountAddress: z.string(),
-  miningAccountHadPreviousLife: z.boolean(),
+  walletAccountsHadPreviousLife: z.boolean(),
+  walletPreviousLifeRecovered: z.boolean(),
   miningAccountPreviousHistory: z.array(MiningAccountPreviousHistoryRecordSchema).nullable(),
 
   hasReadMiningInstructions: z.boolean(),
@@ -192,7 +193,8 @@ export interface IConfigDefaults {
   oldestFrameIdToSync: () => IConfig['oldestFrameIdToSync'];
   latestFrameIdProcessed: () => IConfig['latestFrameIdProcessed'];
   miningAccountAddress: () => IConfig['miningAccountAddress'];
-  miningAccountHadPreviousLife: () => IConfig['miningAccountHadPreviousLife'];
+  walletAccountsHadPreviousLife: () => IConfig['walletAccountsHadPreviousLife'];
+  walletPreviousLifeRecovered: () => IConfig['walletPreviousLifeRecovered'];
   miningAccountPreviousHistory: () => IConfig['miningAccountPreviousHistory'];
 
   hasReadMiningInstructions: () => IConfig['hasReadMiningInstructions'];

@@ -50,9 +50,9 @@
             </button>
           </div>
           <div v-else class="text-slate-900 font-md mb-3">
-            <p>This wallet connected to this app seems to have been previously used. We're looking through the blockchain to see if we can find any mining seats owned by you.</p>
+            <p>This wallet connected to this app seems to have been previously used. We're looking through the blockchain to see if we can find any mining seats or vaults owned by you.</p>
           </div>
-          <ProgressBar :progress="config.miningAccountPreviousHistoryLoadPct" class="mt-3" />
+          <ProgressBar :progress="config.walletPreviousHistoryLoadPct" class="mt-3" />
         </div>
       </TransitionChild>
     </div>

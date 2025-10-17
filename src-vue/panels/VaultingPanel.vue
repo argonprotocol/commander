@@ -20,7 +20,12 @@ import { useConfig } from '../stores/config';
 import VaultIsInstalling from './vaulting-panel/VaultIsInstalling.vue';
 import { useMyVault } from '../stores/vaults.ts';
 import Dashboard from './vaulting-panel/Dashboard.vue';
+import { onMounted } from 'vue';
 
 const myVault = useMyVault();
 const config = useConfig();
+
+onMounted(async () => {
+  await myVault.load();
+});
 </script>

@@ -1,6 +1,5 @@
-import { invoke } from '@tauri-apps/api/core';
 import { Db } from './Db';
-import { remove, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { BaseDirectory, remove } from '@tauri-apps/plugin-fs';
 import { AdvancedRestartOption } from '../interfaces/IAdvancedRestartOption';
 import { SSH } from './SSH';
 import { Server } from './Server';
@@ -8,6 +7,7 @@ import { Config } from './Config.ts';
 import { toRaw } from 'vue';
 import Installer from './Installer.ts';
 import { LocalMachine } from './LocalMachine.ts';
+import { invokeWithTimeout } from './tauriApi.ts';
 
 export default class Restarter {
   private dbPromise: Promise<Db>;
@@ -71,7 +71,7 @@ export default class Restarter {
 
     if (toRestart.has(AdvancedRestartOption.RecreateLocalDatabase)) {
       installer.stop();
-      await this.recreateLocalDatabase();
+      await this.recreateLocalDatabase(toRestart.has(AdvancedRestartOption.ReloadAppUi));
     }
 
     if (toRestart.has(AdvancedRestartOption.ReloadAppUi)) {
@@ -79,7 +79,7 @@ export default class Restarter {
     }
   }
 
-  public async recreateLocalDatabase() {
+  public async recreateLocalDatabase(restartAfter: boolean = true) {
     const db = await this.dbPromise;
     const config = this._config;
     const serverDetails = toRaw(config.serverDetails);
@@ -87,15 +87,27 @@ export default class Restarter {
 
     const dbPath = Db.relativePath;
     await remove(dbPath, { baseDir: BaseDirectory.AppConfig });
-    await invoke('run_db_migrations');
-    await db.reconnect();
+    if (restartAfter) {
+      db.pauseWrites();
+    }
+    await invokeWithTimeout('run_db_migrations', {}, 30e3);
+    // stop accepting writes until we reboot
     localStorage.setItem(
       'ConfigRestore',
       JSON.stringify({
         serverDetails: JSON.stringify(serverDetails),
         hasReadMiningInstructions: config.hasReadMiningInstructions,
+        hasReadVaultingInstructions: config.hasReadVaultingInstructions,
+        oldestFrameIdToSync: config.oldestFrameIdToSync,
+        defaultCurrencyKey: config.defaultCurrencyKey,
+        requiresPassword: config.requiresPassword,
       }),
     );
+    if (restartAfter) {
+      await this.restart();
+    } else {
+      await db.reconnect();
+    }
   }
 
   public async restart() {

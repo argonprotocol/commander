@@ -37,6 +37,10 @@ export interface IMempoolFundingStatus {
 }
 
 export default class BitcoinLocksStore {
+  public get bitcoinNetwork() {
+    return this.data.bitcoinNetwork;
+  }
+
   data: {
     locksById: { [utxoId: number]: IBitcoinLockRecord };
     oracleBitcoinBlockHeight: number;
@@ -50,10 +54,6 @@ export default class BitcoinLocksStore {
 
   private get oracleBitcoinBlockHeight() {
     return this.data.oracleBitcoinBlockHeight;
-  }
-
-  private get bitcoinNetwork() {
-    return this.data.bitcoinNetwork;
   }
 
   public get totalMintPending() {
@@ -290,7 +290,7 @@ export default class BitcoinLocksStore {
     return { hdPath, tx, ownerBitcoinPubkey, satoshis, securityFee };
   }
 
-  private async saveUtxo(args: {
+  public async saveUtxo(args: {
     vaultId: number;
     hdPath: string;
     securityFee: bigint;
@@ -328,6 +328,12 @@ export default class BitcoinLocksStore {
     });
     this.locksById[record.utxoId] = record;
     return record;
+  }
+
+  public async getFromApi(utxoId: number): Promise<IBitcoinLock> {
+    const result = await this.#bitcoinLocksApi.getBitcoinLock(utxoId);
+    if (!result) throw new Error('Unable to get bitcoin lock');
+    return result;
   }
 
   public async saveBitcoinLock(args: {
