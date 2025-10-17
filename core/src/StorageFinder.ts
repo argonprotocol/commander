@@ -1,6 +1,5 @@
 import { type ArgonClient, getTickFromHeader } from '@argonprotocol/mainchain';
 import { MainchainClients } from './MainchainClients.js';
-import { FrameIterator } from './FrameIterator.js';
 import { MiningFrames } from './MiningFrames.js';
 
 export class StorageFinder {
@@ -47,43 +46,30 @@ export class StorageFinder {
     oldestBlockNumber?: number,
   ): Promise<IBlockMeta & { blocksChecked: number[] }> {
     const name = 'StorageFinder';
-    const oldestFrame = new FrameIterator(clients, name);
     const client = await clients.archiveClientPromise;
-    let blockWithoutStorage: IBlockMeta | undefined;
-    const startBlock = await client.rpc.chain.getHeader();
+    const currentBlock = await client.rpc.chain.getHeader();
     const valueExistsAtStart = await this.checkIfStorageExists({
       client,
       storageKey,
-      blockHash: startBlock.hash,
-      blockNumber: startBlock.number.toNumber(),
+      blockHash: currentBlock.hash,
+      blockNumber: currentBlock.number.toNumber(),
     });
     if (!valueExistsAtStart) {
       throw new Error('Storage not found');
     }
-    let maxBlockNumberForExistence = startBlock.number.toNumber();
-    await oldestFrame.forEachFrame(async (_frameId, firstBlockMeta, _api, abortController) => {
-      console.log(`[${name}] Checking frame starting at block ${firstBlockMeta.blockNumber}`);
-      const existsAtHeight = await this.checkIfStorageExists({ client, ...firstBlockMeta, storageKey });
-
-      if (!existsAtHeight) {
-        abortController.abort();
-        blockWithoutStorage = {
-          blockHash: firstBlockMeta.blockHash,
-          blockNumber: firstBlockMeta.blockNumber,
-          tick: firstBlockMeta.blockTick,
-        };
-      } else if (oldestBlockNumber && firstBlockMeta.blockNumber < oldestBlockNumber) {
-        console.log(`[${name}] Reached user-specified oldest block ${oldestBlockNumber}`);
-        abortController.abort();
-        return;
-      }
-      maxBlockNumberForExistence = Math.min(firstBlockMeta.blockNumber, maxBlockNumberForExistence);
+    let maxBlockNumberForExistence = currentBlock.number.toNumber();
+    oldestBlockNumber ??= Math.max(0, maxBlockNumberForExistence - MiningFrames.ticksPerFrame * 365); // default to one year
+    // make sure it doesn't exist at the oldest block
+    const existsAtOldest = await this.checkIfStorageExists({
+      client,
+      storageKey,
+      blockNumber: oldestBlockNumber,
     });
-    if (!blockWithoutStorage) {
-      throw new Error('Storage not found after recursing frames');
+    if (existsAtOldest) {
+      throw new Error('Storage exists at the oldest block, cannot perform binary search');
     }
     // binary search to the first block where the storage exists
-    let lowBlockNumberForExistence = blockWithoutStorage.blockNumber;
+    let lowBlockNumberForExistence = oldestBlockNumber;
     const blocksChecked: number[] = [];
     while (lowBlockNumberForExistence < maxBlockNumberForExistence) {
       const mid = Math.floor((lowBlockNumberForExistence + maxBlockNumberForExistence) / 2);

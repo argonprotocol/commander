@@ -136,23 +136,27 @@ export class MyVaultRecovery {
     console.log('Recovered vault xpub path:', masterXpubPath);
 
     const vaultCreateKey = client.query.vaults.vaultsById.key(vaultId);
-    const vaultStartBlock = await StorageFinder.binarySearchForStorageAddition(mainchainClients, vaultCreateKey);
-    console.log('Look for vault create at block:', vaultStartBlock.blockNumber);
-    const vaultCreateBlockNumber = vaultStartBlock.blockNumber;
-    const vaultCreateFee =
-      (await TransactionFees.findFromEvents({
-        client,
-        accountAddress: vaultingAddress,
-        blockHash: vaultStartBlock.blockHash,
-        isMatchingEvent: ev => {
-          if (client.events.vaults.VaultCreated.is(ev)) {
-            const { vaultId: vaultIdRaw } = ev.data;
-            return vaultIdRaw.toNumber() === vaultId;
-          }
-          return false;
-        },
-      })) ?? 0n;
-
+    const vaultStartBlock = await StorageFinder.binarySearchForStorageAddition(mainchainClients, vaultCreateKey).catch(
+      () => undefined,
+    );
+    console.log('Look for vault create at block:', vaultStartBlock?.blockNumber ?? 'not found');
+    const vaultCreateBlockNumber = vaultStartBlock?.blockNumber ?? 0;
+    let vaultCreateFee = 0n;
+    if (vaultStartBlock) {
+      vaultCreateFee =
+        (await TransactionFees.findFromEvents({
+          client,
+          accountAddress: vaultingAddress,
+          blockHash: vaultStartBlock.blockHash,
+          isMatchingEvent: ev => {
+            if (client.events.vaults.VaultCreated.is(ev)) {
+              const { vaultId: vaultIdRaw } = ev.data;
+              return vaultIdRaw.toNumber() === vaultId;
+            }
+            return false;
+          },
+        })) ?? 0n;
+    }
     return {
       masterXpubPath,
       createBlockNumber: vaultCreateBlockNumber,
@@ -199,20 +203,23 @@ export class MyVaultRecovery {
           mainchainClients,
           bitcoinTxKey,
           vaultSetupBlockNumber,
-        );
-        const bitcoinBlockNumber = bitcoinTxAddition.blockNumber;
-        const bitcoinTxFee =
-          (await TransactionFees.findFromEvents({
-            client,
-            blockHash: bitcoinTxAddition.blockHash,
-            isMatchingEvent: ev => {
-              if (client.events.bitcoinLocks.BitcoinLockCreated.is(ev)) {
-                return ev.data.utxoId.toNumber() === utxo.utxoId;
-              }
-              return false;
-            },
-            accountAddress: vaultingAddress,
-          })) ?? 0n;
+        ).catch(() => undefined);
+        const bitcoinBlockNumber = bitcoinTxAddition?.blockNumber ?? 0;
+        let bitcoinTxFee = 0n;
+        if (bitcoinTxAddition) {
+          bitcoinTxFee =
+            (await TransactionFees.findFromEvents({
+              client,
+              blockHash: bitcoinTxAddition.blockHash,
+              isMatchingEvent: ev => {
+                if (client.events.bitcoinLocks.BitcoinLockCreated.is(ev)) {
+                  return ev.data.utxoId.toNumber() === utxo.utxoId;
+                }
+                return false;
+              },
+              accountAddress: vaultingAddress,
+            })) ?? 0n;
+        }
 
         const record = await bitcoinLocksStore.saveUtxo({
           vaultId,
