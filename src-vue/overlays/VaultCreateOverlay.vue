@@ -27,7 +27,7 @@
 
             <div v-if="isLoaded" class="flex flex-col grow relative w-full">
               <DialogDescription class="text-gray-600 font-light py-6 pl-10 pr-[6%]">
-                Vaults are special holding mechanisms that stabilize the Argon stablecoin and provide liquidity to the broader network. 
+                Vaults are special holding mechanisms that stabilize the Argon stablecoin and provide liquidity to the broader network.
                 You can earn revenue by creating and managing these vaults. Use the screen below to configure your vault.
                 <PopoverRoot :open="isSuggestingTour">
                   <PopoverTrigger asChild>
@@ -59,7 +59,7 @@
                     </header>
                     <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
                       <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
-                        You are <tooltip content="We'll show you how to create it in the next step">creating a new vault</tooltip> with a 
+                        You are <tooltip content="We'll show you how to create it in the next step">creating a new vault</tooltip> with a
                         <tooltip content="This includes everything, even transaction fees">total capital need</tooltip> of
                       </div>
                       <div class="flex flex-row items-center justify-center grow relative h-26 font-bold font-mono text-argon-600">
@@ -74,7 +74,7 @@
                         <tooltip content="The amount shown is what you're are committing">This capital</tooltip> will allow you to
                         <tooltip content="The total amount of bitcoin your vault can lock">secure {{ numeral(btcSpaceAvailable).format('0,0.[00000000]') }} in BTC</tooltip><br/>
                         with a
-                        <tooltip content="This is funded by revenue from mining auctions">treasury pool</tooltip> investment <tooltip content="You are not required to participate in the treasury">options</tooltip> of 
+                        <tooltip content="This is funded by revenue from mining auctions">treasury pool</tooltip> investment <tooltip content="You are not required to participate in the treasury">options</tooltip> of
                         <tooltip content="This can be invested by yourself or third parties">{{ microgonToArgonNm(poolSpace).format('0,0.[00]') }} argons</tooltip>.
                       </div>
                     </div>
@@ -97,7 +97,7 @@
                     <div class="grow flex flex-col mt-3 border-t border-slate-500/30 border-dashed w-10/12 mx-auto">
                       <div class="text-gray-500/60 border-b border-slate-500/30 border-dashed py-3 w-full">
                         Your <tooltip content="This is not a guarantee, simply an estimate">vault is expected</tooltip>
-                        to earn {{ currency.symbol }}{{ microgonToMoneyNm(averageEpochEarnings).format('0,0.00') }} 
+                        to earn {{ currency.symbol }}{{ microgonToMoneyNm(averageEpochEarnings).format('0,0.00') }}
                         <tooltip content="An epoch is equivalent to ten days">per epoch</tooltip> at an <tooltip content="Annual Percent Yield">APY</tooltip> of
                       </div>
                       <div class="flex flex-row items-center justify-center grow relative h-26 text-6xl font-bold font-mono text-argon-600">
@@ -123,7 +123,7 @@
                 </div>
               </section>
 
-              <VaultSettings ref="configBoxesElement" @toggleEditBoxOverlay="(x: boolean) => hasEditBoxOverlay = x" />
+              <VaultSettings ref="configBoxesElement" @toggleEditBoxOverlay="(x: boolean) => hasEditBoxOverlay = x" :includeProjections="true" />
             </div>
             <div v-else class="grow flex items-center justify-center">Loading...</div>
 

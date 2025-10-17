@@ -23,7 +23,7 @@
           <div v-if="isSuggestingTour" class="absolute inset-0 bg-black/20 z-20 rounded-md"></div>
           <div class="flex flex-col h-full w-full">
             <h2
-              @mousedown="draggable.onMouseDown($event)" 
+              @mousedown="draggable.onMouseDown($event)"
               class="relative text-3xl font-bold text-left border-b border-slate-300 pt-5 pb-4 pl-3 mx-4 text-[#672D73]"
               style="box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1)"
             >
@@ -126,7 +126,7 @@
                 </div>
               </section>
 
-              <BotSettings ref="configBoxesElement" @toggleEditBoxOverlay="(x: boolean) => hasEditBoxOverlay = x" />
+              <BotSettings ref="configBoxesElement" @toggleEditBoxOverlay="(x: boolean) => hasEditBoxOverlay = x" :includeProjections="true" />
             </div>
             <div v-else class="grow flex items-center justify-center">Loading...</div>
 

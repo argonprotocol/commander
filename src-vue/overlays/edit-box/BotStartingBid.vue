@@ -29,7 +29,7 @@
     <div class="mt-3 font-bold opacity-60 mb-0.5">
       Value
     </div>
-    <InputArgon v-model="config.biddingRules.startingBidCustom" :min="0n" class="min-w-60" />
+    <InputArgon data-testid="startingBidCustomAmount" v-model="config.biddingRules.startingBidCustom" :min="0n" class="min-w-60" />
   </template>
   <div v-else class="mt-3">
     <div class="mt-3 font-bold opacity-60 mb-0.5">

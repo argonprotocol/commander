@@ -137,7 +137,10 @@ export class MyVaultRecovery {
 
     const vaultCreateKey = client.query.vaults.vaultsById.key(vaultId);
     const vaultStartBlock = await StorageFinder.binarySearchForStorageAddition(mainchainClients, vaultCreateKey).catch(
-      () => undefined,
+      err => {
+        console.warn('Unable to find vault creation block:', err);
+        return undefined;
+      },
     );
     console.log('Look for vault create at block:', vaultStartBlock?.blockNumber ?? 'not found');
     const vaultCreateBlockNumber = vaultStartBlock?.blockNumber ?? 0;
@@ -203,7 +206,10 @@ export class MyVaultRecovery {
           mainchainClients,
           bitcoinTxKey,
           vaultSetupBlockNumber,
-        ).catch(() => undefined);
+        ).catch(err => {
+          console.warn('Unable to find bitcoin lock creation block:', err);
+          return undefined;
+        });
         const bitcoinBlockNumber = bitcoinTxAddition?.blockNumber ?? 0;
         let bitcoinTxFee = 0n;
         if (bitcoinTxAddition) {
