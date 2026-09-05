@@ -51,12 +51,16 @@ export function getConfig(): Vue.Reactive<Config> {
         const walletsForArgon = getWalletsForArgon();
         const miningFrames = getMiningFrames();
         const walletRecover = new WalletRecovery(myVault, walletKeys, walletsForArgon, clients, miningFrames);
-        await recoverOwnServer().catch(error => {
-          console.warn('Unable to recover the imported account server endpoint', error);
-        });
-        await recoverUpstreamHost().catch(error => {
-          console.warn('Unable to recover the imported account upstream endpoint', error);
-        });
+        if (walletKeys.canAccessServer) {
+          await recoverOwnServer().catch(error => {
+            console.warn('Unable to recover the imported account server endpoint', error);
+          });
+        }
+        if (walletKeys.canSign) {
+          await recoverUpstreamHost().catch(error => {
+            console.warn('Unable to recover the imported account upstream endpoint', error);
+          });
+        }
 
         return await walletRecover.findHistory(onProgress);
       }),
@@ -83,7 +87,7 @@ export function getConfig(): Vue.Reactive<Config> {
 
   // Config survives Vite HMR, but SSH's static state may not. Reconnect them whenever
   // a consumer retrieves the retained singleton.
-  SSH.setConfig(config as Config);
+  SSH.setConfig(config as Config, getWalletKeys());
 
   return config;
 }

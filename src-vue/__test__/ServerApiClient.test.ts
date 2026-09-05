@@ -64,7 +64,7 @@ describe('ServerApiClient', () => {
       getAdminOperatorSessionId,
       invalidateAdminOperatorSessionId,
     } satisfies Pick<ServerAuthClient, 'getAdminOperatorSessionId' | 'invalidateAdminOperatorSessionId'>;
-    const client = new ServerApiClient(() => serverDetails, serverAuthClient);
+    const client = new ServerApiClient(() => serverDetails, serverAuthClient, { canAccessServer: true });
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -88,5 +88,29 @@ describe('ServerApiClient', () => {
       'stale-session',
       'fresh-session',
     ]);
+  });
+
+  it('does not contact a configured server when server access is unavailable', async () => {
+    const fetchMock = vi.fn();
+    const getAdminOperatorSessionId = vi.fn();
+    const client = new ServerApiClient(
+      () => ({
+        type: ServerType.CustomServer,
+        ipAddress: '203.0.113.10',
+        gatewayPort: 443,
+      }),
+      {
+        getAdminOperatorSessionId,
+        invalidateAdminOperatorSessionId: vi.fn(),
+      },
+      { canAccessServer: false },
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(client.getAdminOperatorSessionId()).rejects.toThrow('Server access is unavailable');
+    await expect(client.isGatewayReady()).resolves.toBe(false);
+    await expect(client.getInvites()).rejects.toThrow('Server access is unavailable');
+    expect(getAdminOperatorSessionId).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

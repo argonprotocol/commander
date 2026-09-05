@@ -31,10 +31,10 @@ beforeEach(() => {
   mocks.config.save.mockClear();
 });
 
-it('activates E2E extensions after access is available', async () => {
+it('activates E2E operations after access is available without bypassing the Treasury upgrade', async () => {
   await initializeE2EState();
 
-  expect(mocks.config.hasExtensionTreasury).toBe(true);
+  expect(mocks.config.hasExtensionTreasury).toBe(false);
   expect(mocks.config.hasExtensionOperations).toBe(true);
   expect(mocks.config.save).toHaveBeenCalledOnce();
 });
@@ -49,14 +49,14 @@ it('keeps E2E extensions disabled while the first-run welcome overlay is shown',
   expect(mocks.config.save).not.toHaveBeenCalled();
 });
 
-it('activates E2E extensions after account import recreates the config database', async () => {
+it('activates E2E operations after account import recreates the config database', async () => {
   mocks.config.showWelcomeOverlay = true;
   mocks.config.bootstrapDetails = { type: BootstrapType.Public, routerHost: '127.0.0.1' };
 
   await initializeE2EState();
 
   expect(mocks.config.showWelcomeOverlay).toBe(false);
-  expect(mocks.config.hasExtensionTreasury).toBe(true);
+  expect(mocks.config.hasExtensionTreasury).toBe(false);
   expect(mocks.config.hasExtensionOperations).toBe(true);
   expect(mocks.config.save).toHaveBeenCalledOnce();
 });

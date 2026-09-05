@@ -1,12 +1,13 @@
 <!-- prettier-ignore -->
 <template>
-  <div ref="rootRef">
+  <div v-if="serverApiClient.canAccessServer || config.isServerAdded" ref="rootRef">
     <NavigationMenuItem class="pointer-events-auto">
       <NavigationMenuTrigger
         Trigger
         class="flex h-[30px] cursor-pointer flex-row items-center justify-center overflow-hidden rounded-md border border-slate-400/50 font-mono text-[16.4px] font-semibold text-argon-600/70 hover:border-slate-400/50 hover:bg-slate-400/10 focus:outline-none data-[state=open]:border-slate-400/60 data-[state=open]:bg-slate-400/10"
       >
-        <div v-if="!config.isServerAdded" class="relative flex flex-row items-center pl-2.5 pr-3 pt-px whitespace-nowrap" style="word-spacing: -6px">
+        <div v-if="!serverApiClient.canAccessServer" data-server-unavailable class="relative -top-px px-3 pt-1">readonly</div>
+        <div v-else-if="!config.isServerAdded" class="relative flex flex-row items-center pl-2.5 pr-3 pt-px whitespace-nowrap" style="word-spacing: -6px">
           <PluginSmallIcon class="h-3.5 relative mr-1.5" />
           <span class="TopBarOptionalLabel">Add </span>Node
         </div>
@@ -45,7 +46,11 @@
         class="data-[motion=from-start]:animate-enterFromLeft data-[motion=from-end]:animate-enterFromRight data-[motion=to-start]:animate-exitToLeft data-[motion=to-end]:animate-exitToRight absolute top-0 left-0 w-full sm:w-auto"
       >
           <div class="w-fit bg-argon-menu-bg flex shrink flex-col rounded p-1 text-sm/6 font-semibold text-gray-900 shadow-lg ring-1 ring-gray-900/20">
-            <div v-if="!config.isServerAdded" class="w-80">
+            <div v-if="!serverApiClient.canAccessServer" class="w-80 px-5 py-4 font-light">
+              Server management is unavailable in readonly mode.
+            </div>
+
+            <div v-else-if="!config.isServerAdded" class="w-80">
               <div class="flex flex-col px-3 font-light py-2 text-md">
                 <div class="flex flex-row text-argon-600/50 items-center justify-center my-5">
                   <CloudServerOutlineIcon class="h-10 inline mr-1 " aria-hidden="true" />
@@ -139,6 +144,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { getConfig } from '../stores/config.ts';
+import { getServerApiClient } from '../stores/server.ts';
 import InstallProgress from '../components/InstallProgress.vue';
 
 dayjs.extend(relativeTime);
@@ -146,6 +152,7 @@ dayjs.extend(utc);
 
 const config = getConfig();
 const myMiningSeats = getMyMiningSeats();
+const serverApiClient = getServerApiClient();
 
 const rootRef = Vue.ref<HTMLElement>();
 

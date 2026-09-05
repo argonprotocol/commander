@@ -63,7 +63,7 @@ import {
   Vault,
 } from '@argonprotocol/apps-core';
 import { TransactionTracker, TxAttemptState } from './TransactionTracker.ts';
-import { deriveBitcoinLockHdKey, WalletKeys } from './WalletKeys.ts';
+import { deriveBitcoinLockHdKey, isWalletSigningUnavailableError, WalletKeys } from './WalletKeys.ts';
 import { getTransactionFailureMessage, TransactionInfo } from './TransactionInfo.ts';
 import { ExtrinsicType, TransactionStatus } from './db/TransactionsTable.ts';
 import { MyVault } from './MyVault.ts';
@@ -269,6 +269,13 @@ export default class BitcoinLocks {
       findConfirmedRecoveredRelease: async ({ lock, fundingRecord }) => {
         let txid = fundingRecord.releaseTxid;
         if (!txid) {
+          const outspend = await this.#mempool.getOutspendStatus(
+            fundingRecord.txid,
+            fundingRecord.vout,
+            this.oracleBitcoinBlockHeight,
+          );
+          if (outspend?.isConfirmed) return outspend;
+          if (!walletKeys.canSign) return;
           if (!this.utxoTracking.canSubmitFundingRecordReleaseToBitcoin(fundingRecord)) return;
           txid = (await this.ownerCosignAndGenerateTxBytes(lock, fundingRecord)).txid;
         }
@@ -1679,6 +1686,7 @@ export default class BitcoinLocks {
       const tip = await this.#mempool.getTipHeight();
       await this.utxoTracking.setReleaseSeenOnBitcoin(fundingRecord, releasedTxid, tip);
     } catch (error) {
+      if (isWalletSigningUnavailableError(error)) throw error;
       await this.utxoTracking.setStatusError(fundingRecord, String(error));
       throw error;
     }
@@ -2611,6 +2619,7 @@ export default class BitcoinLocks {
     if (lock.vaultId !== vault?.vaultId) return;
     if (!latestFundingRecord.releaseToDestinationAddress || latestFundingRecord.releaseBitcoinNetworkFee == null)
       return;
+    if (!this.walletKeys.canSign) return;
 
     const result = await vault.cosignMyLock(lock);
     if (!result?.txInfo) return;
@@ -2757,6 +2766,7 @@ export default class BitcoinLocks {
       releaseState.isReleaseStatus &&
       !releaseState.isComplete &&
       !!fundingRecord &&
+      this.walletKeys.canSign &&
       this.utxoTracking.canSubmitFundingRecordReleaseToBitcoin(fundingRecord)
     ) {
       await this.ownerCosignAndSendToBitcoin(lock).catch(err => {

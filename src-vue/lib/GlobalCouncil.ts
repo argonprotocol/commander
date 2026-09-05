@@ -342,7 +342,7 @@ export class GlobalCouncil {
     sharedRelayQueueKey?: string;
   }): Promise<void> {
     const { councilSigner, hasReadyGatewayUpdates, sharedRelayQueueKey } = args;
-    if (!councilSigner || this.#pendingRelayPromise) {
+    if (!this.walletKeys.canSign || !councilSigner || this.#pendingRelayPromise) {
       return;
     }
     if (!hasReadyGatewayUpdates && !sharedRelayQueueKey) {
@@ -433,15 +433,24 @@ async function getPendingCouncilApprovals(
   hasReadyGatewayUpdates: boolean;
   sharedRelayQueueKey?: string;
 }> {
-  const [councilSignerAddress] = await walletKeys.getEthereumAddresses([walletKeys.councilSignerEthereumHdPath]);
-  await walletHdKeysTable.upsert({
-    keyRole: 'councilSigner',
-    scopeKey: walletKeys.vaultingAddress.toLowerCase(),
-    hdIndex: 0,
-    hdPath: walletKeys.councilSignerEthereumHdPath,
-    address: councilSignerAddress,
-    publicKeyHex: null,
-  });
+  const scopeKey = walletKeys.vaultingAddress.toLowerCase();
+  let councilSignerAddress = (
+    await walletHdKeysTable.fetchByScope({
+      keyRole: 'councilSigner',
+      scopeKey,
+    })
+  )[0]?.address;
+  if (!councilSignerAddress && walletKeys.canSign) {
+    [councilSignerAddress] = await walletKeys.getEthereumAddresses([walletKeys.councilSignerEthereumHdPath]);
+    await walletHdKeysTable.upsert({
+      keyRole: 'councilSigner',
+      scopeKey,
+      hdIndex: 0,
+      hdPath: walletKeys.councilSignerEthereumHdPath,
+      address: councilSignerAddress,
+      publicKeyHex: null,
+    });
+  }
 
   const [
     councilSignerOption,
@@ -473,11 +482,12 @@ async function getPendingCouncilApprovals(
     entry: NonNullable<CrosschainTransferCouncilApprovalQueueByDestinationChainAndNonceResultSpec151>;
     hasLocalSignature: boolean;
   }> = [];
-  const canSignCouncilApprovals = councilSigner?.toLowerCase() === councilSignerAddress.toLowerCase();
+  const ownsCouncilSigner =
+    !!councilSignerAddress && councilSigner?.toLowerCase() === councilSignerAddress.toLowerCase();
   let sharedRelayQueueKey: string | undefined;
   const gatewayActivityCount = gatewayStateOption?.gatewayActivityNonce ?? 0n;
 
-  if (canSignCouncilApprovals && councilApprovalCursorOption !== null) {
+  if (ownsCouncilSigner && councilApprovalCursorOption !== null) {
     const lastSyncedNonce = gatewayStateOption?.argonApprovalsNonce ?? 0n;
     const lastSignedNonce = councilApprovalCursorOption;
     const nextPendingQueueNonce = nextQueueNonce ?? 0n;

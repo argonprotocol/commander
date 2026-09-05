@@ -12,7 +12,10 @@ function resolveTestSecrets(mnemonicOrUri?: string) {
   return { substrateSuri, masterMnemonic };
 }
 
-export function createTestWallet(mnemonic?: string) {
+export function createTestWallet(
+  mnemonic?: string,
+  capabilities: { canSign?: boolean; canAccessServer?: boolean } = {},
+) {
   const { substrateSuri, masterMnemonic } = resolveTestSecrets(mnemonic ?? mnemonicGenerate());
   const keypair = new Keyring({ type: 'sr25519' }).addFromUri(substrateSuri);
   const legacyMiningHoldAccount = keypair.derive('//holding');
@@ -29,10 +32,14 @@ export function createTestWallet(mnemonic?: string) {
     walletKeys: new MemoryWalletKeys({
       substrateSuri,
       masterMnemonic,
+      ...capabilities,
     }),
   };
 }
 
-export function createMockWalletKeys(mnemonic?: string) {
-  return createTestWallet(mnemonic).walletKeys;
+export function createMockWalletKeys(
+  mnemonic?: string,
+  capabilities: { canSign?: boolean; canAccessServer?: boolean } = {},
+) {
+  return createTestWallet(mnemonic, capabilities).walletKeys;
 }

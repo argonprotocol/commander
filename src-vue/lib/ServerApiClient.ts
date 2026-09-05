@@ -18,6 +18,7 @@ import type {
   IRouterErrorResponse,
 } from '@argonprotocol/apps-router';
 import { type IConfigServerDetails, ServerType } from '../interfaces/IConfig.ts';
+import type { WalletKeys } from './WalletKeys.ts';
 import {
   RequestStatusError,
   isUnauthenticatedServerAuthError,
@@ -85,7 +86,12 @@ export class ServerApiClient {
   constructor(
     private readonly getServerDetails: () => ServerGatewayDetails,
     private readonly serverAuthClient: AdminOperatorServerAuthClient,
+    private readonly walletKeys: Pick<WalletKeys, 'canAccessServer'>,
   ) {}
+
+  public get canAccessServer(): boolean {
+    return this.walletKeys.canAccessServer;
+  }
 
   public getGatewayHttpUrl(path = '', sessionId?: string): string {
     return ServerApiClient.getGatewayHttpUrl(this.getServerDetails(), path, sessionId);
@@ -96,6 +102,7 @@ export class ServerApiClient {
   }
 
   public async getAdminOperatorSessionId(options: ServerAuthOptions = {}): Promise<string> {
+    if (!this.canAccessServer) throw new Error('Server access is unavailable');
     return await this.serverAuthClient.getAdminOperatorSessionId(this.getGatewayHttpUrl(), options);
   }
 
@@ -174,6 +181,10 @@ export class ServerApiClient {
   }
 
   private async request<T>(path: string, options: ClientRequestOptions = {}): Promise<T> {
+    if (!this.canAccessServer) {
+      throw new Error('Server access is unavailable');
+    }
+
     const { adminOperatorAuth, ...requestOptions } = options;
     if (!adminOperatorAuth) {
       return await ServerApiClient.request<T>(this.getServerDetails(), path, requestOptions);

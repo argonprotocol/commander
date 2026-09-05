@@ -27,6 +27,7 @@ import {
   type ServerAuthClient,
   type ServerAuthOptions,
 } from './ServerAuthClient.ts';
+import { isWalletSigningUnavailableError } from './WalletKeys.ts';
 
 type ServerInviteDetails = Pick<IConfigServerDetails, 'ipAddress' | 'gatewayPort'>;
 type UpstreamOperatorSessionAuth = {
@@ -72,6 +73,7 @@ export class UpstreamOperatorClient {
     if (operatorHost) return operatorHost;
 
     this.operatorHostResolution ??= this.recoverOperatorHost?.().catch(error => {
+      if (isWalletSigningUnavailableError(error)) return undefined;
       this.operatorHostResolution = undefined;
       throw error;
     });
@@ -263,6 +265,8 @@ export class UpstreamOperatorClient {
     try {
       return await request(operatorHost);
     } catch (error) {
+      if (isWalletSigningUnavailableError(error)) throw error;
+
       const recoveredOperatorHost = await this.recoverOperatorHost?.().catch(() => undefined);
       if (!recoveredOperatorHost || recoveredOperatorHost === operatorHost) {
         throw error;

@@ -11,6 +11,7 @@ type RuntimeEnv = Partial<{
   __SERVER_ENV_VARS__?: ServerEnvVars;
   __ARGON_APP_INSTANCE__?: string;
   __ARGON_APP_SECURITY__?: ISecurity;
+  __ARGON_APP_CAN_SIGN__?: boolean;
   __LOG_DEBUG__?: boolean;
 }>;
 
@@ -47,6 +48,7 @@ export const ESPLORA_HOST: string = networkConfig.esploraHost;
 export const BITCOIN_BLOCK_MILLIS: number = networkConfig.bitcoinBlockMillis;
 export const DEPLOY_ENV_FILE = `.env.${NETWORK_NAME}`;
 export const SECURITY = (globalThis as RuntimeEnv).__ARGON_APP_SECURITY__ as ISecurity;
+export const CAN_SIGN = (globalThis as RuntimeEnv).__ARGON_APP_CAN_SIGN__ ?? true;
 export const IS_TEST = (typeof __IS_TEST__ !== 'undefined' && __IS_TEST__) || IS_E2E;
 // eslint-disable-next-line prefer-const
 export let LOG_DEBUG =

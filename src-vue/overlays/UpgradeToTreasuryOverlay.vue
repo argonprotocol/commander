@@ -280,7 +280,7 @@ async function connectToNetwork() {
     };
     isConnecting.value = false;
     closeOverlay();
-    config.showWelcomeOverlay = true;
+    config.showWelcomeOverlay = !config.hasExtensionOperations;
     emit('claimed');
 
     await config.save();

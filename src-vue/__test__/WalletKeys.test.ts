@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import { WalletKeys } from '../lib/WalletKeys.ts';
+import { BitcoinNetwork } from '@argonprotocol/bitcoin';
 import type { IWalletRecord } from '../lib/db/WalletsTable.ts';
 import { createTestWallet } from './helpers/wallet.ts';
 
@@ -78,4 +79,40 @@ it('falls back after a capacity load error, retries, and incrementally reuses ge
 
   expect(reusedSubaccounts).toBe(expandedSubaccounts);
   expect(Object.values(reusedSubaccounts)).toHaveLength(152);
+});
+
+it('rejects protected key operations with a recognizable error when signing is unavailable', async () => {
+  const { walletKeys: sourceWalletKeys } = createTestWallet();
+  const walletKeys = new WalletKeys(
+    {
+      sshPublicKey: sourceWalletKeys.sshPublicKey,
+      miningHoldAddress: sourceWalletKeys.legacyMiningHoldAddress,
+      miningBotAddress: sourceWalletKeys.miningBotAddress,
+      vaultingAddress: sourceWalletKeys.defaultArgonAddress,
+      operationalAddress: sourceWalletKeys.operationalAddress,
+      ethereumAddress: sourceWalletKeys.defaultEthereumAddress,
+      ethereumHdPrefixes: sourceWalletKeys.ethereumHdPrefixes,
+    },
+    async () => false,
+    undefined,
+    { canSign: false, canAccessServer: false },
+  );
+
+  await expect(walletKeys.getDefaultArgonKeypair()).rejects.toMatchObject({
+    name: 'WalletSigningUnavailableError',
+  });
+});
+
+it('enforces signing availability in memory-backed wallets', async () => {
+  const { walletKeys } = createTestWallet('//ReadonlyWalletKeys', { canSign: false, canAccessServer: false });
+
+  await expect(walletKeys.getDefaultArgonKeypair()).rejects.toMatchObject({
+    name: 'WalletSigningUnavailableError',
+  });
+  await expect(walletKeys.getEthereumAddresses([walletKeys.ethereumHdPath])).rejects.toMatchObject({
+    name: 'WalletSigningUnavailableError',
+  });
+  await expect(walletKeys.getBitcoinChildXpriv("m/1018'/0'/1'/0/0'", BitcoinNetwork.Regtest)).rejects.toMatchObject({
+    name: 'WalletSigningUnavailableError',
+  });
 });

@@ -416,10 +416,9 @@ impl SSH {
         if let Ok((out, _code)) =
             Self::run_command_on_client(client, config, format!("stat -c %s {escaped_remote}"))
                 .await
+            && let Ok(sz) = out.trim().parse::<u64>()
         {
-            if let Ok(sz) = out.trim().parse::<u64>() {
-                remote_size = sz;
-            }
+            remote_size = sz;
         }
 
         // Ensure local directory exists and create/truncate the file

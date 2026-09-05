@@ -343,6 +343,8 @@ export class MintingAuthorities {
     finalizedClient: ArgonQueryClient,
     updateSeq = ++this.#updateSeq,
   ): Promise<IEthereumMintingAuthority[]> {
+    if (!this.walletKeys.canSign) return this.data.authorities;
+
     const councilSigner = await finalizedClient.query.crosschainTransfer.councilSignerByDestinationChainAndAccountId(
       'Ethereum',
       this.walletKeys.defaultArgonAddress,
@@ -670,6 +672,8 @@ export class MintingAuthorities {
   }
 
   private async syncPendingActivationRelay(authorities: IEthereumMintingAuthority[]): Promise<void> {
+    if (!this.walletKeys.canSign) return;
+
     const pendingActivationSigners = authorities
       .filter(authority => authority.isPendingActivation)
       .map(authority => authority.signer.toLowerCase())
@@ -797,6 +801,8 @@ export async function findOwnedEthereumMintingAuthoritySigners(
   finalizedClient: ArgonQueryClient,
   walletKeys: WalletKeys,
 ): Promise<Array<{ authorityIndex: number; signer: string }>> {
+  if (!walletKeys.canSign) return [];
+
   const ownedSigners: Array<{ authorityIndex: number; signer: string }> = [];
   for (
     let startIndex = 0;

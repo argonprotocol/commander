@@ -616,6 +616,35 @@ it('non-destructively recovers the current wallet setup', async () => {
   expect(restartedConfig.requiresPassword).toBe(true);
 });
 
+it('inspects a readonly account using only its available public addresses', async () => {
+  const { walletKeys } = createTestWallet('//Alice', { canSign: false, canAccessServer: false });
+  walletKeys.legacyMiningHoldAddress = '';
+  const { config, dbPromise } = await createImporterConfig(walletKeys);
+  importMocks.getFinalizedClient.mockResolvedValue({
+    query: {
+      operationalAccounts: {
+        operationalAccounts: vi.fn().mockResolvedValue(null),
+      },
+      vaults: { vaultIdByOperator: importMocks.getOperatorVaultId },
+    },
+  });
+  importMocks.readBalances.mockImplementation(async (_api, addresses: string[]) => {
+    if (addresses.some(address => !address)) throw new Error('Cannot query an empty account address');
+    return addresses.map(address =>
+      address === walletKeys.miningBotAddress ? { ...emptyBalance, availableMicrogons: 1n } : emptyBalance,
+    );
+  });
+  importMocks.findMiningActivity.mockResolvedValue({ blocks: [], coverage: { gaps: [] } });
+  vi.spyOn(Mining, 'fetchMiningSeatsForAccount').mockResolvedValue({});
+
+  await new Importer(config, walletKeys, dbPromise).recoverCurrentAccountState();
+
+  expect(config.walletAccountsHadPreviousLife).toBe(true);
+  expect(config.hasExtensionTreasury).toBe(true);
+  expect(config.hasExtensionOperations).toBe(true);
+  expect(config.miningSetupStatus).toBe(MiningSetupStatus.Checklist);
+});
+
 it('restores a matching server without completing mining setup when bidding rules are absent', async () => {
   const dbPromise = createMockedDbPromise();
   const { walletKeys } = createTestWallet('//Alice');

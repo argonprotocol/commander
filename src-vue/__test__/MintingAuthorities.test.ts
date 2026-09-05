@@ -180,6 +180,39 @@ describe('MintingAuthorities', () => {
     expect(mintingAuthorities.data.authorities[0]).toMatchObject({ signer, authorityIndex: 0, isActive: true });
   });
 
+  it('loads tracked authority state without deriving missing signers when signing is unavailable', async () => {
+    const db = await createTestDb();
+    const walletKeys = { ...createWalletKeysStub(), canSign: false };
+    const deriveAuthoritySigners = vi.spyOn(walletKeys, 'getEthereumAddresses');
+    const finalizedClient = {
+      query: {
+        crosschainTransfer: {
+          chainConfigBySourceChain: vi.fn(async () => null),
+        },
+      },
+    };
+    const mintingAuthorities = new MintingAuthorities(
+      Promise.resolve(db),
+      walletKeys as unknown as WalletKeys,
+      {
+        blockWatch: {
+          start: vi.fn(async () => undefined),
+          getFinalizedApi: vi.fn(async () => finalizedClient),
+        },
+      } as any,
+      {
+        pendingBlockTxInfosAtLoad: [],
+        data: { txInfos: [] },
+      } as any,
+    );
+
+    await mintingAuthorities.load();
+
+    expect(mintingAuthorities.data.isReady).toBe(true);
+    expect(mintingAuthorities.data.authorities).toEqual([]);
+    expect(deriveAuthoritySigners).not.toHaveBeenCalled();
+  });
+
   it('only scans missing signer indexes for a council account after its unrecognized registration', async () => {
     const db = await createTestDb();
     const walletKeys = createWalletKeysStub();
@@ -893,7 +926,7 @@ describe('MintingAuthorities', () => {
     const getEthereumRelayStatus = vi.fn(async () => ({ isReady: true }));
     const mintingAuthorities = new MintingAuthorities(
       Promise.resolve({} as any),
-      {} as any,
+      { canSign: true } as any,
       {
         blockWatch: {
           clients: {
@@ -937,7 +970,7 @@ describe('MintingAuthorities', () => {
     const getEthereumRelayStatus = vi.fn(async () => ({ isReady: true }));
     const mintingAuthorities = new MintingAuthorities(
       Promise.resolve({} as any),
-      {} as any,
+      { canSign: true } as any,
       {
         blockWatch: {
           clients: {
@@ -1101,6 +1134,7 @@ function createWalletKeysStub() {
   }).address;
 
   return {
+    canSign: true,
     councilSignerEthereumHdPath: getEthereumHdPath(DEFAULT_MEMORY_WALLET_KEYS_ETHEREUM_HD_PREFIXES.councilSigner),
     ethereumAddress,
     ethereumHdPrefixes: DEFAULT_MEMORY_WALLET_KEYS_ETHEREUM_HD_PREFIXES,

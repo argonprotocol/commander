@@ -9,7 +9,7 @@ import type BitcoinLocks from './BitcoinLocks.ts';
 import type BitcoinMempool from './BitcoinMempool.ts';
 import { getTransactionFailureMessage, type TransactionInfo } from './TransactionInfo.ts';
 import type { TransactionTracker } from './TransactionTracker.ts';
-import type { WalletKeys } from './WalletKeys.ts';
+import { isWalletSigningUnavailableError, type WalletKeys } from './WalletKeys.ts';
 
 export default class BitcoinOrphanReleases {
   #cosignCounterSubscriptions = new Map<string, () => void>();
@@ -142,7 +142,7 @@ export default class BitcoinOrphanReleases {
             continue;
           }
         }
-        await this.submitToBitcoin(lock, record, {
+        await this.resumeBitcoinSubmission(lock, record, {
           toScriptPubkey: record.releaseToDestinationAddress,
           bitcoinNetworkFee: record.releaseBitcoinNetworkFee,
         });
@@ -157,20 +157,24 @@ export default class BitcoinOrphanReleases {
       if (txInfo.tx.status !== TransactionStatus.Finalized) continue;
 
       await this.ensureObservedAtTick(record, txInfo);
-      const vaultSignature =
+      let vaultSignature =
         record.releaseCosignVaultSignature && record.releaseCosignHeight != null
           ? record.releaseCosignVaultSignature
-          : await this.createVaultSignature(lock, record, {
-              toScriptPubkey: record.releaseToDestinationAddress,
-              bitcoinNetworkFee: record.releaseBitcoinNetworkFee,
-            });
+          : undefined;
+      if (!vaultSignature) {
+        if (!this.walletKeys.canSign) continue;
+        vaultSignature = await this.createVaultSignature(lock, record, {
+          toScriptPubkey: record.releaseToDestinationAddress,
+          bitcoinNetworkFee: record.releaseBitcoinNetworkFee,
+        });
+      }
       if (!record.releaseCosignVaultSignature || record.releaseCosignHeight == null) {
         await this.bitcoinLocks.utxoTracking.setReleaseCosign(record, {
           releaseCosignVaultSignature: vaultSignature,
           releaseCosignHeight: txInfo.txResult.blockNumber!,
         });
       }
-      await this.submitToBitcoin(lock, record, {
+      await this.resumeBitcoinSubmission(lock, record, {
         toScriptPubkey: record.releaseToDestinationAddress,
         bitcoinNetworkFee: record.releaseBitcoinNetworkFee,
         vaultSignature,
@@ -206,7 +210,7 @@ export default class BitcoinOrphanReleases {
       }
 
       if (!record.releaseCosignVaultSignature || record.releaseCosignHeight == null) continue;
-      await this.submitToBitcoin(lock, record, {
+      await this.resumeBitcoinSubmission(lock, record, {
         toScriptPubkey: record.releaseToDestinationAddress,
         bitcoinNetworkFee: record.releaseBitcoinNetworkFee,
         vaultSignature: record.releaseCosignVaultSignature,
@@ -690,8 +694,18 @@ export default class BitcoinOrphanReleases {
       const mempoolTip = await this.mempool.getTipHeight().catch(() => oracleBitcoinBlockHeight);
       await this.bitcoinLocks.utxoTracking.setReleaseSeenOnBitcoinAndProcessing(record, bitcoinTxid, mempoolTip);
     } catch (error) {
+      if (isWalletSigningUnavailableError(error)) throw error;
       await this.bitcoinLocks.utxoTracking.setStatusError(record, String(error));
     }
+  }
+
+  private async resumeBitcoinSubmission(
+    lock: IBitcoinLockRecord,
+    record: IBitcoinUtxoRecord,
+    args: { toScriptPubkey: string; bitcoinNetworkFee: bigint; vaultSignature?: Uint8Array },
+  ): Promise<void> {
+    if (!this.walletKeys.canSign) return;
+    await this.submitToBitcoin(lock, record, args);
   }
 
   private async continueAfterArgonInclusion(

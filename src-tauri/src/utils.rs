@@ -25,10 +25,10 @@ pub struct Utils;
 
 impl Utils {
     pub fn get_instance_name() -> String {
-        if let Ok(instance) = std::env::var("ARGON_APP_INSTANCE") {
-            if let Some(name) = instance.split(':').next() {
-                return name.to_string();
-            }
+        if let Ok(instance) = std::env::var("ARGON_APP_INSTANCE")
+            && let Some(name) = instance.split(':').next()
+        {
+            return name.to_string();
         }
 
         // Default fallback

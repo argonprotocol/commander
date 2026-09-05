@@ -229,6 +229,12 @@ export class BitcoinLockRecovery {
         recovered.status = BitcoinLockStatus.Released;
         if (recovered.removalBlockNumber) recovered.removalReason ??= 'released';
       } catch (error) {
+        replay.failedLockUtxoIds.add(recovered.utxoId);
+        failedLockUuids.add(recovered.uuid);
+        handledUtxoIds.add(recovered.utxoId);
+        handledHdPaths.add(recovered.hdPath);
+        const message = error instanceof Error ? error.message : String(error);
+        persistenceErrors.push(`Bitcoin lock ${recovered.utxoId}: ${message}`);
         console.warn(`Unable to check recovered Bitcoin release ${recovered.utxoId}; leaving it retryable`, error);
       }
     }
@@ -938,12 +944,15 @@ export class BitcoinLockRecovery {
       return this.applyRecoveredRecord(existing);
     }
 
-    const derivedPubkey = await this.findDerivedPubkeyForOwner(args.lock.vaultId, args.lock.ownerPubkey);
-    if (!derivedPubkey) throw new Error(`Unable to recover the HD path for Bitcoin lock ${args.lock.utxoId}`);
+    let derivedPubkey: Awaited<ReturnType<typeof deriveBitcoinLockHdKey>> | undefined;
+    if (this.walletKeys.canSign) {
+      derivedPubkey = await this.findDerivedPubkeyForOwner(args.lock.vaultId, args.lock.ownerPubkey);
+      if (!derivedPubkey) throw new Error(`Unable to recover the HD path for Bitcoin lock ${args.lock.utxoId}`);
+    }
 
-    let record = await table.findPendingByHdPath(derivedPubkey.hdPath);
+    let record = derivedPubkey ? await table.findPendingByHdPath(derivedPubkey.hdPath) : undefined;
     let recoveredUuid = record?.uuid;
-    if (!recoveredUuid) {
+    if (!recoveredUuid && derivedPubkey) {
       const db = await this.dbPromise;
       const transaction = (await db.transactionsTable.fetchAll()).find(candidate => {
         if (candidate.extrinsicType !== ExtrinsicType.BitcoinRequestLock) return false;
@@ -952,8 +961,9 @@ export class BitcoinLockRecovery {
         return metadata?.bitcoin?.hdPath === derivedPubkey.hdPath && metadata.bitcoin.vaultId === args.lock.vaultId;
       });
       const metadata = transaction?.metadataJson as Partial<IBitcoinRequestLockMetadata> | undefined;
-      recoveredUuid = metadata?.bitcoin?.uuid ?? BitcoinLocksTable.createUuid();
+      recoveredUuid = metadata?.bitcoin?.uuid;
     }
+    recoveredUuid ??= BitcoinLocksTable.createUuid();
 
     if (this.historyReplay) {
       const now = new Date();
@@ -970,7 +980,7 @@ export class BitcoinLockRecovery {
             lockDetails: args.lock,
             fundingUtxoRecordId: null,
             network: this.getBitcoinNetwork(),
-            hdPath: derivedPubkey.hdPath,
+            hdPath: derivedPubkey?.hdPath ?? '',
             vaultId: args.lock.vaultId,
             createdAt: now,
             updatedAt: now,
@@ -989,7 +999,7 @@ export class BitcoinLockRecovery {
           uuid: recoveredUuid,
           vaultId: args.lock.vaultId,
           satoshis: args.lock.satoshis,
-          hdPath: derivedPubkey.hdPath,
+          hdPath: derivedPubkey?.hdPath ?? '',
         });
       }
       if (record.status === BitcoinLockStatus.LockIsProcessingOnArgon) {

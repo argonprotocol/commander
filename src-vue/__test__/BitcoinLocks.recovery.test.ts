@@ -7,6 +7,7 @@ import {
   BitcoinLock,
 } from '@argonprotocol/apps-core';
 import BitcoinLocks from '../lib/BitcoinLocks.ts';
+import BitcoinMempool from '../lib/BitcoinMempool.ts';
 import type { WalletKeys } from '../lib/WalletKeys.ts';
 import { BitcoinLockStatus, type IBitcoinLockRecord } from '../lib/db/BitcoinLocksTable.ts';
 import { BitcoinUtxoStatus } from '../lib/db/BitcoinUtxosTable.ts';
@@ -776,6 +777,147 @@ describe('BitcoinLocks recovery', () => {
 });
 
 describe('BitcoinLocks history replay publication', () => {
+  it('restores readonly Bitcoin lock history from public account ownership', async () => {
+    const db = await createTestDb();
+    const accountId = encodeAddress(new Uint8Array(32).fill(0x44));
+    const creationLock = new BitcoinLock(
+      createHistoricalLock({ accountId, liquidityPromised: 1_000n, lockedTargetPrice: 1_000n }),
+    );
+    const walletKeys = {
+      canSign: false,
+      defaultArgonAddress: accountId,
+      getBitcoinChildXpriv: async () => {
+        throw new Error('Wallet encryption key is unavailable');
+      },
+    } as unknown as WalletKeys;
+    const store = createStore({
+      db,
+      blockWatch: { getApi: vi.fn(async () => ({})) } as unknown as BlockWatch,
+      walletKeys,
+    });
+    vi.spyOn(BitcoinLock, 'get').mockResolvedValue(creationLock);
+
+    await store.recovery.beginHistoryReplay({ lockScope: 'all' });
+    await store.recovery.recoverBlock(historyBlock(151), [
+      historyEvent(157, 'bitcoinLocks', 'BitcoinLockCreated', {
+        utxoId: 7,
+        vaultId: 1,
+        liquidityPromised: 1_000n,
+        securitization: 1_000n,
+        lockedTargetPrice: 1_000n,
+        accountId,
+        securityFee: 20n,
+      }),
+    ]);
+    await store.recovery.commitHistoryReplay();
+
+    const visible = store.getLockByUtxoId(7);
+    expect(visible).toMatchObject({
+      utxoId: 7,
+      vaultId: 1,
+      lockDetails: { ownerAccount: accountId, ownerPubkey: `02${'33'.repeat(32)}` },
+    });
+    expect(visible?.hdPath).toBe('');
+    const durable = await db.bitcoinLocksTable.getByUtxoId(7);
+    expect(durable).toMatchObject({
+      utxoId: 7,
+      vaultId: 1,
+    });
+    expect(durable?.hdPath).toBe('');
+  });
+
+  it('restores a readonly historical release from the public funding outspend', async () => {
+    const db = await createTestDb();
+    const accountId = encodeAddress(new Uint8Array(32).fill(0x44));
+    const fundingTxid = `0x${'44'.repeat(32)}`;
+    const releaseTxid = `0x${'55'.repeat(32)}`;
+    const creationLock = new BitcoinLock(
+      createHistoricalLock({ accountId, liquidityPromised: 1_000n, lockedTargetPrice: 1_000n }),
+    );
+    const fundedLock = new BitcoinLock({
+      ...createHistoricalLock({ accountId, liquidityPromised: 1_000n, lockedTargetPrice: 1_000n }),
+      utxoSatoshis: 10_000n,
+    });
+    const getBitcoinChildXpriv = vi.fn(async () => {
+      throw new Error('Wallet encryption key is unavailable');
+    });
+    const walletKeys = {
+      canSign: false,
+      defaultArgonAddress: accountId,
+      getBitcoinChildXpriv,
+    } as unknown as WalletKeys;
+    const api = {
+      query: {
+        ticks: { currentTick: vi.fn(async () => 700) },
+      },
+    };
+    const store = createStore({
+      db,
+      blockWatch: { getApi: vi.fn(async () => api) } as unknown as BlockWatch,
+      walletKeys,
+    });
+    vi.spyOn(BitcoinLock, 'get').mockResolvedValueOnce(creationLock).mockResolvedValueOnce(fundedLock);
+    vi.spyOn(BitcoinLock.prototype, 'getFundingUtxoRef').mockResolvedValue({ txid: fundingTxid, vout: 1 });
+    vi.spyOn(BitcoinLock.prototype, 'getReleaseRequest').mockResolvedValue({
+      toScriptPubkey: '0x0014',
+      bitcoinNetworkFee: 8n,
+      redemptionAmount: 900n,
+    });
+    const getOutspendStatus = vi.spyOn(BitcoinMempool.prototype, 'getOutspendStatus').mockResolvedValue({
+      txid: releaseTxid,
+      isConfirmed: true,
+      transactionBlockHeight: 600,
+      transactionBlockTime: 1_700_000_000,
+      argonBitcoinHeight: 610,
+    });
+
+    await store.recovery.beginHistoryReplay({ lockScope: 'all' });
+    await store.recovery.recoverBlock(historyBlock(151), [
+      historyEvent(157, 'bitcoinLocks', 'BitcoinLockCreated', {
+        utxoId: 7,
+        vaultId: 1,
+        liquidityPromised: 1_000n,
+        securitization: 1_000n,
+        lockedTargetPrice: 1_000n,
+        accountId,
+        securityFee: 20n,
+      }),
+    ]);
+    await store.recovery.recoverBlock(historyBlock(152), [
+      historyEvent(157, 'bitcoinUtxos', 'UtxoVerified', {
+        utxoId: 7,
+        satoshisReceived: 10_000n,
+      }),
+    ]);
+    await store.recovery.recoverBlock(historyBlock(155), [
+      historyEvent(157, 'bitcoinLocks', 'BitcoinUtxoCosignRequested', { utxoId: 7, vaultId: 1 }),
+      historyEvent(157, 'bitcoinLocks', 'BitcoinUtxoCosigned', {
+        utxoId: 7,
+        vaultId: 1,
+        signature: '0x11',
+      }),
+    ]);
+    await store.recovery.commitHistoryReplay();
+
+    expect(getOutspendStatus).toHaveBeenCalledWith(fundingTxid, 1, 0);
+    expect(getBitcoinChildXpriv).not.toHaveBeenCalled();
+    expect(store.getActiveLocks()).toEqual([]);
+    expect(store.getLockByUtxoId(7)).toMatchObject({
+      status: BitcoinLockStatus.Released,
+      removalReason: 'released',
+    });
+    expect(await db.bitcoinUtxosTable.fetchAll()).toEqual([
+      expect.objectContaining({
+        lockUtxoId: 7,
+        txid: fundingTxid,
+        vout: 1,
+        status: BitcoinUtxoStatus.ReleaseComplete,
+        releaseTxid,
+        releasedAtBitcoinHeight: 600,
+      }),
+    ]);
+  });
+
   it('restores missing creation history while preserving later ratchets across restart', async () => {
     const db = await createTestDb();
     const accountId = encodeAddress(new Uint8Array(32).fill(0x33));
@@ -936,7 +1078,7 @@ describe('BitcoinLocks history replay publication', () => {
     const store = createStore({
       db,
       blockWatch: { getApi: vi.fn(async () => ({})) } as unknown as BlockWatch,
-      walletKeys: { defaultArgonAddress: accountId } as WalletKeys,
+      walletKeys: { canSign: true, defaultArgonAddress: accountId } as WalletKeys,
     });
     store.data.locksByUtxoId[7] = record;
     const recoveredLockDetails = createHistoricalLock({ accountId, liquidityPromised: 1_000n });
@@ -1010,7 +1152,7 @@ describe('BitcoinLocks history replay publication', () => {
     });
     const store = createStore({
       db,
-      walletKeys: { defaultArgonAddress: accountId } as WalletKeys,
+      walletKeys: { canSign: true, defaultArgonAddress: accountId } as WalletKeys,
     });
     vi.spyOn(store, 'getDerivedPubkey').mockResolvedValue({
       address: 'tb1qhistory',
@@ -1099,7 +1241,7 @@ describe('BitcoinLocks history replay publication', () => {
     const store = createStore({
       db,
       blockWatch: { getApi: vi.fn(async () => ({})) } as unknown as BlockWatch,
-      walletKeys: { defaultArgonAddress: accountId } as WalletKeys,
+      walletKeys: { canSign: true, defaultArgonAddress: accountId } as WalletKeys,
     });
     store.data.locksByUtxoId[7] = record;
     store.data.locksByUtxoId[8] = record8;
@@ -1186,7 +1328,7 @@ describe('BitcoinLocks history replay publication', () => {
     const store = createStore({
       db,
       blockWatch: { getApi: vi.fn(async () => ({})) } as unknown as BlockWatch,
-      walletKeys: { defaultArgonAddress: accountId } as WalletKeys,
+      walletKeys: { canSign: true, defaultArgonAddress: accountId } as WalletKeys,
     });
     store.data.locksByUtxoId[7] = record;
     vi.spyOn(BitcoinLock, 'get').mockResolvedValue(
@@ -1232,7 +1374,7 @@ describe('BitcoinLocks history replay publication', () => {
     const store = createStore({
       db,
       blockWatch: { getApi: vi.fn(async () => ({})) } as unknown as BlockWatch,
-      walletKeys: { defaultArgonAddress: accountId } as WalletKeys,
+      walletKeys: { canSign: true, defaultArgonAddress: accountId } as WalletKeys,
     });
     store.data.locksByUtxoId[7] = record;
     vi.spyOn(BitcoinLock, 'get').mockResolvedValue(
@@ -1299,7 +1441,7 @@ describe('BitcoinLocks history replay publication', () => {
     const store = createStore({
       db,
       blockWatch: { getApi: vi.fn(async () => ({})) } as unknown as BlockWatch,
-      walletKeys: { defaultArgonAddress: accountId } as WalletKeys,
+      walletKeys: { canSign: true, defaultArgonAddress: accountId } as WalletKeys,
     });
     store.data.locksByUtxoId[7] = record;
     vi.spyOn(BitcoinLock, 'get').mockResolvedValue(

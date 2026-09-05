@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createDeferred } from '../src/Deferred.ts';
 import { calculateRestabilizationLeverage } from '../src/GlobalVaultingStats.ts';
 import type { IAllVaultStats, IVaultFrameStats, IVaultStats } from '../src/interfaces/IVaultStats.ts';
 import { NetworkConfig } from '../src/NetworkConfig.ts';
@@ -59,6 +60,36 @@ describe('Vaults load retry', () => {
     expect(vaults.stats?.formatVersion).toBe(VAULT_STATS_FORMAT_VERSION);
     expect(vaults.stats?.vaultsById).toBe(cachedStats.vaultsById);
     expect(vaults.stats?.argonotStakingByFrame).toEqual([]);
+  });
+
+  it('finishes loading before operator profile names are available', async () => {
+    const operatorAccountId = `0x${'02'.repeat(32)}`;
+    const operationalAccountId = `0x${'01'.repeat(32)}`;
+    const profileEntries = createDeferred<any[]>();
+    const client = {
+      query: {
+        vaults: {
+          vaultsById: { entries: vi.fn().mockResolvedValue([]) },
+        },
+        operationalAccounts: {
+          operationalAccountBySubAccount: {
+            entries: vi.fn().mockResolvedValue([[{ args: [operatorAccountId] }, operationalAccountId]]),
+          },
+          operationalAccounts: { entries: vi.fn(() => profileEntries.promise) },
+        },
+      },
+    };
+    const miningFrames = { load: vi.fn().mockResolvedValue(undefined) };
+    const mainchainClients = { get: vi.fn().mockResolvedValue(client) };
+    const vaults = new Vaults('mainnet', {} as any, miningFrames as any, mainchainClients as any);
+    vaults.stats = createStats([]);
+    vaults.vaultsById[1] = { vaultId: 1, operatorAccountId } as any;
+
+    await expect(vaults.load()).resolves.toBeUndefined();
+    expect(vaults.operatorNamesByVaultId[1]).toBeUndefined();
+
+    profileEntries.resolve([[{ args: [operationalAccountId] }, { name: new TextEncoder().encode('Atlas') }]]);
+    await vi.waitFor(() => expect(vaults.operatorNamesByVaultId[1]).toBe('Atlas'));
   });
 });
 

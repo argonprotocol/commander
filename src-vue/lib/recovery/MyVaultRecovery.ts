@@ -84,12 +84,14 @@ export class MyVaultRecovery {
     const vaultId = vault.vaultId;
 
     const storedXpubMaybe = await client.query.vaults.vaultXPubById(vaultId);
-    const masterXpubPath = await this.recoverXpubPath({
-      vaultId,
-      storedXpubMaybe,
-      walletKeys,
-      bitcoinNetwork,
-    });
+    const masterXpubPath = walletKeys.canSign
+      ? await this.recoverXpubPath({
+          vaultId,
+          storedXpubMaybe,
+          walletKeys,
+          bitcoinNetwork,
+        })
+      : DEFAULT_MASTER_XPUB_PATH;
     console.log('Recovered vault xpub path:', masterXpubPath);
 
     const findVaultCreation = (blockHash: Uint8Array) => {

@@ -52,6 +52,39 @@ it('keeps mnemonic-restored accounts eligible for financial history without mini
   expect(config.walletPreviousLifeRecovered).toBe(true);
 });
 
+it('initializes wallet history from a migrated readonly database', async () => {
+  const db = await createTestDb();
+  const { walletKeys } = createTestWallet('//Alice', { canSign: false, canAccessServer: false });
+  vi.spyOn(walletKeys, 'didWalletHavePreviousLife').mockResolvedValueOnce(true);
+  const recoverAccount = vi.fn(async () => ({}));
+  instanceChecks.delete(Config.prototype.constructor);
+  const config = new Config(Promise.resolve(db), walletKeys, recoverAccount);
+
+  await config.load();
+
+  expect(config.walletAccountsHadPreviousLife).toBe(true);
+  expect(config.showWelcomeOverlay).toBe(false);
+  expect(config.walletPreviousLifeRecovered).toBe(true);
+  expect(recoverAccount).toHaveBeenCalledOnce();
+
+  const { walletKeys: restartedWalletKeys } = createTestWallet('//Alice', {
+    canSign: false,
+    canAccessServer: false,
+  });
+  const inspectWalletHistory = vi.spyOn(restartedWalletKeys, 'didWalletHavePreviousLife');
+  const recoverAfterRestart = vi.fn(async () => ({}));
+  instanceChecks.delete(Config.prototype.constructor);
+  const restartedConfig = new Config(Promise.resolve(db), restartedWalletKeys, recoverAfterRestart);
+
+  await restartedConfig.load();
+
+  expect(restartedConfig.walletAccountsHadPreviousLife).toBe(true);
+  expect(restartedConfig.showWelcomeOverlay).toBe(false);
+  expect(inspectWalletHistory).not.toHaveBeenCalled();
+  expect(recoverAfterRestart).not.toHaveBeenCalled();
+  await db.close();
+});
+
 it('leaves failed previous-life recovery retryable after config finishes loading', async () => {
   const dbPromise = createMockedDbPromise();
   const { walletKeys } = createTestWallet('//Alice');
@@ -180,7 +213,7 @@ it('migrates old server port field to sshPort', async () => {
   expect((config.serverDetails as any).port).toBeUndefined();
 });
 
-it('does not activate a recovered local server owned by another app instance', async () => {
+it('loads a copied local-server configuration without activating the server', async () => {
   const dbPromise = createMockedDbPromise({
     serverDetails: JsonExt.stringify({
       ipAddress: '127.0.0.1',
@@ -189,10 +222,11 @@ it('does not activate a recovered local server owned by another app instance', a
       type: ServerType.LocalComputer,
       workDir: '/app',
     }),
+    serverAdd: JsonExt.stringify({ localComputer: {} }),
     isServerInstalled: 'true',
   });
-  const activate = vi.spyOn(LocalMachine, 'activate');
-  const { walletKeys } = createTestWallet('//Alice');
+  const activate = vi.spyOn(LocalMachine, 'activate').mockResolvedValue({ sshPort: 55222 } as any);
+  const { walletKeys } = createTestWallet('//Alice', { canAccessServer: false });
   instanceChecks.delete(Config.prototype.constructor);
   const config = new Config(dbPromise, walletKeys);
 

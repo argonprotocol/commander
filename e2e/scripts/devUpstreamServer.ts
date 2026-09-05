@@ -10,6 +10,7 @@ import {
   BidAmountFormulaType,
   createArgonClient,
   type IEthereumGatewayRelayStatus,
+  type INetworkConfigOverride,
   JsonExt,
   MainchainClients,
   MICROGONS_PER_ARGON,
@@ -126,7 +127,8 @@ export async function readDevUpstreamServerPorts(
 
 export async function startDevUpstreamServer(args: {
   archiveUrl: string;
-  devEthereum?: IStartDevEthereumResult;
+  networkConfigOverride?: INetworkConfigOverride;
+  devEthereum?: Pick<IStartDevEthereumResult, 'serverBeaconApiUrl' | 'serverExecutionRpcUrl' | 'usdcTokenAddress'>;
   devEthereumConfig?: Pick<IDevEthereumConfig, 'finalityBlocks' | 'finalityMillis'>;
 }): Promise<IDevUpstreamServerRuntime> {
   const upstreamRootDir = resolveDevUpstreamRootDir();
@@ -254,6 +256,9 @@ export async function startDevUpstreamServer(args: {
   );
 
   NetworkConfig.setNetwork('dev-docker');
+  if (args.networkConfigOverride) {
+    NetworkConfig.setRuntimeOverride('dev-docker', args.networkConfigOverride);
+  }
 
   const clients = new MainchainClients(args.archiveUrl, () => false);
   const actor = await AppVaultOperator.load({

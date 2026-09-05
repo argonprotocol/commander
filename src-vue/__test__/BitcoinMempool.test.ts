@@ -65,6 +65,35 @@ describe('BitcoinMempool', () => {
     expect(utxos).toHaveLength(1);
     expect(utxos[0].txid).toBe(`0x${reverseHexTxid(mempoolTxid)}`);
   });
+
+  it('finds the confirmed transaction that spent a canonical funding outpoint', async () => {
+    const mempool = new BitcoinMempool('https://example.invalid');
+    const fundingMempoolTxid = createMempoolTxid();
+    const spendingMempoolTxid = 'ffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100';
+    const fetchJson = vi.fn().mockResolvedValue({
+      spent: true,
+      txid: spendingMempoolTxid,
+      vin: 0,
+      status: {
+        confirmed: true,
+        block_height: 321,
+        block_time: 654,
+        block_hash: '00'.repeat(32),
+      },
+    });
+    Object.defineProperty(mempool, 'fetchJson', { value: fetchJson, configurable: true });
+
+    const result = await mempool.getOutspendStatus(`0x${reverseHexTxid(fundingMempoolTxid)}`, 2, 300);
+
+    expect(fetchJson).toHaveBeenCalledWith(`tx/${fundingMempoolTxid}/outspend/2`, 10_000);
+    expect(result).toEqual({
+      txid: `0x${reverseHexTxid(spendingMempoolTxid)}`,
+      isConfirmed: true,
+      transactionBlockHeight: 321,
+      transactionBlockTime: 654,
+      argonBitcoinHeight: 300,
+    });
+  });
 });
 
 function createMempoolTxid(): string {

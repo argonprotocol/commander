@@ -123,7 +123,6 @@ export default defineConfig({
           name: 'e2e',
           include: [E2E_TEST_GLOB],
           setupFiles: APP_SETUP_FILE,
-          isolate: false,
           fileParallelism: false,
           maxWorkers: 1,
           sequence: {

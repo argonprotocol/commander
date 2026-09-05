@@ -4,7 +4,7 @@ import { getEthereumFinalityMillis } from '../lib/EthereumClient.ts';
 
 describe('GlobalCouncil', () => {
   it('relays immediately when our signed approvals are awaiting Ethereum relay', async () => {
-    const globalCouncil = new GlobalCouncil(Promise.resolve({} as any), {} as any, {} as any);
+    const globalCouncil = new GlobalCouncil(Promise.resolve({} as any), { canSign: true } as any, {} as any);
     const getReadyGatewayRelayPreview = vi
       .spyOn(globalCouncil, 'getReadyGatewayRelayPreview')
       .mockResolvedValue({ canRelay: true } as any);
@@ -40,7 +40,7 @@ describe('GlobalCouncil', () => {
     vi.setSystemTime(new Date('2026-06-02T17:00:00Z'));
 
     try {
-      const globalCouncil = new GlobalCouncil(Promise.resolve({} as any), {} as any, {} as any);
+      const globalCouncil = new GlobalCouncil(Promise.resolve({} as any), { canSign: true } as any, {} as any);
       const getReadyGatewayRelayPreview = vi.spyOn(globalCouncil, 'getReadyGatewayRelayPreview').mockResolvedValue({
         canRelay: true,
         firstQueueNonce: 9n,
@@ -84,7 +84,7 @@ describe('GlobalCouncil', () => {
     vi.setSystemTime(new Date('2026-06-02T17:00:00Z'));
 
     try {
-      const globalCouncil = new GlobalCouncil(Promise.resolve({} as any), {} as any, {} as any);
+      const globalCouncil = new GlobalCouncil(Promise.resolve({} as any), { canSign: true } as any, {} as any);
       const getReadyGatewayRelayPreview = vi.spyOn(globalCouncil, 'getReadyGatewayRelayPreview').mockResolvedValue({
         canRelay: true,
         firstQueueNonce: 9n,
@@ -138,13 +138,14 @@ describe('GlobalCouncil', () => {
     const globalCouncil = new GlobalCouncil(
       Promise.resolve({
         walletHdKeysTable: {
+          fetchByScope: vi.fn(async () => [{ address: '0xabc' }]),
           upsert: vi.fn(async () => undefined),
         },
       } as any),
       {
+        canSign: false,
         councilSignerEthereumHdPath: `m/44'/60'/1'/0'`,
         vaultingAddress: '5existing',
-        getEthereumAddresses: vi.fn(async () => ['0xabc']),
       } as any,
       {} as any,
     );
@@ -290,6 +291,7 @@ describe('GlobalCouncil', () => {
     const globalCouncil = new GlobalCouncil(
       Promise.resolve({} as any),
       {
+        canSign: true,
         councilSignerEthereumHdPath: `m/44'/60'/1'/0'`,
         signEthereumPersonalMessage,
       } as any,
@@ -321,10 +323,12 @@ describe('GlobalCouncil', () => {
     const globalCouncil = new GlobalCouncil(
       Promise.resolve({
         walletHdKeysTable: {
+          fetchByScope: vi.fn(async () => []),
           upsert: vi.fn(async () => undefined),
         },
       } as any),
       {
+        canSign: true,
         councilSignerEthereumHdPath: `m/44'/60'/1'/0'`,
         vaultingAddress: '5vault',
         getEthereumAddresses: vi.fn(async () => ['0xabc']),

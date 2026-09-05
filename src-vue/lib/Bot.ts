@@ -56,6 +56,7 @@ export class Bot {
 
   public async getClient(): Promise<BotWsClient> {
     await this.loadDeferred.promise;
+    if (!this.serverApiClient.canAccessServer) throw new Error('Server access is unavailable');
     return this.botSyncer.getClient();
   }
 
@@ -66,6 +67,10 @@ export class Bot {
     this.loadDeferred.setIsRunning(true);
     try {
       await this.config.isLoadedPromise;
+      if (!this.serverApiClient.canAccessServer) {
+        this.loadDeferred.resolve();
+        return this.loadDeferred.promise;
+      }
       const db = await this.dbPromise;
       this.botSyncer = new BotSyncer(this.config, db, installer, this.serverApiClient, mining, miningFrames, {
         onEvent: (type, payload) => botEmitter.emit(type, payload),
@@ -92,6 +97,7 @@ export class Bot {
 
   public async refreshState(): Promise<void> {
     await this.loadDeferred.promise;
+    if (!this.serverApiClient.canAccessServer) throw new Error('Server access is unavailable');
     await this.botSyncer.refresh();
   }
 

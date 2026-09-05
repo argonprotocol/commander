@@ -46,15 +46,19 @@ describe('Vaults stats storage', () => {
 });
 
 describe('Vault operator names', () => {
-  it('loads requested names from operational profiles', async () => {
+  it('loads vault names from operational profile entries', async () => {
+    const operationalAccountId = `0x${'01'.repeat(32)}`;
+    const operatorAccountId = `0x${'02'.repeat(32)}`;
     const client = {
       query: {
         operationalAccounts: {
           operationalAccountBySubAccount: {
-            multi: vi.fn(async () => [`0x${'01'.repeat(32)}`]),
+            entries: vi.fn(async () => [[{ args: [operatorAccountId] }, operationalAccountId]]),
           },
           operationalAccounts: {
-            multi: vi.fn(async () => [{ name: new TextEncoder().encode('Atlas') }]),
+            entries: vi.fn(async () => [
+              [{ args: [operationalAccountId] }, { name: new TextEncoder().encode('Atlas') }],
+            ]),
           },
         },
       },
@@ -62,7 +66,7 @@ describe('Vault operator names', () => {
     setMainchainClients({ get: vi.fn(async () => client) } as any);
     const vaults = new Vaults('dev-docker', {} as any, {} as any);
 
-    await vaults.refreshOperatorNames({ vaults: [{ vaultId: 1, operatorAccountId: `0x${'02'.repeat(32)}` }] });
+    await vaults.refreshOperatorNames({ vaults: [{ vaultId: 1, operatorAccountId }] });
 
     expect(vaults.operatorNamesByVaultId[1]).toBe('Atlas');
   });

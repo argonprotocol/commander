@@ -282,8 +282,10 @@ export class Config implements IConfig {
         rawData[dbFields.upstreamOperator] = '';
       }
       const isFirstTimeAppLoad = Object.keys(dbRawData).length === 0;
-      if (isFirstTimeAppLoad) {
-        await this._injectFirstTimeAppData(loadedData, rawData, fieldsToSave);
+      const isWalletOnlyReadonlyLoad =
+        !this._walletKeys.canSign && dbRawData[dbFields.walletAccountsHadPreviousLife] === undefined;
+      if (isFirstTimeAppLoad || isWalletOnlyReadonlyLoad) {
+        await this._injectInitialWalletHistory(loadedData, rawData, fieldsToSave);
       }
 
       const hasLegacyAccountState =
@@ -321,7 +323,9 @@ export class Config implements IConfig {
       }
 
       const managesLocalComputer =
-        loadedData.serverDetails.type === ServerType.LocalComputer && loadedData.serverAdd?.localComputer;
+        this._walletKeys.canAccessServer &&
+        loadedData.serverDetails.type === ServerType.LocalComputer &&
+        loadedData.serverAdd?.localComputer;
       if (managesLocalComputer && !loadedData.isServerInstalling) {
         const { sshPort } = await LocalMachine.activate();
         if (!IS_TEST && IS_STABLE_BUILD) {
@@ -702,7 +706,7 @@ export class Config implements IConfig {
     this._fieldsToSave.add(field);
   }
 
-  private async _injectFirstTimeAppData(
+  private async _injectInitialWalletHistory(
     loadedData: Partial<IConfig>,
     stringifiedData: IConfigStringified,
     fieldsToSave: Set<string>,

@@ -117,7 +117,7 @@ describe('BitcoinLocks Argon cosign gating', () => {
 
     const store = new BitcoinLocks(
       Promise.resolve({} as Db),
-      {} as WalletKeys,
+      { canSign: true } as WalletKeys,
       { bestBlockHeader: { blockNumber: 0 } } as BlockWatch,
       {} as CurrencyBase,
       {} as TransactionTracker,
@@ -174,7 +174,7 @@ describe('BitcoinLocks Argon cosign gating', () => {
 
     const store = new BitcoinLocks(
       Promise.resolve({} as Db),
-      {} as WalletKeys,
+      { canSign: true } as WalletKeys,
       { bestBlockHeader: { blockNumber: 0 } } as BlockWatch,
       {} as CurrencyBase,
       {} as TransactionTracker,

@@ -9,7 +9,7 @@ import BitcoinOrphanReleases from '../lib/BitcoinOrphanReleases.ts';
 import BitcoinMempool, { type IMempoolTxStatus } from '../lib/BitcoinMempool.ts';
 import type { Db } from '../lib/Db.ts';
 import type { TransactionTracker } from '../lib/TransactionTracker.ts';
-import type { WalletKeys } from '../lib/WalletKeys.ts';
+import { WalletSigningUnavailableError, type WalletKeys } from '../lib/WalletKeys.ts';
 import { BitcoinLockStatus, type IBitcoinLockRecord } from '../lib/db/BitcoinLocksTable.ts';
 import { BitcoinUtxoStatus, type IBitcoinUtxoRecord } from '../lib/db/BitcoinUtxosTable.ts';
 import { TransactionStatus } from '../lib/db/TransactionsTable.ts';
@@ -79,6 +79,36 @@ describe('BitcoinLocks release status sync', () => {
     expect(setStatusError).toHaveBeenCalledWith(fundingRecord, 'Error: signing failed');
   });
 
+  it('ownerCosignAndSendToBitcoin does not record unavailable signing as a release failure', async () => {
+    const db = await createTestDb();
+    const lock = await createLock(db, BitcoinLockStatus.Releasing);
+    lock.utxoId = 1;
+    const fundingRecord = createFundingRecord({
+      id: 11,
+      lockUtxoId: lock.utxoId,
+      status: BitcoinUtxoStatus.ReleaseIsProcessingOnArgon,
+      requestedReleaseAtTick: 123,
+      releaseToDestinationAddress: '0014abc123',
+      releaseBitcoinNetworkFee: 10n,
+      releaseCosignVaultSignature: new Uint8Array([1, 2, 3]),
+      releaseTxid: undefined,
+      releasedAtBitcoinHeight: undefined,
+    });
+    lock.fundingUtxoRecord = fundingRecord;
+
+    const ownerCosignAndGenerateTxBytes = vi
+      .fn<() => Promise<never>>()
+      .mockRejectedValue(new WalletSigningUnavailableError());
+    const store = createRuntimeStore(db, { ownerCosignAndGenerateTxBytes });
+    const setStatusError = vi.spyOn(store.utxoTracking, 'setStatusError').mockResolvedValue();
+    vi.spyOn(store.utxoTracking, 'clearStatusError').mockResolvedValue();
+    vi.spyOn(store.utxoTracking, 'canSubmitFundingRecordReleaseToBitcoin').mockReturnValue(true);
+
+    // @ts-expect-error - private access
+    await expect(store.ownerCosignAndSendToBitcoin(lock)).rejects.toBeInstanceOf(WalletSigningUnavailableError);
+    expect(setStatusError).not.toHaveBeenCalled();
+  });
+
   it('release flow continues once the local cosign tx reaches its first block', async () => {
     const harness = createReleaseFlowHarness();
 
@@ -105,6 +135,18 @@ describe('BitcoinLocks release status sync', () => {
 
     expect(harness.ownerCosignAndSendToBitcoin).toHaveBeenCalledTimes(1);
     expect(harness.ownerCosignAndSendToBitcoin).toHaveBeenCalledWith(harness.lock);
+  });
+
+  it('release reconciliation stops cleanly when local vault signing is unavailable', async () => {
+    const harness = createReleaseFlowHarness({ canSign: false });
+
+    await expect(
+      // @ts-expect-error - private access
+      harness.store.syncLockReleaseArgonCosign(harness.lock, createArgonClientStub()),
+    ).resolves.toBeUndefined();
+
+    expect(harness.cosignMyLock).not.toHaveBeenCalled();
+    expect(harness.setReleaseCosign).not.toHaveBeenCalled();
   });
 
   it('syncLockReleaseArgonRequest repairs stale local release metadata from chain', async () => {
@@ -293,6 +335,39 @@ describe('BitcoinLocks release status sync', () => {
     expect(setReleaseError).not.toHaveBeenCalled();
   });
 
+  it('reconcileCandidateReturns restores the chain request without signing access', async () => {
+    const lock = { utxoId: 11, lockDetails: createLockDetails() } as IBitcoinLockRecord;
+    const orphanRecord = createFundingRecord({
+      id: 18,
+      lockUtxoId: 11,
+      status: BitcoinUtxoStatus.ReleaseIsProcessingOnArgon,
+      releaseToDestinationAddress: '0014abc123',
+      releaseBitcoinNetworkFee: 10n,
+    });
+    const submitToBitcoin = vi.fn();
+    const orphanReleases = createOrphanReleasesStub({
+      walletKeys: { canSign: false },
+      bitcoinLocks: {
+        utxoTracking: {
+          getAcceptedFundingRecordForLock: vi.fn().mockReturnValue(undefined),
+          getMismatchOrphanReleases: vi.fn().mockReturnValue([orphanRecord]),
+          setReleaseError: vi.fn<(...args: any[]) => Promise<void>>().mockResolvedValue(undefined),
+        },
+      },
+      getTransactionInfo: vi.fn().mockReturnValue(undefined),
+      syncReleaseRequestFromChain: vi.fn().mockImplementation(async () => {
+        orphanRecord.requestedReleaseAtTick = 123;
+        return true;
+      }),
+      submitToBitcoin,
+    });
+
+    await orphanReleases.reconcileCandidateReturns(lock);
+
+    expect(orphanRecord.requestedReleaseAtTick).toBe(123);
+    expect(submitToBitcoin).not.toHaveBeenCalled();
+  });
+
   it('reconcileCandidateReturns stores confirmed orphan cosign data only after finalization', async () => {
     const lock = { utxoId: 11 } as IBitcoinLockRecord;
     const orphanRecord = createFundingRecord({
@@ -424,6 +499,44 @@ describe('BitcoinLocks release status sync', () => {
 
     expect(syncReleaseRequestFromChain).toHaveBeenCalledWith(lock, orphanRecord);
     expect(setReleaseError).not.toHaveBeenCalled();
+  });
+
+  it('reconcileOrphanReturns restores the chain request without signing access', async () => {
+    const lock = { utxoId: 11 } as IBitcoinLockRecord;
+    const orphanRecord = createFundingRecord({
+      id: 19,
+      lockUtxoId: 11,
+      status: BitcoinUtxoStatus.ReleaseIsProcessingOnArgon,
+      requestedReleaseAtTick: undefined,
+      releaseToDestinationAddress: '0014abc123',
+      releaseBitcoinNetworkFee: 10n,
+      releaseCosignVaultSignature: new Uint8Array([4, 5, 6]),
+      releaseCosignHeight: 77,
+    });
+    const submitToBitcoin = vi.fn();
+    const orphanReleases = createOrphanReleasesStub({
+      walletKeys: { canSign: false },
+      bitcoinLocks: {
+        utxoTracking: {
+          getUnresolvedOrphanRecords: vi.fn().mockReturnValue([orphanRecord]),
+          setReleaseError: vi.fn<(...args: any[]) => Promise<void>>().mockResolvedValue(undefined),
+        },
+      },
+      getTransactionInfo: vi.fn().mockReturnValue({
+        tx: { status: TransactionStatus.Error },
+        txResult: { submissionError: new Error('The local attempt failed') },
+      }),
+      syncReleaseRequestFromChain: vi.fn().mockImplementation(async () => {
+        orphanRecord.requestedReleaseAtTick = 123;
+        return true;
+      }),
+      submitToBitcoin,
+    });
+
+    await orphanReleases.reconcileOrphanReturns(lock);
+
+    expect(orphanRecord.requestedReleaseAtTick).toBe(123);
+    expect(submitToBitcoin).not.toHaveBeenCalled();
   });
 
   it('reconcileCandidateReturns excludes the accepted funding UTXO from orphan-return handling', async () => {
@@ -711,7 +824,7 @@ function createRuntimeStore(
   return Object.assign(
     new BitcoinLocks(
       Promise.resolve(db),
-      deps?.walletKeys ?? (Object.create(null) as WalletKeys),
+      deps?.walletKeys ?? ({ canSign: true } as WalletKeys),
       blockWatch,
       currency,
       transactionTracker,
@@ -728,11 +841,13 @@ function createStoreStub(overrides: object): BitcoinLocks {
 function createOrphanReleasesStub({ bitcoinLocks, ...overrides }: any): BitcoinOrphanReleases {
   return Object.assign(Object.create(BitcoinOrphanReleases.prototype), {
     bitcoinLocks,
+    walletKeys: { canSign: true },
     ...overrides,
   }) as BitcoinOrphanReleases;
 }
 
 function createReleaseFlowHarness(args?: {
+  canSign?: boolean;
   waitForInFirstBlock?: Promise<unknown>;
   waitForFinalizedBlock?: Promise<unknown>;
 }) {
@@ -809,6 +924,7 @@ function createReleaseFlowHarness(args?: {
   };
 
   const store = createStoreStub({
+    walletKeys: { canSign: args?.canSign ?? true },
     utxoTracking,
     myVault: {
       vaultId: 1,

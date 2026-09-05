@@ -17,7 +17,25 @@ import type { IWalletRecord } from './db/WalletsTable.ts';
 
 export type EthereumHdPathPrefix = `m/44'/60'/${string}`;
 
+export class WalletSigningUnavailableError extends Error {
+  constructor() {
+    super('Wallet signing is unavailable');
+    this.name = 'WalletSigningUnavailableError';
+  }
+}
+
+export function isWalletSigningUnavailableError(error: unknown): error is WalletSigningUnavailableError {
+  return error instanceof WalletSigningUnavailableError;
+}
+
+type WalletCapabilities = {
+  canSign: boolean;
+  canAccessServer: boolean;
+};
+
 export class WalletKeys {
+  public readonly canSign: boolean;
+  public readonly canAccessServer: boolean;
   public sshPublicKey: string;
   /**
    * Default Argon wallet used for user capital.
@@ -57,7 +75,10 @@ export class WalletKeys {
     security: ISecurity,
     public didWalletHavePreviousLife: () => Promise<boolean>,
     private readonly loadMiningBotSubaccountCount?: () => Promise<number>,
+    capabilities: WalletCapabilities = { canSign: true, canAccessServer: true },
   ) {
+    this.canSign = capabilities.canSign;
+    this.canAccessServer = capabilities.canAccessServer;
     this.sshPublicKey = security.sshPublicKey;
     this.defaultArgonAddress = security.vaultingAddress;
     this.defaultArgonKeyReference = '//vaulting';
@@ -77,10 +98,12 @@ export class WalletKeys {
   }
 
   public async exposeMasterMnemonic(): Promise<string> {
+    this.requireSigningAccess();
     return await invokeWithTimeout<string>('expose_mnemonic', {}, 60e3);
   }
 
   public async exportEthereumPrivateKey(): Promise<Hex> {
+    this.requireSigningAccess();
     return await invokeWithTimeout<Hex>('export_default_ethereum_private_key', {}, 60e3);
   }
 
@@ -118,16 +141,19 @@ export class WalletKeys {
   }
 
   public async getMiningSessionMiniSecret(): Promise<string> {
+    this.requireSigningAccess();
     const seed = await invokeWithTimeout<Uint8Array>('derive_ed25519_seed', { suri: '//mining//sessions' }, 60e3);
     return u8aToHex(seed);
   }
 
   public async getRouterRestoreSealingKey(): Promise<string> {
+    this.requireSigningAccess();
     const seed = await invokeWithTimeout<Uint8Array>('derive_ed25519_seed', { suri: '//router-restore-sealing' }, 60e3);
     return u8aToHex(seed);
   }
 
   public async getOwnServerBootstrapEndpointSecret(index = 0): Promise<string> {
+    this.requireSigningAccess();
     const seed = await invokeWithTimeout<Uint8Array>(
       'derive_ed25519_seed',
       { suri: `//bootstrap-endpoint//${index}` },
@@ -137,6 +163,7 @@ export class WalletKeys {
   }
 
   public async getUpstreamEndpointRecoverySeed(): Promise<string> {
+    this.requireSigningAccess();
     const seed = await invokeWithTimeout<Uint8Array>(
       'derive_ed25519_seed',
       { suri: '//bootstrap-recovery//upstream' },
@@ -146,6 +173,7 @@ export class WalletKeys {
   }
 
   public async getOwnServerEndpointRecoverySeed(): Promise<string> {
+    this.requireSigningAccess();
     const seed = await invokeWithTimeout<Uint8Array>(
       'derive_ed25519_seed',
       { suri: '//bootstrap-recovery//own-server' },
@@ -156,6 +184,7 @@ export class WalletKeys {
 
   // TODO: move signing to backend instead of passing around key
   public async getDefaultArgonKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     const account = await invokeWithTimeout<Uint8Array>(
       'derive_sr25519_seed',
       { suri: this.defaultArgonKeyReference },
@@ -165,12 +194,14 @@ export class WalletKeys {
   }
 
   public async getLegacyMiningHoldKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     const account = await invokeWithTimeout<Uint8Array>('derive_sr25519_seed', { suri: `//holding` }, 60e3);
     return new Keyring({ type: 'sr25519' }).addFromSeed(account);
   }
 
   // TODO: move signing to backend instead of passing around key
   public async getVaultingKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     const account = await invokeWithTimeout<Uint8Array>(
       'derive_sr25519_seed',
       { suri: this.defaultArgonKeyReference },
@@ -187,11 +218,13 @@ export class WalletKeys {
 
   // TODO: move signing to backend instead of passing around key
   public async getOperationalKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     const account = await invokeWithTimeout<Uint8Array>('derive_sr25519_seed', { suri: `//operational` }, 60e3);
     return new Keyring({ type: 'sr25519' }).addFromSeed(account);
   }
 
   public async getUpstreamOperatorAuthKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     if (this.upstreamOperatorAuthKeypair) return this.upstreamOperatorAuthKeypair;
 
     const account = await invokeWithTimeout<Uint8Array>(
@@ -205,11 +238,13 @@ export class WalletKeys {
   }
 
   public async getVaultDelegateKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     const account = await invokeWithTimeout<Uint8Array>('derive_sr25519_seed', { suri: `//vaulting//delegate` }, 60e3);
     return new Keyring({ type: 'sr25519' }).addFromSeed(account);
   }
 
   public async getOperationalEncryptionKeypair(): Promise<Uint8Array> {
+    this.requireSigningAccess();
     return await invokeWithTimeout<Uint8Array>('derive_x25519_public_key', { suri: `//operational//encrypt` }, 60e3);
   }
 
@@ -226,6 +261,7 @@ export class WalletKeys {
     hdPath?: string,
     format: 'ethereum' | 'argon' = 'ethereum',
   ): Promise<Hex> {
+    this.requireSigningAccess();
     const signature =
       !hdPath && this.canUseExternalEthereumSigner()
         ? await invokeWithTimeout<Hex>(
@@ -258,12 +294,14 @@ export class WalletKeys {
   }
 
   public async getEthereumAddresses(hdPaths: string[]): Promise<string[]> {
+    this.requireSigningAccess();
     return (await invokeWithTimeout<string[]>('derive_ethereum_addresses', { hdPaths }, 60e3)).map(x =>
       x.toLowerCase(),
     );
   }
 
   public async signEthereumTransaction(unsignedTransaction: Hex, hdPath = this.ethereumHdPath): Promise<Signature> {
+    this.requireSigningAccess();
     if (hdPath === this.ethereumHdPath && this.canUseExternalEthereumSigner()) {
       return await invokeWithTimeout<Signature>(
         'sign_external_ethereum_transaction',
@@ -290,6 +328,7 @@ export class WalletKeys {
     nonce: bigint;
     deadline: bigint;
   }): Promise<{ v: number; r: string; s: string }> {
+    this.requireSigningAccess();
     const request = {
       tokenAddress: args.tokenAddress,
       tokenName: args.tokenName,
@@ -339,11 +378,13 @@ export class WalletKeys {
 
   // TODO: move signing to backend instead of passing around key
   public async getMiningBotKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     const account = await invokeWithTimeout<Uint8Array>('derive_sr25519_seed', { suri: `//mining` }, 60e3);
     return new Keyring({ type: 'sr25519' }).addFromSeed(account);
   }
 
   public async getMiningBidProxyKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     const account = await invokeWithTimeout<Uint8Array>('derive_sr25519_seed', { suri: `//mining//proxy` }, 60e3);
     return new Keyring({ type: 'sr25519' }).addFromSeed(account);
   }
@@ -395,6 +436,7 @@ export class WalletKeys {
   }
 
   public async getBitcoinChildXpriv(xpubPath: string, network: BitcoinNetwork): Promise<HDKey> {
+    this.requireSigningAccess();
     const bip32Version = getBip32Version(network) ?? BITCOIN_VERSIONS[network as keyof typeof BITCOIN_VERSIONS];
     if (!bip32Version) {
       throw new Error(`Unsupported Bitcoin network: ${network}`);
@@ -405,6 +447,10 @@ export class WalletKeys {
       60e3,
     );
     return HDKey.fromExtendedKey(extendedKey, bip32Version);
+  }
+
+  protected requireSigningAccess(): void {
+    if (!this.canSign) throw new WalletSigningUnavailableError();
   }
 
   private canUseExternalEthereumSigner(): boolean {

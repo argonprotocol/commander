@@ -3,6 +3,7 @@ import { IConfigServerDetails } from '../interfaces/IConfig';
 import { InvokeTimeout } from './tauriApi';
 import { SSHConnection } from './SSHConnection';
 import { ServerAdmin } from './ServerAdmin';
+import type { WalletKeys } from './WalletKeys.ts';
 
 export type ITryServerData = Awaited<ReturnType<ServerAdmin['downloadConfigState']>> & {
   walletAddress: string | undefined;
@@ -12,9 +13,11 @@ export type ITryServerData = Awaited<ReturnType<ServerAdmin['downloadConfigState
 export class SSH {
   public static connection?: SSHConnection;
   private static config: Config;
+  private static walletKeys: WalletKeys;
 
-  public static setConfig(config: Config): void {
+  public static setConfig(config: Config, walletKeys: WalletKeys): void {
     this.config = config;
+    this.walletKeys = walletKeys;
     if (
       this.connection &&
       this.connection.address !== `${this.config.serverDetails.ipAddress}:${this.config.serverDetails.sshPort ?? 22}`
@@ -29,6 +32,7 @@ export class SSH {
   }
 
   public static async getOrCreateConnection(retries = 3): Promise<SSHConnection> {
+    if (!this.walletKeys.canAccessServer) throw new Error('Server access is unavailable');
     await this.config.isLoadedPromise;
     this.connection ??= new SSHConnection({ ...this.config.serverDetails });
     try {
@@ -42,6 +46,7 @@ export class SSH {
   }
 
   public static async tryConnection(serverDetails: IConfigServerDetails): Promise<ITryServerData> {
+    if (!this.walletKeys.canAccessServer) throw new Error('Server access is unavailable');
     const connection = new SSHConnection({ ...serverDetails });
     await connection.connect(0);
     const server = new ServerAdmin(connection, serverDetails);

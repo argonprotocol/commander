@@ -1,10 +1,11 @@
 import { JsonExt } from '@argonprotocol/apps-core';
 import { invoke } from '@tauri-apps/api/core';
 import { getConfig } from '../stores/config';
+import { getDbPromise } from '../stores/helpers/dbPromise.ts';
 import { getMainchainClient, getMiningFrames } from '../stores/mainchain';
 import { getBitcoinLocks } from '../stores/bitcoin';
 import { getMyVault } from '../stores/vaults';
-import { useWallets } from '../stores/wallets.ts';
+import { getWalletKeys, useWallets } from '../stores/wallets.ts';
 import { useBasics } from '../stores/basics.ts';
 import { getEthereumMoveTracker } from '../stores/moveFromEthereum.ts';
 import { getEthereumOutboundTransferTracker } from '../stores/moveToEthereum.ts';
@@ -1226,6 +1227,9 @@ async function getAppQueryRefs(): Promise<IAppQueryRefs> {
     bitcoinLocks,
     myVault,
     wallets: useWallets(),
+    canSign: getWalletKeys().canSign,
+    defaultArgonAddress: getWalletKeys().defaultArgonAddress,
+    defaultEthereumAddress: getWalletKeys().defaultEthereumAddress,
     overlayIsOpen: basics.overlayIsOpen,
     getEthereumMoveTracker,
     getEthereumOutboundTransferTracker,
@@ -1333,6 +1337,24 @@ async function runCommandInternal(command: string, argsInput: unknown, context: 
   if (command === 'app.waitForReady') {
     const timeoutMs = getTimeoutMs(args.timeoutMs, 'timeoutMs', DEFAULT_READY_TIMEOUT_MS);
     await waitForAppReady(timeoutMs);
+    return { ok: true };
+  }
+
+  if (command === 'app.checkpointDatabase') {
+    const timeoutMs = getTimeoutMs(args.timeoutMs, 'timeoutMs', DEFAULT_READY_TIMEOUT_MS);
+    const db = await getDbPromise();
+    await withTimeout(db.execute('PRAGMA wal_checkpoint(TRUNCATE)'), timeoutMs, command);
+    db.pauseWrites();
+    return { ok: true };
+  }
+
+  if (command === 'app.loadInstance') {
+    const name = getString(args.name, 'name') as string;
+    window.setTimeout(() => {
+      void invoke('load_instance', { name }).catch(error => {
+        console.error(`[E2E] Failed to load instance '${name}'`, error);
+      });
+    }, 0);
     return { ok: true };
   }
 

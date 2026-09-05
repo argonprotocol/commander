@@ -12,6 +12,7 @@ import { getTransactionTracker } from './transactions.ts';
 import { getUpstreamOperatorClient } from './upstreamOperator.ts';
 import { getVaults } from './vaults.ts';
 import { getWalletKeys } from './wallets.ts';
+import type { WalletKeys } from '../lib/WalletKeys.ts';
 
 const bitcoinPrices = new BitcoinPrices();
 const bitcoinFees = new BitcoinFees();
@@ -59,6 +60,7 @@ export function getBitcoinLockCoupons() {
         config: getConfig(),
         upstreamOperatorClient: getUpstreamOperatorClient(),
         vaults: getVaults(),
+        walletKeys: getWalletKeys(),
       }),
     )!;
   }
@@ -71,11 +73,13 @@ export function createBitcoinLockCouponsState({
   config,
   upstreamOperatorClient,
   vaults,
+  walletKeys,
 }: {
   bitcoinLocks: BitcoinLocks;
   config: ReturnType<typeof getConfig>;
   upstreamOperatorClient: ReturnType<typeof getUpstreamOperatorClient>;
   vaults: ReturnType<typeof getVaults>;
+  walletKeys: Pick<WalletKeys, 'canSign'>;
 }) {
   const coupons = Vue.shallowRef<IBitcoinLockCouponStatus[]>([]);
   const couponOfferLiquidityMicrogons = Vue.ref<bigint>();
@@ -152,6 +156,7 @@ export function createBitcoinLockCouponsState({
   }
 
   async function refresh(subscriptionKey = selectedVaultSubscriptionKey): Promise<void> {
+    if (!walletKeys.canSign) return;
     if (couponRefresh?.subscriptionKey === subscriptionKey) return await couponRefresh.promise;
     if (couponStatusRefreshTimeout) clearTimeout(couponStatusRefreshTimeout);
     couponStatusRefreshTimeout = undefined;
