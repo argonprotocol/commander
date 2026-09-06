@@ -26,8 +26,9 @@ const ARCHIVE_URL = process.env.ARGON_ARCHIVE_URL;
     try {
       console.log(`Updating ${name}: ${config.archiveUrl}`);
       const clients = new MainchainClients(config.archiveUrl, () => true);
+      let client: Awaited<typeof clients.archiveClientPromise> | undefined;
       try {
-        const client = await Promise.race([
+        client = await Promise.race([
           clients.archiveClientPromise,
           new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 1e3)),
         ]);
@@ -46,7 +47,8 @@ const ARCHIVE_URL = process.env.ARGON_ARCHIVE_URL;
           console.log(`Updated ${name}.json with latest frame history`);
         }
       } finally {
-        await clients.disconnect();
+        const disconnect = clients.archiveClientPromise.then(() => clients.disconnect()).catch(() => undefined);
+        if (client) await disconnect;
       }
     } catch (e) {
       console.warn(`[${name}]`, e);
