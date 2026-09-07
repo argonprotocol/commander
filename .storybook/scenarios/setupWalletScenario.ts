@@ -69,6 +69,7 @@ export type WalletTransferScenario =
   | 'routeUnavailable'
   | 'submittingInbound'
   | 'inboundEthereum'
+  | 'inboundTransactionUnavailable'
   | 'inboundRelay'
   | 'inboundArgon'
   | 'submittingOutbound'
@@ -333,7 +334,9 @@ function createInboundTransfer(state: WalletTransferScenario): IEthereumInboundA
   let progress = createCrosschainTransferProgress(INBOUND_TRANSFER_STEP_TITLES);
   let isSubmitting = false;
   let hasPersistedTransfer = true;
+  let needsAttention = false;
   let isComplete = false;
+  let error = '';
 
   switch (state) {
     case 'submittingInbound':
@@ -354,6 +357,15 @@ function createInboundTransfer(state: WalletTransferScenario): IEthereumInboundA
         }),
         confirmations: 5,
         expectedConfirmations: 12,
+      });
+      break;
+    case 'inboundTransactionUnavailable':
+      needsAttention = true;
+      error =
+        'Ethereum transaction 0x9595959595959595959595959595959595959595959595959595959595959595 could not be found after the expected confirmation window. It may have been dropped or replaced. Check your Ethereum wallet activity before retrying.';
+      progress = setInboundEthereumStepProgress(progress, {
+        progressPct: 0,
+        detail: 'Submitted to Ethereum. Waiting for confirmation...',
       });
       break;
     case 'inboundRelay':
@@ -388,12 +400,12 @@ function createInboundTransfer(state: WalletTransferScenario): IEthereumInboundA
     transferState: {
       isSubmitting,
       hasPersistedTransfer,
-      needsAttention: false,
+      needsAttention,
       isComplete,
       amount: 175n * argon,
       targetWalletType: WalletType.defaultArgon,
       progress: stabilizeProgress(progress),
-      error: '',
+      error,
     } satisfies IEthereumInboundTransferState,
   };
 }

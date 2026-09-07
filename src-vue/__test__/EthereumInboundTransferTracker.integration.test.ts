@@ -12,6 +12,7 @@ import {
 import { EthereumInboundTransferTracker } from '../lib/EthereumInboundTransferTracker.ts';
 import {
   EthereumTransactionRevertedError,
+  EthereumTransactionUnavailableError,
   type EthereumClient,
   type IEthereumTransactionProgress,
 } from '../lib/EthereumClient.ts';
@@ -1115,6 +1116,70 @@ describe('EthereumInboundTransferTracker integration', () => {
       hasPersistedTransfer: false,
       needsAttention: false,
     });
+  });
+
+  it('marks a long-missing source transaction failed after loading it from the database', async () => {
+    const db = await createTestDb();
+    const walletKeys = createMockWalletKeys();
+    const sourceTxHash = `0x${'95'.repeat(32)}` as const;
+    const persistedRecord = await insertTransferRecord(db, walletKeys.ethereumAddress, {
+      id: 'eth-transfer-unavailable',
+      token: MoveToken.ARGN,
+      argonDestinationAddress: walletKeys.defaultArgonAddress,
+      sourceTxHash,
+      status: CrosschainInboundTransferStatus.SourceSubmitted,
+    });
+    const ethereumClient = createEthereumClient({
+      sourceAddress: walletKeys.ethereumAddress,
+      destinationAddress: persistedRecord.argonDestinationAddress,
+      sourceTxHash,
+      sourceBlockNumber: 55,
+      sourceBlockHash: `0x${'96'.repeat(32)}`,
+      sourceLogIndex: 0,
+      gatewayActivityNonce: 10n,
+    });
+    let finalityAttempt = 0;
+    ethereumClient.waitForTransactionFinality = vi.fn(async () => {
+      finalityAttempt += 1;
+      if (finalityAttempt === 1) {
+        throw new EthereumTransactionUnavailableError(sourceTxHash);
+      }
+      throw new EthereumTransactionRevertedError(sourceTxHash);
+    });
+    const tracker = new EthereumInboundTransferTracker(
+      Promise.resolve(db),
+      createTransactionTracker(),
+      createBlockWatch(
+        createMainchainClient({
+          getProvenNonce: () => 9n,
+        }),
+      ),
+      walletKeys,
+      ethereumClient,
+      undefined,
+      {
+        resolveOperatorHost: async () => undefined,
+        requestEthereumGatewayCatchUp: vi.fn(),
+      },
+    );
+
+    await tracker.load();
+
+    await vi.waitFor(async () => {
+      const failedRecord = await db.crosschainInboundTransfersTable.get(persistedRecord.id);
+      expect(failedRecord?.failureReason).toContain('could not be found');
+      expect(failedRecord?.isFailureAcknowledged).toBe(false);
+      expect(tracker.getTransfer(persistedRecord.id)?.transferState).toMatchObject({
+        isSubmitting: false,
+        hasPersistedTransfer: true,
+        needsAttention: true,
+        isComplete: false,
+      });
+    });
+    expect(ethereumClient.waitForTransactionFinality).toHaveBeenCalledTimes(1);
+    expect(ethereumClient.waitForTransactionFinality).toHaveBeenCalledWith(
+      expect.objectContaining({ submittedAtMs: persistedRecord.createdAt.getTime() }),
+    );
   });
 
   it('surfaces a clear error when the Ethereum wallet cannot cover the network fee', async () => {
