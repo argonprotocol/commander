@@ -76,7 +76,9 @@ function runDockerInspector(): void {
       '--cpus',
       '1',
       '--user',
-      '65534:65534',
+      typeof process.getuid === 'function' && typeof process.getgid === 'function'
+        ? `${process.getuid()}:${process.getgid()}`
+        : '65534:65534',
       '--tmpfs',
       '/tmp:rw,noexec,nosuid,nodev,size=32m',
       '--mount',
@@ -166,12 +168,8 @@ async function inspectZip(archivePath: string, depth: number, context: Inspectio
     const entries: ArchiveEntry[] = [];
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- Node 22 types do not expose the container-only API.
     for (const zipEntry of zip.valuesSync()) {
-      if (isFinderMetadata(zipEntry.name)) continue;
       const entry = createEntry(zipEntry.name, zipEntry.size);
-      inspectEntry(entry, zipEntry.isDirectory, !zipEntry.isDirectory, zipEntry.mode);
-      if (zipEntry.isSymlink) {
-        entry.issues.push('symbolic link');
-      }
+      const isRegular = !zipEntry.isDirectory && !zipEntry.isSymlink;
       if (zipEntry.size > MAX_ENTRY_BYTES) {
         entry.issues.push(`entry larger than ${MAX_ENTRY_BYTES} bytes`);
       }
@@ -181,13 +179,27 @@ async function inspectZip(archivePath: string, depth: number, context: Inspectio
       ) {
         entry.issues.push(`compression ratio above ${MAX_COMPRESSION_RATIO}:1`);
       }
-      registerEntry(entry, context);
-      if (!zipEntry.isDirectory && !zipEntry.isSymlink) {
+      if (zipEntry.isSymlink) {
+        entry.issues.push('symbolic link');
+      } else if (isRegular) {
         if (zipEntry.flags & 1) {
           entry.issues.push('encrypted ZIP entries are not supported');
         } else if (zipEntry.method !== 0 && zipEntry.method !== 8) {
           entry.issues.push(`ZIP compression method ${zipEntry.method} is not supported`);
-        } else if (zipEntry.size > MAX_ENTRY_BYTES) {
+        }
+      }
+      registerEntry(entry, context);
+      if (isFinderMetadata(zipEntry.name)) {
+        if (!isRegular && entry.issues.length === 0) entry.issues.push('non-regular archive entry');
+        if (entry.issues.length > 0) {
+          throw new InspectionError(`Finder metadata entry ${JSON.stringify(entry.name)}: ${entry.issues.join('; ')}`);
+        }
+        continue;
+      }
+
+      inspectEntry(entry, zipEntry.isDirectory, isRegular, zipEntry.mode);
+      if (isRegular && !(zipEntry.flags & 1) && (zipEntry.method === 0 || zipEntry.method === 8)) {
+        if (zipEntry.size > MAX_ENTRY_BYTES) {
           if (isNestedArchiveName(zipEntry.name))
             entry.issues.push(`nested archive is larger than ${MAX_NESTED_ARCHIVE_BYTES} bytes`);
         } else {
@@ -338,25 +350,28 @@ async function inspectTarEntry(
   if (!Number.isSafeInteger(tarEntry.size) || tarEntry.size < 0) {
     throw new InspectionError('TAR size exceeds the supported range');
   }
-  if (isFinderMetadata(tarEntry.path)) {
-    await readEntryPrefix(tarEntry);
-    return;
+  const entry = createEntry(tarEntry.path, tarEntry.size);
+  if (tarEntry.size > MAX_ENTRY_BYTES) {
+    entry.issues.push(`entry larger than ${MAX_ENTRY_BYTES} bytes`);
   }
-
+  registerEntry(entry, context);
   const isDirectory = tarEntry.type === 'Directory';
   const isRegular = tarEntry.type === 'File' || tarEntry.type === 'OldFile' || tarEntry.type === 'ContiguousFile';
-  const entry = createEntry(tarEntry.path, tarEntry.size);
-  inspectEntry(entry, isDirectory, isRegular, tarEntry.mode ?? 0);
   if (tarEntry.type === 'Link' || tarEntry.type === 'SymbolicLink') {
     entry.issues.push('link');
   } else if (!isDirectory && !isRegular) {
     entry.issues.push('non-regular archive entry');
   }
-  if (tarEntry.size > MAX_ENTRY_BYTES) {
-    entry.issues.push(`entry larger than ${MAX_ENTRY_BYTES} bytes`);
+  if (isFinderMetadata(tarEntry.path)) {
+    if (!isRegular && entry.issues.length === 0) entry.issues.push('non-regular archive entry');
+    if (entry.issues.length > 0) {
+      throw new InspectionError(`Finder metadata entry ${JSON.stringify(entry.name)}: ${entry.issues.join('; ')}`);
+    }
+    await readEntryPrefix(tarEntry, 0);
+    return;
   }
-  registerEntry(entry, context);
 
+  inspectEntry(entry, isDirectory, isRegular, tarEntry.mode ?? 0);
   const contents = await readEntryPrefix(tarEntry, isRegular ? MAX_NESTED_ARCHIVE_BYTES : 0);
   if (isRegular) await inspectContents(entry, contents, depth, context);
   entries.push(entry);

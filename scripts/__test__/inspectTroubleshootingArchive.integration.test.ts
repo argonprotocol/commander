@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmod, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import Path from 'node:path';
 import { crc32, deflateRawSync } from 'node:zlib';
@@ -13,13 +13,14 @@ afterEach(async () => {
 });
 
 describe('troubleshooting archive inspector', () => {
-  it('reports a support bundle without extracting files on the host', async () => {
+  it('reports an owner-only support bundle without extracting files on the host', async () => {
     const directory = await temporaryDirectory();
     const source = Path.join(directory, 'source');
     const archive = Path.join(directory, 'support.tar.gz');
     await mkdir(Path.join(source, 'logs'), { recursive: true });
     await writeFile(Path.join(source, 'logs', 'argon.log'), 'diagnostic output\n');
     await tar.create({ cwd: source, file: archive, gzip: true }, ['logs/argon.log']);
+    await chmod(archive, 0o600);
 
     const output = execFileSync('yarn', ['troubleshoot:inspect', archive], { encoding: 'utf8' });
 
@@ -252,7 +253,61 @@ describe('troubleshooting archive inspector', () => {
     expect(result.status).toBe(0);
     expect(result.stdout).not.toContain('REJECTED');
     expect(result.stdout).not.toContain('__MACOSX');
+    expect(result.stdout).toContain('Declared uncompressed bytes: 16');
     expect((await readdir(directory)).sort()).toEqual(['support.zip']);
+  });
+
+  it('rejects encrypted Finder metadata in ZIP archives', async () => {
+    const directory = await temporaryDirectory();
+    const archive = Path.join(directory, 'support.zip');
+    await createZip(archive, '__MACOSX/troubleshooting/._logs', 'encrypted metadata', { encrypted: true });
+
+    const result = spawnSync('yarn', ['troubleshoot:inspect', archive], { encoding: 'utf8' });
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('encrypted ZIP entries are not supported');
+  });
+
+  it('counts hidden Finder metadata in the TAR archive budget', async () => {
+    const directory = await temporaryDirectory();
+    const source = Path.join(directory, 'source');
+    const archive = Path.join(directory, 'support.tar');
+    const metadata = '__MACOSX/troubleshooting/._logs';
+    await mkdir(Path.join(source, '__MACOSX/troubleshooting'), { recursive: true });
+    await writeFile(Path.join(source, metadata), 'Finder metadata\n');
+    await tar.create({ cwd: source, file: archive }, [metadata]);
+
+    const result = spawnSync('yarn', ['troubleshoot:inspect', archive], { encoding: 'utf8' });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toContain('__MACOSX');
+    expect(result.stdout).toContain('Declared uncompressed bytes: 16');
+  });
+
+  it('rejects Finder metadata links in TAR archives', async () => {
+    const directory = await temporaryDirectory();
+    const source = Path.join(directory, 'source');
+    const archive = Path.join(directory, 'support.tar');
+    const metadata = '__MACOSX/troubleshooting/._logs';
+    await mkdir(Path.join(source, '__MACOSX/troubleshooting'), { recursive: true });
+    await symlink('logs', Path.join(source, metadata));
+    await tar.create({ cwd: source, file: archive }, [metadata]);
+
+    const result = spawnSync('yarn', ['troubleshoot:inspect', archive], { encoding: 'utf8' });
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('link');
+  });
+
+  it('rejects oversized Finder metadata before reporting the archive safe', async () => {
+    const directory = await temporaryDirectory();
+    const archive = Path.join(directory, 'support.zip');
+    await createZip(archive, '__MACOSX/troubleshooting/._logs', 'x', { declaredSize: 256 * 1024 * 1024 + 1 });
+
+    const result = spawnSync('yarn', ['troubleshoot:inspect', archive], { encoding: 'utf8' });
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('entry larger than');
   });
 
   it('rejects an ELF binary disguised as a diagnostic log', async () => {
@@ -347,7 +402,13 @@ async function createZip(
   archive: string,
   fileName: string,
   contents: string | Buffer,
-  options: { compressionMethod?: number; deflate?: boolean; mode?: number } = {},
+  options: {
+    compressionMethod?: number;
+    declaredSize?: number;
+    deflate?: boolean;
+    encrypted?: boolean;
+    mode?: number;
+  } = {},
 ): Promise<void> {
   const name = Buffer.from(fileName);
   const uncompressedData = Buffer.from(contents);
@@ -357,20 +418,22 @@ async function createZip(
   const localHeader = Buffer.alloc(30);
   localHeader.writeUInt32LE(0x04034b50);
   localHeader.writeUInt16LE(20, 4);
+  localHeader.writeUInt16LE(options.encrypted ? 1 : 0, 6);
   localHeader.writeUInt16LE(compressionMethod, 8);
   localHeader.writeUInt32LE(checksum, 14);
   localHeader.writeUInt32LE(data.length, 18);
-  localHeader.writeUInt32LE(uncompressedData.length, 22);
+  localHeader.writeUInt32LE(options.declaredSize ?? uncompressedData.length, 22);
   localHeader.writeUInt16LE(name.length, 26);
 
   const centralDirectory = Buffer.alloc(46);
   centralDirectory.writeUInt32LE(0x02014b50);
   centralDirectory.writeUInt16LE(0x0314, 4);
   centralDirectory.writeUInt16LE(20, 6);
+  centralDirectory.writeUInt16LE(options.encrypted ? 1 : 0, 8);
   centralDirectory.writeUInt16LE(compressionMethod, 10);
   centralDirectory.writeUInt32LE(checksum, 16);
   centralDirectory.writeUInt32LE(data.length, 20);
-  centralDirectory.writeUInt32LE(uncompressedData.length, 24);
+  centralDirectory.writeUInt32LE(options.declaredSize ?? uncompressedData.length, 24);
   centralDirectory.writeUInt16LE(name.length, 28);
   centralDirectory.writeUInt32LE((options.mode ?? 0o100644) * 2 ** 16, 38);
 
