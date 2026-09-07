@@ -14,7 +14,12 @@ import {
   setInboundRelayStepProgress,
   type ICrosschainTransferProgress,
 } from './CrosschainTransferProgress.ts';
-import { EthereumClient, EthereumTransactionRevertedError, type IEthereumMoveToken } from './EthereumClient.ts';
+import {
+  EthereumClient,
+  EthereumTransactionRevertedError,
+  EthereumTransactionUnavailableError,
+  type IEthereumMoveToken,
+} from './EthereumClient.ts';
 import { sleep } from './Utils.ts';
 import {
   CrosschainInboundTransferStatus,
@@ -425,7 +430,11 @@ export class EthereumInboundTransferTracker {
             return;
           }
         } catch (error) {
-          if (error instanceof InboundTransferInvariantError || error instanceof EthereumTransactionRevertedError) {
+          if (
+            error instanceof InboundTransferInvariantError ||
+            error instanceof EthereumTransactionRevertedError ||
+            error instanceof EthereumTransactionUnavailableError
+          ) {
             throw error;
           }
 
@@ -472,6 +481,7 @@ export class EthereumInboundTransferTracker {
       txHash: sourceTxHash,
       blockNumber: activeRecord.sourceBlockNumber,
       blockHash: activeRecord.sourceBlockHash,
+      submittedAtMs: activeRecord.createdAt.getTime(),
       onProgress: txProgress => {
         transferState.progress = setInboundEthereumStepProgress(transferState.progress, {
           progressPct: txProgress.progressPct,

@@ -100,6 +100,15 @@ export class EthereumTransactionRevertedError extends Error {
   }
 }
 
+export class EthereumTransactionUnavailableError extends Error {
+  constructor(txHash: Hash) {
+    super(
+      `Ethereum transaction ${txHash} could not be found after the expected confirmation window. It may have been dropped or replaced. Check your Ethereum wallet activity before retrying.`,
+    );
+    this.name = 'EthereumTransactionUnavailableError';
+  }
+}
+
 type IEthereumSubmissionClient = {
   sendRawTransaction(args: { serializedTransaction: Hex }): Promise<Hash>;
   getTransaction(args: { hash: Hash }): Promise<unknown>;
@@ -431,10 +440,13 @@ export class EthereumClient {
     txHash: Hash;
     blockNumber?: number;
     blockHash?: Hash;
+    submittedAtMs?: number;
     onProgress?: (progress: IEthereumTransactionProgress) => void;
     onRpcDelay?: (progress?: IEthereumTransactionProgress) => void;
   }): Promise<IFinalizedEthereumTransactionProgress> {
     const { txHash, onProgress, onRpcDelay } = args;
+    const transactionVisibilityDeadlineMs =
+      args.submittedAtMs == null ? undefined : args.submittedAtMs + this.getTransactionFinalityWaitEstimateMs();
     let blockNumber = args.blockNumber;
     let blockHash = args.blockHash;
     let lastProgress: IEthereumTransactionProgress | undefined;
@@ -450,6 +462,16 @@ export class EthereumClient {
         blockNumber = progress.blockNumber ?? blockNumber;
         blockHash = progress.blockHash ?? blockHash;
         onProgress?.(progress);
+
+        if (
+          blockNumber == null &&
+          transactionVisibilityDeadlineMs != null &&
+          Date.now() >= transactionVisibilityDeadlineMs
+        ) {
+          if (!(await this.isTransactionVisible(txHash))) {
+            throw new EthereumTransactionUnavailableError(txHash);
+          }
+        }
 
         if (!progress.isFinalized || blockNumber == null || !blockHash) {
           await sleep(this.getTransactionFinalityPollMs());

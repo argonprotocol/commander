@@ -148,6 +148,17 @@ const stories = {
     },
   },
 
+  inboundTransactionUnavailable: {
+    beforeEach: () => useScenario('inboundTransactionUnavailable'),
+    play: async () => {
+      const canvas = await getWalletCanvas('in');
+
+      await expectEventuallyVisible(canvas.findByText(/could not be found after the expected confirmation window/));
+      await expectEventuallyVisible(canvas.findByText(/may have been dropped or replaced/));
+      await expectEventuallyVisible(canvas.findByRole('button', { name: 'Dismiss' }));
+    },
+  },
+
   inboundRelay: {
     beforeEach: () => useScenario('inboundRelay'),
     play: async () => {
@@ -256,6 +267,7 @@ export const InsufficientEth = stories.insufficientEth;
 export const RouteUnavailable = stories.routeUnavailable;
 export const SubmittingInbound = stories.submittingInbound;
 export const InboundEthereum = stories.inboundEthereum;
+export const InboundTransactionUnavailable = stories.inboundTransactionUnavailable;
 export const InboundRelay = stories.inboundRelay;
 export const InboundArgon = stories.inboundArgon;
 export const SubmittingOutbound = stories.submittingOutbound;

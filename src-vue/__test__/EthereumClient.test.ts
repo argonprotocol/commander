@@ -251,6 +251,76 @@ describe('EthereumClient', () => {
     expect(getBlockNumber).not.toHaveBeenCalled();
   });
 
+  it('stops waiting when a submitted transaction remains absent past the finality window', async () => {
+    const txHash = `0x${'33'.repeat(32)}` as const;
+    const ethereumClient = new EthereumClient(createMockWalletKeys(), 'https://ethereum.test');
+    let receiptLookupCount = 0;
+
+    Object.assign(ethereumClient, {
+      createExecutionClient: async () => ({
+        publicClient: {
+          getTransactionReceipt: vi.fn(async () => {
+            receiptLookupCount += 1;
+            if (receiptLookupCount > 2) {
+              throw new Error('continued polling an absent transaction');
+            }
+            throw new TransactionReceiptNotFoundError({ hash: txHash });
+          }),
+          getTransaction: vi.fn(async () => {
+            throw new TransactionNotFoundError({ hash: txHash });
+          }),
+        },
+      }),
+      getTransactionFinalityPollMs: () => 0,
+      getTransactionFinalityWaitEstimateMs: () => 1_000,
+    });
+
+    await expect(
+      ethereumClient.waitForTransactionFinality({
+        txHash,
+        submittedAtMs: Date.now() - 1_001,
+      }),
+    ).rejects.toThrow(`Ethereum transaction ${txHash} could not be found`);
+  });
+
+  it('keeps waiting past the finality window when the submitted transaction is still visible', async () => {
+    const txHash = `0x${'44'.repeat(32)}` as const;
+    const blockHash = `0x${'55'.repeat(32)}` as const;
+    const ethereumClient = new EthereumClient(createMockWalletKeys(), 'https://ethereum.test');
+    let receiptLookupCount = 0;
+
+    Object.assign(ethereumClient, {
+      createExecutionClient: async () => ({
+        publicClient: {
+          getTransactionReceipt: vi.fn(async () => {
+            receiptLookupCount += 1;
+            if (receiptLookupCount === 1) {
+              throw new TransactionReceiptNotFoundError({ hash: txHash });
+            }
+            return {
+              blockNumber: 98n,
+              blockHash,
+              transactionHash: txHash,
+              status: 'success',
+            };
+          }),
+          getTransaction: vi.fn(async () => ({ hash: txHash })),
+          getBlockNumber: vi.fn(async () => 100n),
+        },
+      }),
+      getTransactionFinalityBlocks: () => 2,
+      getTransactionFinalityPollMs: () => 0,
+      getTransactionFinalityWaitEstimateMs: () => 1_000,
+    });
+
+    await expect(
+      ethereumClient.waitForTransactionFinality({
+        txHash,
+        submittedAtMs: Date.now() - 1_001,
+      }),
+    ).resolves.toMatchObject({ blockNumber: 98, blockHash, isFinalized: true });
+  });
+
   it('relays a council rotation and the next contiguous ready update', async () => {
     const fixture = createCouncilRotationRelayFixture();
     const receipt = await fixture.ethereumClient.applyReadyGatewayUpdates(

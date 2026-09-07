@@ -3,6 +3,7 @@ import { fn } from 'storybook/test';
 type EthereumClientModule = typeof import('../EthereumClient.ts');
 
 export class EthereumTransactionRevertedError extends Error {}
+export class EthereumTransactionUnavailableError extends Error {}
 
 export class EthereumClient {
   constructor(..._args: unknown[]) {}
