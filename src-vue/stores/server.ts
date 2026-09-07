@@ -15,7 +15,7 @@ let serverAuthClient: ServerAuthClient | undefined;
 let upstreamOperatorAuthClient: ServerAuthClient | undefined;
 
 export function getServerApiClient(): ServerApiClient {
-  serverApiClient ??= new ServerApiClient(() => getConfig().serverDetails, getServerAuthClient());
+  serverApiClient ??= new ServerApiClient(() => getConfig().serverDetails, getServerAuthClient(), getWalletKeys());
   return serverApiClient;
 }
 

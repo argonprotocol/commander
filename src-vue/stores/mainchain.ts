@@ -19,6 +19,7 @@ import { BaseDirectory, readTextFile, writeTextFile } from '@tauri-apps/plugin-f
 import { BlockWatch } from '@argonprotocol/apps-core/src/BlockWatch.ts';
 import { getServerApiClient } from './server.ts';
 import { getUpstreamOperatorClient } from './upstreamOperator.ts';
+import { getWalletKeys } from './wallets.ts';
 
 let mainchainClients: MainchainClients;
 let mining: Mining;
@@ -209,6 +210,10 @@ async function connectPrunedClientToConfiguredServer(): Promise<void> {
   const serverApiClient = getServerApiClient();
   let prunedUrl: string;
   if (config.isServerInstalled && config.serverDetails.ipAddress) {
+    if (!serverApiClient.canAccessServer) {
+      mainchainClients.clearPrunedClient();
+      return;
+    }
     if (!(await serverApiClient.isGatewayReady())) {
       console.warn('[Mainchain] Configured server gateway is not ready for pruned RPC');
       mainchainClients.clearPrunedClient();
@@ -227,6 +232,10 @@ async function connectPrunedClientToConfiguredServer(): Promise<void> {
       throw error;
     }
   } else {
+    if (!getWalletKeys().canSign) {
+      mainchainClients.clearPrunedClient();
+      return;
+    }
     const upstreamOperatorClient = getUpstreamOperatorClient();
     const operatorHost = await upstreamOperatorClient.resolveOperatorHost();
     if (!operatorHost) {

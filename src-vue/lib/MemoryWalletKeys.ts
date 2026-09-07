@@ -37,6 +37,8 @@ export class MemoryWalletKeys extends WalletKeys {
     didWalletHavePreviousLife?: () => Promise<boolean>;
     ethereumHdPrefixes?: ISecurity['ethereumHdPrefixes'];
     sshPublicKey?: string;
+    canSign?: boolean;
+    canAccessServer?: boolean;
   }) {
     const rootAccount = new Keyring({ type: 'sr25519' }).addFromUri(args.substrateSuri);
     const legacyMiningHoldAccount = rootAccount.derive('//holding');
@@ -60,6 +62,11 @@ export class MemoryWalletKeys extends WalletKeys {
         ethereumHdPrefixes,
       },
       args.didWalletHavePreviousLife ?? (() => Promise.resolve(false)),
+      undefined,
+      {
+        canSign: args.canSign ?? true,
+        canAccessServer: args.canAccessServer ?? true,
+      },
     );
 
     this.substrateSuri = args.substrateSuri;
@@ -74,10 +81,12 @@ export class MemoryWalletKeys extends WalletKeys {
   }
 
   public async exposeMasterMnemonic(): Promise<string> {
+    this.requireSigningAccess();
     return this.masterMnemonic;
   }
 
   public async exportEthereumPrivateKey(): Promise<Hex> {
+    this.requireSigningAccess();
     const privateKey = this.getEthereumAccount().getHdKey().privateKey;
     if (!privateKey) {
       throw new Error('Unable to derive the Ethereum private key.');
@@ -90,58 +99,72 @@ export class MemoryWalletKeys extends WalletKeys {
   }
 
   public async getMiningSessionMiniSecret(): Promise<string> {
+    this.requireSigningAccess();
     return miniSecretFromUri(`${this.substrateSuri}//mining//session`);
   }
 
   public async getRouterRestoreSealingKey(): Promise<string> {
+    this.requireSigningAccess();
     return miniSecretFromUri(`${this.substrateSuri}//router-restore-sealing`);
   }
 
   public async getOwnServerBootstrapEndpointSecret(index = 0): Promise<string> {
+    this.requireSigningAccess();
     return miniSecretFromUri(`${this.substrateSuri}//bootstrap-endpoint//${index}`);
   }
 
   public async getUpstreamEndpointRecoverySeed(): Promise<string> {
+    this.requireSigningAccess();
     return miniSecretFromUri(`${this.substrateSuri}//bootstrap-recovery//upstream`);
   }
 
   public async getOwnServerEndpointRecoverySeed(): Promise<string> {
+    this.requireSigningAccess();
     return miniSecretFromUri(`${this.substrateSuri}//bootstrap-recovery//own-server`);
   }
 
   public async getDefaultArgonKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     return this.vaultingAccount;
   }
 
   public async getLegacyMiningHoldKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     return this.legacyMiningHoldAccount;
   }
 
   public async getVaultingKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     return this.vaultingAccount;
   }
 
   public async getOperationalKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     return this.operationalAccount;
   }
 
   public async getUpstreamOperatorAuthKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     return this.upstreamOperatorAuthAccount;
   }
 
   public async getVaultDelegateKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     return this.vaultDelegateAccount;
   }
 
   public async getOperationalEncryptionKeypair(): Promise<Uint8Array> {
+    this.requireSigningAccess();
     return x25519.getPublicKey(hexToU8a(miniSecretFromUri(`${this.substrateSuri}//operational//encrypt`)));
   }
 
   public async getMiningBotKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     return this.miningBotAccount;
   }
 
   public async getMiningBidProxyKeypair(): Promise<KeyringPair> {
+    this.requireSigningAccess();
     return this.miningBidProxyAccount;
   }
 
@@ -150,6 +173,7 @@ export class MemoryWalletKeys extends WalletKeys {
     hdPath?: string,
     format: 'ethereum' | 'argon' = 'ethereum',
   ): Promise<Hex> {
+    this.requireSigningAccess();
     const signature = await this.getEthereumAccount(hdPath).signMessage({
       message: { raw: message as Hex },
     });
@@ -165,6 +189,7 @@ export class MemoryWalletKeys extends WalletKeys {
   }
 
   public async getEthereumAddresses(hdPaths: string[]): Promise<string[]> {
+    this.requireSigningAccess();
     return hdPaths.map(path =>
       mnemonicToAccount(this.masterMnemonic, {
         path: path as `m/44'/60'/${string}`,
@@ -173,6 +198,7 @@ export class MemoryWalletKeys extends WalletKeys {
   }
 
   public async signEthereumTransaction(unsignedTransaction: Hex, hdPath = this.ethereumHdPath): Promise<Signature> {
+    this.requireSigningAccess();
     const signedTransaction = await this.getEthereumAccount(hdPath).signTransaction(
       parseTransaction(unsignedTransaction),
     );
@@ -192,6 +218,7 @@ export class MemoryWalletKeys extends WalletKeys {
     nonce: bigint;
     deadline: bigint;
   }): Promise<{ v: number; r: string; s: string }> {
+    this.requireSigningAccess();
     if (!this.ethereumSignerPolicy) {
       throw new Error('Ethereum signer policy must be configured before signing permits.');
     }
@@ -243,6 +270,7 @@ export class MemoryWalletKeys extends WalletKeys {
   }
 
   public async getBitcoinChildXpriv(xpubPath: string, network: BitcoinNetwork): Promise<HDKey> {
+    this.requireSigningAccess();
     const version = getBip32Version(network) ?? BITCOIN_VERSIONS[network as keyof typeof BITCOIN_VERSIONS];
     const seed = await bip39.mnemonicToSeed(this.masterMnemonic);
     return HDKey.fromMasterSeed(seed, version).derive(xpubPath);

@@ -9,10 +9,12 @@ async function runIsolatedFlow(flowName: BitcoinFlowName): Promise<void> {
   const sessionName = `bitcoin-spec-${flowName}`;
   const session: IFlowSession = await createFlowSession({
     useTestNetwork: true,
+    useDevUpstream: true,
     sessionName,
   });
 
   try {
+    await session.run('App.flow.claimDevUpstream');
     await session.run(flowName);
   } finally {
     await session.close();

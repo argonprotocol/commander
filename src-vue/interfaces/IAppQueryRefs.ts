@@ -12,6 +12,9 @@ export interface IAppQueryRefs {
   bitcoinLocks: IBitcoinLocksQueryRef;
   myVault: IMyVaultQueryRef;
   wallets: IWalletsQueryRef;
+  canSign: boolean;
+  defaultArgonAddress: string;
+  defaultEthereumAddress: string;
   overlayIsOpen: boolean;
   getEthereumMoveTracker(): IEthereumMoveTrackerQueryRef;
   getEthereumOutboundTransferTracker(): EthereumOutboundTransferTracker;

@@ -15,6 +15,7 @@
     "build:indexer": "yarn generate:runtime-client && yarn workspace @argonprotocol/apps-indexer run build",
     "capture:financial-history-replay": "FINANCIAL_HISTORY_REPLAY_CAPTURE=1 vitest --run --project=integration FinancialHistoryReplay.integration.test.ts",
     "troubleshoot:inspect": "tsx scripts/inspectTroubleshootingArchive.ts",
+    "troubleshoot:account": "tsx scripts/troubleshootAccount.ts",
     "download:financial-history-replay": "tsx scripts/financialHistoryReplayArtifact.ts download",
     "extract:financial-history-replay": "tsx scripts/financialHistoryReplayArtifact.ts extract",
     "package:financial-history-replay": "tsx scripts/financialHistoryReplayArtifact.ts package",

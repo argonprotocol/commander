@@ -69,7 +69,13 @@ it('refreshes fee waivers while mounted and drops stale state when the upstream 
   } as unknown as UpstreamOperatorClient;
   const scope = Vue.effectScope();
   const store = scope.run(() =>
-    createBitcoinLockCouponsState({ bitcoinLocks, config, upstreamOperatorClient, vaults }),
+    createBitcoinLockCouponsState({
+      bitcoinLocks,
+      config,
+      upstreamOperatorClient,
+      vaults,
+      walletKeys: { canSign: true },
+    }),
   )!;
 
   await vi.advanceTimersByTimeAsync(0);
@@ -91,6 +97,40 @@ it('refreshes fee waivers while mounted and drops stale state when the upstream 
   resolveCapacity!({ availableLiquidityMicrogons: 100n });
   await vi.advanceTimersByTimeAsync(0);
   expect(store.couponOfferLiquidityMicrogons).toBeUndefined();
+
+  scope.stop();
+});
+
+it('does not start upstream coupon refresh without signing access', async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal('window', new EventTarget());
+
+  const config = Vue.reactive({
+    isLoaded: true,
+    isLoadedPromise: Promise.resolve(),
+    bootstrapDetails: { routerHost: 'upstream.test' },
+  }) as unknown as Vue.Reactive<Config>;
+  const resolveOperatorHost = vi.fn();
+  const getBitcoinLockCoupons = vi.fn();
+  const upstreamOperatorClient = {
+    resolveOperatorHost,
+    getBitcoinLockCoupons,
+  } as unknown as UpstreamOperatorClient;
+  const scope = Vue.effectScope();
+
+  scope.run(() =>
+    createBitcoinLockCouponsState({
+      bitcoinLocks: { load: vi.fn() } as unknown as BitcoinLocks,
+      config,
+      upstreamOperatorClient,
+      vaults: { load: vi.fn() } as unknown as Vaults,
+      walletKeys: { canSign: false },
+    }),
+  );
+
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(resolveOperatorHost).not.toHaveBeenCalled();
+  expect(getBitcoinLockCoupons).not.toHaveBeenCalled();
 
   scope.stop();
 });

@@ -15,15 +15,13 @@
       <div class="relative top-px text-[19px] font-bold whitespace-nowrap flex flex-row items-center">
         Argon Desktop
         <NavigationMenuRoot
-          v-if="instances.length > 1 && controller.isLoaded && !controller.isImporting"
+          v-if="controller.isLoaded && !controller.isImporting"
           class="relative pointer-events-auto"
           :delay-duration="0"
           :skip-delay-duration="0"
         >
           <NavigationMenuList>
-            <InstanceMenu
-              :instances="instances"
-            />
+            <InstanceMenu :instances="instances" />
           </NavigationMenuList>
           <NavigationMenuIndicator
             :style="navigationMenuIndicatorZIndex"
@@ -38,7 +36,8 @@
             class="pointer-events-auto absolute top-full left-0 mt-2 h-[var(--reka-navigation-menu-viewport-height)] w-[var(--reka-navigation-menu-viewport-width)] origin-[top_center] overflow-visible transition-[width,_height] duration-300 data-[state=closed]:animate-scaleOut data-[state=open]:animate-scaleIn"
           />
         </NavigationMenuRoot>
-        <span v-else class="bg-slate-600/60 text-white rounded-full ml-2 px-2 border border-slate-600 inset-shadow text-sm">Alpha</span>
+        <span v-if="controller.isLoaded && !walletKeys.canSign" data-read-only class="ml-2 rounded-full border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900">readonly</span>
+        <span v-else-if="!controller.isLoaded" class="bg-slate-600/60 text-white rounded-full ml-2 px-2 border border-slate-600 inset-shadow text-sm">Alpha</span>
       </div>
     </div>
 
@@ -121,8 +120,10 @@ import InstanceMenu, { type IInstance } from './InstanceMenu.vue';
 import { appConfigDir } from '@tauri-apps/api/path';
 import { readDir } from '@tauri-apps/plugin-fs';
 import { INSTANCE_NAME, NETWORK_NAME } from '../lib/Env.ts';
+import { getWalletKeys } from '../stores/wallets.ts';
 
 const controller = useCertificationController();
+const walletKeys = getWalletKeys();
 const wallets = useWallets();
 const tour = useTour();
 const config = getConfig();

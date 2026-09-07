@@ -200,7 +200,7 @@ async fn expose_mnemonic(app: AppHandle) -> Result<String, String> {
 
 #[tauri::command]
 async fn export_default_ethereum_private_key(app: AppHandle) -> Result<String, String> {
-    let security = Security::load(&app).map_err(|e| e.to_string())?;
+    let security = Security::load(&app).map_err(|e| e.to_string())?.security;
     let mnemonic = Security::expose_mnemonic(&app).map_err(|e| e.to_string())?;
     let hd_path = format!("{}/0'", security.ethereum_hd_prefixes.primary);
     let private_key = ethereum_signer::export_private_key_at_path(&mnemonic, &hd_path)
@@ -506,10 +506,10 @@ async fn create_zip(
 
                 let name = prefix.join(rel).to_string_lossy().replace("\\", "/");
                 let mut file_opts = opts;
-                if let Ok(mtime) = entry.metadata().map_err(|e| e.to_string())?.modified() {
-                    if let Ok(zdt) = DateTime::try_from(OffsetDateTime::from(mtime)) {
-                        file_opts = file_opts.last_modified_time(zdt);
-                    }
+                if let Ok(mtime) = entry.metadata().map_err(|e| e.to_string())?.modified()
+                    && let Ok(zdt) = DateTime::try_from(OffsetDateTime::from(mtime))
+                {
+                    file_opts = file_opts.last_modified_time(zdt);
                 }
                 zip.start_file(name, file_opts).map_err(|e| e.to_string())?;
 
@@ -785,15 +785,15 @@ pub fn run() {
 
             let handle = window.app_handle();
             let instance_name = Utils::get_instance_name();
-            let security = security::Security::load(handle);
-            let security_json = match security {
-                Ok(sec) => serde_json::to_string(&sec).unwrap_or_else(|e| {
+            let loaded_security = security::Security::load(handle);
+            let (security_json, can_sign) = match loaded_security {
+                Ok(loaded) => (serde_json::to_string(&loaded.security).unwrap_or_else(|e| {
                     log::error!("Failed to serialize security config: {e}");
                     "null".to_string()
-                }),
+                }), loaded.can_sign),
                 Err(e) => {
                     log::error!("Failed to load security config: {e}");
-                    "null".to_string()
+                    ("null".to_string(), false)
                 }
             };
             let app_id = &handle.config().identifier;
@@ -808,6 +808,7 @@ pub fn run() {
             __ARGON_APP_ID__: '{app_id}',
             __ARGON_APP_NAME__: '{app_name_clone}',
             __ARGON_APP_SECURITY__: {security_json},
+            __ARGON_APP_CAN_SIGN__: {can_sign},
             __ARGON_APP_INSTANCE__: '{instance_name}',
             __ARGON_APP_ENABLE_AUTOUPDATE__: {enable_auto_update},
             __ARGON_E2E_HEADLESS__: {e2e_headless},
@@ -881,11 +882,12 @@ pub fn run() {
             }
 
             #[cfg(target_os = "macos")]
-            if e2e_driver_mode && !e2e_headless {
-                if let Ok(ns_window) = window.ns_window() {
-                    let ns_window = unsafe { &*(ns_window as *mut NSWindow) };
-                    ns_window.orderBack(None);
-                }
+            if e2e_driver_mode
+                && !e2e_headless
+                && let Ok(ns_window) = window.ns_window()
+            {
+                let ns_window = unsafe { &*(ns_window as *mut NSWindow) };
+                ns_window.orderBack(None);
             }
 
             // Adjust window height if it exceeds available screen space

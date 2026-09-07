@@ -105,6 +105,12 @@ export default class Installer {
 
     await this.config.isLoadedPromise;
 
+    if (!this.walletKeys.canAccessServer) {
+      this.isLoaded = true;
+      this.isLoadedDeferred.resolve();
+      return;
+    }
+
     try {
       if (
         this.config.miningSetupStatus === MiningSetupStatus.Finished &&

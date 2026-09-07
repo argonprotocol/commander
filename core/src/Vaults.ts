@@ -71,10 +71,10 @@ export class Vaults {
           securitizedSatoshis: raw.securitizedSatoshis,
         };
       }
-      await this.refreshOperatorNames({ client, vaults: Object.values(this.vaultsById) });
       this.stats ??= await this.loadStats();
 
       this.waitForLoad.resolve();
+      void this.refreshOperatorNames({ client, vaults: Object.values(this.vaultsById) });
     } catch (error) {
       this.waitForLoad.reject(error as Error);
     }
@@ -109,28 +109,27 @@ export class Vaults {
 
     try {
       const client = args.client ?? (await this.mainchainClients.get(false));
-      const operationalAccountOptions =
-        (await client.query.operationalAccounts.operationalAccountBySubAccount.multi(
-          args.vaults.map(vault => vault.operatorAccountId),
-        )) ?? [];
-      const vaultsWithOperationalAccounts: [Pick<Vault, 'vaultId' | 'operatorAccountId'>, string][] = [];
-
-      for (const [index, vault] of args.vaults.entries()) {
-        const operationalAccountId = operationalAccountOptions[index];
+      const [subaccountEntriesRaw, profileEntriesRaw] = await Promise.all([
+        client.query.operationalAccounts.operationalAccountBySubAccount.entries(),
+        client.query.operationalAccounts.operationalAccounts.entries(),
+      ]);
+      const operationalAccountBySubAccount = new Map<string, string>();
+      for (const [key, operationalAccountId] of subaccountEntriesRaw ?? []) {
         if (operationalAccountId) {
-          vaultsWithOperationalAccounts.push([vault, operationalAccountId]);
-        } else {
-          this.setOperatorName(vault.vaultId);
+          operationalAccountBySubAccount.set(key.args[0].toString(), operationalAccountId.toString());
         }
       }
-      if (!vaultsWithOperationalAccounts.length) return;
+      const profilesByOperationalAccount = new Map<string, RuntimeOperationalAccount>();
+      for (const [key, profile] of profileEntriesRaw ?? []) {
+        if (profile) profilesByOperationalAccount.set(key.args[0].toString(), profile);
+      }
 
-      const profileOptions =
-        (await client.query.operationalAccounts.operationalAccounts.multi(
-          vaultsWithOperationalAccounts.map(([, operationalAccountId]) => operationalAccountId),
-        )) ?? [];
-      for (const [index, [vault]] of vaultsWithOperationalAccounts.entries()) {
-        this.setOperatorName(vault.vaultId, profileOptions[index] ?? undefined);
+      for (const vault of args.vaults) {
+        const operationalAccountId = operationalAccountBySubAccount.get(vault.operatorAccountId);
+        this.setOperatorName(
+          vault.vaultId,
+          operationalAccountId ? profilesByOperationalAccount.get(operationalAccountId) : undefined,
+        );
       }
     } catch (error) {
       console.warn('[Vaults] Unable to load operator profile names', error);

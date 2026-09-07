@@ -51,12 +51,24 @@ pub struct Security {
     pub ssh_public_key: String,
 }
 
+pub struct LoadedSecurity {
+    pub security: Security,
+    pub can_sign: bool,
+}
+
 /// On-disk wallet file: public metadata + encrypted mnemonic.
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct WalletFile {
     encrypted_mnemonic: String,
     meta: Security,
+}
+
+#[derive(Debug, PartialEq)]
+enum WalletSecretAccess {
+    Available,
+    Recover(String),
+    Unavailable,
 }
 
 #[derive(serde::Deserialize)]
@@ -321,7 +333,7 @@ impl Security {
         Ok(security)
     }
 
-    fn load_or_migrate_wallet_file(app: &AppHandle) -> Result<Option<Security>> {
+    fn load_or_migrate_wallet_file(app: &AppHandle) -> Result<Option<LoadedSecurity>> {
         let wallet_path = Self::wallet_path(app);
         if !wallet_path.exists() {
             return Ok(None);
@@ -339,25 +351,46 @@ impl Security {
                     None
                 }
             };
-            let Some(mnemonic) = wallet_recovery_mnemonic(
+            return match resolve_wallet_secret_access(
                 &wallet,
                 existing_key.as_ref(),
                 &Self::legacy_mnemonic_path(app),
-            )?
-            else {
-                return Ok(Some(wallet.meta));
+            ) {
+                WalletSecretAccess::Available => Ok(Some(LoadedSecurity {
+                    security: wallet.meta,
+                    can_sign: true,
+                })),
+                WalletSecretAccess::Recover(mnemonic) => {
+                    let replacement_key = Self::replace_encryption_key_for_app_id(app_id)?;
+                    let security =
+                        Self::write_wallet_file_with_key(app, &mnemonic, &replacement_key)?;
+                    log::warn!(
+                        "Recovered the wallet encryption key from the local mnemonic bridge"
+                    );
+                    Ok(Some(LoadedSecurity {
+                        security,
+                        can_sign: true,
+                    }))
+                }
+                WalletSecretAccess::Unavailable => {
+                    log::warn!(
+                        "Wallet signing key is unavailable; loading wallet metadata in readonly mode"
+                    );
+                    Ok(Some(LoadedSecurity {
+                        security: wallet.meta,
+                        can_sign: false,
+                    }))
+                }
             };
-
-            let replacement_key = Self::replace_encryption_key_for_app_id(app_id)?;
-            let security = Self::write_wallet_file_with_key(app, &mnemonic, &replacement_key)?;
-            log::warn!("Recovered the wallet encryption key from the local mnemonic bridge");
-            return Ok(Some(security));
         }
 
         let mnemonic = Self::expose_mnemonic(app)?;
         let security = Self::write_wallet_file(app, &mnemonic)?;
         log::info!("Rewrote wallet.json with ethereum wallet metadata");
-        Ok(Some(security))
+        Ok(Some(LoadedSecurity {
+            security,
+            can_sign: true,
+        }))
     }
 
     fn derive_security_from_mnemonic(mnemonic: &str) -> Result<Security> {
@@ -552,7 +585,7 @@ impl Security {
         Ok(key)
     }
 
-    pub fn load(app: &AppHandle) -> Result<Self> {
+    pub fn load(app: &AppHandle) -> Result<LoadedSecurity> {
         let private_key_path = Utils::get_absolute_config_instance_dir(app).join("serverkey.pem");
         if private_key_path.exists() {
             let _ = fs::remove_file(&private_key_path);
@@ -563,7 +596,10 @@ impl Security {
             return Ok(security);
         }
 
-        Security::create(app)
+        Ok(LoadedSecurity {
+            security: Security::create(app)?,
+            can_sign: true,
+        })
     }
 
     pub fn save_with_mnemonic(app: &AppHandle, mnemonic: &str) -> Result<Self> {
@@ -633,18 +669,24 @@ fn read_wallet_recovery_mnemonic(wallet: &WalletFile, mnemonic_path: &Path) -> R
     Ok(mnemonic.to_string())
 }
 
-fn wallet_recovery_mnemonic(
+fn resolve_wallet_secret_access(
     wallet: &WalletFile,
     existing_key: Option<&[u8; 32]>,
     mnemonic_path: &Path,
-) -> Result<Option<String>> {
+) -> WalletSecretAccess {
     if existing_key
         .is_some_and(|key| Security::decrypt_mnemonic(key, &wallet.encrypted_mnemonic).is_ok())
     {
-        return Ok(None);
+        return WalletSecretAccess::Available;
     }
 
-    read_wallet_recovery_mnemonic(wallet, mnemonic_path).map(Some)
+    match read_wallet_recovery_mnemonic(wallet, mnemonic_path) {
+        Ok(mnemonic) => WalletSecretAccess::Recover(mnemonic),
+        Err(error) => {
+            log::warn!("Could not recover wallet signing access: {error}");
+            WalletSecretAccess::Unavailable
+        }
+    }
 }
 
 fn default_ethereum_hd_prefixes() -> EthereumHdPrefixes {
@@ -780,9 +822,9 @@ fn backup_mnemonic_if_different(config_dir: &Path, imported_mnemonic: &str) -> R
 #[cfg(test)]
 mod tests {
     use super::{
-        Security, WalletFile, backup_mnemonic_if_different, default_ethereum_hd_prefixes,
-        get_ethereum_hd_path, read_wallet_recovery_mnemonic, wallet_recovery_mnemonic,
-        write_mnemonic_file, write_mnemonic_file_if_missing,
+        Security, WalletFile, WalletSecretAccess, backup_mnemonic_if_different,
+        default_ethereum_hd_prefixes, get_ethereum_hd_path, read_wallet_recovery_mnemonic,
+        resolve_wallet_secret_access, write_mnemonic_file, write_mnemonic_file_if_missing,
     };
     use crate::ethereum_signer;
     use sp_core::Pair;
@@ -1158,14 +1200,48 @@ mod tests {
         fs::write(&mnemonic_path, mnemonic).expect("mnemonic should be written");
 
         assert_eq!(
-            wallet_recovery_mnemonic(&wallet, Some(&wrong_key), &mnemonic_path)
-                .expect("matching mnemonic should recover the stranded wallet"),
-            Some(mnemonic.to_string())
+            resolve_wallet_secret_access(&wallet, Some(&wrong_key), &mnemonic_path),
+            WalletSecretAccess::Recover(mnemonic.to_string())
         );
         assert_eq!(
-            wallet_recovery_mnemonic(&wallet, Some(&original_key), &mnemonic_path)
-                .expect("the original key should still decrypt the wallet"),
-            None
+            resolve_wallet_secret_access(&wallet, Some(&original_key), &mnemonic_path),
+            WalletSecretAccess::Available
+        );
+
+        fs::remove_dir_all(&test_dir).expect("test dir should be removed");
+    }
+
+    #[test]
+    fn keeps_wallet_identity_read_only_when_secret_is_unavailable() {
+        let test_dir =
+            unique_test_dir("keeps-wallet-identity-read-only-when-secret-is-unavailable");
+        fs::create_dir_all(&test_dir).expect("test dir should be created");
+
+        let mnemonic = "test test test test test test test test test test test junk";
+        let original_key = rand::random::<[u8; 32]>();
+        let wallet = WalletFile {
+            encrypted_mnemonic: Security::encrypt_mnemonic(&original_key, mnemonic)
+                .expect("mnemonic should encrypt"),
+            meta: Security::derive_security_from_mnemonic(mnemonic)
+                .expect("wallet metadata should derive"),
+        };
+
+        assert_eq!(
+            resolve_wallet_secret_access(&wallet, None, &test_dir.join("mnemonic")),
+            WalletSecretAccess::Unavailable
+        );
+
+        let generated_wallet = WalletFile {
+            encrypted_mnemonic: String::new(),
+            meta: wallet.meta,
+        };
+        assert_eq!(
+            resolve_wallet_secret_access(
+                &generated_wallet,
+                Some(&original_key),
+                &test_dir.join("mnemonic")
+            ),
+            WalletSecretAccess::Unavailable
         );
 
         fs::remove_dir_all(&test_dir).expect("test dir should be removed");

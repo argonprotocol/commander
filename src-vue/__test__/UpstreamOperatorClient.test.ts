@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { RequestStatusError, ServerAuthClient } from '../lib/ServerAuthClient.ts';
 import { hasOperationsUpgradeRequest, UpstreamOperatorClient } from '../lib/UpstreamOperatorClient.ts';
+import { WalletSigningUnavailableError } from '../lib/WalletKeys.ts';
 import { createMockWalletKeys } from './helpers/wallet.ts';
 import { BootstrapType } from '../interfaces/IConfig.ts';
 
@@ -18,6 +19,9 @@ vi.mock('../stores/config.ts', () => ({
 }));
 vi.mock('../stores/server.ts', () => ({
   getUpstreamOperatorAuthClient: () => undefined,
+}));
+vi.mock('../stores/wallets.ts', () => ({
+  getWalletKeys: () => ({ canSign: true }),
 }));
 vi.mock('../stores/bootstrapRecovery.ts', () => ({
   enrollUpstreamRecovery: vi.fn(),
@@ -64,6 +68,42 @@ it('queries a missing upstream endpoint only once', async () => {
   await expect(client.resolveOperatorHost()).resolves.toBeUndefined();
 
   expect(recoverOperatorHost).toHaveBeenCalledOnce();
+});
+
+it('does not repeatedly recover an upstream endpoint when wallet signing is unavailable', async () => {
+  const recoverOperatorHost = vi.fn().mockRejectedValue(new WalletSigningUnavailableError());
+  const client = new UpstreamOperatorClient(undefined, undefined, recoverOperatorHost);
+
+  await expect(client.resolveOperatorHost()).resolves.toBeUndefined();
+  await expect(client.resolveOperatorHost()).resolves.toBeUndefined();
+
+  expect(recoverOperatorHost).toHaveBeenCalledOnce();
+});
+
+it('loads a persisted upstream host without signing or contacting it', async () => {
+  const recoverOperatorHost = vi.fn();
+  const fetchMock = vi.fn();
+  const serverAuthClient = new ServerAuthClient(() =>
+    createMockWalletKeys('//ReadOnlyUpstream', { canSign: false, canAccessServer: false }),
+  );
+  const client = new UpstreamOperatorClient(serverAuthClient, () => 'https://operator.example', recoverOperatorHost);
+  vi.stubGlobal('fetch', fetchMock);
+
+  await expect(client.resolveOperatorHost()).resolves.toBe('https://operator.example');
+  await expect(client.getMemberSessionId()).rejects.toMatchObject({ name: 'WalletSigningUnavailableError' });
+  expect(recoverOperatorHost).not.toHaveBeenCalled();
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it('authenticates to an upstream independently of access to the managed server', async () => {
+  const serverAuthClient = new ServerAuthClient(() =>
+    createMockWalletKeys('//RemoteSignerUpstream', { canSign: true, canAccessServer: false }),
+  );
+  const getMemberSessionId = vi.spyOn(serverAuthClient, 'getMemberSessionId').mockResolvedValue('member-session');
+  const client = new UpstreamOperatorClient(serverAuthClient, () => 'https://operator.example');
+
+  await expect(client.getMemberSessionId()).resolves.toBe('member-session');
+  expect(getMemberSessionId).toHaveBeenCalledWith('https://operator.example', {});
 });
 
 it('does not treat a legacy public RPC host as an upstream operator', async () => {

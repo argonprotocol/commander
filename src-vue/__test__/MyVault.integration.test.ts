@@ -57,7 +57,7 @@ describe.skipIf(skipE2E).sequential('My Vault tests', {}, () => {
   };
   let vaultCreatedBlockNumber: number;
   let vaultCreationFees: bigint;
-  const walletKeys = createMockWalletKeys();
+  const walletKeys = createMockWalletKeys('//Alice');
 
   beforeAll(async () => {
     db = await createTestDb();
@@ -184,6 +184,19 @@ describe.skipIf(skipE2E).sequential('My Vault tests', {}, () => {
       vaultId = vault.vaultId;
     },
   );
+
+  it('recovers vault details without local signing keys', async () => {
+    const readonlyWalletKeys = createMockWalletKeys('//Alice', { canSign: false, canAccessServer: false });
+    const deriveBitcoinKey = vi
+      .spyOn(readonlyWalletKeys, 'getBitcoinChildXpriv')
+      .mockRejectedValue(new Error('Wallet encryption key is unavailable'));
+
+    const recovered = await MyVaultRecovery.findOperatorVault(clients, BitcoinNetwork.Regtest, readonlyWalletKeys);
+
+    expect(recovered?.vault.vaultId).toBe(vaultId);
+    expect(recovered?.masterXpubPath).toBe(DEFAULT_MASTER_XPUB_PATH);
+    expect(deriveBitcoinKey).not.toHaveBeenCalled();
+  });
 
   it(
     'should be able to recover vault details after creating a personal bitcoin lock',

@@ -173,7 +173,7 @@ export default class Importer {
       walletKeys.miningBotAddress,
       walletKeys.vaultingAddress,
       walletKeys.operationalAddress,
-    ];
+    ].filter(Boolean);
     const crosschainTransfer = finalizedApi.query.crosschainTransfer;
     const activeCouncilPromise = crosschainTransfer
       ?.activeGlobalIssuanceCouncilByDestinationChain?.('Ethereum')
@@ -193,6 +193,7 @@ export default class Importer {
     const hasExistingWalletValue = balances.some(balance => {
       return hasArgonWalletValue(balance);
     });
+    const balancesByAddress = new Map(addresses.map((address, index) => [address, balances[index]]));
     const operationalProgress = getOperationalChainProgressFromAccount(operationalAccount);
     let hasMiningSeats = operationalProgress.hasFirstMiningSeat;
     let hasMiningBids = hasMiningSeats;
@@ -210,7 +211,10 @@ export default class Importer {
       hasMiningBids = hasMiningSeats || !!miningActivity?.blocks.length;
     }
 
-    const hasMiningWalletValue = hasArgonWalletValue(balances[0]) || hasArgonWalletValue(balances[1]);
+    const hasMiningWalletValue = [walletKeys.legacyMiningHoldAddress, walletKeys.miningBotAddress].some(address => {
+      const balance = balancesByAddress.get(address);
+      return balance ? hasArgonWalletValue(balance) : false;
+    });
     const hasMiningActivity = hasMiningWalletValue || hasMiningBids;
     // Member Bitcoin events also carry VaultPosition because they affect vault capital. Only the runtime's operator
     // index proves that this account owns a vault and should regain Operations.

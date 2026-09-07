@@ -9,6 +9,18 @@ describe('Bot', () => {
     vi.restoreAllMocks();
   });
 
+  it('settles as unavailable without starting server synchronization', async () => {
+    const config = createConfigStub({ isLoadedPromise: Promise.resolve() });
+    const serverApiClient = { canAccessServer: false, isGatewayReady: vi.fn() };
+    const bot = new Bot(config as any, Promise.resolve({} as any), serverApiClient as any);
+
+    await expect(bot.load({} as any, {} as any, {} as any)).resolves.toBeUndefined();
+
+    expect(serverApiClient.isGatewayReady).not.toHaveBeenCalled();
+    await expect(bot.getClient()).rejects.toThrow('Server access is unavailable');
+    await expect(bot.refreshState()).rejects.toThrow('Server access is unavailable');
+  });
+
   it('persists downloaded bidding rules through the dedicated config save path', async () => {
     const remoteRules = {
       seatGoal: {

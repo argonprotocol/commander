@@ -61,6 +61,14 @@ export class WalletForBase {
   }
 
   public async load(): Promise<void> {
+    if (!this.address) {
+      this.data.fetchErrorMsg = '';
+      this.data.otherTokens = [];
+      this.data.balanceUpdatedAt = new Date();
+      this.data.balanceIsCached = false;
+      return;
+    }
+
     await restoreCachedExternalWalletBalances(this.financialCache, 'base', this.data);
     const { baseNetwork } = NetworkConfig.get();
     const chain = getBaseChain(baseNetwork.chainId);

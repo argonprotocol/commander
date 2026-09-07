@@ -7,7 +7,7 @@ import { createDeferred, UnitOfMeasurement } from '@argonprotocol/apps-core';
 import { getMyMiningSeats } from './myMiningSeats.ts';
 import { getCurrency } from './currency.ts';
 import { WalletKeys } from '../lib/WalletKeys.ts';
-import { SECURITY } from '../lib/Env.ts';
+import { CAN_SIGN, SECURITY } from '../lib/Env.ts';
 import { getSpendableDefaultArgonMicrogons, IArgonWalletType, WalletForArgon } from '../lib/WalletForArgon.ts';
 import { IWallet, defaultWalletData } from '../lib/Wallet.ts';
 import { WalletsForArgon, IWalletEvents, readArgonWalletBalanceValues } from '../lib/WalletsForArgon.ts';
@@ -34,12 +34,16 @@ export function getWalletKeys() {
     async () => {
       const walletsForArgon = getWalletsForArgon();
       await walletsForArgon.load();
-      return walletsForArgon.didWalletHavePreviousLife();
+      if (walletsForArgon.didWalletHavePreviousLife()) return true;
+
+      const client = await getMainchainClient(false);
+      return !!(await client.query.operationalAccounts.operationalAccounts(walletKeys.operationalAddress));
     },
     async () => {
       const client = await getMainchainClient(false);
       return client.consts.mint.maxPossibleMiners.toNumber();
     },
+    { canSign: CAN_SIGN, canAccessServer: CAN_SIGN },
   );
   return walletKeys;
 }
@@ -394,9 +398,11 @@ export const useWallets = defineStore('wallets', () => {
           blockNumber: walletsForArgon.finalizedBlock?.blockNumber ?? getBlockWatch().finalizedBlockHeader.blockNumber,
           onlyIfIncomplete: true,
         });
-        await ensureLegacyMiningHoldCleanup().catch(error => {
-          console.warn('Legacy mining hold cleanup failed', error);
-        });
+        if (walletKeys.canSign) {
+          await ensureLegacyMiningHoldCleanup().catch(error => {
+            console.warn('Legacy mining hold cleanup failed', error);
+          });
+        }
         const legacyCleanupReadyAt = performance.now();
 
         totalWalletMicrogons.value = walletsForArgon.totalWalletMicrogons;

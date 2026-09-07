@@ -53,6 +53,53 @@ export const BasicAccount: Story = {
   },
 };
 
+export const ReadonlyOperationsAccount: Story = {
+  render: () => ({
+    components: { AppScreen, Home },
+    template: '<AppScreen><Home /></AppScreen>',
+  }),
+  beforeEach: () => {
+    const { controller, walletKeys } = setupHomeScenario('operations', {
+      serverAdd: { localComputer: {} },
+      upstreamOperator: {
+        name: 'Testing',
+        vaultId: 1,
+        accountId: '5GrwvaEF5zXb26Fz9rcQpDWSvVvKQPiRyg2xHnUSzjZmCz7b',
+      },
+    });
+    controller.isLoaded = true;
+    walletKeys.canSign = false;
+    walletKeys.canAccessServer = false;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const sponsor = canvasElement.querySelector('[data-upstream-operator]');
+    if (!sponsor) throw new Error('Readonly account sponsor is missing');
+
+    await expect(canvas.getAllByText('readonly')[0]).toBeVisible();
+    await expect(sponsor).toHaveTextContent('Sponsored by Testing');
+    await expect(canvas.getByText('Your Gateway to Argon')).toBeVisible();
+  },
+};
+
+export const ReadonlyOperationsAccountWithoutServer: Story = {
+  render: () => ({
+    components: { AppScreen, Home },
+    template: '<AppScreen><Home /></AppScreen>',
+  }),
+  beforeEach: () => {
+    const { controller, walletKeys } = setupHomeScenario('operations');
+    controller.isLoaded = true;
+    walletKeys.canSign = false;
+    walletKeys.canAccessServer = false;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText('readonly')).toBeVisible();
+    await expect(canvas.queryByText('Add Node')).not.toBeInTheDocument();
+  },
+};
+
 export const TreasuryAccount: Story = {
   beforeEach: () => {
     setupHomeScenario('treasury');

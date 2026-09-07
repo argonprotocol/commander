@@ -2,6 +2,7 @@ import { UpstreamOperatorClient } from '../lib/UpstreamOperatorClient.ts';
 import { enrollUpstreamRecovery, recoverUpstreamHost } from './bootstrapRecovery.ts';
 import { getConfig } from './config.ts';
 import { getUpstreamOperatorAuthClient } from './server.ts';
+import { getWalletKeys } from './wallets.ts';
 import { BootstrapType } from '../interfaces/IConfig.ts';
 
 let upstreamOperatorClient: UpstreamOperatorClient | undefined;
@@ -21,6 +22,7 @@ export function getUpstreamOperatorClient(): UpstreamOperatorClient {
       recoverUpstreamHost,
     );
     void config.isLoadedPromise.then(() => {
+      if (!getWalletKeys().canSign) return;
       if (!config.upstreamOperator?.encryptedBootstrapRecovery) return;
 
       return enrollUpstreamRecovery().catch(error => {

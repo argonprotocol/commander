@@ -1,9 +1,10 @@
-import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
+import { type ChildProcess, execFile, execFileSync, spawn } from 'node:child_process';
 import { createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync, type WriteStream } from 'node:fs';
 import os from 'node:os';
 import Path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { isPortAvailable, reserveEphemeralPort } from '../../scripts/utils.ts';
 import { DriverClient } from '../driver/client.ts';
 import { type DriverServer, startDriverServer } from '../driver/server.ts';
@@ -16,6 +17,7 @@ import {
   startArgonTestNetwork,
   type StartedArgonTestNetwork,
 } from '@argonprotocol/apps-core/__test__/startArgonTestNetwork.ts';
+import { ensureDevUpstreamWorker, stopDevUpstreamWorker } from '../scripts/devUpstreamProcess.ts';
 
 const DEFAULT_APP_CONNECT_TIMEOUT_MS = 12 * 60_000;
 const APP_CONNECT_PROGRESS_INTERVAL_MS = 20_000;
@@ -29,7 +31,9 @@ const APP_STARTUP_READY_RETRY_DELAY_MS = 1_000;
 const APP_STARTUP_READY_WAIT_TIMEOUT_MS = 15_000;
 const APP_PROCESS_OUTPUT_MAX_LINES = 600;
 const APP_PROCESS_OUTPUT_TAIL_LINES = 120;
+const TROUBLESHOOTING_BUNDLE_TIMEOUT_MS = 30_000;
 const DOCKER_COMPOSE_CONFIG_FILES = ['docker-compose.yml', 'indexer.docker-compose.yml'] as const;
+const execFileAsync = promisify(execFile);
 
 export type E2ESessionMode = 'isolated' | 'stateful';
 export type E2EFlowAppLogsMode = 'inherit' | 'quiet';
@@ -41,13 +45,18 @@ export interface IFlowSessionOptions {
   sessionMode?: E2ESessionMode;
   appLogsMode?: E2EFlowAppLogsMode;
   appEnv?: NodeJS.ProcessEnv;
+  useDevUpstream?: boolean;
 }
 
 export interface IFlowSession {
+  appInstanceDirectory: string;
+  archiveUrl: string;
   run: (
     flowName: string,
     input?: Record<string, unknown>,
   ) => Promise<{ elapsedMs: number; data: Record<string, unknown> }>;
+  checkpointDatabase: () => Promise<void>;
+  loadInstance: (name: string) => Promise<void>;
   close: () => Promise<void>;
 }
 
@@ -66,6 +75,7 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
   console.info(`[E2E] Driver session ${driverServer.session}`);
   let devDockerProcess: ChildProcess | null = null;
   let testNetwork: StartedArgonTestNetwork | null = null;
+  let devUpstreamRootDir: string | undefined;
   let closed = false;
   const previousComposeProjectName = process.env.COMPOSE_PROJECT_NAME;
   const previousNetworkConfigOverride = process.env.ARGON_NETWORK_CONFIG_OVERRIDE;
@@ -81,6 +91,7 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
   const appInstanceName = sessionIdentity.appInstanceName || sessionIdentity.sessionName;
   const appPort = await chooseSessionPort(sessionIdentity.appInstancePort);
   const appConfigId = resolveLocalAppConfigId();
+  const appInstanceDirectory = getAppInstanceDirectory(appConfigId, sessionIdentity.composeNetwork, appInstanceName);
   const { composeProjectName, appEnv: commandEnv } = resolveTestSessionCommandEnv({
     baseEnv: process.env,
     fallbackSessionName: defaultSessionName,
@@ -133,6 +144,19 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
       tauriEnv.JOIN_COMPOSE_NETWORK = composeEnv.COMPOSE_PROJECT_NAME;
       tauriEnv.RPC_PORT = composeEnv.RPC_PORT;
 
+      if (options.useDevUpstream) {
+        devUpstreamRootDir = isolatedDataEnv.ARGON_DEV_UPSTREAM_ROOT_DIR;
+        if (!devUpstreamRootDir) throw new Error('[E2E] Dev upstream requires an isolated data directory.');
+        await ensureDevUpstreamWorker({
+          archiveUrl: testNetwork.archiveUrl,
+          env: tauriEnv,
+          networkConfigOverride: testNetwork.networkConfigOverride,
+          rootDir: devUpstreamRootDir,
+          startupTimeoutMs: 5 * 60_000,
+        });
+        sessionData.devUpstreamInviteCode = await createDevUpstreamInvite(repoRoot, tauriEnv);
+      }
+
       devDockerProcess = spawn('yarn', ['tauri:dev:docker'], createAppSpawnOptions(repoRoot, tauriEnv, appLogsMode));
     } else {
       delete tauriEnv.ARGON_NETWORK_CONFIG_OVERRIDE;
@@ -145,6 +169,9 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
   } catch (error) {
     driver.close();
     await driverServer.close();
+    if (devUpstreamRootDir) {
+      await stopDevUpstreamWorker(devUpstreamRootDir).catch(() => undefined);
+    }
     if (testNetwork) {
       await testNetwork.stop();
     }
@@ -221,6 +248,9 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
     closed = true;
     driver.close();
     await stopChild(devDockerProcess);
+    if (devUpstreamRootDir) {
+      await stopDevUpstreamWorker(devUpstreamRootDir).catch(() => undefined);
+    }
     if (testNetwork) {
       await testNetwork.stop();
     }
@@ -237,6 +267,8 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
   }
 
   return {
+    appInstanceDirectory,
+    archiveUrl: String(sessionData.sessionArchiveUrl),
     run: async (flowName, input = {}) => {
       if (!getFlow(flowName)) {
         throw new Error(`Unknown flow '${flowName}'`);
@@ -264,12 +296,26 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
         throw error;
       }
     },
+    checkpointDatabase: async () => {
+      await driver.command('app.checkpointDatabase', { timeoutMs: 30_000 });
+    },
+    loadInstance: async name => {
+      const reloadMarker = driver.getAppReloadMarker();
+      await driver.command('app.loadInstance', { name, timeoutMs: 30_000 });
+      await driver.waitForApp(reloadMarker + 1);
+      await waitForInitialUiReady(driver, devDockerProcess, APP_STARTUP_READY_TIMEOUT_MS);
+    },
     close: async () => {
       if (closed) return;
       closed = true;
       try {
         driver.close();
         await stopChild(devDockerProcess);
+        if (devUpstreamRootDir) {
+          await stopDevUpstreamWorker(devUpstreamRootDir).catch(error => {
+            console.warn(`[E2E] Failed to stop dev upstream worker: ${(error as Error).message}`);
+          });
+        }
         if (testNetwork) {
           await testNetwork.stop();
         }
@@ -289,6 +335,19 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
       }
     },
   };
+}
+
+async function createDevUpstreamInvite(repoRoot: string, env: NodeJS.ProcessEnv): Promise<string> {
+  const { stdout } = await execFileAsync('tsx', ['e2e/scripts/devUpstreamInvite.ts'], {
+    cwd: repoRoot,
+    env,
+    encoding: 'utf8',
+    timeout: 120_000,
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  const inviteCode = stdout.match(/\[dev-upstream-invite\] Invite code: (.+)/)?.[1]?.trim();
+  if (!inviteCode) throw new Error(`[E2E] Dev upstream did not return an invite code.\n${stdout}`);
+  return inviteCode;
 }
 
 function getAppConfigBaseDir(): string {
@@ -441,6 +500,7 @@ async function createTroubleshootingBundle(appDir: string): Promise<void> {
       env: process.env,
       stdio: ['ignore', 'pipe', 'pipe'],
       maxBuffer: 10 * 1024 * 1024,
+      timeout: TROUBLESHOOTING_BUNDLE_TIMEOUT_MS,
     });
     const archiveMatch = output.match(/Bundle ready: (.+\.tar\.gz)/);
     if (archiveMatch?.[1]) {

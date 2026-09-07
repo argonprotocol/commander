@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, path::PathBuf};
 
 fn main() {
     println!("cargo:rerun-if-changed=migrations/");
@@ -51,5 +51,58 @@ fn main() {
         println!("cargo:rustc-cfg=argon_signed_build");
     }
 
-    tauri_build::build()
+    tauri_build::build();
+    link_development_resources();
+}
+
+fn link_development_resources() {
+    if env::var("PROFILE").as_deref() != Ok("debug") {
+        return;
+    }
+
+    let build_profile_dir =
+        PathBuf::from(env::var_os("OUT_DIR").expect("Cargo did not provide OUT_DIR"))
+            .ancestors()
+            .nth(3)
+            .expect("Cargo OUT_DIR did not contain a profile directory")
+            .to_path_buf();
+    let staged_resources = build_profile_dir.join("_up_").join("resources");
+    if !staged_resources.exists() {
+        return;
+    }
+
+    let target_dir = env::var_os("CARGO_TARGET_DIR")
+        .or_else(|| env::var_os("CARGO_BUILD_TARGET_DIR"))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap()).join("target")
+        });
+    let runtime_resources = target_dir.join("debug").join("_up_").join("resources");
+    if staged_resources == runtime_resources {
+        return;
+    }
+    if std::fs::read_link(&runtime_resources).is_ok_and(|target| target == staged_resources) {
+        return;
+    }
+
+    if std::fs::symlink_metadata(&runtime_resources).is_ok() {
+        if runtime_resources.is_dir() && !runtime_resources.is_symlink() {
+            std::fs::remove_dir_all(&runtime_resources)
+                .expect("Unable to replace the development resource directory");
+        } else {
+            std::fs::remove_file(&runtime_resources)
+                .expect("Unable to replace the development resource link");
+        }
+    }
+    std::fs::create_dir_all(runtime_resources.parent().unwrap())
+        .expect("Unable to create the development resource directory");
+
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&staged_resources, &runtime_resources)
+        .expect("Unable to link the development resources");
+
+    #[cfg(windows)]
+    if let Err(error) = std::os::windows::fs::symlink_dir(&staged_resources, &runtime_resources) {
+        println!("cargo:warning=Unable to link the development resources: {error}");
+    }
 }

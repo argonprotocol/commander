@@ -169,12 +169,15 @@ export function setupAppScenario({ selectedTab, config: configOverrides = {} }: 
     load: fn(async () => undefined),
     findLatestTxInfo: fn(() => undefined) as ReturnType<typeof getTransactionTracker>['findLatestTxInfo'],
   });
-  mocked(getWalletKeys, { partial: true }).mockReturnValue({
+  const walletKeys = {
+    canSign: true,
+    canAccessServer: true,
     defaultArgonAddress: defaultArgonWallet.address,
     vaultingAddress: '5SyntheticVaultingWallet',
     liquidLockingAddress: '5SyntheticLiquidLockingWallet',
     getMiningBotSubaccounts: fn(async () => ({})),
-  });
+  };
+  mocked(getWalletKeys, { partial: true }).mockReturnValue(walletKeys);
   mocked(getBot, { partial: true }).mockReturnValue(
     Vue.reactive({
       isReady: false,
@@ -336,5 +339,5 @@ export function setupAppScenario({ selectedTab, config: configOverrides = {} }: 
   const controller = useCertificationController();
   controller.selectedTab = selectedTab;
 
-  return { config, controller, wallets };
+  return { config, controller, walletKeys, wallets };
 }

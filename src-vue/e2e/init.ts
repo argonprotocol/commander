@@ -57,7 +57,6 @@ export async function initializeE2EState(): Promise<void> {
   // Account import recreates the config database and explicitly dismisses onboarding.
   if (!config.showWelcomeOverlay || config.bootstrapDetails) {
     config.showWelcomeOverlay = false;
-    config.hasExtensionTreasury = true;
     config.hasExtensionOperations = true;
     await config.save();
   }

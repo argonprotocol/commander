@@ -1,5 +1,5 @@
 import type { AddressTxsUtxo } from '@mempool/mempool.js/lib/interfaces/bitcoin/addresses';
-import type { TxStatus } from '@mempool/mempool.js/lib/interfaces/bitcoin/transactions';
+import type { TxOutspend, TxStatus } from '@mempool/mempool.js/lib/interfaces/bitcoin/transactions';
 import { fetch } from '@argonprotocol/apps-core';
 
 export interface IMempoolTxStatus {
@@ -64,6 +64,37 @@ export default class BitcoinMempool {
       isConfirmed: status.confirmed,
       transactionBlockHeight: status.block_height,
       transactionBlockTime: status.block_time,
+      argonBitcoinHeight: oracleBitcoinBlockHeight,
+    };
+  }
+
+  public async getOutspendStatus(
+    fundingTxid: string,
+    fundingVout: number,
+    oracleBitcoinBlockHeight: number,
+    timeoutMs: number = 10e3,
+  ): Promise<(IMempoolTxStatus & { txid: string }) | undefined> {
+    let outspend: TxOutspend | undefined;
+    let lastError: unknown;
+    for (const mempoolTxid of this.toMempoolTxidCandidates(fundingTxid)) {
+      try {
+        outspend = await this.fetchJson<TxOutspend>(`tx/${mempoolTxid}/outspend/${fundingVout}`, timeoutMs);
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (!outspend) {
+      const message = lastError instanceof Error ? lastError.message : String(lastError ?? '');
+      throw new Error(`Funding outspend for txid ${fundingTxid}:${fundingVout} not found in mempool. ${message}`);
+    }
+    if (!outspend.spent) return;
+
+    return {
+      txid: this.convertBoundaryTxid(outspend.txid, 'argon'),
+      isConfirmed: outspend.status.confirmed,
+      transactionBlockHeight: outspend.status.block_height,
+      transactionBlockTime: outspend.status.block_time,
       argonBitcoinHeight: oracleBitcoinBlockHeight,
     };
   }

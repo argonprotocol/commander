@@ -15,7 +15,7 @@ export class Diagnostics {
   }
 
   public hasServer(): boolean {
-    return !!this.server || !!this.config.serverDetails.ipAddress;
+    return this.walletKeys.canAccessServer && (!!this.server || !!this.config.serverDetails.ipAddress);
   }
 
   public async load() {

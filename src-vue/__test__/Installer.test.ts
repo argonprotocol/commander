@@ -32,6 +32,38 @@ beforeEach(() => {
   WalletKeys.prototype.didWalletHavePreviousLife = vi.fn().mockResolvedValue(false);
 });
 
+it('settles startup without checking or publishing a configured server when access is unavailable', async () => {
+  const { walletKeys } = createTestWallet('//Alice', { canAccessServer: false });
+  const config = new Config(
+    createMockedDbPromise({
+      isServerInstalled: 'true',
+      serverDetails: JSON.stringify({
+        ipAddress: '203.0.113.10',
+        sshPort: 22,
+        sshUser: 'root',
+        type: ServerType.CustomServer,
+        workDir: '~',
+      }),
+    }),
+    walletKeys,
+  );
+  await config.load();
+  const publishOwnServerEndpoint = vi.fn();
+  const publishOwnServerRecovery = vi.fn();
+  const installer = new Installer(config, walletKeys, {
+    publishOwnServerEndpoint,
+    publishOwnServerRecovery,
+  });
+  const getServer = vi.spyOn(installer as any, 'getServer');
+
+  await expect(installer.load()).resolves.toBeUndefined();
+
+  expect(installer.isLoaded).toBe(true);
+  expect(getServer).not.toHaveBeenCalled();
+  expect(publishOwnServerEndpoint).not.toHaveBeenCalled();
+  expect(publishOwnServerRecovery).not.toHaveBeenCalled();
+});
+
 it('should skip install if server is not connected', async () => {
   const dbPromise = createMockedDbPromise({ miningSetupStatus: `"${MiningSetupStatus.None}"` });
 

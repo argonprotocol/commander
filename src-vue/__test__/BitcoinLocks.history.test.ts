@@ -854,7 +854,7 @@ describe('BitcoinLocks historical event replay', () => {
     };
     const store = createStore({
       blockWatch: { getApi: vi.fn(async () => ({})) } as unknown as BlockWatch,
-      walletKeys: { defaultArgonAddress: accountId } as WalletKeys,
+      walletKeys: { canSign: true, defaultArgonAddress: accountId } as WalletKeys,
     });
     vi.spyOn(store, 'getTable').mockResolvedValue(table as never);
     vi.spyOn(store, 'getDerivedPubkey').mockResolvedValue({
