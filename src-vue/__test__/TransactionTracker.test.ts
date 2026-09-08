@@ -1409,6 +1409,132 @@ describe('TransactionTracker', () => {
     finishStatusScan();
     await submission;
   });
+
+  it('releases terminal, reloaded, and shutdown transaction watches exactly once', async () => {
+    const { tracker } = await createTracker({
+      txs: [],
+      finalizedHeight: 125,
+    });
+    const finalizedUnsubscribe = vi.fn();
+    const invalidUnsubscribe = vi.fn();
+    const finalityTimeoutUnsubscribe = vi.fn();
+    const reloadUnsubscribe = vi.fn();
+    const shutdownUnsubscribe = vi.fn();
+    const createSignedTx = (hash: string, result: Record<string, any>, unsubscribe: ReturnType<typeof vi.fn>) => ({
+      hash: { toHex: () => hash },
+      method: { toHuman: () => ({ section: 'balances', method: 'transferAllowDeath' }) },
+      nonce: numberCodec(4),
+      send: vi.fn(async (callback: (result: any) => void) => {
+        callback(result);
+        await Promise.resolve();
+        return unsubscribe;
+      }),
+    });
+    const status = {
+      isBroadcast: false,
+      isInBlock: false,
+      isRetracted: false,
+      isUsurped: false,
+      isDropped: false,
+      isInvalid: false,
+      isFinalityTimeout: false,
+      isFinalized: false,
+    };
+    const finalizedTx = createSignedTx(
+      '0xfinalized',
+      {
+        events: [],
+        isFinalized: true,
+        txIndex: 0,
+        status: {
+          ...status,
+          isFinalized: true,
+          asFinalized: Object.assign(Uint8Array.from([1]), { toHex: () => '0x01' }),
+        },
+      },
+      finalizedUnsubscribe,
+    );
+    const invalidTx = createSignedTx(
+      '0xinvalid',
+      {
+        events: [],
+        isFinalized: false,
+        status: { ...status, isInvalid: true },
+      },
+      invalidUnsubscribe,
+    );
+    const reloadTx = createSignedTx(
+      '0xreload',
+      {
+        events: [],
+        isFinalized: false,
+        status: { ...status, isBroadcast: true },
+      },
+      reloadUnsubscribe,
+    );
+    const shutdownTx = createSignedTx(
+      '0xshutdown',
+      {
+        events: [],
+        isFinalized: false,
+        status: { ...status, isBroadcast: true },
+      },
+      shutdownUnsubscribe,
+    );
+    const finalityTimeoutTx = createSignedTx(
+      '0xfinality-timeout',
+      {
+        events: [],
+        isFinalized: false,
+        status: { ...status, isFinalityTimeout: true },
+      },
+      finalityTimeoutUnsubscribe,
+    );
+    const client = {
+      tx: vi.fn((tx: unknown) => tx),
+      rpc: {
+        chain: {
+          getHeader: vi.fn(async () => ({ number: numberCodec(126) })),
+        },
+      },
+    };
+
+    for (const tx of [finalizedTx, invalidTx, finalityTimeoutTx, reloadTx]) {
+      await tracker.submitAndWatch({
+        client: client as any,
+        tx: { signAsync: vi.fn().mockResolvedValue(tx) } as any,
+        txSigner: { address: '5Alice' } as any,
+        extrinsicType: ExtrinsicType.Transfer,
+      });
+    }
+
+    await vi.waitFor(() => {
+      expect(finalizedUnsubscribe).toHaveBeenCalledOnce();
+      expect(invalidUnsubscribe).toHaveBeenCalledOnce();
+      expect(finalityTimeoutUnsubscribe).toHaveBeenCalledOnce();
+    });
+    expect(reloadUnsubscribe).not.toHaveBeenCalled();
+
+    await tracker.load(true);
+
+    expect(reloadUnsubscribe).toHaveBeenCalledOnce();
+    await tracker.submitAndWatch({
+      client: client as any,
+      tx: { signAsync: vi.fn().mockResolvedValue(shutdownTx) } as any,
+      txSigner: { address: '5Alice' } as any,
+      extrinsicType: ExtrinsicType.Transfer,
+    });
+    expect(shutdownUnsubscribe).not.toHaveBeenCalled();
+
+    tracker.shutdown();
+    tracker.shutdown();
+
+    expect(finalizedUnsubscribe).toHaveBeenCalledOnce();
+    expect(invalidUnsubscribe).toHaveBeenCalledOnce();
+    expect(finalityTimeoutUnsubscribe).toHaveBeenCalledOnce();
+    expect(reloadUnsubscribe).toHaveBeenCalledOnce();
+    expect(shutdownUnsubscribe).toHaveBeenCalledOnce();
+  });
 });
 
 async function createTracker(args: {
