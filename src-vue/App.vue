@@ -167,7 +167,7 @@ import BitcoinLockingOverlay from './overlays/BitcoinLockingOverlay.vue';
 import BondPurchaseOverlay from './overlays/BondPurchaseOverlay.vue';
 import StakePurchaseOverlay from './overlays/StakePurchaseOverlay.vue';
 import SponsorOverlay from './overlays/SponsorOverlay.vue';
-import { getMainchainClient, getMainchainClients } from './stores/mainchain.ts';
+import { getBlockWatch, getMainchainClient, getMainchainClients } from './stores/mainchain.ts';
 import { getMyVault } from './stores/vaults.ts';
 import { getArgonBonds } from './stores/argonBonds.ts';
 import { getEthereumOutboundTransferTracker } from './stores/moveToEthereum.ts';
@@ -233,6 +233,10 @@ function refreshFinalizedStateOnFocus() {
   if (!controller.isLoaded || foregroundRefreshPromise) return;
 
   foregroundRefreshPromise = (async () => {
+    await getBlockWatch()
+      .refreshAfterResume()
+      .catch(error => console.error('[App] Unable to repair block subscriptions after window focus', error));
+
     const archiveClient = await getMainchainClient(true);
     const finalizedHash = await archiveClient.rpc.chain.getFinalizedHead();
     const blockHash = finalizedHash.toHex();

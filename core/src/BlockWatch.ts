@@ -31,6 +31,9 @@ export type RuntimeSystemEventRecord = HistoricalQueryRecord<'system', 'events'>
 
 export class BlockWatch {
   private static readonly queryTimeoutMs = 120e3;
+  private static readonly resumeProbeTimeoutMs = 5_000;
+  private static readonly resumeCatchupGraceMs = 10_000;
+  private static readonly resumeFinalizedLagThreshold = 4;
   private static readonly backgroundArchiveReadConcurrency = 3;
   private static readonly backgroundArchiveReadRetryDelayMs = 250;
   private static readonly maxBackgroundArchiveReadRetries = 3;
@@ -137,7 +140,8 @@ export class BlockWatch {
     this.isLoaded.setIsRunning(true);
 
     try {
-      this.processingQueue.clear();
+      void this.processingQueue.stop();
+      this.processingQueue = new SingleFileQueue();
       this.latestHeaders.length = 1;
       this.finalizedAheadRecoveryFailures = 0;
       const generation = ++this.subscriptionGeneration;
@@ -149,7 +153,8 @@ export class BlockWatch {
         }
 
         console.warn('[BlockWatch]: Failed to start with pruned client, falling back to archive', { error });
-        this.processingQueue.clear();
+        void this.processingQueue.stop();
+        this.processingQueue = new SingleFileQueue();
         this.latestHeaders.length = 1;
         this.finalizedAheadRecoveryFailures = 0;
         await this.startSubscription('archive', ++this.subscriptionGeneration);
@@ -281,6 +286,35 @@ export class BlockWatch {
       unsubscribe();
     }
     this.clientEventUnsubscribes.length = 0;
+  }
+
+  public async refreshAfterResume(): Promise<void> {
+    if (!this.isLoaded.isResolved || this.isRestarting) {
+      return;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, BlockWatch.resumeCatchupGraceMs));
+    if (!this.isLoaded.isResolved || this.isRestarting) {
+      return;
+    }
+
+    const watchedFinalized = this.finalizedBlockHeader;
+    const archiveClient = await this.clients.archiveClientPromise;
+    const currentFinalizedHeader = await this.runQueryWithTimeout(
+      'getFinalizedHeaderAfterResume',
+      archiveClient.rpc.chain.getFinalizedHead().then(hash => archiveClient.rpc.chain.getHeader(hash)),
+      BlockWatch.resumeProbeTimeoutMs,
+    );
+    const currentFinalized = BlockWatch.readHeader(currentFinalizedHeader, true);
+    const finalizedLag = currentFinalized.blockNumber - watchedFinalized.blockNumber;
+    if (finalizedLag <= BlockWatch.resumeFinalizedLagThreshold) {
+      return;
+    }
+
+    await this.restart(
+      'archive',
+      `Watched finalized block was stale after resume (${watchedFinalized.blockNumber} -> ${currentFinalized.blockNumber})`,
+    );
   }
 
   public isSafeForPrunedClient(blockNumber: number): boolean {
@@ -816,6 +850,9 @@ export class BlockWatch {
       return;
     }
     this.isRestarting = true;
+    const previousHeaders = [...this.latestHeaders];
+    const previousFinalized = previousHeaders.at(0);
+    const previousBest = previousHeaders.at(-1);
 
     try {
       console.warn('[BlockWatch]: Restarting subscriptions', {
@@ -824,7 +861,31 @@ export class BlockWatch {
       });
       this.stop();
       await this.startWithCatchup(source);
+
+      if (previousBest) {
+        const recoveredBest = this.bestBlockHeader;
+        const recoveredBestBlocks = this.latestHeaders.filter(x => x.blockNumber > previousBest.blockNumber);
+        if (!recoveredBestBlocks.length && recoveredBest.blockHash !== previousBest.blockHash) {
+          recoveredBestBlocks.push(recoveredBest);
+        }
+        if (recoveredBestBlocks.length) {
+          this.events.emit('best-blocks', recoveredBestBlocks as [...IBlockHeaderInfo[], IBlockHeaderInfo]);
+        }
+      }
+
+      if (previousFinalized) {
+        const recoveredFinalized = this.finalizedBlockHeader;
+        if (
+          recoveredFinalized.blockNumber > previousFinalized.blockNumber ||
+          recoveredFinalized.blockHash !== previousFinalized.blockHash
+        ) {
+          this.events.emit('finalized', [recoveredFinalized]);
+        }
+      }
     } catch (error) {
+      if (previousHeaders.length) {
+        this.latestHeaders = previousHeaders;
+      }
       console.error('[BlockWatch]: Failed to restart subscriptions', { reason, error });
       this.pendingRestart = {
         source,

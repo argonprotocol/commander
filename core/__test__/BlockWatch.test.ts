@@ -368,6 +368,170 @@ describe('BlockWatch archive recovery', () => {
     });
   });
 
+  it('repairs stale subscriptions after resume and notifies existing observers', async () => {
+    vi.spyOn(BlockWatch, 'readHeader').mockImplementation(readMockHeader);
+
+    const initialFinalized = createHeaderInfo(100, '0x100', '0x099');
+    initialFinalized.isFinalized = true;
+    const initialBest = createHeaderInfo(101, '0x101', initialFinalized.blockHash);
+    const resumedFinalized = createHeaderInfo(105, '0x105', '0x104');
+    resumedFinalized.isFinalized = true;
+    const resumedBest = createHeaderInfo(106, '0x106', resumedFinalized.blockHash);
+    const staleParent = createHeaderInfo(102, '0x102-stale', initialBest.blockHash);
+    const staleHead = createHeaderInfo(103, '0x103-stale', staleParent.blockHash);
+    const staleParentRead = createDeferredPromise<unknown>();
+    let finalizedHeader = initialFinalized;
+    let bestHeader = initialBest;
+    let onNewHead!: (header: unknown) => Promise<void>;
+    const headersByHash = new Map(
+      [initialFinalized, initialBest, resumedFinalized, resumedBest].map(header => [header.blockHash, header]),
+    );
+    const unsubscribeNewHeads = vi.fn();
+    const unsubscribeFinalizedHeads = vi.fn();
+    const client = {
+      rpc: {
+        chain: {
+          getFinalizedHead: vi.fn(async () => finalizedHeader.blockHash),
+          getHeader: vi.fn(async (hash?: string) => {
+            if (hash === staleParent.blockHash) return await staleParentRead.promise;
+            return { __info: hash ? headersByHash.get(hash)! : bestHeader };
+          }),
+          subscribeNewHeads: vi.fn(async callback => {
+            onNewHead = callback;
+            return unsubscribeNewHeads;
+          }),
+          subscribeFinalizedHeads: vi.fn(async () => unsubscribeFinalizedHeads),
+        },
+      },
+    };
+    const blockWatch = new BlockWatch(createClients(client, client) as any);
+    const bestUpdates: IBlockHeaderInfo[][] = [];
+    const finalizedUpdates: IBlockHeaderInfo[][] = [];
+
+    await blockWatch.start('archive');
+    await blockWatch.isLoaded.promise;
+    blockWatch.events.on('best-blocks', headers => bestUpdates.push(headers));
+    blockWatch.events.on('finalized', headers => finalizedUpdates.push(headers));
+
+    void onNewHead({ __info: staleHead });
+    await vi.waitFor(() => expect(client.rpc.chain.getHeader).toHaveBeenCalledWith(staleParent.blockHash));
+    finalizedHeader = resumedFinalized;
+    bestHeader = resumedBest;
+    vi.useFakeTimers();
+    const refresh = blockWatch.refreshAfterResume();
+    await vi.advanceTimersByTimeAsync(10_000);
+    await refresh;
+    staleParentRead.resolve({ __info: staleParent });
+
+    expect(unsubscribeNewHeads).toHaveBeenCalledOnce();
+    expect(unsubscribeFinalizedHeads).toHaveBeenCalledOnce();
+    expect(client.rpc.chain.subscribeNewHeads).toHaveBeenCalledTimes(2);
+    expect(client.rpc.chain.subscribeFinalizedHeads).toHaveBeenCalledTimes(2);
+    expect(blockWatch.finalizedBlockHeader).toEqual(resumedFinalized);
+    expect(blockWatch.bestBlockHeader).toEqual(resumedBest);
+    expect(finalizedUpdates.at(-1)).toEqual([resumedFinalized]);
+    expect(bestUpdates.at(-1)?.at(-1)).toEqual(resumedBest);
+  });
+
+  it('keeps current subscriptions when finalized is current despite best-head churn', async () => {
+    vi.spyOn(BlockWatch, 'readHeader').mockImplementation(readMockHeader);
+
+    const finalizedHeader = createHeaderInfo(100, '0x100', '0x099');
+    finalizedHeader.isFinalized = true;
+    const initialBest = createHeaderInfo(101, '0x101', finalizedHeader.blockHash);
+    const churnedBest = createHeaderInfo(110, '0x110', '0x109');
+    const client = createSubscriptionClient(finalizedHeader);
+    client.rpc.chain.getHeader.mockImplementation(async (hash?: string) => ({
+      __info: hash ? finalizedHeader : initialBest,
+    }));
+    const blockWatch = new BlockWatch(createClients(client, client) as any);
+
+    await blockWatch.start('archive');
+    await blockWatch.isLoaded.promise;
+    blockWatch.latestHeaders = [finalizedHeader, churnedBest];
+    client.rpc.chain.getHeader.mockClear();
+    client.rpc.chain.getHeader.mockImplementation(async (hash?: string) => ({
+      __info: hash ? finalizedHeader : churnedBest,
+    }));
+    vi.useFakeTimers();
+
+    const refresh = blockWatch.refreshAfterResume();
+    await vi.advanceTimersByTimeAsync(10_000);
+    await refresh;
+
+    expect(client.rpc.chain.getHeader).toHaveBeenCalledOnce();
+    expect(client.rpc.chain.getHeader).toHaveBeenCalledWith(finalizedHeader.blockHash);
+    expect(client.rpc.chain.subscribeNewHeads).toHaveBeenCalledOnce();
+    expect(client.rpc.chain.subscribeFinalizedHeads).toHaveBeenCalledOnce();
+    expect(blockWatch.bestBlockHeader).toEqual(churnedBest);
+  });
+
+  it.each([
+    {
+      name: 'repairs a subscription that advances but remains more than four finalized blocks behind',
+      archiveFinalizedNumber: 619,
+      expectedRestarts: 1,
+    },
+    {
+      name: 'keeps a subscription that catches up within four finalized blocks',
+      archiveFinalizedNumber: 105,
+      expectedRestarts: 0,
+    },
+  ])('$name during the resume grace period', async ({ archiveFinalizedNumber, expectedRestarts }) => {
+    vi.spyOn(BlockWatch, 'readHeader').mockImplementation(readMockHeader);
+
+    const watchedFinalized = createHeaderInfo(100, '0x100', '0x099');
+    watchedFinalized.isFinalized = true;
+    const resumedFinalized = createHeaderInfo(101, '0x101-finalized', watchedFinalized.blockHash);
+    resumedFinalized.isFinalized = true;
+    const archiveFinalized = createHeaderInfo(
+      archiveFinalizedNumber,
+      `0x${archiveFinalizedNumber}`,
+      `0x${archiveFinalizedNumber - 1}`,
+    );
+    archiveFinalized.isFinalized = true;
+    const client = createSubscriptionClient(watchedFinalized);
+    const blockWatch = new BlockWatch(createClients(client, client) as any);
+
+    await blockWatch.start('archive');
+    await blockWatch.isLoaded.promise;
+    client.rpc.chain.getFinalizedHead.mockResolvedValue(archiveFinalized.blockHash);
+    client.rpc.chain.getHeader.mockResolvedValue({ __info: archiveFinalized });
+    const restart = vi.spyOn(getInternalBlockWatch(blockWatch), 'restart').mockResolvedValue();
+    vi.useFakeTimers();
+
+    const refresh = blockWatch.refreshAfterResume();
+    blockWatch.latestHeaders = [resumedFinalized];
+    await vi.advanceTimersByTimeAsync(10_000);
+    await refresh;
+
+    expect(restart).toHaveBeenCalledTimes(expectedRestarts);
+  });
+
+  it('times out a stalled resume probe without restarting subscriptions', async () => {
+    vi.spyOn(BlockWatch, 'readHeader').mockImplementation(readMockHeader);
+
+    const finalizedHeader = createHeaderInfo(100, '0x100', '0x099');
+    finalizedHeader.isFinalized = true;
+    const client = createSubscriptionClient(finalizedHeader);
+    const blockWatch = new BlockWatch(createClients(client, client) as any);
+
+    await blockWatch.start('archive');
+    await blockWatch.isLoaded.promise;
+    client.rpc.chain.getHeader.mockImplementation(() => new Promise(() => undefined));
+    const restart = vi.spyOn(getInternalBlockWatch(blockWatch), 'restart');
+    vi.useFakeTimers();
+
+    const refresh = blockWatch.refreshAfterResume();
+    const rejection = expect(refresh).rejects.toThrow(
+      '[BlockWatch] Query timed out after 5000ms (getFinalizedHeaderAfterResume)',
+    );
+    await vi.advanceTimersByTimeAsync(15_000);
+    await rejection;
+
+    expect(restart).not.toHaveBeenCalled();
+  });
+
   it('retries with a newer best block when the previous best head becomes unreadable', async () => {
     const finalizedHeader = createHeaderInfo(100, '0xfinalized', '0x099');
     finalizedHeader.isFinalized = true;
@@ -822,17 +986,21 @@ describe('BlockWatch archive recovery', () => {
     try {
       const blockWatch = new BlockWatch(createClients({}, {}) as any);
       const blockWatchInternal = getInternalBlockWatch(blockWatch);
+      const previousHeaders = [createHeaderInfo(100, '0x100', '0x099'), createHeaderInfo(101, '0x101', '0x100')];
 
+      blockWatch.latestHeaders = previousHeaders;
       blockWatchInternal.unsubscribe = vi.fn();
       const startMock = vi.spyOn(blockWatch, 'startWithCatchup').mockImplementation(async () => {
         blockWatchInternal.unsubscribe = vi.fn();
         if (startMock.mock.calls.length === 1) {
+          blockWatch.latestHeaders = [previousHeaders[0]];
           throw new Error('offline');
         }
       });
 
       await blockWatchInternal.restart('archive', 'Detected archive client degradation');
       expect(startMock).toHaveBeenCalledTimes(1);
+      expect(blockWatch.latestHeaders).toEqual(previousHeaders);
 
       await vi.advanceTimersByTimeAsync(2_500);
       expect(startMock).toHaveBeenCalledTimes(2);

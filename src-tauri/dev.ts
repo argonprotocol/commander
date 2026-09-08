@@ -136,7 +136,7 @@ async function main(): Promise<void> {
   const tauriArgs = ['tauri', 'dev', '--config', configArg];
   const isE2EAppRun = Boolean(readNonEmpty(tauriEnv.ARGON_DRIVER_WS));
   if (isE2EAppRun) {
-    tauriArgs.push('--features', 'e2e-screenshots,e2e-insecure-gateway-certs');
+    tauriArgs.push('--no-watch', '--features', 'e2e-screenshots,e2e-insecure-gateway-certs');
     console.log('[tauri-dev] Enabling e2e features (ARGON_DRIVER_WS detected)');
   }
 

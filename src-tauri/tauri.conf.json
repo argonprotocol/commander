@@ -21,6 +21,7 @@
         "decorations": false,
         "resizable": true,
         "alwaysOnTop": false,
+        "backgroundThrottling": "disabled",
         "center": true,
         "maximized": false,
         "minWidth": 1100,
