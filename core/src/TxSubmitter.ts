@@ -85,26 +85,7 @@ export class TxSubmitter {
     });
     result.txProgressCallback = options.txProgressCallback;
     if (options.disableAutomaticTxTracking !== true) {
-      let unsubscribe: (() => void) | undefined;
-      let isWatchReleased = false;
-      const releaseWatch = () => {
-        if (isWatchReleased) return;
-        isWatchReleased = true;
-        const currentUnsubscribe = unsubscribe;
-        unsubscribe = undefined;
-        currentUnsubscribe?.();
-      };
-      const watchUnsubscribe = await signedTx.send(subscriptionResult => {
-        result.onSubscriptionResult(subscriptionResult);
-        if (subscriptionResult.isFinalized || subscriptionResult.isError) {
-          releaseWatch();
-        }
-      });
-      if (isWatchReleased) {
-        watchUnsubscribe();
-      } else {
-        unsubscribe = watchUnsubscribe;
-      }
+      await signedTx.send(result.onSubscriptionResult.bind(result));
     } else {
       try {
         await signedTx.send();

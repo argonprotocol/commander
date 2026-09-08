@@ -1,15 +1,14 @@
 #!/usr/bin/env tsx
 
-import Fs from 'node:fs';
+import Path from 'node:path';
 import process from 'node:process';
 import type { INetworkConfigOverride } from '@argonprotocol/apps-core';
 import { startDevEthereumMintingAuthority } from '../helpers/startDevEthereumMintingAuthority.ts';
 import type { IDevEthereumConfig, IStartDevEthereumResult } from '../devEthereum.ts';
-import { getDevUpstreamWorkerPaths } from './devUpstreamProcess.ts';
-import { resolveDevUpstreamRootDir, startDevUpstreamServer } from './devUpstreamServer.ts';
+import { resolveDevUpstreamDir, setDevUpstreamWorkerReady, watchAppInstanceDirectory } from './devUpstreamProcess.ts';
+import { startDevUpstreamServer } from './devUpstreamServer.ts';
 
-const rootDir = resolveDevUpstreamRootDir();
-const paths = getDevUpstreamWorkerPaths(rootDir);
+const devUpstreamDir = resolveDevUpstreamDir();
 const archiveUrl = readRequiredEnv('ARGON_DEV_UPSTREAM_ARCHIVE_URL');
 const devEthereum =
   readJsonEnv<Pick<IStartDevEthereumResult, 'serverBeaconApiUrl' | 'serverExecutionRpcUrl' | 'usdcTokenAddress'>>(
@@ -27,6 +26,7 @@ const shouldStartMintingAuthority =
 let upstreamRuntime: Awaited<ReturnType<typeof startDevUpstreamServer>> | undefined;
 let mintingAuthorityRuntime: Awaited<ReturnType<typeof startDevEthereumMintingAuthority>> | undefined;
 let shutdownPromise: Promise<void> | undefined;
+const appInstanceWatcher = watchAppInstanceDirectory(Path.dirname(devUpstreamDir), () => void shutdown(0));
 
 process.once('SIGINT', () => void shutdown(0));
 process.once('SIGTERM', () => void shutdown(0));
@@ -59,16 +59,16 @@ async function start(): Promise<void> {
     });
   }
 
-  Fs.writeFileSync(paths.readyPath, 'ready\n');
+  setDevUpstreamWorkerReady(true, devUpstreamDir);
   console.log(`[dev-upstream-worker] Ready (pid ${process.pid})`);
 }
 
 function shutdown(exitCode: number): Promise<void> {
   shutdownPromise ??= (async () => {
-    Fs.rmSync(paths.readyPath, { force: true });
+    appInstanceWatcher.close();
+    setDevUpstreamWorkerReady(false, devUpstreamDir);
     await mintingAuthorityRuntime?.shutdown().catch(() => undefined);
     await upstreamRuntime?.shutdown().catch(() => undefined);
-    Fs.rmSync(paths.pidPath, { force: true });
   })().finally(() => process.exit(exitCode));
   return shutdownPromise;
 }

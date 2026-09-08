@@ -49,6 +49,14 @@ it('keeps E2E extensions disabled while the first-run welcome overlay is shown',
   expect(mocks.config.save).not.toHaveBeenCalled();
 });
 
+it('keeps a newly imported account at its recovered access level when automatic Operations access is disabled', async () => {
+  await initializeE2EState(false);
+
+  expect(mocks.config.hasExtensionTreasury).toBe(false);
+  expect(mocks.config.hasExtensionOperations).toBe(false);
+  expect(mocks.config.save).not.toHaveBeenCalled();
+});
+
 it('activates E2E operations after account import recreates the config database', async () => {
   mocks.config.showWelcomeOverlay = true;
   mocks.config.bootstrapDetails = { type: BootstrapType.Public, routerHost: '127.0.0.1' };

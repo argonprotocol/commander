@@ -223,8 +223,8 @@ async function activateDevEthereumMintingAuthority(args: {
   console.info(`[${logPrefix}] ensuring council signer registration`);
   await actor.ensureCouncilSignerRegistered({ client });
 
-  console.info(`[${logPrefix}] setting initial committed Argonots for council weight`);
-  await actor.setCommittedArgonots({
+  console.info(`[${logPrefix}] ensuring committed Argonots for council weight`);
+  await actor.ensureCommittedArgonots({
     amount: initialCommittedMicronots,
   });
 
@@ -250,12 +250,14 @@ async function activateDevEthereumMintingAuthority(args: {
     },
   );
 
-  console.info(`[${logPrefix}] forcing global issuance council`);
-  await forceUpdateGlobalIssuanceCouncil({
-    archiveUrl,
-    executionRpcUrl,
-    vaultAddresses: [status.vaultingAddress],
-  });
+  if (!status.hasActiveCouncil) {
+    console.info(`[${logPrefix}] forcing global issuance council`);
+    await forceUpdateGlobalIssuanceCouncil({
+      archiveUrl,
+      executionRpcUrl,
+      vaultAddresses: [status.vaultingAddress],
+    });
+  }
 
   await waitForStatus({
     label: 'active Ethereum council',
@@ -277,39 +279,43 @@ async function activateDevEthereumMintingAuthority(args: {
     micronots: registrationMicronotCollateral,
   });
 
-  console.info(`[${logPrefix}] setting committed Argonots`);
-  await actor.setCommittedArgonots({
+  console.info(`[${logPrefix}] ensuring committed Argonots`);
+  await actor.ensureCommittedArgonots({
     amount: registrationMicronotCollateral,
   });
 
-  console.info(`[${logPrefix}] registering minting authority`);
-  const registerTxInfo = await actor.registerMintingAuthority({
-    microgonCollateral: 0n,
-    micronotCollateral: registrationMicronotCollateral,
-  });
-  await registerTxInfo.waitForPostProcessing;
-  status = {
-    ...status,
-    mintingAuthoritySigner: registerTxInfo.tx.metadataJson.destinationSigningKey,
-  };
+  if (!status.authorityPendingActivation) {
+    console.info(`[${logPrefix}] registering minting authority`);
+    const registerTxInfo = await actor.registerMintingAuthority({
+      microgonCollateral: 0n,
+      micronotCollateral: registrationMicronotCollateral,
+    });
+    await registerTxInfo.waitForPostProcessing;
+    status = {
+      ...status,
+      mintingAuthoritySigner: registerTxInfo.tx.metadataJson.destinationSigningKey,
+    };
 
-  console.info(`[${logPrefix}] waiting for minting authority registration`);
-  await actor.waitForMintingAuthorityRegistration({
-    client,
-    signingKey: status.mintingAuthoritySigner,
-  });
+    console.info(`[${logPrefix}] waiting for minting authority registration`);
+    await actor.waitForMintingAuthorityRegistration({
+      client,
+      signingKey: status.mintingAuthoritySigner,
+    });
 
-  await waitForStatus({
-    label: 'pending council approval',
-    timeoutMs: 60_000,
-    timeoutMessage: `${logPrefix}: minting authority activation approval never appeared in the council queue.`,
-    stopOnPause: true,
-    isReady: nextStatus => nextStatus.pendingApprovals > 0,
-  });
+    await waitForStatus({
+      label: 'pending council approval',
+      timeoutMs: 60_000,
+      timeoutMessage: `${logPrefix}: minting authority activation approval never appeared in the council queue.`,
+      stopOnPause: true,
+      isReady: nextStatus => nextStatus.pendingApprovals > 0,
+    });
+  }
 
-  console.info(`[${logPrefix}] approving pending council updates`);
-  if (!(await actor.approvePendingGatewayUpdates())) {
-    throw new Error(`${logPrefix}: minting authority activation approval disappeared before it could be signed.`);
+  if (status.pendingApprovals > 0) {
+    console.info(`[${logPrefix}] approving pending council updates`);
+    if (!(await actor.approvePendingGatewayUpdates())) {
+      throw new Error(`${logPrefix}: minting authority activation approval disappeared before it could be signed.`);
+    }
   }
 
   const relaySignerAddress = getAddress(actor.walletKeys.ethereumAddress);
@@ -372,16 +378,6 @@ async function refreshMintingAuthorityActivation(args: {
       client: args.client,
       priorStatus: status,
     });
-  }
-
-  const finalizedClient = await args.client.at(await args.client.rpc.chain.getFinalizedHead());
-  await args.actor.globalCouncil.refresh(finalizedClient);
-  if (status.authorityPendingActivation && status.pendingApprovals === 0) {
-    const preview = await args.actor.globalCouncil.getReadyGatewayRelayPreview();
-    if (preview.canRelay && preview.activationCount > 0) {
-      console.info(`[${args.logPrefix}] relaying approved gateway updates`);
-      await args.actor.relayApprovedGatewayUpdates();
-    }
   }
 
   return await args.actor.getEthereumMintingAuthorityStatus({
