@@ -47,11 +47,6 @@ type IWatchedTxStatus = {
   replacementTxHash?: string;
 };
 
-type TransactionWatch = {
-  isReleased: boolean;
-  unsubscribe?: VoidFunction;
-};
-
 export enum TxAttemptState {
   Pending = 'Pending',
   Finalized = 'Finalized',
@@ -81,7 +76,6 @@ export class TransactionTracker {
   #nonceLaneByAddress = new Map<string, Promise<void>>();
   #statusLaneByTxId = new Map<number, Promise<void>>();
   #pendingWatchResultsByTxId = new Map<number, number>();
-  #transactionWatchesByTxId = new Map<number, TransactionWatch>();
   #reconciliationByTxId = new Map<number, { head: string; state: TxReconciliationState }>();
   #isClosed = false;
 
@@ -103,10 +97,6 @@ export class TransactionTracker {
     this.#isClosed = false;
     if (this.#waitForLoad?.isRunning) return this.#waitForLoad.promise;
     if (!reload && this.#waitForLoad?.isResolved) return this.#waitForLoad.promise;
-
-    if (reload) {
-      this.releaseAllTransactionWatches();
-    }
 
     if (reload || this.#waitForLoad?.isRejected) {
       this.#waitForLoad = createDeferred();
@@ -305,32 +295,17 @@ export class TransactionTracker {
         extrinsicType,
         metadata,
       });
-      const transactionWatch: TransactionWatch = { isReleased: false };
-      this.#transactionWatchesByTxId.set(txInfo.tx.id, transactionWatch);
 
       let shouldRetryOutdatedNonce = false;
       try {
-        const unsubscribe = await signedTx.send(result => {
+        await signedTx.send(result => {
           if (this.#isClosed) {
             return;
           }
           txResult.onSubscriptionResult(result);
-          const shouldReleaseWatch =
-            result.isFinalized ||
-            result.status.isFinalityTimeout ||
-            result.status.isFinalized ||
-            result.status.isUsurped ||
-            result.status.isDropped ||
-            result.status.isInvalid;
-          void this.handleWatchedResult(txInfo.tx, txResult, result).finally(() => {
-            if (shouldReleaseWatch) {
-              this.releaseTransactionWatch(txInfo.tx.id, transactionWatch);
-            }
-          });
+          void this.handleWatchedResult(txInfo.tx, txResult, result);
         });
-        this.attachTransactionWatchUnsubscribe(txInfo.tx.id, transactionWatch, unsubscribe);
       } catch (error) {
-        this.releaseTransactionWatch(txInfo.tx.id, transactionWatch);
         if (this.#isClosed) {
           return txInfo;
         }
@@ -354,7 +329,6 @@ export class TransactionTracker {
 
   public shutdown(): void {
     this.#isClosed = true;
-    this.releaseAllTransactionWatches();
     this.stopWatching();
   }
 
@@ -396,7 +370,7 @@ export class TransactionTracker {
   }
 
   public async getTxAttemptState(txInfo: TransactionInfo, waitForConfirmations: number): Promise<TxAttemptState> {
-    const attemptState = await this.runInTransactionStatusLane(txInfo.tx.id, async () => {
+    return await this.runInTransactionStatusLane(txInfo.tx.id, async () => {
       if (
         txInfo.tx.submissionErrorJson ||
         txInfo.tx.blockExtrinsicErrorJson ||
@@ -531,11 +505,6 @@ export class TransactionTracker {
       });
       return TxAttemptState.Replace;
     });
-
-    if (attemptState === TxAttemptState.Replace) {
-      this.releaseTransactionWatch(txInfo.tx.id);
-    }
-    return attemptState;
   }
 
   public async trackTxResult<T>(
@@ -667,7 +636,6 @@ export class TransactionTracker {
             blockTime: new Date(finalizedBlockTime),
           });
           await txResult.setFinalized();
-          this.releaseTransactionWatch(tx.id);
           reconciliationState = TxReconciliationState.Included;
         }
       } else if (!shouldRescanBestBlockTx) {
@@ -725,7 +693,6 @@ export class TransactionTracker {
               blockTime: new Date(finalizedBlockTime),
             });
             await txResult.setFinalized();
-            this.releaseTransactionWatch(tx.id);
           }
         }
       } else {
@@ -785,7 +752,6 @@ export class TransactionTracker {
               txResult.extrinsicError = new Error('Transaction expired waiting for block inclusion');
               await txResult.setFinalized();
               await table.markExpiredWaitingForBlock(tx);
-              this.releaseTransactionWatch(tx.id);
             }
           } catch (error) {
             console.warn('[TransactionTracker] Unable to check transaction pool before expiring transaction', {
@@ -846,40 +812,6 @@ export class TransactionTracker {
     if (record.status === TransactionStatus.Error) return;
     const table = await this.getTable();
     await table.recordSubmissionError(record, error);
-  }
-
-  private attachTransactionWatchUnsubscribe(
-    transactionId: number,
-    transactionWatch: TransactionWatch,
-    unsubscribe: VoidFunction,
-  ): void {
-    if (transactionWatch.isReleased || this.#isClosed) {
-      unsubscribe();
-      return;
-    }
-    transactionWatch.unsubscribe = unsubscribe;
-    this.#transactionWatchesByTxId.set(transactionId, transactionWatch);
-  }
-
-  private releaseTransactionWatch(
-    transactionId: number,
-    transactionWatch = this.#transactionWatchesByTxId.get(transactionId),
-  ): void {
-    if (!transactionWatch || transactionWatch.isReleased) return;
-
-    transactionWatch.isReleased = true;
-    if (this.#transactionWatchesByTxId.get(transactionId) === transactionWatch) {
-      this.#transactionWatchesByTxId.delete(transactionId);
-    }
-    const unsubscribe = transactionWatch.unsubscribe;
-    transactionWatch.unsubscribe = undefined;
-    unsubscribe?.();
-  }
-
-  private releaseAllTransactionWatches(): void {
-    for (const [transactionId, transactionWatch] of this.#transactionWatchesByTxId) {
-      this.releaseTransactionWatch(transactionId, transactionWatch);
-    }
   }
 
   private async runInTransactionStatusLane<T>(transactionId: number, callback: () => Promise<T>): Promise<T> {
