@@ -41,6 +41,22 @@ it('keeps an operations upgrade pending after the upstream records the request',
   ).toBe(true);
 });
 
+it('recognizes an operations upgrade request from the restored package revision', () => {
+  expect(
+    hasOperationsUpgradeRequest({
+      restorePackageRevision: '3.1.1788969734729',
+    }),
+  ).toBe(true);
+});
+
+it('does not confuse a coupon revision with an operations upgrade request', () => {
+  expect(
+    hasOperationsUpgradeRequest({
+      restorePackageRevision: '3.0.1',
+    }),
+  ).toBe(false);
+});
+
 it('refuses redirects when claiming a pasted invite', async () => {
   const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response('{}'));
   vi.stubGlobal('fetch', fetchMock);

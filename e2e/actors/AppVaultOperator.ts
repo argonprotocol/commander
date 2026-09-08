@@ -4,6 +4,7 @@ import {
   Currency,
   hasCompletedTreasuryCertificationRequirements,
   JsonExt,
+  loadCertificationProgress,
   MainchainClients,
   MiningFrames,
   MoveTo,
@@ -249,14 +250,18 @@ export class AppVaultOperator {
       this.config.vaultingRules.baseMicrogonCommitment +
       rewardConfig.treasuryMinimumBonds +
       20n * BigInt(MICROGONS_PER_ARGON);
-    const existingTreasuryMicronots = (await client.query.ownership.account(this.walletKeys.treasuryAddress)).free;
-
-    await sudoFundWallet({
-      client,
-      address: this.walletKeys.treasuryAddress,
-      microgons: requiredVaultingBalance,
-      micronots: existingTreasuryMicronots,
-    });
+    const [existingTreasuryArgons, existingTreasuryArgonots] = await Promise.all([
+      client.query.system.account(this.walletKeys.treasuryAddress),
+      client.query.ownership.account(this.walletKeys.treasuryAddress),
+    ]);
+    if (existingTreasuryArgons.data.free < requiredVaultingBalance) {
+      await sudoFundWallet({
+        client,
+        address: this.walletKeys.treasuryAddress,
+        microgons: requiredVaultingBalance,
+        micronots: existingTreasuryArgonots.free,
+      });
+    }
 
     await this.ensureVaultReady();
 
@@ -414,9 +419,13 @@ export class AppVaultOperator {
     });
   }
 
-  public async setCommittedArgonots(args: { amount: bigint }): Promise<void> {
+  public async ensureCommittedArgonots(args: { amount: bigint }): Promise<void> {
     await this.ensureVaultReady();
-    const txInfo = await this.myVault.setCommittedArgonots(args.amount);
+    const { committedMicronots, encumberedMicronots } = this.myVault.data.argonotCommitment;
+    const requiredMicronots = args.amount > encumberedMicronots ? args.amount : encumberedMicronots;
+    if (committedMicronots >= requiredMicronots) return;
+
+    const txInfo = await this.myVault.setCommittedArgonots(requiredMicronots);
     await txInfo.waitForPostProcessing;
   }
 
@@ -440,14 +449,21 @@ export class AppVaultOperator {
           });
 
           for (const invite of invites.invites) {
-            if (!invite.operationsUpgradeRequestedAt || invite.accessProof || !invite.operationalAccountId) {
+            if (
+              !invite.operationsUpgradeRequestedAt ||
+              invite.accessProof ||
+              !invite.defaultAccountId ||
+              !invite.operationalAccountId
+            ) {
               continue;
             }
 
-            if (
-              !invite.certificationProgress ||
-              !hasCompletedTreasuryCertificationRequirements(invite.certificationProgress)
-            ) {
+            const certificationProgress = await loadCertificationProgress({
+              client,
+              defaultAccountId: invite.defaultAccountId,
+              operationalAccountId: invite.operationalAccountId,
+            });
+            if (!hasCompletedTreasuryCertificationRequirements(certificationProgress)) {
               continue;
             }
 

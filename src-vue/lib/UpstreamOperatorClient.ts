@@ -377,7 +377,7 @@ export function hasOperationsUpgradeRequest({
   operationsUpgradeRequestedAt,
   restorePackageRevision,
 }: OperationsUpgradeRequestState): boolean {
-  return !!operationsUpgradeRequestedAt || restorePackageRevision?.endsWith('.1') === true;
+  return !!operationsUpgradeRequestedAt || restorePackageRevision?.split('.')[1] === '1';
 }
 
 function buildAuthenticatedUrl(operatorHost: string, path: string, sessionId?: string): string {

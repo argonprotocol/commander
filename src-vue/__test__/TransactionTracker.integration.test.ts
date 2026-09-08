@@ -127,6 +127,7 @@ describe.skipIf(skipE2E).sequential('Transaction tracker tests', { timeout: 60e3
     console.timeLog('test', 'got finalized');
     expect(tx.status).toBe(TransactionStatus.Finalized);
     const history = await db.transactionStatusHistoryTable.fetchByTransactionId(tx.id);
+    expect(history.some(x => x.source === TransactionHistorySource.Watch)).toBe(true);
     expect(
       history.some(x => x.source === TransactionHistorySource.Block && x.status === TransactionHistoryStatus.InBlock),
     ).toBe(true);

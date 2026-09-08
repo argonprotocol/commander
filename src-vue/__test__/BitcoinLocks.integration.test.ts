@@ -583,11 +583,16 @@ async function createLock(
   const availableBitcoinSpace = vault.availableBitcoinSpace();
   const targetLiquidity = microgonLiquidity ?? (availableBitcoinSpace * 4n) / 5n;
   expect(targetLiquidity).toBeGreaterThan(0n);
-  const satoshis = await harness.bitcoinLocks.satoshisForArgonLiquidity(targetLiquidity);
+  const client = await harness.clients.get(false);
+  const microgonsAtTargetPerBtc = (await client.query.bitcoinLocks.microgonPerBtcHistory()).at(-1)?.[1];
+  expect(microgonsAtTargetPerBtc).toBeGreaterThan(0n);
+  if (!microgonsAtTargetPerBtc) throw new Error('No eligible Bitcoin rate is available for the test lock.');
+  const satoshis = await harness.bitcoinLocks.satoshisForArgonLiquidity(targetLiquidity, microgonsAtTargetPerBtc);
 
   const { pendingLock, txInfo } = await harness.bitcoinLocks.initializeLock({
     satoshis,
     vault,
+    microgonsAtTargetPerBtc,
   });
   expect(txInfo).toBeTruthy();
 

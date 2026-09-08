@@ -1,11 +1,57 @@
-import { describe, expect, it, vi } from 'vitest';
-import { EvmContracts } from '@argonprotocol/mainchain';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ArgonClient } from '@argonprotocol/apps-core';
+import {
+  EvmContracts,
+  getEthereumBeaconSyncBootstrapTx,
+  getEthereumBeaconSyncState,
+  type KeyringPair,
+} from '@argonprotocol/mainchain';
 import { getAddress, type Hex, type PublicClient } from 'viem';
 import {
+  ensureDevEthereumBeaconBootstrapped,
   initializeDevEthereumTokenReserve,
   submitDevAdminTransaction,
   syncEthereumGatewayActiveCouncilToArgon,
 } from '../devEthereumRuntimeSetup.ts';
+import { waitForFinalizedBeaconExecutionAtOrAbove } from '../../bot/src/EthereumBeaconSyncService.ts';
+
+vi.mock('@argonprotocol/mainchain', async importOriginal => ({
+  ...(await importOriginal<typeof import('@argonprotocol/mainchain')>()),
+  getEthereumBeaconSyncBootstrapTx: vi.fn(),
+  getEthereumBeaconSyncState: vi.fn(),
+}));
+
+vi.mock('../../bot/src/EthereumBeaconSyncService.ts', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../bot/src/EthereumBeaconSyncService.ts')>()),
+  waitForFinalizedBeaconExecutionAtOrAbove: vi.fn(),
+}));
+
+describe('ensureDevEthereumBeaconBootstrapped', () => {
+  beforeEach(() => {
+    vi.mocked(getEthereumBeaconSyncState).mockReset();
+    vi.mocked(getEthereumBeaconSyncBootstrapTx).mockReset();
+    vi.mocked(waitForFinalizedBeaconExecutionAtOrAbove).mockReset();
+  });
+
+  it('reports progress while the light-client bootstrap endpoint is not ready', async () => {
+    vi.mocked(getEthereumBeaconSyncState).mockResolvedValue({ isBootstrapped: false } as never);
+    vi.mocked(waitForFinalizedBeaconExecutionAtOrAbove).mockResolvedValue();
+    vi.mocked(getEthereumBeaconSyncBootstrapTx).mockRejectedValue(
+      new Error('GET /eth/v1/beacon/light_client/bootstrap/0x123 returned 404'),
+    );
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    await expect(
+      ensureDevEthereumBeaconBootstrapped({} as ArgonClient, 'http://127.0.0.1:33001', {} as KeyringPair, {
+        timeoutMs: 20,
+        pollMs: 1,
+      }),
+    ).rejects.toThrow('light-client bootstrap endpoint did not become ready');
+
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('Waiting for beacon light-client bootstrap data'));
+    log.mockRestore();
+  });
+});
 
 describe('initializeDevEthereumTokenReserve', () => {
   it('does not remigrate after the root account distributes part of the initialized reserve', async () => {

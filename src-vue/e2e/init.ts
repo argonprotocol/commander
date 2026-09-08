@@ -51,9 +51,14 @@ function installClipboardShim(): void {
   e2eWindow.__ARGON_E2E_CLIPBOARD_PATCHED__ = true;
 }
 
-export async function initializeE2EState(): Promise<void> {
+export async function initializeE2EState(
+  autoEnableOperations = typeof __ARGON_E2E_AUTO_ENABLE_OPERATIONS__ === 'undefined' ||
+    __ARGON_E2E_AUTO_ENABLE_OPERATIONS__,
+): Promise<void> {
   const config = getConfig();
   await config.isLoadedPromise;
+  if (!autoEnableOperations) return;
+
   // Account import recreates the config database and explicitly dismisses onboarding.
   if (!config.showWelcomeOverlay || config.bootstrapDetails) {
     config.showWelcomeOverlay = false;

@@ -15,4 +15,5 @@ export interface IConfigQueryRef
   hasSavedBiddingRules: boolean;
   hasSavedVaultingRules: boolean;
   isServerAdded: boolean;
+  save(): Promise<void>;
 }

@@ -84,6 +84,9 @@ export async function ensureDevEthereumBeaconBootstrapped(
       if (!error.message.includes('/eth/v1/beacon/light_client/bootstrap/') || !error.message.includes('404')) {
         throw error;
       }
+      console.log(
+        `[dev-ethereum] Waiting for beacon light-client bootstrap data after ${Date.now() - bootstrapTxStartedAt}ms`,
+      );
       await new Promise(resolve => setTimeout(resolve, pollMs));
     }
   }
