@@ -110,14 +110,11 @@ export default new OperationalFlow<IReadOnlyFlowContext, IReadOnlyFlowState>(imp
   },
   async run({ flow }) {
     if (flow.input.expectsBitcoinLock === true) {
-      await flow.poll<IReadOnlyFlowState>(
-        latest => latest.blockers.every(blocker => blocker === 'Bitcoin lock is not visible'),
-        {
-          pollMs: 1_000,
-          timeoutMs: 60_000,
-          timeoutMessage: 'Account did not finish loading its readonly state before Bitcoin navigation.',
-        },
-      );
+      await flow.poll<IReadOnlyFlowState>(latest => !latest.uiState.recoveryInProgress, {
+        pollMs: 1_000,
+        timeoutMs: 60_000,
+        timeoutMessage: 'Account did not finish loading its readonly state before Bitcoin navigation.',
+      });
       const bitcoinLocksScreen = await flow.isVisible('BitcoinLocksScreen');
       if (!bitcoinLocksScreen.visible) {
         await flow.click('LeftBar.goto(TopTab.BitcoinLocks)', { timeoutMs: 10_000 });
