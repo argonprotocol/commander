@@ -18,6 +18,7 @@ type IReadOnlyFlowState = IE2EOperationInspectState<
     hasOperationsAccess: boolean;
     configuredServerLoaded: boolean;
     serverUnavailableVisible: boolean;
+    recoveryInProgress: boolean;
     upstreamName?: string;
     upstreamVisible: boolean;
     vaultId?: number;
@@ -36,6 +37,7 @@ export default new OperationalFlow<IReadOnlyFlowContext, IReadOnlyFlowState>(imp
       defaultEthereumAddress: refs.defaultEthereumAddress,
       hasOperationsAccess: refs.config.hasExtensionOperations,
       configuredServerLoaded: refs.config.isServerAdded,
+      recoveryInProgress: refs.config.isBootingUpPreviousWalletHistory,
       upstreamName: refs.config.upstreamOperator?.name,
       vaultId: refs.myVault.vaultId,
     }));
@@ -64,6 +66,7 @@ export default new OperationalFlow<IReadOnlyFlowContext, IReadOnlyFlowState>(imp
     const isComplete =
       appState?.canSign === false &&
       badgeVisible &&
+      !appState?.recoveryInProgress &&
       appState?.hasOperationsAccess === expectsOperations &&
       hasExpectedIdentity &&
       hasExpectedServerState &&
@@ -83,6 +86,7 @@ export default new OperationalFlow<IReadOnlyFlowContext, IReadOnlyFlowState>(imp
         hasOperationsAccess: appState?.hasOperationsAccess ?? false,
         configuredServerLoaded: appState?.configuredServerLoaded ?? false,
         serverUnavailableVisible,
+        recoveryInProgress: appState?.recoveryInProgress ?? false,
         upstreamName: appState?.upstreamName,
         upstreamVisible,
         vaultId: appState?.vaultId,
@@ -92,6 +96,7 @@ export default new OperationalFlow<IReadOnlyFlowContext, IReadOnlyFlowState>(imp
       blockers: [
         ...(appState?.canSign === false ? [] : ['app still reports signing access']),
         ...(badgeVisible ? [] : ['readonly badge is not visible']),
+        ...(!appState?.recoveryInProgress ? [] : ['blockchain history recovery is still in progress']),
         ...(appState?.hasOperationsAccess === expectsOperations
           ? []
           : [`operations access should be ${expectsOperations ? 'enabled' : 'disabled'}`]),
@@ -105,6 +110,14 @@ export default new OperationalFlow<IReadOnlyFlowContext, IReadOnlyFlowState>(imp
   },
   async run({ flow }) {
     if (flow.input.expectsBitcoinLock === true) {
+      await flow.poll<IReadOnlyFlowState>(
+        latest => latest.blockers.every(blocker => blocker === 'Bitcoin lock is not visible'),
+        {
+          pollMs: 1_000,
+          timeoutMs: 60_000,
+          timeoutMessage: 'Account did not finish loading its readonly state before Bitcoin navigation.',
+        },
+      );
       const bitcoinLocksScreen = await flow.isVisible('BitcoinLocksScreen');
       if (!bitcoinLocksScreen.visible) {
         await flow.click('LeftBar.goto(TopTab.BitcoinLocks)', { timeoutMs: 10_000 });
