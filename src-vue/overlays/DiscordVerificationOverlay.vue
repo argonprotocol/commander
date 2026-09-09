@@ -203,11 +203,14 @@ async function submit(action: 'connect' | 'update'): Promise<void> {
       path = '/role-updates';
       requestBody = { ...proof, signature: signDiscordRoleUpdateProof(operationalKey, proof) };
     }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
     const response = await fetch(`${activeServices.serviceUrl.replace(/\/$/, '')}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
     const body = (await response.json().catch(() => undefined)) as Partial<IDiscordVerificationResult> & {
       error?: unknown;
     };
