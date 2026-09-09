@@ -56,6 +56,11 @@ export default defineConfig({
         },
       },
       {
+        resolve: {
+          alias: {
+            'src-vue': path.join(dirname, 'src-vue'),
+          },
+        },
         test: {
           name: 'scripts',
           include: ['scripts/__test__/**/*.test.ts'],

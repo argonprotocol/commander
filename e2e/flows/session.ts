@@ -17,7 +17,11 @@ import {
   startArgonTestNetwork,
   type StartedArgonTestNetwork,
 } from '@argonprotocol/apps-core/__test__/startArgonTestNetwork.ts';
-import { ensureDevUpstreamWorker, stopDevUpstreamWorker } from '../scripts/devUpstreamProcess.ts';
+import {
+  resolveDevUpstreamDir,
+  restartDevUpstreamWorker,
+  stopDevUpstreamWorker,
+} from '../scripts/devUpstreamProcess.ts';
 
 const DEFAULT_APP_CONNECT_TIMEOUT_MS = 12 * 60_000;
 const APP_CONNECT_PROGRESS_INTERVAL_MS = 20_000;
@@ -75,12 +79,12 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
   console.info(`[E2E] Driver session ${driverServer.session}`);
   let devDockerProcess: ChildProcess | null = null;
   let testNetwork: StartedArgonTestNetwork | null = null;
-  let devUpstreamRootDir: string | undefined;
+  let devUpstreamDir: string | undefined;
   let closed = false;
   const previousComposeProjectName = process.env.COMPOSE_PROJECT_NAME;
   const previousNetworkConfigOverride = process.env.ARGON_NETWORK_CONFIG_OVERRIDE;
   const previousDevEthereumRuntimeStateDir = process.env.ARGON_DEV_ETHEREUM_RUNTIME_STATE_DIR;
-  const previousDevUpstreamRootDir = process.env.ARGON_DEV_UPSTREAM_ROOT_DIR;
+  const previousDevUpstreamDir = process.env.ARGON_DEV_UPSTREAM_DIR;
   const sessionData: Record<string, unknown> = {};
 
   const defaultSessionName = options.sessionName || 'e2e';
@@ -105,7 +109,9 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
     });
     const devEthereumRuntimeStateDir = Path.join(testDataDir, 'dev-ethereum');
     isolatedDataEnv.ARGON_DEV_ETHEREUM_RUNTIME_STATE_DIR = devEthereumRuntimeStateDir;
-    isolatedDataEnv.ARGON_DEV_UPSTREAM_ROOT_DIR = Path.join(testDataDir, 'dev-upstream');
+    isolatedDataEnv.ARGON_DEV_UPSTREAM_DIR = resolveDevUpstreamDir({
+      ARGON_APP_INSTANCE_DIR: appInstanceDirectory,
+    });
     sessionData.devEthereumRuntimeStateDir = devEthereumRuntimeStateDir;
   }
   const cleanupEnv: NodeJS.ProcessEnv = { ...commandEnv, ...isolatedDataEnv };
@@ -113,8 +119,10 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
     ...commandEnv,
     ARGON_DRIVER_WS: driverServer.url,
     ARGON_E2E_HEADLESS: process.env.ARGON_E2E_HEADLESS?.trim() || '0',
+    ARGON_E2E_AUTO_ENABLE_OPERATIONS: options.useDevUpstream ? '0' : '1',
     E2E_USE_TEST_NETWORK: useTestNetwork ? '1' : '0',
     ARGON_APP_ENABLE_AUTOUPDATE: '0',
+    ARGON_APP_INSTANCE_DIR: appInstanceDirectory,
     ARGON_DEV_ETHEREUM: '0',
     ...options.appEnv,
     ...isolatedDataEnv,
@@ -145,14 +153,13 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
       tauriEnv.RPC_PORT = composeEnv.RPC_PORT;
 
       if (options.useDevUpstream) {
-        devUpstreamRootDir = isolatedDataEnv.ARGON_DEV_UPSTREAM_ROOT_DIR;
-        if (!devUpstreamRootDir) throw new Error('[E2E] Dev upstream requires an isolated data directory.');
-        await ensureDevUpstreamWorker({
+        devUpstreamDir = isolatedDataEnv.ARGON_DEV_UPSTREAM_DIR;
+        if (!devUpstreamDir) throw new Error('[E2E] Dev upstream requires an isolated data directory.');
+        await restartDevUpstreamWorker({
           archiveUrl: testNetwork.archiveUrl,
+          devUpstreamDir,
           env: tauriEnv,
           networkConfigOverride: testNetwork.networkConfigOverride,
-          rootDir: devUpstreamRootDir,
-          startupTimeoutMs: 5 * 60_000,
         });
         sessionData.devUpstreamInviteCode = await createDevUpstreamInvite(repoRoot, tauriEnv);
       }
@@ -169,8 +176,8 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
   } catch (error) {
     driver.close();
     await driverServer.close();
-    if (devUpstreamRootDir) {
-      await stopDevUpstreamWorker(devUpstreamRootDir).catch(() => undefined);
+    if (devUpstreamDir) {
+      await stopDevUpstreamWorker(devUpstreamDir).catch(() => undefined);
     }
     if (testNetwork) {
       await testNetwork.stop();
@@ -181,7 +188,7 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
     restoreComposeProjectName(previousComposeProjectName);
     restoreNetworkConfigOverride(previousNetworkConfigOverride);
     restoreProcessEnv('ARGON_DEV_ETHEREUM_RUNTIME_STATE_DIR', previousDevEthereumRuntimeStateDir);
-    restoreProcessEnv('ARGON_DEV_UPSTREAM_ROOT_DIR', previousDevUpstreamRootDir);
+    restoreProcessEnv('ARGON_DEV_UPSTREAM_DIR', previousDevUpstreamDir);
     closeAppProcessOutputTracker(appProcessOutput);
     throw error;
   }
@@ -248,8 +255,8 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
     closed = true;
     driver.close();
     await stopChild(devDockerProcess);
-    if (devUpstreamRootDir) {
-      await stopDevUpstreamWorker(devUpstreamRootDir).catch(() => undefined);
+    if (devUpstreamDir) {
+      await stopDevUpstreamWorker(devUpstreamDir).catch(() => undefined);
     }
     if (testNetwork) {
       await testNetwork.stop();
@@ -261,7 +268,7 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
     restoreComposeProjectName(previousComposeProjectName);
     restoreNetworkConfigOverride(previousNetworkConfigOverride);
     restoreProcessEnv('ARGON_DEV_ETHEREUM_RUNTIME_STATE_DIR', previousDevEthereumRuntimeStateDir);
-    restoreProcessEnv('ARGON_DEV_UPSTREAM_ROOT_DIR', previousDevUpstreamRootDir);
+    restoreProcessEnv('ARGON_DEV_UPSTREAM_DIR', previousDevUpstreamDir);
     closeAppProcessOutputTracker(appProcessOutput);
     throw error;
   }
@@ -311,8 +318,8 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
       try {
         driver.close();
         await stopChild(devDockerProcess);
-        if (devUpstreamRootDir) {
-          await stopDevUpstreamWorker(devUpstreamRootDir).catch(error => {
+        if (devUpstreamDir) {
+          await stopDevUpstreamWorker(devUpstreamDir).catch(error => {
             console.warn(`[E2E] Failed to stop dev upstream worker: ${(error as Error).message}`);
           });
         }
@@ -330,7 +337,7 @@ export async function createFlowSession(options: IFlowSessionOptions = {}): Prom
         restoreComposeProjectName(previousComposeProjectName);
         restoreNetworkConfigOverride(previousNetworkConfigOverride);
         restoreProcessEnv('ARGON_DEV_ETHEREUM_RUNTIME_STATE_DIR', previousDevEthereumRuntimeStateDir);
-        restoreProcessEnv('ARGON_DEV_UPSTREAM_ROOT_DIR', previousDevUpstreamRootDir);
+        restoreProcessEnv('ARGON_DEV_UPSTREAM_DIR', previousDevUpstreamDir);
         closeAppProcessOutputTracker(appProcessOutput);
       }
     },
@@ -1046,7 +1053,7 @@ function restoreProcessEnv(name: string, previousValue: string | undefined): voi
 
 function runCleanDevDocker(repoRoot: string, env: NodeJS.ProcessEnv, reason: string): void {
   try {
-    execFileSync('yarn', ['clean:dev:docker'], {
+    execFileSync('yarn', ['clean:dev:docker:instance'], {
       cwd: repoRoot,
       env,
       shell: true,

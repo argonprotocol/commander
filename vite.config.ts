@@ -158,6 +158,7 @@ export default defineConfig(async ({ mode }) => {
       'process.env': {},
       global: 'globalThis',
       __ARGON_DRIVER_WS__: JSON.stringify(driverWs ?? ''),
+      __ARGON_E2E_AUTO_ENABLE_OPERATIONS__: process.env.ARGON_E2E_AUTO_ENABLE_OPERATIONS !== '0',
       __ARGON_E2E_SCREENSHOT_MODE__: JSON.stringify(process.env.E2E_SCREENSHOT_MODE?.trim() ?? ''),
     },
     // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

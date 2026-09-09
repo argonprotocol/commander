@@ -61,7 +61,7 @@ async function main(): Promise<void> {
     if (!useTestNetwork || sessionMode === 'stateful') return;
     const cleanupEnv: NodeJS.ProcessEnv = { ...appEnv };
     try {
-      execFileSync('yarn', ['clean:dev:docker'], {
+      execFileSync('yarn', ['clean:dev:docker:instance'], {
         cwd: REPO_ROOT,
         env: cleanupEnv,
         shell: true,

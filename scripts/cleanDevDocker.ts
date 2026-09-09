@@ -1,34 +1,37 @@
 #!/usr/bin/env tsx
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import Path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { stripNetworkPrefix, toComposeProjectName } from '../core/src/utils.ts';
+import { readDevEthereumRuntimeState } from '../e2e/devEthereum.ts';
+import { resolveDevUpstreamDir, stopDevUpstreamWorkerSync } from '../e2e/scripts/devUpstreamProcess.ts';
 
 const scriptDir = Path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = Path.resolve(scriptDir, '..');
-const appIds = ['com.argon.desktop.local'];
-const kurtosisEthereumEnclavePrefix = 'argon-eth-';
+const appIds = ['com.argon.desktop.local'] as const;
 
 const networkName = readNonEmptyEnv('ARGON_NETWORK_NAME') ?? 'dev-docker';
 const rawInstance = readNonEmptyEnv('ARGON_APP_INSTANCE') ?? 'e2e';
 const rawInstanceName = rawInstance.split(':')[0] || 'e2e';
 const instanceName = stripNetworkPrefix(rawInstanceName, networkName) || 'e2e';
 const composeProjectName = readNonEmptyEnv('COMPOSE_PROJECT_NAME') ?? toComposeProjectName(instanceName, networkName);
+const appInstanceDir = Path.join(getAppConfigBaseDir(), appIds[0], networkName, instanceName);
+const devUpstreamDir = resolveDevUpstreamDir({ ...process.env, ARGON_APP_INSTANCE_DIR: appInstanceDir });
 
 console.info(
   `[clean:dev:docker] Resetting project="${composeProjectName}" network="${networkName}" instance="${instanceName}"`,
 );
 
+stopDevUpstreamWorkerSync(devUpstreamDir);
 bringDownArgonComposeProject();
 removeConflictingComposeNetwork(composeProjectName);
 bringDownLocalMachineComposeProjects();
-removeDevUpstreamFixtureData();
 removeDevEthereumRelayers();
-removeDevEthereumEnclaves();
+await removeDevEthereumEnclave();
 
 console.info('[clean:dev:docker] Completed');
 
@@ -178,24 +181,10 @@ function bringDownLocalMachineComposeProjects(): void {
   }
 }
 
-function removeDevUpstreamFixtureData(): void {
-  const upstreamRootDir = process.env.ARGON_DEV_UPSTREAM_ROOT_DIR?.trim()
-    ? Path.resolve(process.env.ARGON_DEV_UPSTREAM_ROOT_DIR)
-    : Path.join(repoRoot, 'e2e', 'dev-upstream');
-  const upstreamDataDir = Path.join(upstreamRootDir, 'data');
+async function removeDevEthereumEnclave(): Promise<void> {
+  const runtimeState = await readDevEthereumRuntimeState();
+  if (!runtimeState?.enclaveName) return;
 
-  try {
-    if (existsSync(upstreamDataDir)) {
-      rmSync(upstreamDataDir, { recursive: true, force: true });
-      mkdirSync(upstreamDataDir, { recursive: true });
-      console.info(`[clean:dev:docker] Reset upstream fixture data at ${upstreamDataDir}`);
-    }
-  } catch (error) {
-    console.warn(`[clean:dev:docker] Failed to reset upstream fixture data: ${(error as Error).message}`);
-  }
-}
-
-function removeDevEthereumEnclaves(): void {
   let output: string;
   try {
     output = execFileSync('kurtosis', ['enclave', 'ls'], {
@@ -208,22 +197,19 @@ function removeDevEthereumEnclaves(): void {
     return;
   }
 
-  const enclaveNames = Array.from(
-    new Set(output.match(new RegExp(`\\b${kurtosisEthereumEnclavePrefix}[a-z0-9]+\\b`, 'g')) ?? []),
-  );
-  if (!enclaveNames.length) return;
+  if (!output.split(/\s+/).includes(runtimeState.enclaveName)) return;
 
-  for (const enclaveName of enclaveNames) {
-    try {
-      console.info(`[clean:dev:docker] Removing Kurtosis enclave ${enclaveName}`);
-      execFileSync('kurtosis', ['enclave', 'rm', '-f', enclaveName], {
-        cwd: repoRoot,
-        env: process.env,
-        encoding: 'utf8',
-      });
-    } catch (error) {
-      console.warn(`[clean:dev:docker] Failed to remove Kurtosis enclave ${enclaveName}: ${(error as Error).message}`);
-    }
+  try {
+    console.info(`[clean:dev:docker] Removing Kurtosis enclave ${runtimeState.enclaveName}`);
+    execFileSync('kurtosis', ['enclave', 'rm', '-f', runtimeState.enclaveName], {
+      cwd: repoRoot,
+      env: process.env,
+      encoding: 'utf8',
+    });
+  } catch (error) {
+    console.warn(
+      `[clean:dev:docker] Failed to remove Kurtosis enclave ${runtimeState.enclaveName}: ${(error as Error).message}`,
+    );
   }
 }
 

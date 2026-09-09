@@ -20,7 +20,7 @@ import {
   SeatGoalType,
 } from '@argonprotocol/apps-core';
 import { getClient } from '@argonprotocol/mainchain';
-import { sudoFundWallet } from '@argonprotocol/apps-core/__test__/helpers/sudoFundWallet.ts';
+import { sudoFundWallet, type ISudoFundWalletInput } from '@argonprotocol/apps-core/__test__/helpers/sudoFundWallet.ts';
 import type { IDevEthereumConfig, IStartDevEthereumResult } from '../devEthereum.ts';
 import { AppVaultOperator } from '../actors/AppVaultOperator.ts';
 import { ensureDevGatewayCerts } from '../../scripts/devGatewayCerts.ts';
@@ -28,10 +28,10 @@ import type { IConfig } from 'src-vue/interfaces/IConfig.ts';
 import { BootstrapRecovery } from 'src-vue/lib/BootstrapRecovery.ts';
 import { Config } from 'src-vue/lib/Config.ts';
 import { MemoryWalletKeys } from 'src-vue/lib/MemoryWalletKeys.ts';
+import { resolveDevUpstreamDir } from './devUpstreamProcess.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const defaultUpstreamRootDir = path.resolve(__dirname, '..', 'dev-upstream');
 const execFileAsync = promisify(execFile);
 
 export const DEV_UPSTREAM_MASTER_MNEMONIC = 'test test test test test test test test test test test junk';
@@ -59,7 +59,6 @@ export interface IDevUpstreamServerRuntime {
   botPort: string;
   gatewayPort: string;
   routerPort: string;
-  detachOperator(): Promise<void>;
   shutdown(): Promise<void>;
 }
 
@@ -92,7 +91,7 @@ export function getDevDockerComposeContext(
 export function getDevUpstreamComposeContext(): DevDockerComposeContext {
   return getDevDockerComposeContext({
     envOverrides: {
-      ARGON_DEV_UPSTREAM_ROOT_DIR: resolveDevUpstreamRootDir(),
+      ARGON_DEV_UPSTREAM_DIR: resolveDevUpstreamDir(),
     },
     profiles: UPSTREAM_COMPOSE_PROFILES,
   });
@@ -131,11 +130,11 @@ export async function startDevUpstreamServer(args: {
   devEthereum?: Pick<IStartDevEthereumResult, 'serverBeaconApiUrl' | 'serverExecutionRpcUrl' | 'usdcTokenAddress'>;
   devEthereumConfig?: Pick<IDevEthereumConfig, 'finalityBlocks' | 'finalityMillis'>;
 }): Promise<IDevUpstreamServerRuntime> {
-  const upstreamRootDir = resolveDevUpstreamRootDir();
+  const devUpstreamDir = resolveDevUpstreamDir();
   const context = getDevUpstreamComposeContext();
   const walletKeys = await createDevUpstreamWalletKeys();
-  const configDir = path.join(upstreamRootDir, 'config');
-  const dataDir = path.join(upstreamRootDir, 'data');
+  const configDir = path.join(devUpstreamDir, 'config');
+  const dataDir = path.join(devUpstreamDir, 'data');
   const envStatePath = path.join(configDir, '.env.state');
   const biddingRulesPath = path.join(configDir, 'biddingRules.json');
   const miningBotWalletPath = path.join(configDir, 'walletMiningBot.json');
@@ -201,27 +200,30 @@ export async function startDevUpstreamServer(args: {
   await Fs.writeFile(envStatePath, envLines.join('\n') + '\n');
   await ensureDevGatewayCerts();
 
-  const miningCapital = {
-    microgons: 100_000_000n * BigInt(MICROGONS_PER_ARGON),
-    micronots: 100_000_000n * BigInt(MICRONOTS_PER_ARGONOT),
-  };
   const fundingClient = createArgonClient(await getClient(args.archiveUrl));
   try {
-    const existingTreasuryMicronots = (await fundingClient.query.ownership.account(walletKeys.defaultArgonAddress))
-      .free;
+    const [miningBotArgons, miningBotArgonots, treasuryArgons, treasuryArgonots] = await Promise.all([
+      fundingClient.query.system.account(miningBotKeypair.address),
+      fundingClient.query.ownership.account(miningBotKeypair.address),
+      fundingClient.query.system.account(walletKeys.defaultArgonAddress),
+      fundingClient.query.ownership.account(walletKeys.defaultArgonAddress),
+    ]);
+    const funding = planDevUpstreamFunding({
+      miningBot: {
+        address: miningBotKeypair.address,
+        microgons: miningBotArgons.data.free,
+        micronots: miningBotArgonots.free,
+      },
+      treasury: {
+        address: walletKeys.defaultArgonAddress,
+        microgons: treasuryArgons.data.free,
+        micronots: treasuryArgonots.free,
+      },
+    });
 
-    await sudoFundWallet({
-      client: fundingClient,
-      address: miningBotKeypair.address,
-      microgons: miningCapital.microgons,
-      micronots: miningCapital.micronots,
-    });
-    await sudoFundWallet({
-      client: fundingClient,
-      address: walletKeys.defaultArgonAddress,
-      microgons: 10n * BigInt(MICROGONS_PER_ARGON),
-      micronots: existingTreasuryMicronots,
-    });
+    for (const account of funding) {
+      await sudoFundWallet({ client: fundingClient, ...account });
+    }
   } finally {
     await fundingClient.disconnect();
   }
@@ -261,13 +263,20 @@ export async function startDevUpstreamServer(args: {
   }
 
   const clients = new MainchainClients(args.archiveUrl, () => false);
-  const actor = await AppVaultOperator.load({
-    clients,
-    walletKeys,
-  });
+  let actor: AppVaultOperator;
+  try {
+    actor = await AppVaultOperator.load({
+      clients,
+      walletKeys,
+    });
+  } catch (error) {
+    await clients.disconnect().catch(() => undefined);
+    throw error;
+  }
   const bootstrapRecovery = new BootstrapRecovery(walletKeys);
   const vaultAlertAbortController = new AbortController();
   let isShutdown = false;
+  let shutdownPromise: Promise<void> | undefined;
   let operationsUpgradePoller: { shutdown(): Promise<void> } | undefined;
   let vaultAlertPoller: Promise<void> | undefined;
   let endpointMonitor: NodeJS.Timeout | undefined;
@@ -286,15 +295,21 @@ export async function startDevUpstreamServer(args: {
       actor.myVault.unsubscribe();
     }
   };
-  const shutdown = async () => {
-    if (isShutdown) {
-      return;
-    }
-    isShutdown = true;
-    clearInterval(endpointMonitor);
-    await detachOperator().catch(() => undefined);
-    await actor.dispose().catch(() => undefined);
-    await clients.disconnect().catch(() => undefined);
+  const shutdown = (): Promise<void> => {
+    if (isShutdown) return Promise.resolve();
+    if (shutdownPromise) return shutdownPromise;
+
+    shutdownPromise = (async () => {
+      clearInterval(endpointMonitor);
+      await detachOperator().catch(() => undefined);
+      await actor.dispose().catch(() => undefined);
+      await clients.disconnect().catch(() => undefined);
+      isShutdown = true;
+    })().finally(() => {
+      shutdownPromise = undefined;
+    });
+
+    return shutdownPromise;
   };
 
   try {
@@ -361,7 +376,6 @@ export async function startDevUpstreamServer(args: {
       botPort,
       gatewayPort,
       routerPort,
-      detachOperator,
       shutdown,
     };
   } catch (error) {
@@ -504,7 +518,32 @@ export async function waitForDevUpstreamEthereumRelayReady(args: {
   throw new Error(`Upstream Ethereum relay did not become ready within ${timeoutMs}ms: ${lastReason}`);
 }
 
-export function resolveDevUpstreamRootDir(): string {
-  const configuredRootDir = process.env.ARGON_DEV_UPSTREAM_ROOT_DIR?.trim() || defaultUpstreamRootDir;
-  return path.resolve(configuredRootDir);
+export function planDevUpstreamFunding(input: {
+  miningBot: DevUpstreamAccountBalance;
+  treasury: DevUpstreamAccountBalance;
+}): Array<Omit<ISudoFundWalletInput, 'archiveUrl' | 'client'>> {
+  const funding: Array<Omit<ISudoFundWalletInput, 'archiveUrl' | 'client'>> = [];
+
+  if (input.miningBot.microgons === 0n || input.miningBot.micronots === 0n) {
+    funding.push({
+      address: input.miningBot.address,
+      microgons: input.miningBot.microgons || 100_000_000n * BigInt(MICROGONS_PER_ARGON),
+      micronots: input.miningBot.micronots || 100_000_000n * BigInt(MICRONOTS_PER_ARGONOT),
+    });
+  }
+  if (input.treasury.microgons === 0n) {
+    funding.push({
+      address: input.treasury.address,
+      microgons: 10n * BigInt(MICROGONS_PER_ARGON),
+      micronots: input.treasury.micronots,
+    });
+  }
+
+  return funding;
 }
+
+type DevUpstreamAccountBalance = {
+  address: string;
+  microgons: bigint;
+  micronots: bigint;
+};

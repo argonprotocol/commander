@@ -72,7 +72,7 @@ services:
       upstream-miner:
         condition: service_healthy
     env_file:
-      - ${ARGON_DEV_UPSTREAM_ROOT_DIR:-../dev-upstream}/config/.env.state
+      - ${ARGON_DEV_UPSTREAM_DIR:-../dev-upstream}/config/.env.state
     environment:
       - PORT=8080
       - ARGON_CHAIN=dev-docker
@@ -83,7 +83,7 @@ services:
       - BITCOIN_CHAIN=regtest
       - DATADIR=/data
     volumes:
-      - ${ARGON_DEV_UPSTREAM_ROOT_DIR:-../dev-upstream}/data:/data
+      - ${ARGON_DEV_UPSTREAM_DIR:-../dev-upstream}/data:/data
     ports:
       - '${UPSTREAM_ROUTER_PORT:-0}:8080'
     healthcheck:
@@ -111,7 +111,7 @@ services:
       upstream-router:
         condition: service_healthy
     env_file:
-      - ${ARGON_DEV_UPSTREAM_ROOT_DIR:-../dev-upstream}/config/.env.state
+      - ${ARGON_DEV_UPSTREAM_DIR:-../dev-upstream}/config/.env.state
     environment:
       - PORT=8080
       - ARGON_CHAIN=dev-docker
@@ -123,8 +123,8 @@ services:
       - BIDDER_KEYPAIR_PATH=/config/walletMiningBot.json
       - VAULT_DELEGATE_KEYPAIR_PATH=/config/walletVaultDelegate.json
     volumes:
-      - ${ARGON_DEV_UPSTREAM_ROOT_DIR:-../dev-upstream}/config:/config
-      - ${ARGON_DEV_UPSTREAM_ROOT_DIR:-../dev-upstream}/data:/data
+      - ${ARGON_DEV_UPSTREAM_DIR:-../dev-upstream}/config:/config
+      - ${ARGON_DEV_UPSTREAM_DIR:-../dev-upstream}/data:/data
     ports:
       - '${UPSTREAM_BOT_PORT:-0}:8080'
     healthcheck:
