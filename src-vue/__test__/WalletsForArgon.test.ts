@@ -6,6 +6,24 @@ import { SyncStateKeys } from '../lib/db/SyncStateTable.ts';
 import { WalletFinancials } from '../lib/financials/WalletBalances.ts';
 
 describe('WalletsForArgon live balance tracking', () => {
+  it('loads only the default wallet when operational wallet metadata is unavailable', async () => {
+    const wallets = new WalletsForArgon({
+      walletKeys: {
+        defaultArgonAddress: '5default',
+        miningBotAddress: '',
+        operationalAddress: '',
+        legacyMiningHoldAddress: '',
+      } as any,
+      dbPromise: Promise.resolve({} as any),
+      blockWatch: {} as any,
+      currency: {} as any,
+    });
+
+    expect(wallets.wallets).toEqual([wallets.defaultArgonWallet]);
+    expect(wallets.addresses).toEqual(['5default']);
+    expect(wallets.ownedAddresses).toEqual(['5default']);
+  });
+
   it('publishes the current best balance without loading intermediate blocks', async () => {
     const finalized = blockHeader(0, 'finalized');
     const interim = blockHeader(1, 'interim');

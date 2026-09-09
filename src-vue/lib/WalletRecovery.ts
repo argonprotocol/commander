@@ -42,7 +42,7 @@ export class WalletRecovery {
     await this.miningFrames.load();
     reportProgress(5);
 
-    const hasVaultHistory = walletsForArgon.defaultArgonWallet.hasValue();
+    const hasVaultHistory = !!this.walletKeys.operationalAddress && walletsForArgon.defaultArgonWallet.hasValue();
 
     let miningProgress = 0;
     let vaultProgress = 0;
@@ -59,7 +59,10 @@ export class WalletRecovery {
 
     const liveClient = await this.clients.archiveClientPromise;
     reportProgress(10);
-    const miningHistoryPromise = this.loadMiningHistory(liveClient, pct => onProgress('miner', pct));
+    const miningHistoryPromise = this.walletKeys.miningBotAddress
+      ? this.loadMiningHistory(liveClient, pct => onProgress('miner', pct))
+      : Promise.resolve(undefined);
+    if (!this.walletKeys.miningBotAddress) onProgress('miner', 100);
 
     let vaultingHistoryPromise: Promise<IVaultingRules | undefined> = Promise.resolve(undefined);
     if (hasVaultHistory) {
