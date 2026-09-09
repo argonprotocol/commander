@@ -13,6 +13,7 @@ type IReadOnlyFlowState = IE2EOperationInspectState<
     expectedDefaultArgonAddress?: string;
     defaultEthereumAddress?: string;
     expectedEthereumAddress?: string;
+    expectsOperations?: boolean;
     badgeVisible: boolean;
     hasOperationsAccess: boolean;
     configuredServerLoaded: boolean;
@@ -48,6 +49,7 @@ export default new OperationalFlow<IReadOnlyFlowContext, IReadOnlyFlowState>(imp
     const expectsConfiguredServer = flow.input.expectsConfiguredServer !== false;
     const expectsUpstream = flow.input.expectsUpstream !== false;
     const expectsVault = flow.input.expectsVault !== false;
+    const expectsOperations = flow.input.expectsOperations !== false;
     const expectsBitcoinLock = flow.input.expectsBitcoinLock === true;
     const hasExpectedIdentity = expectedDefaultArgonAddress
       ? appState?.defaultArgonAddress === expectedDefaultArgonAddress
@@ -62,7 +64,7 @@ export default new OperationalFlow<IReadOnlyFlowContext, IReadOnlyFlowState>(imp
     const isComplete =
       appState?.canSign === false &&
       badgeVisible &&
-      appState?.hasOperationsAccess &&
+      appState?.hasOperationsAccess === expectsOperations &&
       hasExpectedIdentity &&
       hasExpectedServerState &&
       hasExpectedUpstreamState &&
@@ -90,7 +92,9 @@ export default new OperationalFlow<IReadOnlyFlowContext, IReadOnlyFlowState>(imp
       blockers: [
         ...(appState?.canSign === false ? [] : ['app still reports signing access']),
         ...(badgeVisible ? [] : ['readonly badge is not visible']),
-        ...(appState?.hasOperationsAccess ? [] : ['operations access was not restored from chain']),
+        ...(appState?.hasOperationsAccess === expectsOperations
+          ? []
+          : [`operations access should be ${expectsOperations ? 'enabled' : 'disabled'}`]),
         ...(hasExpectedIdentity ? [] : ['wallet metadata identity was not loaded']),
         ...(hasExpectedServerState ? [] : ['configured server state does not match the account package']),
         ...(hasExpectedUpstreamState ? [] : ['upstream operator state does not match the account package']),

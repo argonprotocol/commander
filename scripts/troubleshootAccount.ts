@@ -120,7 +120,12 @@ async function resolveByDefaultAccount(
 ): Promise<ReadonlyAccountIdentity> {
   const operationalAccountId = await client.query.operationalAccounts.operationalAccountBySubAccount(defaultAccountId);
   if (!operationalAccountId) {
-    throw new Error(`${defaultAccountId} is not linked to an operational account.`);
+    return {
+      operatorName: '',
+      operationalAccountId: '',
+      defaultAccountId,
+      miningAccountId: '',
+    };
   }
 
   const profile = await client.query.operationalAccounts.operationalAccounts(operationalAccountId);
@@ -161,7 +166,7 @@ function readOperatorName(profile: RuntimeOperationalAccount): string {
 async function main(): Promise<void> {
   const selector = Process.argv.slice(2).join(' ').trim();
   if (!selector) {
-    throw new Error('Usage: yarn troubleshoot:account <operator name or default account ID>');
+    throw new Error('Usage: yarn troubleshoot:account <operator name or account ID>');
   }
 
   const networkName = Process.env.ARGON_NETWORK_NAME?.trim() || 'mainnet';
