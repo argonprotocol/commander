@@ -1,17 +1,18 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import Path from 'node:path';
 import { createArgonClient } from '@argonprotocol/apps-core';
-import { getClient } from '@argonprotocol/mainchain';
+import { getClient, Keyring } from '@argonprotocol/mainchain';
 import { describe, it } from 'vitest';
 import { createFlowSession, type IFlowSession } from '../flows/session.ts';
 import { resolveReadonlyAccount, writeReadonlyWallet } from '../../scripts/troubleshootAccount.ts';
 import { sudoSubmitAndFinalize } from '../../core/__test__/helpers/mainchain.ts';
+import { sudoFundWallet } from '../../core/__test__/helpers/sudoFundWallet.ts';
 
 const skipE2E = Boolean(JSON.parse(process.env.SKIP_E2E ?? '0'));
 
-describe.skipIf(skipE2E)('Read-only operational account', () => {
+describe.skipIf(skipE2E)('Read-only account', () => {
   it(
-    'loads copied and wallet-only operational accounts in readonly mode',
+    'loads basic, copied, and wallet-only operational accounts in readonly mode',
     async () => {
       const session: IFlowSession = await createFlowSession({
         useTestNetwork: true,
@@ -22,6 +23,8 @@ describe.skipIf(skipE2E)('Read-only operational account', () => {
       const readOnlyInstanceDirectory = Path.join(Path.dirname(session.appInstanceDirectory), readOnlyInstanceName);
       const generatedInstanceName = `${Path.basename(session.appInstanceDirectory)}-generated`;
       const generatedInstanceDirectory = Path.join(Path.dirname(session.appInstanceDirectory), generatedInstanceName);
+      const basicInstanceName = `${Path.basename(session.appInstanceDirectory)}-basic`;
+      const basicInstanceDirectory = Path.join(Path.dirname(session.appInstanceDirectory), basicInstanceName);
 
       try {
         await session.run('App.flow.claimDevUpstream');
@@ -54,6 +57,25 @@ describe.skipIf(skipE2E)('Read-only operational account', () => {
         };
         const client = createArgonClient(await getClient(session.archiveUrl));
         try {
+          const basicAccountId = new Keyring({ type: 'sr25519' }).addFromUri(`//ReadonlyBasic//${process.pid}`).address;
+          await sudoFundWallet({
+            client,
+            address: basicAccountId,
+            microgons: 5_000_000n,
+            micronots: 0n,
+          });
+          const basicAccount = await resolveReadonlyAccount(client, { defaultAccountId: basicAccountId });
+          writeReadonlyWallet(basicInstanceDirectory, basicAccount);
+
+          await session.loadInstance(basicInstanceName);
+          await session.run('App.flow.readOnly', {
+            expectedDefaultArgonAddress: basicAccountId,
+            expectsOperations: false,
+            expectsConfiguredServer: false,
+            expectsUpstream: false,
+            expectsVault: false,
+          });
+
           await registerOperationalProfile(client, sourceWallet.meta);
           const account = await resolveReadonlyAccount(client, {
             defaultAccountId: sourceWallet.meta.vaultingAddress,
@@ -76,6 +98,7 @@ describe.skipIf(skipE2E)('Read-only operational account', () => {
         await session.close();
         rmSync(readOnlyInstanceDirectory, { recursive: true, force: true });
         rmSync(generatedInstanceDirectory, { recursive: true, force: true });
+        rmSync(basicInstanceDirectory, { recursive: true, force: true });
       }
     },
     60 * 60_000,

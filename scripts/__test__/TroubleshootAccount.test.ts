@@ -90,6 +90,40 @@ describe('troubleshoot account', () => {
     expect(operationalAccounts).toHaveBeenCalledWith(operationalAccountId);
   });
 
+  it('loads an account that is not linked to an operational profile', async () => {
+    const operationalAccountBySubAccount = vi.fn(async () => null);
+    const client = {
+      query: {
+        operationalAccounts: {
+          operationalAccountBySubAccount,
+        },
+      },
+    } as unknown as ArgonQueryClient;
+
+    const identity = await resolveReadonlyAccount(client, { defaultAccountId });
+    const instanceDirectory = mkdtempSync(Path.join(Os.tmpdir(), 'argon-readonly-wallet-'));
+    temporaryDirectories.push(instanceDirectory);
+    writeReadonlyWallet(instanceDirectory, identity);
+
+    expect(identity).toEqual({
+      operatorName: '',
+      operationalAccountId: '',
+      defaultAccountId,
+      miningAccountId: '',
+    });
+    expect(JSON.parse(readFileSync(Path.join(instanceDirectory, 'wallet.json'), 'utf8')).meta).toEqual(
+      expect.objectContaining({
+        vaultingAddress: defaultAccountId,
+        operationalAddress: '',
+        miningBotAddress: '',
+      }),
+    );
+    expect(resolveReadonlyInstanceName(identity)).toBe(
+      `account-${defaultAccountId.slice(0, 8).toLowerCase()}-readonly`,
+    );
+    expect(operationalAccountBySubAccount).toHaveBeenCalledWith(defaultAccountId);
+  });
+
   it('rejects ambiguous operator names with the matching default accounts', async () => {
     const secondDefaultAccountId = `5${'w'.repeat(47)}`;
     const client = {

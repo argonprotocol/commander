@@ -78,7 +78,7 @@ export class WalletsForArgon {
   public readonly legacyMiningHoldAddress: string;
 
   public get wallets(): WalletForArgon[] {
-    return [this.defaultArgonWallet, this.miningBotWallet, this.operationalWallet];
+    return [this.defaultArgonWallet, this.miningBotWallet, this.operationalWallet].filter(wallet => wallet.address);
   }
 
   public get addresses(): string[] {

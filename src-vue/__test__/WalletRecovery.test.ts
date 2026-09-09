@@ -19,7 +19,7 @@ it('scans mining history during restore when the mining wallet is currently empt
   };
   const recovery = new WalletRecovery(
     {} as any,
-    {} as any,
+    { miningBotAddress: '5miner', operationalAddress: '' } as any,
     walletsForArgon as any,
     {} as any,
     { load: vi.fn().mockResolvedValue(undefined) } as any,
@@ -29,11 +29,35 @@ it('scans mining history during restore when the mining wallet is currently empt
   await expect(recovery.findHistory()).resolves.toEqual({ miningHistory, vaultingRules: undefined });
 });
 
+it('skips operator recovery for a readonly wallet without operational accounts', async () => {
+  const myVault = {
+    load: vi.fn(),
+    recoverAccountVault: vi.fn(),
+  };
+  const recovery = new WalletRecovery(
+    myVault as any,
+    { miningBotAddress: '', operationalAddress: '' } as any,
+    {
+      load: vi.fn().mockResolvedValue(undefined),
+      defaultArgonWallet: { hasValue: () => true },
+    } as any,
+    { archiveClientPromise: Promise.resolve({}) } as any,
+    { load: vi.fn().mockResolvedValue(undefined) } as any,
+  );
+  const loadMiningHistory = vi.spyOn(recovery as any, 'loadMiningHistory');
+
+  await expect(recovery.findHistory()).resolves.toEqual({ miningHistory: undefined, vaultingRules: undefined });
+
+  expect(loadMiningHistory).not.toHaveBeenCalled();
+  expect(myVault.load).not.toHaveBeenCalled();
+  expect(myVault.recoverAccountVault).not.toHaveBeenCalled();
+});
+
 it('uses the full recovery range for mining when there is no vault history', async () => {
   const progress: number[] = [];
   const recovery = new WalletRecovery(
     {} as any,
-    {} as any,
+    { miningBotAddress: '5miner', operationalAddress: '' } as any,
     {
       load: vi.fn().mockResolvedValue(undefined),
       defaultArgonWallet: { hasValue: () => false },
@@ -67,7 +91,7 @@ it('combines mining and vault work without allowing progress to move backward', 
         return undefined;
       }),
     } as any,
-    {} as any,
+    { miningBotAddress: '5miner', operationalAddress: '5operator' } as any,
     {
       load: vi.fn().mockResolvedValue(undefined),
       defaultArgonWallet: { hasValue: () => true },
