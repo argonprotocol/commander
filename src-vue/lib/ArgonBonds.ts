@@ -101,14 +101,14 @@ export class ArgonBonds {
   }
 
   public getVaultBondCapacityMicrogons(vault: Vault): bigint {
-    return vault.activatedSecuritization();
+    return TreasuryBonds.getVaultBondCapacityMicrogons({ vault, priceIndex: this.currency.priceIndex });
   }
 
   public availableBondSpace(vault: Vault): bigint {
     const bondState = this.data.capacityStatesByVault[vault.vaultId];
 
     return TreasuryBonds.availableBondSpace({
-      vault,
+      capacityMicrogons: this.getVaultBondCapacityMicrogons(vault),
       bondState,
     });
   }

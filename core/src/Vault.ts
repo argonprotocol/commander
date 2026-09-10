@@ -5,6 +5,12 @@ import type {
 } from '@argonprotocol/runtime-client';
 import BigNumber from 'bignumber.js';
 import type { ArgonQueryClient } from './MainchainClients.js';
+import { bigIntMax } from './utils.js';
+
+const FixedU128BigNumber = BigNumber.clone({
+  DECIMAL_PLACES: 18,
+  ROUNDING_MODE: BigNumber.ROUND_HALF_DOWN,
+});
 
 type RuntimeVault = NonNullable<VaultsVaultsByIdResultSpec157Variant13 | VaultsVaultsByIdResultSpec158Variant14>;
 
@@ -120,7 +126,30 @@ export class Vault {
   }
 
   public activatedSecuritization(): bigint {
-    return this.securitizationLocked - this.securitizationPendingActivation;
+    return bigIntMax(0n, this.securitizationLocked - this.securitizationPendingActivation);
+  }
+
+  /**
+   * Returns the ratio-adjusted Bitcoin that can support Treasury bonds. Regular Bitcoin always
+   * counts; flexible Bitcoin counts only in proportion to its collateral that has not been
+   * displaced when activated securitization exceeds the vault's securitization.
+   */
+  public bondEligibleSatoshis(): bigint {
+    if (this.flexibleSecuritizationLocked === 0n) return this.securitizedSatoshis;
+
+    const activatedSecuritization = this.activatedSecuritization();
+    const displacedFlexibleCollateral = bigIntMax(0n, activatedSecuritization - this.securitization);
+    const eligibleFlexibleCollateral = bigIntMax(0n, this.flexibleSecuritizationLocked - displacedFlexibleCollateral);
+    // Flexible Bitcoin counts only in proportion to its collateral that has not been displaced.
+    // FixedU128::from_rational rounds this fraction to 18 places, preferring down on a tie.
+    const eligibleFlexibleFraction = new FixedU128BigNumber(eligibleFlexibleCollateral).dividedBy(
+      this.flexibleSecuritizationLocked,
+    );
+    const eligibleFlexibleSatoshis = eligibleFlexibleFraction.multipliedBy(this.flexibleSecuritizedSatoshis);
+
+    const eligibleRegularSatoshis = bigIntMax(0n, this.securitizedSatoshis - this.flexibleSecuritizedSatoshis);
+
+    return bigNumberToBigInt(new BigNumber(eligibleRegularSatoshis).plus(eligibleFlexibleSatoshis));
   }
 
   public calculateBitcoinFee(amount: bigint): bigint {

@@ -95,7 +95,7 @@ export const useVaultingAssetBreakdown = defineStore('vaultingAssetBreakdown', (
     return treasuryBondTotals.value.returningBondMicrogons;
   });
 
-  // What the vault can support with its activated securitization.
+  // What the vault's eligible Bitcoin security can support at the current market price.
   const treasuryBondCapacityMicrogons = Vue.computed(() => {
     if (!myVault.createdVault) return 0n;
 

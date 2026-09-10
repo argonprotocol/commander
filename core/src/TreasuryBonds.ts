@@ -1,4 +1,9 @@
-import { FIXED_U128_DECIMALS, fromFixedNumber, type SubmittableExtrinsic } from '@argonprotocol/mainchain';
+import {
+  FIXED_U128_DECIMALS,
+  fromFixedNumber,
+  type PriceIndex,
+  type SubmittableExtrinsic,
+} from '@argonprotocol/mainchain';
 import { stringToU8a, u8aConcat } from '@polkadot/util';
 import { bigNumberToBigInt } from './utils.js';
 import BigNumber from 'bignumber.js';
@@ -234,17 +239,37 @@ export class TreasuryBonds {
   }
 
   public static availableBondSpace({
-    vault,
+    capacityMicrogons,
     bondState,
   }: {
-    vault: Pick<Vault, 'activatedSecuritization'>;
+    capacityMicrogons: bigint;
     bondState?: VaultBondCapacityState;
   }): bigint {
-    const bondCapacity = TreasuryBonds.getBondPurchaseCapacity(vault.activatedSecuritization());
+    const bondCapacity = TreasuryBonds.getBondPurchaseCapacity(capacityMicrogons);
     const unavailableBonds = [...(bondState ?? [])].reduce((total, state) => total + state.activeBonds, 0);
     const availableBonds = bondCapacity > unavailableBonds ? bondCapacity - unavailableBonds : 0;
 
     return BondLot.bondsToMicrogons(availableBonds);
+  }
+
+  public static getVaultBondCapacityMicrogons({
+    vault,
+    priceIndex,
+  }: {
+    vault: Pick<Vault, 'bondEligibleSatoshis'>;
+    priceIndex: Pick<PriceIndex, 'btcUsdPrice' | 'argonUsdPrice' | 'getSatoshiPriceInMarketMicrogons'>;
+  }): bigint {
+    const { btcUsdPrice, argonUsdPrice } = priceIndex;
+    if (
+      btcUsdPrice === undefined ||
+      argonUsdPrice === undefined ||
+      btcUsdPrice.isLessThanOrEqualTo(0) ||
+      argonUsdPrice.isLessThanOrEqualTo(0)
+    ) {
+      return 0n;
+    }
+
+    return priceIndex.getSatoshiPriceInMarketMicrogons(vault.bondEligibleSatoshis());
   }
 
   public static async getBondLotsByAccount(client: ArgonQueryClient, accountId: string): Promise<BondLot[]> {

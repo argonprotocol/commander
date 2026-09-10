@@ -8,13 +8,20 @@ import { useFinancials } from '../../src-vue/stores/financials.ts';
 import { getMainchainClient } from '../../src-vue/stores/mainchain.ts';
 import { getTransactionTracker } from '../../src-vue/stores/transactions.ts';
 import { useVaultingStats } from '../../src-vue/stores/vaultingStats.ts';
+import { getVaults } from '../../src-vue/stores/vaults.ts';
+import { createScenarioVault } from './createScenarioVault.ts';
 import { setupAppScenario } from './setupAppScenario.ts';
 
-type BondPurchaseState = 'loading' | 'loadError' | 'ready';
+type BondPurchaseState = 'loading' | 'loadError' | 'ready' | 'available';
 type StakePurchaseState = 'loadError' | 'ready' | 'fundingRequired' | 'progress' | 'progressError' | 'complete';
 
 export function setupBondPurchaseScenario(state: BondPurchaseState) {
   setupAppScenario({ selectedTab: TopTab.ArgonBonds });
+  const vault = createScenarioVault({
+    securitizationLocked: 1_052_698_425n,
+    lockedSatoshis: 1_408_910n,
+    securitizedSatoshis: 1_408_910n,
+  });
   let refresh = fn(async () => undefined);
   if (state === 'loading') {
     refresh = fn(() => new Promise<void>(() => undefined));
@@ -30,13 +37,14 @@ export function setupBondPurchaseScenario(state: BondPurchaseState) {
     refreshBondLots: fn(async () => undefined),
     subscribeGlobal: fn(async () => undefined),
     subscribeVault: fn(async () => fn()),
-    availableBondSpace: fn(() => 0n),
+    availableBondSpace: fn(() => (state === 'available' ? 1_026_000_000n : 0n)),
   } as unknown as ReturnType<typeof getArgonBonds>);
+  getVaults().operatorNamesByVaultId[vault.vaultId] = 'Market Vault';
   mocked(useFinancials).mockReturnValue(
     Vue.reactive({
       refreshVaults: refresh,
       vaultsIsLoaded: true,
-      vaultsActiveRecords: [],
+      vaultsActiveRecords: state === 'available' ? [vault] : [],
     }) as unknown as ReturnType<typeof useFinancials>,
   );
   mocked(getMainchainClient).mockResolvedValue({

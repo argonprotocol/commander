@@ -381,8 +381,7 @@ async function loadInviteCapacity(preserveFeeWaiverAmount = false) {
   const client = await getMainchainClient(false);
   const currentVault = (await Vault.get(client, vault.vaultId, NetworkConfig.tickMillis)) ?? vault;
   inviteVaultSnapshot.value = currentVault;
-  memberBondCapacityMicrogons.value =
-    argonBonds.availableBondSpace(currentVault) + currentVault.securitizationPendingActivation;
+  memberBondCapacityMicrogons.value = argonBonds.availableBondSpace(currentVault);
   memberBondTotalCapacityMicrogons.value =
     currentVault.activatedSecuritization() + currentVault.securitizationPendingActivation;
   supportsFlexibleAssets.value = supportsFlexibleAssetsRuntime(client);
