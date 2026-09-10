@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.8] - 2026-09-09
+- Clear dropped Ethereum Transactions from cross-chain transfers
+- Bidding bots now detect updated rules during an active auction
+- Stabilize transaction tracking when RPC servers rotate
+- Add Discord account verification
+- Restore stalled network subscriptions after sleep or reconnect
+- Automated tests to verify every account can recover historical financial data
+
 ## [2.3.7] - 2026-08-24
 - Improve Bitcoin lock recovery, history, ratcheting, and fee handling
 - Improve financial history recovery across app and network upgrades
