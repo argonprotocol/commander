@@ -1,3 +1,4 @@
+import BigNumber from 'bignumber.js';
 import { describe, expect, it, vi } from 'vitest';
 import {
   type Codec,
@@ -7,6 +8,7 @@ import {
   type PalletTreasuryFrameVaultCapital,
   type PalletTreasuryBondLot,
   type PalletTreasuryVaultBondState,
+  PriceIndex,
   toFixedNumber,
 } from '@argonprotocol/mainchain';
 import { encodeAddress } from '@polkadot/util-crypto';
@@ -14,6 +16,7 @@ import { toPlain } from '@argonprotocol/runtime-client';
 
 import { MICRONOTS_PER_ARGONOT } from '../src/Currency.ts';
 import { TreasuryBonds } from '../src/TreasuryBonds.ts';
+import { Vault } from '../src/Vault.ts';
 
 const registry = getOfflineRegistry();
 registry.register({
@@ -168,8 +171,7 @@ describe('TreasuryBonds', () => {
 
   it('uses flexible bond reservations without counting flexible bonds against available capacity', async () => {
     const oneArgon = BigInt(MICROGONS_PER_ARGON);
-    let activatedSecuritization = 10n * oneArgon;
-    const vault = createCapacityVault(() => activatedSecuritization);
+    let bitcoinCapacityMicrogons = 10n * oneArgon;
 
     const runtimeState = registry.createType<PalletTreasuryVaultBondState>('PalletTreasuryVaultBondState', {
       regularBondLots: [{ bondLotId: 1, bonds: 3 }],
@@ -190,7 +192,7 @@ describe('TreasuryBonds', () => {
 
     expect(
       TreasuryBonds.availableBondSpace({
-        vault,
+        capacityMicrogons: bitcoinCapacityMicrogons,
         bondState: bondState.capacityState,
       }),
     ).toBe(5n * oneArgon);
@@ -205,16 +207,16 @@ describe('TreasuryBonds', () => {
 
     expect(
       TreasuryBonds.availableBondSpace({
-        vault,
+        capacityMicrogons: bitcoinCapacityMicrogons,
         bondState: moreFlexibleBondState.capacityState,
       }),
     ).toBe(5n * oneArgon);
 
-    activatedSecuritization = 4n * oneArgon;
+    bitcoinCapacityMicrogons = 4n * oneArgon;
 
     expect(
       TreasuryBonds.availableBondSpace({
-        vault,
+        capacityMicrogons: bitcoinCapacityMicrogons,
         bondState: bondState.capacityState,
       }),
     ).toBe(0n);
@@ -282,19 +284,94 @@ describe('TreasuryBonds', () => {
     expect(result.bondLots.map(({ id, bonds }) => ({ id, bonds }))).toEqual([{ id: 'lot:1', bonds: 3 }]);
   });
 
-  it('caps purchases at activated securitization instead of full vault securitization', () => {
+  it('caps purchases at the market value of eligible Bitcoin security', () => {
     const oneArgon = BigInt(MICROGONS_PER_ARGON);
-    const vault = {
-      activatedSecuritization: () => 4n * oneArgon,
-      securitization: 10n * oneArgon,
-    };
+    const vault = createCapacityVault({
+      securitization: 2_000_000_000n,
+      securitizationLocked: 1_052_698_425n,
+      securitizedSatoshis: 1_408_910n,
+    });
+    const priceIndex = new PriceIndex();
+    priceIndex.btcUsdPrice = new BigNumber('77311.097');
+    priceIndex.argonUsdPrice = new BigNumber('1.061');
+    const capacityMicrogons = TreasuryBonds.getVaultBondCapacityMicrogons({ vault, priceIndex });
+
+    expect(capacityMicrogons).toBe(1_026_619_959n);
+    expect(
+      TreasuryBonds.availableBondSpace({
+        capacityMicrogons,
+        bondState: [{ activeBonds: 3 }],
+      }),
+    ).toBe(1_023n * oneArgon);
+  });
+
+  it.each([
+    { btcUsdPrice: undefined, argonUsdPrice: new BigNumber(1) },
+    { btcUsdPrice: new BigNumber(1), argonUsdPrice: undefined },
+    { btcUsdPrice: new BigNumber(1), argonUsdPrice: new BigNumber(0) },
+  ])('reports no bond capacity when a market price is unavailable', ({ btcUsdPrice, argonUsdPrice }) => {
+    const priceIndex = new PriceIndex();
+    priceIndex.btcUsdPrice = btcUsdPrice;
+    priceIndex.argonUsdPrice = argonUsdPrice;
 
     expect(
       TreasuryBonds.availableBondSpace({
-        vault,
-        bondState: [{ activeBonds: 3 }],
+        capacityMicrogons: TreasuryBonds.getVaultBondCapacityMicrogons({
+          vault: createCapacityVault(),
+          priceIndex,
+        }),
       }),
-    ).toBe(oneArgon);
+    ).toBe(0n);
+  });
+
+  it('excludes displaced flexible Bitcoin security from eligible capacity', () => {
+    const oneArgon = BigInt(MICROGONS_PER_ARGON);
+    const vault = createCapacityVault({
+      securitization: 10n * oneArgon,
+      securitizationLocked: 12n * oneArgon,
+      flexibleSecuritizationLocked: 5n * oneArgon,
+      securitizedSatoshis: 120n,
+      flexibleSecuritizedSatoshis: 50n,
+    });
+
+    expect(vault.bondEligibleSatoshis()).toBe(100n);
+
+    vault.securitizationPendingActivation = 4n * oneArgon;
+    expect(vault.bondEligibleSatoshis()).toBe(120n);
+
+    vault.securitizationPendingActivation = 8n * oneArgon;
+    expect(vault.bondEligibleSatoshis()).toBe(120n);
+  });
+
+  it('matches FixedU128 rounding for displaced flexible Bitcoin security', () => {
+    const oneArgon = BigInt(MICROGONS_PER_ARGON);
+    const vault = createCapacityVault({
+      securitization: 10n * oneArgon,
+      securitizationLocked: 12n * oneArgon,
+      flexibleSecuritizationLocked: 3n * oneArgon,
+      securitizedSatoshis: 3n,
+      flexibleSecuritizedSatoshis: 3n,
+    });
+
+    expect(vault.bondEligibleSatoshis()).toBe(0n);
+
+    vault.securitizedSatoshis = 2n;
+    expect(vault.bondEligibleSatoshis()).toBe(0n);
+  });
+
+  it('normalizes previous-runtime backfill security into the same eligible capacity', () => {
+    const oneArgon = BigInt(MICROGONS_PER_ARGON);
+    const values = {
+      securitization: 10n * oneArgon,
+      securitizationLocked: 12n * oneArgon,
+      flexibleSecuritizationLocked: 5n * oneArgon,
+      securitizedSatoshis: 120n,
+      flexibleSecuritizedSatoshis: 50n,
+    };
+
+    expect(createCapacityVault(values, true).bondEligibleSatoshis()).toBe(
+      createCapacityVault(values).bondEligibleSatoshis(),
+    );
   });
 });
 
@@ -377,8 +454,53 @@ function createRuntimeSpec157VaultBondLot({
   });
 }
 
-function createCapacityVault(activatedSecuritization: () => bigint) {
-  return {
-    activatedSecuritization,
-  };
+function createCapacityVault(
+  overrides: Partial<{
+    securitization: bigint;
+    securitizationLocked: bigint;
+    flexibleSecuritizationLocked: bigint;
+    securitizedSatoshis: bigint;
+    flexibleSecuritizedSatoshis: bigint;
+  }> = {},
+  previousRuntime = false,
+) {
+  return new Vault(
+    1,
+    {
+      operatorAccountId: operatorAddress,
+      delegateAccountId: null,
+      name: null,
+      lastNameChangeTick: null,
+      securitization: overrides.securitization ?? 10n,
+      securitizationTarget: 10n,
+      securitizationLocked: overrides.securitizationLocked ?? 10n,
+      ...(previousRuntime
+        ? {
+            backfillSecuritizationLocked: overrides.flexibleSecuritizationLocked ?? 0n,
+            backfillSecuritizationReserved: 0n,
+            backfillSecuritizedSatoshis: overrides.flexibleSecuritizedSatoshis ?? 0n,
+          }
+        : {
+            flexibleSecuritizationLocked: overrides.flexibleSecuritizationLocked ?? 0n,
+            reservedSecuritizationSpace: 0n,
+            flexibleSecuritizedSatoshis: overrides.flexibleSecuritizedSatoshis ?? 0n,
+          }),
+      securitizationPendingActivation: 0n,
+      lockedSatoshis: overrides.securitizedSatoshis ?? 1n,
+      securitizedSatoshis: overrides.securitizedSatoshis ?? 1n,
+      securitizationReleaseSchedule: {},
+      securitizationRatio: new BigNumber(1),
+      isClosed: false,
+      terms: {
+        bitcoinAnnualPercentRate: new BigNumber(0),
+        bitcoinBaseFee: 0n,
+        treasuryProfitSharing: new BigNumber(0),
+        treasuryBonusProfitSharing: new BigNumber(0),
+      },
+      pendingTerms: null,
+      openedTick: 1,
+      operationalMinimumReleaseTick: null,
+    },
+    60_000,
+  );
 }
