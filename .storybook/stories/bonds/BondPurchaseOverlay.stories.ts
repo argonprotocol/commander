@@ -10,18 +10,13 @@ const meta = {
   render: () => ({
     components: { BondPurchaseOverlay },
     setup() {
-      Vue.onMounted(() => {
-        basicEmitter.emit('openBondPurchaseOverlay');
-        void Vue.nextTick(() => {
-          document.querySelector('[data-testid="BondPurchaseOverlay"]')?.setAttribute('inert', '');
-        });
-      });
+      Vue.onMounted(() => basicEmitter.emit('openBondPurchaseOverlay'));
     },
     template: `
       <div class="fixed top-2 right-3 z-[10000] rounded-full border border-slate-400/40 bg-white/90 px-2.5 py-1 text-xs font-semibold text-slate-600 shadow-sm">
         Fixed state preview
       </div>
-      <BondPurchaseOverlay />
+      <BondPurchaseOverlay inert />
     `,
   }),
 } satisfies Meta<typeof BondPurchaseOverlay>;
