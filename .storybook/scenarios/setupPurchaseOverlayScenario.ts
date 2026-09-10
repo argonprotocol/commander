@@ -8,13 +8,22 @@ import { useFinancials } from '../../src-vue/stores/financials.ts';
 import { getMainchainClient } from '../../src-vue/stores/mainchain.ts';
 import { getTransactionTracker } from '../../src-vue/stores/transactions.ts';
 import { useVaultingStats } from '../../src-vue/stores/vaultingStats.ts';
+import { getVaults } from '../../src-vue/stores/vaults.ts';
+import { createScenarioVault } from './createScenarioVault.ts';
 import { setupAppScenario } from './setupAppScenario.ts';
 
-type BondPurchaseState = 'loading' | 'loadError' | 'ready';
+type BondPurchaseState = 'loading' | 'loadError' | 'ready' | 'selection';
 type StakePurchaseState = 'loadError' | 'ready' | 'fundingRequired' | 'progress' | 'progressError' | 'complete';
 
 export function setupBondPurchaseScenario(state: BondPurchaseState) {
   setupAppScenario({ selectedTab: TopTab.ArgonBonds });
+  const vaults =
+    state === 'selection'
+      ? [
+          createScenarioVault({ vaultId: 7, operatorAccountId: '5AtlasVaultOperator' }),
+          createScenarioVault({ vaultId: 12, operatorAccountId: '5NorthstarVaultOperator' }),
+        ]
+      : [];
   let refresh = fn(async () => undefined);
   if (state === 'loading') {
     refresh = fn(() => new Promise<void>(() => undefined));
@@ -30,13 +39,19 @@ export function setupBondPurchaseScenario(state: BondPurchaseState) {
     refreshBondLots: fn(async () => undefined),
     subscribeGlobal: fn(async () => undefined),
     subscribeVault: fn(async () => fn()),
-    availableBondSpace: fn(() => 0n),
+    availableBondSpace: fn(vault => (vault.vaultId === 7 ? 120_000_000n : 80_000_000n)),
   } as unknown as ReturnType<typeof getArgonBonds>);
+  mocked(getVaults, { partial: true }).mockReturnValue({
+    load: fn(async () => undefined),
+    operatorNamesByVaultId: Vue.reactive({ 7: 'Atlas', 12: 'Northstar' }),
+    vaultsById: Object.fromEntries(vaults.map(vault => [vault.vaultId, vault])),
+    calculateArgonBondsApr: fn(vaultId => (vaultId === 7 ? 14.8 : 11.2)),
+  });
   mocked(useFinancials).mockReturnValue(
     Vue.reactive({
       refreshVaults: refresh,
       vaultsIsLoaded: true,
-      vaultsActiveRecords: [],
+      vaultsActiveRecords: vaults,
     }) as unknown as ReturnType<typeof useFinancials>,
   );
   mocked(getMainchainClient).mockResolvedValue({

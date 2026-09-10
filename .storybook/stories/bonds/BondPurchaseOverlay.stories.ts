@@ -30,3 +30,7 @@ export const VaultLoadFailed: Story = {
 export const NoActiveVaults: Story = {
   beforeEach: () => setupBondPurchaseScenario('ready'),
 };
+
+export const VaultSelection: Story = {
+  beforeEach: () => setupBondPurchaseScenario('selection'),
+};
