@@ -79,12 +79,17 @@ describe('Discord bot', () => {
       },
       developerIds: new Set(),
     });
-    const assignedRoleIds: string[] = [];
+    const existingRoleId = '555555555555555555';
+    const memberRoleIds = new Set([existingRoleId]);
     const member = {
       roles: {
         add: async (roleId: string | string[]) => {
-          if (Array.isArray(roleId)) throw new Error('Bulk member role replacement is not permitted.');
-          assignedRoleIds.push(roleId);
+          if (Array.isArray(roleId)) {
+            memberRoleIds.clear();
+            roleId.forEach(x => memberRoleIds.add(x));
+          } else {
+            memberRoleIds.add(roleId);
+          }
         },
       },
     };
@@ -94,7 +99,9 @@ describe('Discord bot', () => {
 
     await bot.grantRoles(DISCORD_USER_ID, ['treasuryUser', 'operationallyCertified']);
 
-    expect(assignedRoleIds).toEqual(['111111111111111111', '333333333333333333']);
+    expect(memberRoleIds).toEqual(
+      new Set([existingRoleId, '111111111111111111', '333333333333333333']),
+    );
     await bot.close();
     await verifier.close();
   });
