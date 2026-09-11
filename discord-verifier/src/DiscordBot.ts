@@ -114,7 +114,9 @@ export class DiscordBot {
   public grantRoles = async (discordUserId: string, roles: DiscordRole[]): Promise<void> => {
     const guild = await this.client.guilds.fetch(this.config.guildId);
     const member = await guild.members.fetch(discordUserId);
-    await member.roles.add(roles.map(role => this.config.roleIds[role]));
+    for (const role of roles) {
+      await member.roles.add(this.config.roleIds[role]);
+    }
   };
 
   private async handle(interaction: Interaction): Promise<void> {

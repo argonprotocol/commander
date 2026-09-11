@@ -67,6 +67,38 @@ describe('Discord bot', () => {
     expect(result).toContain('Joined Argon server: <t:1735689600:D> (<t:1735689600:R>)');
   });
 
+  it('adds earned roles without replacing roles already held by the Discord member', async () => {
+    const verifier = new Verifier(':memory:', APPLICATION_ID, 300_000, 'ws://unused');
+    const bot = new DiscordBot(verifier, {
+      guildId: GUILD_ID,
+      roleIds: {
+        treasuryUser: '111111111111111111',
+        treasuryCertified: '222222222222222222',
+        operationallyCertified: '333333333333333333',
+        coreDeveloper: '444444444444444444',
+      },
+      developerIds: new Set(),
+    });
+    const assignedRoleIds: string[] = [];
+    const member = {
+      roles: {
+        add: async (roleId: string | string[]) => {
+          if (Array.isArray(roleId)) throw new Error('Bulk member role replacement is not permitted.');
+          assignedRoleIds.push(roleId);
+        },
+      },
+    };
+    vi.spyOn((bot as any).client.guilds, 'fetch').mockResolvedValue({
+      members: { fetch: vi.fn().mockResolvedValue(member) },
+    });
+
+    await bot.grantRoles(DISCORD_USER_ID, ['treasuryUser', 'operationallyCertified']);
+
+    expect(assignedRoleIds).toEqual(['111111111111111111', '333333333333333333']);
+    await bot.close();
+    await verifier.close();
+  });
+
   it('includes the selected account profile dates in an unknown role check', async () => {
     const verifier = new Verifier(':memory:', APPLICATION_ID, 300_000, 'ws://unused');
     const bot = new DiscordBot(verifier, {
